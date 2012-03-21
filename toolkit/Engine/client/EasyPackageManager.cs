@@ -18,7 +18,6 @@ using CoApp.Toolkit.Extensions;
 
 namespace CoApp.Toolkit.Engine.Client {
     using System.Threading.Tasks;
-    using Network;
     using Tasks;
     using Toolkit.Exceptions;
     using Win32;

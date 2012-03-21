@@ -92,8 +92,8 @@
     <Compile Include="Toolkit\UI\VisibilityAnimation.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Toolkit\Images\logo-only1.png" />
-    <Resource Include="Toolkit\Images\coapp-background1.png" />
+    <Resource Include="resources\images\logo-only1.png" />
+    <Resource Include="resources\images\coapp-background1.png" />
     <ProjectReference Include="CoApp.Toolkit.csproj">
       <Project>{8B7E0D2F-6CA0-4E5E-BF52-1E4BDB132BBC}</Project>
       <Name>CoApp.Toolkit</Name>
@@ -115,6 +115,9 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>InstallerResources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Toolkit\Images\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

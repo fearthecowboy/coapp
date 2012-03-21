@@ -25,7 +25,7 @@ namespace CoApp.CLI {
     using Toolkit.Exceptions;
     using Toolkit.Extensions;
     using Toolkit.Logging;
-    using Toolkit.Network;
+
     using Toolkit.toolkit.Engine.Client;
 
     /// <summary>

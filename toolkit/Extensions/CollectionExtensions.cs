@@ -23,9 +23,7 @@ namespace CoApp.Toolkit.Extensions {
     using System.Collections.ObjectModel;
     using System.Linq;
     using System.Text;
-#if !COAPP_ENGINE_CORE
-    using Collections;
-#endif 
+
     /// <summary>
     /// 
     /// </summary>
@@ -181,10 +179,6 @@ namespace CoApp.Toolkit.Extensions {
             TValue value;
             dictionary.TryGetValue(key, out value);
             return value;
-        }
-
-        public static IEnumerable<T> ToLazyEnumerable<T>(this IEnumerable<T> collection) {
-            return new LazyEnumerable<T>(collection);
         }
 
 

@@ -15,7 +15,6 @@ namespace CoApp.Toolkit.PackageFormatHandlers {
     using System.Data.Common;
     using System.IO;
     using System.Linq;
-    using DynamicXml;
     using Engine;
     using Engine.Exceptions;
     using Extensions;

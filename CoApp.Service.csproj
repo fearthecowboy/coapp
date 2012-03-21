@@ -56,20 +56,48 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="toolkit\Compression\CRC32.cs" />
-    <Compile Include="toolkit\Compression\Deflate.cs" />
-    <Compile Include="toolkit\Compression\DeflateStream.cs" />
-    <Compile Include="toolkit\Compression\GZipStream.cs" />
-    <Compile Include="toolkit\Compression\Inflate.cs" />
-    <Compile Include="toolkit\Compression\InfTree.cs" />
-    <Compile Include="toolkit\Compression\Iso8859Dash1Encoding.cs" />
-    <Compile Include="toolkit\Compression\ParallelDeflateOutputStream.cs" />
-    <Compile Include="toolkit\Compression\Tree.cs" />
-    <Compile Include="toolkit\Compression\Zlib.cs" />
-    <Compile Include="toolkit\Compression\ZlibBaseStream.cs" />
-    <Compile Include="toolkit\Compression\ZlibCodec.cs" />
-    <Compile Include="toolkit\Compression\ZlibConstants.cs" />
-    <Compile Include="toolkit\Compression\ZlibStream.cs" />
+    <Compile Include="toolkit\Compression\CRC32.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="toolkit\Compression\Deflate.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="toolkit\Compression\DeflateStream.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="toolkit\Compression\GZipStream.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="toolkit\Compression\Inflate.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="toolkit\Compression\InfTree.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="toolkit\Compression\Iso8859Dash1Encoding.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="toolkit\Compression\ParallelDeflateOutputStream.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="toolkit\Compression\Tree.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="toolkit\Compression\Zlib.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="toolkit\Compression\ZlibBaseStream.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="toolkit\Compression\ZlibCodec.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="toolkit\Compression\ZlibConstants.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="toolkit\Compression\ZlibStream.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="toolkit\Configuration\RegistryView.cs" />
     <Compile Include="toolkit\Crypto\Verifier.cs" />
     <Compile Include="toolkit\dtf\Compression.Cab\CabEngine.cs" />
@@ -170,9 +198,6 @@
     <Compile Include="toolkit\dtf\WindowsInstaller\Transaction.cs" />
     <Compile Include="toolkit\dtf\WindowsInstaller\ValidationErrorInfo.cs" />
     <Compile Include="toolkit\dtf\WindowsInstaller\View.cs" />
-    <Compile Include="toolkit\DynamicXml\DynamicDataRow.cs" />
-    <Compile Include="toolkit\DynamicXml\DynamicDataSet.cs" />
-    <Compile Include="toolkit\DynamicXml\DynamicDataTable.cs" />
     <Compile Include="toolkit\Engine\EngineServiceManager.cs" />
     <Compile Include="toolkit\Engine\Exceptions\ConfigurationException.cs">
       <SubType>Code</SubType>
@@ -303,11 +328,33 @@
     <Compile Include="toolkit\Shell\ShellLink.cs" />
     <Compile Include="toolkit\Shell\ShellLinkFlags.cs" />
     <Compile Include="toolkit\Shell\ShowWindowCommand.cs" />
+    <Compile Include="toolkit\TaskService\Action.cs" />
+    <Compile Include="toolkit\TaskService\ActionCollection.cs" />
+    <Compile Include="toolkit\TaskService\CultureSwitcher.cs" />
+    <Compile Include="toolkit\TaskService\EnumGlobalizer.cs" />
+    <Compile Include="toolkit\TaskService\Impersonation.cs" />
+    <Compile Include="toolkit\TaskService\NamedValueCollection.cs" />
+    <Compile Include="toolkit\TaskService\NotV1SupportedException.cs" />
+    <Compile Include="toolkit\TaskService\Task.cs" />
+    <Compile Include="toolkit\TaskService\TaskCollection.cs" />
+    <Compile Include="toolkit\TaskService\TaskFolder.cs" />
+    <Compile Include="toolkit\TaskService\TaskFolderCollection.cs" />
+    <Compile Include="toolkit\TaskService\TaskHandlerInterfaces.cs" />
+    <Compile Include="toolkit\TaskService\TaskService.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="toolkit\TaskService\Trigger.cs" />
+    <Compile Include="toolkit\TaskService\TriggerCollection.cs" />
+    <Compile Include="toolkit\TaskService\V1\TaskSchedulerV1Interop.cs" />
+    <Compile Include="toolkit\TaskService\V2\TaskSchedulerV2Interop.cs" />
+    <Compile Include="toolkit\TaskService\Wildcard.cs" />
     <Compile Include="toolkit\Tasks\Cache.cs" />
     <Compile Include="toolkit\Tasks\MessageHandlers.cs" />
     <Compile Include="toolkit\Tasks\CoTask.cs" />
     <Compile Include="toolkit\Tasks\TriggeredProperty.cs" />
-    <Compile Include="toolkit\Text\HttpUtility.cs" />
+    <Compile Include="toolkit\Text\HttpUtility.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="toolkit\Utility\MultifactorProgressTracker.cs" />
     <Compile Include="toolkit\Win32\AdminPrivilege.cs" />
     <Compile Include="toolkit\Win32\Advapi32.cs" />

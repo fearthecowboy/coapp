@@ -110,7 +110,8 @@ namespace CoApp.Toolkit.Extensions {
 
         public static string Copyright(this Assembly assembly) {
             try {
-                return PEInfo.Scan(assembly.Location).VersionInfo.LegalCopyright;
+                ;
+                return FileVersionInfo.GetVersionInfo(assembly.Location).LegalCopyright;
             }
             catch {
             }
@@ -119,7 +120,7 @@ namespace CoApp.Toolkit.Extensions {
 
         public static string Company(this Assembly assembly) {
             try {
-                return PEInfo.Scan(assembly.Location).VersionInfo.CompanyName;
+                return FileVersionInfo.GetVersionInfo(assembly.Location).CompanyName;
             }
             catch {
             }
@@ -128,7 +129,7 @@ namespace CoApp.Toolkit.Extensions {
 
         public static string Version(this Assembly assembly) {
             try {
-                var vi = PEInfo.Scan(assembly.Location).VersionInfo;
+                var vi = FileVersionInfo.GetVersionInfo(assembly.Location);
 
                 return "{0}.{1}.{2}.{3}".format(vi.FileMajorPart, vi.FileMinorPart, vi.FileBuildPart, vi.FilePrivatePart);
             }
@@ -139,7 +140,7 @@ namespace CoApp.Toolkit.Extensions {
 
         public static string Comments(this Assembly assembly) {
             try {
-                return PEInfo.Scan(assembly.Location).VersionInfo.Comments;
+                return FileVersionInfo.GetVersionInfo(assembly.Location).Comments;
             }
             catch {
             }

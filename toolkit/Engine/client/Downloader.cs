@@ -7,7 +7,7 @@ namespace CoApp.Toolkit.Engine.Client {
     using System.IO;
     using System.Threading.Tasks;
     using Extensions;
-    using Network;
+    
     using toolkit.Engine.Client;
 
     public class Downloader {

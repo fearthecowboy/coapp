@@ -24,7 +24,6 @@ namespace CoApp.Toolkit.Engine.Client {
     using System.Windows.Media.Imaging;
     using Extensions;
     using Logging;
-    using Network;
     using Toolkit.Exceptions;
     using UI;
     using MessageBox = System.Windows.Forms.MessageBox;

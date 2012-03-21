@@ -48,23 +48,48 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Toolkit\Collections\LazyEnumerable.cs" />
-    <Compile Include="Toolkit\Collections\NullableCollectionDictionary.cs" />
-    <Compile Include="Toolkit\Collections\EasyDictionary.cs" />
-    <Compile Include="Toolkit\Compression\CRC32.cs" />
-    <Compile Include="Toolkit\Compression\Deflate.cs" />
-    <Compile Include="Toolkit\Compression\DeflateStream.cs" />
-    <Compile Include="Toolkit\Compression\GZipStream.cs" />
-    <Compile Include="Toolkit\Compression\Inflate.cs" />
-    <Compile Include="Toolkit\Compression\InfTree.cs" />
-    <Compile Include="Toolkit\Compression\Iso8859Dash1Encoding.cs" />
-    <Compile Include="Toolkit\Compression\ParallelDeflateOutputStream.cs" />
-    <Compile Include="Toolkit\Compression\Tree.cs" />
-    <Compile Include="Toolkit\Compression\Zlib.cs" />
-    <Compile Include="Toolkit\Compression\ZlibBaseStream.cs" />
-    <Compile Include="Toolkit\Compression\ZlibCodec.cs" />
-    <Compile Include="Toolkit\Compression\ZlibConstants.cs" />
-    <Compile Include="Toolkit\Compression\ZlibStream.cs" />
+    <Compile Include="Toolkit\Compression\CRC32.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Compression\Deflate.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Compression\DeflateStream.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Compression\GZipStream.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Compression\Inflate.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Compression\InfTree.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Compression\Iso8859Dash1Encoding.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Compression\ParallelDeflateOutputStream.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Compression\Tree.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Compression\Zlib.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Compression\ZlibBaseStream.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Compression\ZlibCodec.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Compression\ZlibConstants.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Compression\ZlibStream.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Toolkit\Configuration\RegistryView.cs" />
     <Compile Include="Toolkit\Console\AsyncConsoleProgram.cs" />
     <Compile Include="Toolkit\Console\ConsoleApi.cs" />
@@ -74,21 +99,10 @@
     <Compile Include="Toolkit\Exceptions\ConsoleException.cs" />
     <Compile Include="Toolkit\Crypto\PfxStoreLoader.cs" />
     <Compile Include="Toolkit\Crypto\Verifier.cs" />
-    <Compile Include="Toolkit\DynamicXml\DynamicAttributes.cs" />
-    <Compile Include="Toolkit\DynamicXml\DynamicDataRow.cs" />
-    <Compile Include="Toolkit\DynamicXml\DynamicDataSet.cs" />
-    <Compile Include="Toolkit\DynamicXml\DynamicNode.cs" />
-    <Compile Include="Toolkit\DynamicXml\DynamicDataTable.cs" />
     <Compile Include="Toolkit\Exceptions\ConflictingFileOrFolderException.cs" />
-    <Compile Include="Toolkit\Exceptions\EndUserException.cs" />
-    <Compile Include="Toolkit\Exceptions\EndUserPropertyException.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Toolkit\Exceptions\EndUserRuleException.cs" />
     <Compile Include="Toolkit\Exceptions\FailedPackageRemoveException.cs" />
     <Compile Include="Toolkit\Exceptions\PathIsNotFileUriException.cs" />
     <Compile Include="Toolkit\Exceptions\PathIsNotSymlinkException.cs" />
-    <Compile Include="Toolkit\Exceptions\EndUserParseException.cs" />
     <Compile Include="Toolkit\Extensions\AssemblyExtensions.cs" />
     <Compile Include="Toolkit\Extensions\CollectionExtensions.cs" />
     <Compile Include="Toolkit\Extensions\CommandLineExtensions.cs" />
@@ -115,8 +129,6 @@
     </Compile>
     <Compile Include="Toolkit\Extensions\XmlExtensions.cs" />
     <Compile Include="Toolkit\Logging\Logger.cs" />
-    <Compile Include="Toolkit\Network\Ftp.cs" />
-    <Compile Include="Toolkit\Network\HttpServer.cs" />
     <Compile Include="Toolkit\Pipes\AsyncPipeExtensions.cs" />
     <Compile Include="Toolkit\Pipes\UrlEncodedMessage.cs" />
     <Compile Include="Toolkit\Properties\Resources.Designer.cs">
@@ -186,28 +198,6 @@
     <Compile Include="Toolkit\Win32\ResourceTypes.cs" />
     <Compile Include="Toolkit\Win32\RgbQuad.cs" />
     <Compile Include="Toolkit\Win32\StaticControlStyles.cs" />
-    <Compile Include="Toolkit\Scan\ProjectScanner.cs" />
-    <Compile Include="Toolkit\Scan\Types\ScannedDefine.cs" />
-    <Compile Include="Toolkit\Scan\Types\ScannedFile.cs" />
-    <Compile Include="Toolkit\Scan\Types\ScannedFileType.cs" />
-    <Compile Include="Toolkit\Scan\Types\ScanReport.cs" />
-    <Compile Include="Toolkit\Scripting\Languages\CSV\CachedCsvReader.cs" />
-    <Compile Include="Toolkit\Scripting\Languages\CSV\CachedCsvReader.CsvBindingList.cs" />
-    <Compile Include="Toolkit\Scripting\Languages\CSV\CachedCsvReader.CsvPropertyDescriptor.cs" />
-    <Compile Include="Toolkit\Scripting\Languages\CSV\CachedCsvReader.CsvRecordComparer.cs" />
-    <Compile Include="Toolkit\Scripting\Languages\CSV\CsvReader.cs" />
-    <Compile Include="Toolkit\Scripting\Languages\CSV\CsvReader.DataReaderValidations.cs" />
-    <Compile Include="Toolkit\Scripting\Languages\CSV\CsvReader.RecordEnumerator.cs" />
-    <Compile Include="Toolkit\Scripting\Languages\CSV\Events\ParseErrorEventArgs.cs" />
-    <Compile Include="Toolkit\Exceptions\MalformedCsvException.cs" />
-    <Compile Include="Toolkit\Exceptions\MissingFieldCsvException.cs" />
-    <Compile Include="Toolkit\Scripting\Languages\CSV\MissingFieldAction.cs" />
-    <Compile Include="Toolkit\Scripting\Languages\CSV\ParseErrorAction.cs" />
-    <Compile Include="Toolkit\Scripting\Languages\CSV\Resources\ExceptionMessage.Designer.cs" />
-    <Compile Include="Toolkit\Scripting\Languages\CSV\ValueTrimmingOptions.cs" />
-    <Compile Include="Toolkit\Collections\VirtualEnumerator.cs" />
-    <Compile Include="Toolkit\Scripting\Utility\Token.cs" />
-    <Compile Include="Toolkit\Scripting\Utility\TokenType.cs" />
     <Compile Include="Toolkit\Shell\ColorTable.cs" />
     <Compile Include="Toolkit\Shell\ConsoleProperties.cs" />
     <Compile Include="Toolkit\Shell\Coordinate.cs" />
@@ -233,37 +223,12 @@
     <Compile Include="Toolkit\Shell\ShellLink.cs" />
     <Compile Include="Toolkit\Shell\ShellLinkFlags.cs" />
     <Compile Include="Toolkit\Shell\ShowWindowCommand.cs" />
-    <Compile Include="Toolkit\Scripting\Utility\ActiveScriptHost.cs" />
-    <Compile Include="Toolkit\Scripting\Languages\CSharp\CSharpTokenizer.cs" />
-    <Compile Include="Toolkit\Scripting\Languages\GSharp\GSharpProcessor.cs" />
-    <Compile Include="Toolkit\Scripting\Languages\GSharp\GSharpTokenizer.cs" />
-    <Compile Include="Toolkit\Scripting\Languages\PropertySheet\PropertySheet.cs" />
-    <Compile Include="Toolkit\Scripting\Languages\PropertySheet\PropertySheetParser.cs" />
-    <Compile Include="Toolkit\Scripting\Languages\PropertySheet\PropertySheetTokenizer.cs" />
-    <Compile Include="Toolkit\Scripting\Languages\PropertySheet\Rule.cs" />
-    <Compile Include="Toolkit\Scripting\Languages\PropertySheet\RuleProperty.cs" />
-    <Compile Include="Toolkit\Scripting\Utility\Tokenizer.cs" />
     <Compile Include="Toolkit\Properties\AssemblyInfo.cs" />
     <Compile Include="$(SolutionDir)\Source\CoApp.Toolkit.AssemblyStrongName.cs" />
-    <Compile Include="Toolkit\Scripting\Languages\PropertySheet\Indexer.cs" />
-    <Compile Include="Toolkit\Scripting\Languages\PropertySheet\PropertySheetItem.cs" />
     <Compile Include="Toolkit\Tasks\CoTask.cs" />
     <Compile Include="Toolkit\Tasks\MessageHandlers.cs" />
     <Compile Include="Toolkit\Exceptions\OperationCompletedBeforeResultException.cs" />
     <Compile Include="Toolkit\Text\HttpUtility.cs" />
-    <Compile Include="Toolkit\Text\Sgml\SgmlParser.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Toolkit\Text\Sgml\SgmlReader.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Toolkit\Utility\DependencyInformation.cs" />
-    <Compile Include="Toolkit\Utility\DirectedGraph.cs" />
-    <Compile Include="Toolkit\Utility\ExecutableInfo.cs" />
-    <Compile Include="Toolkit\Utility\PathEqualityComparer.cs" />
-    <Compile Include="Toolkit\Utility\ProcessUtility.cs" />
-    <Compile Include="Toolkit\Utility\ProgramFinder.cs" />
-    <Compile Include="Toolkit\Utility\ToolSniffer.cs" />
     <Compile Include="Toolkit\Win32\AdminPrivilege.cs" />
     <Compile Include="Toolkit\Win32\Advapi32.cs" />
     <Compile Include="Toolkit\Win32\AllocationType.cs" />
@@ -328,7 +293,6 @@
     <Compile Include="Toolkit\Win32\SafeHGlobalHandle.cs" />
     <Compile Include="Toolkit\Win32\SafeNativeMethods.cs" />
     <Compile Include="Toolkit\Win32\StreamName.cs" />
-    <Compile Include="Toolkit\Win32\PEInfo.cs" />
     <Compile Include="Toolkit\Win32\Win32StreamId.cs" />
     <Compile Include="Toolkit\Win32\Symlink.cs" />
     <Compile Include="Toolkit\Win32\SafeTokenHandle.cs" />
@@ -347,9 +311,7 @@
     <Compile Include="Toolkit\Win32\WinTrust.cs" />
     <Compile Include="Toolkit\Win32\Winver.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Toolkit\Scripting\Languages\CSV\Exceptions\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <Content Include="$(SolutionDir)resources\icons\CoApp.ico" />
   </ItemGroup>
@@ -359,7 +321,6 @@
       <SubType>Designer</SubType>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <EmbeddedResource Include="Toolkit\Scripting\Languages\CSV\Resources\ExceptionMessage.resx" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
