@@ -9,7 +9,7 @@
 //-----------------------------------------------------------------------
 
 
-namespace CoApp.Toolkit.toolkit.Engine.Client {
+namespace CoApp.Toolkit.Engine.Client {
     using System;
     using System.Collections.Generic;
     using System.IO;
@@ -19,9 +19,9 @@ namespace CoApp.Toolkit.toolkit.Engine.Client {
     using System.Reflection;
     using System.Security.Cryptography;
     using System.Threading.Tasks;
-    using Exceptions;
-    using Extensions;
-    using Tasks;
+    using CoApp.Toolkit.Exceptions;
+    using CoApp.Toolkit.Extensions;
+    using CoApp.Toolkit.Tasks;
 
     public class UniqueInstance<T> :IDisposable where T : class {
         private static readonly Dictionary<string, T> instances = new Dictionary<string, T>();

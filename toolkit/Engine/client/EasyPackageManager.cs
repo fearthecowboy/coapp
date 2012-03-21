@@ -21,7 +21,6 @@ namespace CoApp.Toolkit.Engine.Client {
     using Tasks;
     using Toolkit.Exceptions;
     using Win32;
-    using toolkit.Engine.Client;
 
     public class Feed {
         public string Location { get; internal set; }
@@ -755,12 +754,12 @@ namespace CoApp.Toolkit.Engine.Client {
             }, TaskContinuationOptions.AttachedToParent);
         }
 
-        public Task SupressFeed( string feedLocation ) {
+        public Task SuppressFeed( string feedLocation ) {
             var handler = new RemoteCallResponse();
 
             return PackageManager.Instance.SuppressFeed(feedLocation, handler).ContinueWith((antecedent) => {
                 if( handler.EngineRestarting) {
-                    SupressFeed(feedLocation);
+                    SuppressFeed(feedLocation);
                     return;
                 }
                 handler.ThrowWhenFaulted(antecedent);

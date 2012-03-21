@@ -34,7 +34,7 @@
         <Border Style="{StaticResource ContentBorderStyle}">
             <DockPanel HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="0,0,0,0" Width="Auto">
                 <DockPanel.Background>
-                    <ImageBrush ImageSource="/Images/coapp-background1.png" Stretch="None" TileMode="Tile" Viewport="0,0,700,400" ViewportUnits="Absolute" Opacity="0.6" />
+                    <ImageBrush ImageSource="/resources\images/coapp-background1.png" Stretch="None" TileMode="Tile" Viewport="0,0,700,400" ViewportUnits="Absolute" Opacity="0.6" />
                 </DockPanel.Background>
 
                 <StackPanel DockPanel.Dock="Top" Name="Header" Style="{StaticResource HeaderBackground}" Background="#f7f7f7F7" Height="90" MouseLeftButtonDown="HeaderMouseLeftButtonDown">

@@ -128,7 +128,7 @@ namespace CoApp.Toolkit.Engine.Client {
         public IEnumerable<RemoveCommand> RemoveChoices {
             get {
                 if (HasPackage) {
-                    var ct = PackageSet.InstalledPackages.Count();
+                    var ct = PackageSet.InstalledPackages == null ? 0: PackageSet.InstalledPackages.Count();
                     if (ct > 0) {
 
                         if (ct == 1) {

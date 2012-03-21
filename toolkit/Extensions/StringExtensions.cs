@@ -554,7 +554,7 @@ namespace CoApp.Toolkit.Extensions {
         /// <param name="version">The version.</param>
         /// <returns></returns>
         /// <remarks></remarks>
-        internal static UInt64 VersionStringToUInt64(this string version) {
+        public static UInt64 VersionStringToUInt64(this string version) {
             if (String.IsNullOrEmpty(version)) {
                 return 0;
             }
@@ -573,7 +573,7 @@ namespace CoApp.Toolkit.Extensions {
         /// <param name="version">The version.</param>
         /// <returns></returns>
         /// <remarks></remarks>
-        internal static string UInt64VersiontoString(this UInt64 version) {
+        public static string UInt64VersiontoString(this UInt64 version) {
             return String.Format("{0}.{1}.{2}.{3}", (version >> 48) & 0xFFFF, (version >> 32) & 0xFFFF, (version >> 16) & 0xFFFF,
                 (version) & 0xFFFF);
         }

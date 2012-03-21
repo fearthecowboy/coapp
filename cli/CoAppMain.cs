@@ -26,8 +26,6 @@ namespace CoApp.CLI {
     using Toolkit.Extensions;
     using Toolkit.Logging;
 
-    using Toolkit.toolkit.Engine.Client;
-
     /// <summary>
     /// Main Program for command line coapp tool
     /// </summary>
