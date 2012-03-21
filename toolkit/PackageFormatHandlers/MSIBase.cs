@@ -13,6 +13,7 @@ namespace CoApp.Toolkit.PackageFormatHandlers {
     using System.Collections.Generic;
     using System.Data;
     using System.Data.Common;
+    using System.IO;
     using System.Linq;
     using DynamicXml;
     using Engine;
@@ -98,11 +99,32 @@ namespace CoApp.Toolkit.PackageFormatHandlers {
         public bool IsInstalled(Guid productCode) {
             try {
                 lock (typeof(MSIBase)) {
-                    Installer.OpenProduct(productCode.ToString("B")).Close();
-                    return true;
+                    using( var i = Installer.OpenProduct(productCode.ToString("B"))) {
+                        if (i != null) {
+                            i.Close();
+                            return true;
+                        }
+                    }
                 }
             }
             catch {
+            }
+            return false;
+        }
+
+        private static byte[] SSHeader = new byte[] { 0xd0, 0xcf, 0x11, 0xe0 };
+        public static bool IsStructuredStorageFile( string path ) {
+            try {
+                if( File.Exists(path)) {
+                    using (var f = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)) {
+                        var bytes = new byte[4];
+                        if (f.Read(bytes, 0, 4) == 4 && SSHeader.SequenceEqual(bytes)) {
+                            return true;
+                        }
+                    }
+                }
+            } catch {
+                
             }
             return false;
         }

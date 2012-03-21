@@ -248,6 +248,11 @@ namespace CoApp.Toolkit.Engine {
                 return;
             }
 
+            if (!StartingUp && !ShuttingDown && !Available && AreAnyServiceExesRunning) {
+                // Just...wait a moment to see if anything good is going to happen.
+                Thread.Sleep(800);
+            }
+
             var count = 1200; // 10 minutes.
             if (StartingUp) {
                 while (StartingUp && 0 < count--) {
@@ -311,7 +316,7 @@ namespace CoApp.Toolkit.Engine {
         }
 
         private static void KillServiceProcesses() {
-            foreach (var proc in Process.GetProcessesByName("coapp.service").Where(each => each != Process.GetCurrentProcess()).ToArray()) {
+            foreach (var proc in Process.GetProcessesByName("coapp.service").Where(each => each.Id != Process.GetCurrentProcess().Id).ToArray()) {
                 try {
                     proc.Kill();
                 } catch {
@@ -320,6 +325,9 @@ namespace CoApp.Toolkit.Engine {
             }
         }
 
+        private static bool AreAnyServiceExesRunning{get {
+            return Process.GetProcessesByName("coapp.service").Any(each => each != Process.GetCurrentProcess());
+        }}
 
         public static string CoAppServiceExecutablePath {
             get {

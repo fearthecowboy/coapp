@@ -278,10 +278,15 @@ namespace CoApp.Toolkit.Scripting.Languages.PropertySheet {
     public class Rule : DynamicObject {
         internal readonly PropertySheet ParentPropertySheet;
         private readonly List<NewRuleProperty> _properties = new List<NewRuleProperty>();
-        public string Class;
-        public string Id;
-        public string Name = "*";
-        public string Parameter;
+        public string Class { get; set; }
+        public string Id { get; set; }
+        public string Name{ get; set; }
+        private string _parameter;
+        public string Parameter { get {
+            return ParentPropertySheet.ResolveMacros(_parameter);
+        } set {
+            _parameter = value;
+        } }
         public SourceLocation SourceLocation;
 
         /// <summary>
@@ -289,6 +294,7 @@ namespace CoApp.Toolkit.Scripting.Languages.PropertySheet {
         /// </summary>
         /// <param name="propertySheet"></param>
         internal Rule(PropertySheet propertySheet) {
+            Name = "*";
             ParentPropertySheet = propertySheet;
         }
 
@@ -331,7 +337,7 @@ namespace CoApp.Toolkit.Scripting.Languages.PropertySheet {
 
         public string FullSelector {
             get {
-                return CreateSelectorString(Name, Parameter, Class, Id);
+                return CreateSelectorString(Name, _parameter, Class, Id);
             }
         }
 

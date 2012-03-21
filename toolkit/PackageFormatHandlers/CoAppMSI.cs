@@ -51,18 +51,20 @@ namespace CoApp.Toolkit.PackageFormatHandlers {
         /// <param name="path"></param>
         /// <returns></returns>
         internal static bool HasCoAppProperties(string localPackagePath) {
-            lock (typeof (MSIBase)) {
-                try {
-                    using (var database = new Database(localPackagePath, DatabaseOpenMode.ReadOnly)) {
-                        using (var view = database.OpenView("SELECT Value FROM Property WHERE Property='CoAppPackageFeed' OR Property='CoAppCompositionData'")) {
-                            view.Execute();
-                            return view.Count() == 2;
+            if (IsStructuredStorageFile(localPackagePath)) {
+                lock (typeof (MSIBase)) {
+                    try {
+                        using (var database = new Database(localPackagePath, DatabaseOpenMode.ReadOnly)) {
+                            using (
+                                var view = database.OpenView("SELECT Value FROM Property WHERE Property='CoAppPackageFeed' OR Property='CoAppCompositionData'")) {
+                                view.Execute();
+                                return view.Count() == 2;
+                            }
                         }
-                    }
-                } catch {
-                    return false;
+                    } catch { }
                 }
             }
+            return false;
         }
 
         /// <summary>

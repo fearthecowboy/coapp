@@ -28,6 +28,8 @@ namespace CoApp.Toolkit.Engine {
         /// policy name, description ,accounts
         /// </summary>
         public Action<string,string, IEnumerable<string>> PolicyInformation;
+
+        public Action<bool, bool, bool> LoggingSettings;
 #endif
         public Action<Package> PackageDetails;
         public Action NoPackagesFound;
@@ -135,7 +137,11 @@ namespace CoApp.Toolkit.Engine {
         /// </summary>
         public Action<Package,Package> PackageSatisfiedBy;
 
+        public Action<bool> CurrentTelemetryOption;
+
         public Action Restarting;
+
+        public Action<string, string, string, int, int, DayOfWeek?, int> ScheduledTaskInfo;
 
         public string RequestId;
     }

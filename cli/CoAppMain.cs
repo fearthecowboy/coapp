@@ -46,7 +46,6 @@ namespace CoApp.CLI {
         private bool? _force = null;
         private bool? _forceScan = null;
         private string _location = null;
-        private bool? _pause = null;
         private bool? _dependencies = null;
         private bool? _download = null;
         private bool? _pretend = null;
@@ -80,6 +79,14 @@ namespace CoApp.CLI {
         }
 
         private readonly PackageManager _pm = PackageManager.Instance;
+
+        private readonly EasyPackageManager _easyPackageManager = new EasyPackageManager((itemUri, localLocation, progress) => {
+            "Downloading {0}".format(itemUri).PrintProgressBar(progress);
+        }, (itemUrl, localLocation) => {
+            Console.WriteLine();
+
+        } );
+
         /// <summary>
         /// The (non-static) startup method
         /// </summary>
@@ -87,6 +94,8 @@ namespace CoApp.CLI {
         /// <returns>Process return code.</returns>
         /// <remarks></remarks>
         protected override int Main(IEnumerable<string> args) {
+            
+
             _messages = new PackageManagerMessages {
                 UnexpectedFailure = UnexpectedFailure,
                 NoPackagesFound = NoPackagesFound,
@@ -112,7 +121,7 @@ namespace CoApp.CLI {
                 #region command line parsing
 
                 var options = args.Where(each => each.StartsWith("--")).Switches();
-                var parameters = args.Where(each => !each.StartsWith("--")).Parameters();
+                var parameters = args.Where(each => !each.StartsWith("--")).Parameters().ToArray();
 
                 foreach (var arg in options.Keys) {
                     var argumentParameters = options[arg];
@@ -154,7 +163,9 @@ namespace CoApp.CLI {
                             break;
 
                         case "force-scan":
-                            _forceScan = lastAsBool;
+                        case "scan":
+                        case "rescan":
+                            _easyPackageManager.SetAllFeedsStale();
                             break;
 
                         case "download":
@@ -173,15 +184,14 @@ namespace CoApp.CLI {
                             _location = last;
                             break;
 
-                        case "pause":
-                            _pause = lastAsBool;
-                            break;
-
                         case "verbose":
                             _verbose = lastAsBool;
                             Logger.Errors = true;
                             Logger.Messages = true;
                             Logger.Warnings = true;
+                            _easyPackageManager.EnableMessageLogging();
+                            _easyPackageManager.EnableWarningLogging();
+                            _easyPackageManager.EnableErrorLogging();
                             break;
 
                         case "dependencies":
@@ -214,15 +224,11 @@ namespace CoApp.CLI {
 
                 Logo();
 
-                if (parameters.Count() < 1) {
+                if (!parameters.Any()) {
                     throw new ConsoleException(Resources.MissingCommand);
                 }
 
                 #endregion
-
-                Task task = null;
-                var command = parameters.FirstOrDefault();
-                parameters = parameters.Skip(1);
 #if false
                 if (ConsoleExtensions.InputRedirected) {
                     // grab the contents of the input stream and use that as parameters
@@ -240,57 +246,30 @@ namespace CoApp.CLI {
                     _terse = true;
                     _verbose = false;
                 }
-#endif 
-                if (command.IsNullOrEmpty()) {
+#endif
+              
+                Task task = null;
+                if (parameters.IsNullOrEmpty()) {
                     return Help();
                 }
 
-                if( _verbose) {
-                    _pm.SetLogging(true, true, true);
+                if (parameters[0].EndsWith(".msi")) {
+                    var files = parameters.FindFilesSmarter().ToArray();
+                    if( files.Length > 0 ) {
+                        // assume install if just given filenames 
+                        return InstallFiles(files);
+                    }
                 }
 
-                if (command.EndsWith(".msi") && File.Exists(command) && parameters.IsNullOrEmpty()) {
-                    // assume install if the only thing given is a filename.
-                    task =
-                        _pm.GetPackages(command, _minVersion, _maxVersion, _dependencies , _installed, _active, _required, _blocked, _latest, _location, _forceScan, messages: _messages).
-                            ContinueWith(antecedent => Install(antecedent.Result));
-                    return 0;
-                }
+                var command = parameters.FirstOrDefault();
+                parameters = parameters.Skip(1).ToArray();
 
                 if (!command.StartsWith("-")) {
                     command = command.ToLower();
                 }
 
+
                 switch (command) {
-#if FALSE
-                        case "download":
-                            var remoteFileUri = new Uri(parameters.First());
-                            // create the remote file reference 
-                            var remoteFile = new RemoteFile(remoteFileUri, CancellationTokenSource.Token);
-                            var previewTask = remoteFile.Preview();
-                            previewTask.Wait();
-                            // Tell it to download it 
-                            var getTask = remoteFile.Get();
-
-                            // monitor the progress.
-                            remoteFile.DownloadProgress.Notification += progress => {
-                                // this executes when the download progress value changes. 
-                                Console.Write(progress <= 100 ? "..{0}% " : "bytes: [{0}]", progress);
-                            };
-
-                            // when it's done, do this:
-                            getTask.ContinueWith(t => {
-                                // this executes when the Get() operation completes.
-                                Console.WriteLine("File {0} has finished downloading", remoteFile.LocalFullPath);
-                            },TaskContinuationOptions.AttachedToParent);
-                            break;
-
-                        case "verify-package":
-                            var r = Verifier.HasValidSignature(parameters.First());
-                            Console.WriteLine("Has Valid Signature: {0}", r);
-                            Console.WriteLine("Name: {0}", Verifier.GetPublisherInformation(parameters.First())["PublisherName"]);
-                            break;
-#endif
                     case "-?":
                         return Help();
                      
@@ -298,8 +277,7 @@ namespace CoApp.CLI {
                     case "list":
                     case "list-package":
                     case "list-packages":
-                        task =
-                            _pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, _installed, _active, _required, _blocked, _latest, _location,_forceScan,  messages: _messages).ContinueWith(antecedent => ListPackages(antecedent.Result));
+                        task = NewListPackages(parameters);
                         break;
 
                     case "-i":
@@ -312,9 +290,7 @@ namespace CoApp.CLI {
 
                         // if you haven't specified this, we're gonna assume that you want the latest version
                         // this is overridden if the user specifies a version tho'
-                        if( _latest == null ) {
-                            _latest = true;
-                        }
+                        _latest = _latest ?? true;
 
                         task =
                             _pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, _installed, _active, _required, _blocked, _latest, _location, _forceScan, messages: _messages).
@@ -505,7 +481,7 @@ namespace CoApp.CLI {
 
                     case "remove-from-policy": {
                         if (parameters.Count() != 2) {
-                            throw new ConsoleException("Remove-to-policy requires at two parameters (policy name and account)");
+                            throw new ConsoleException("Remove-from-policy requires at two parameters (policy name and account)");
                         }
 
                         var policyName = parameters.First();
@@ -543,13 +519,6 @@ namespace CoApp.CLI {
                     }).Wait();
                 }
 
-                if( _pause == true ) {
-                    Console.ReadLine();
-                }
-
-                if (_pause == true) {
-                    Console.ReadLine();
-                }
 
             }
             catch (ConsoleException failure) {
@@ -934,6 +903,14 @@ namespace CoApp.CLI {
                 "ChangeBlockedState", "EditSystemFeeds", "EditSessionFeeds", "PauseService", "StopService", "ModifyPolicy", "Symlink",
             };
         
+        private int InstallFiles(IEnumerable<string> filenames ) {
+            return 0;
+        }
+
+        private Task NewListPackages(IEnumerable<string> packageNames) {
+            return null;
+        }
+
         private void ListPolicies() {
             foreach( var name in policyNames ) {
                 _pm.GetPolicy(name, new PackageManagerMessages {

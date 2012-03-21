@@ -42,6 +42,8 @@ namespace CoApp.Toolkit.Engine.Client {
         }
 
         protected Package() {
+            IsPackageInfoStale = true;
+            IsPackageDetailsStale = true;
             Tags = Enumerable.Empty<string>();
             RemoteLocations = Enumerable.Empty<string>();
             Dependencies = Enumerable.Empty<string>();
@@ -52,6 +54,8 @@ namespace CoApp.Toolkit.Engine.Client {
         public string LocalPackagePath{ get; set; }
         public string Name{ get; set; }
         public FourPartVersion Version{ get; set; }
+        public FourPartVersion MinPolicy{ get; set; }
+        public FourPartVersion MaxPolicy { get; set; }
         public Architecture Architecture { get; set; }
         public string PublicKeyToken{ get; set; }
         public bool IsInstalled{ get; set; }
@@ -75,6 +79,9 @@ namespace CoApp.Toolkit.Engine.Client {
         public string ProductCode { get; set; }
         public string PackageItemText { get; set; }
 
+        public bool DoNotUpdate { get; set; }
+        public bool DoNotUpgrade { get; set; }
+
         public bool IsConflicted{ get; set; }
         public Package SatisfiedBy{ get; set; }
 
@@ -83,5 +90,13 @@ namespace CoApp.Toolkit.Engine.Client {
         public IEnumerable<string> Dependencies{ get; set; }
         public IEnumerable<string> SupercedentPackages{ get; set; }
         public IEnumerable<Role> Roles { get; set; }
+
+        internal bool IsPackageInfoStale { get; set; }
+        internal bool IsPackageDetailsStale { get; set; }
+
+        public bool IsCompatableWith(Package package) {
+            return package.Version > Version
+                ? package.MinPolicy <= package.Version && package.MaxPolicy >= Version : MinPolicy <= package.Version && MaxPolicy >= package.Version;
+        }
     };
 }

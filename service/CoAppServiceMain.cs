@@ -9,7 +9,9 @@ using System.ServiceProcess;
 namespace CoApp.Service {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.Linq;
+    using System.Reflection;
     using System.Threading;
     using Toolkit.Engine;
     using Toolkit.Exceptions;
@@ -144,6 +146,23 @@ CoApp.Service [options]
                             break;
 
                         case "interactive":
+                            if (EngineServiceManager.IsServiceRunning) {
+                                Console.WriteLine("Shutting down running assembly.");
+                                EngineServiceManager.TryToStopService();
+
+                                while (EngineServiceManager.IsServiceRunning) {
+                                    Console.Write(".");
+                                    Thread.Sleep(100);
+                                }
+
+                                foreach (var proc in Process.GetProcessesByName("coapp.service").Where(each => each.Id != Process.GetCurrentProcess().Id).ToArray()) {
+                                    try {
+                                        Console.Write("Killing Process...");
+                                        proc.Kill();
+                                    } catch { }
+                                }
+                            }
+
                             _interactive = true;
                             break;
 
@@ -162,7 +181,6 @@ CoApp.Service [options]
 
                 if (_interactive) {
                     RequiresAdmin("--interactive");
-
                     if (EngineServiceManager.IsServiceRunning) {
                         throw new ConsoleException(
                             "The CoApp Service can not be running.\r\nYou must stop it with --stop before using the service interactively.");

@@ -11,9 +11,7 @@ namespace CoApp.Toolkit.Engine.Feeds {
 
     internal class InstalledPackageFeed : PackageFeed {
         internal static string CanonicalLocation = "CoApp://InstalledPackages";
-        internal static InstalledPackageFeed Instance = new InstalledPackageFeed();
-
-        private readonly HashSet<long> _nonCoAppMSIFiles = new HashSet<long>();
+        internal static InstalledPackageFeed Instance = new InstalledPackageFeed();       
 
         /// <summary>
         /// contains the list of packages in the direcory. (may be recursive)
@@ -21,7 +19,7 @@ namespace CoApp.Toolkit.Engine.Feeds {
         private readonly List<Package> _packageList = new List<Package>();
 
         private InstalledPackageFeed() : base(CanonicalLocation) {
-            LoadCache();
+            
         }
 
         internal void PackageRemoved( Package package ) {
@@ -51,27 +49,7 @@ namespace CoApp.Toolkit.Engine.Feeds {
                     var installedFiles =
                         MSIBase.InstalledMSIFilenames.Union(PackageManagerSettings.CoAppPackageCache.FindFilesSmarter("*.msi")).ToArray();
 
-                    /*
-                    for (var i = 0; i < installedFiles.Length;i++ ) {
-                        var packageFilename = installedFiles[i];
-
-                        Progress = (i*100)/installedFiles.Length;
-
-                        var lookup = File.GetCreationTime(packageFilename).Ticks + packageFilename.GetHashCode();
-
-                        if( _nonCoAppMSIFiles.Contains(lookup) ) {
-                            // already identified as a not-coapp-package.
-                            continue;
-                        }
-
-                        var pkg = Package.GetPackageFromFilename(packageFilename);
-
-                        if (pkg != null && pkg.IsInstalled) { 
-                            _packageList.Add(pkg);
-                        } 
-                    }
-
-                     * */
+                  
                     var count = installedFiles.Length;
 
                     installedFiles.AsParallel().ForAll(each => {
@@ -79,11 +57,14 @@ namespace CoApp.Toolkit.Engine.Feeds {
                         Progress = (count - installedFiles.Length)*100/installedFiles.Length;
                         var lookup = File.GetCreationTime(each).Ticks + each.GetHashCode();
 
-                        if (!_nonCoAppMSIFiles.Contains(lookup)) {
+                        if (!Cache.Contains(lookup)) {
                             var pkg = Package.GetPackageFromFilename(each);
 
                             if (pkg != null && pkg.IsInstalled) {
                                 _packageList.Add(pkg);
+                            } else {
+                                // doesn't appear to be a coapp package
+                                Cache.Add(lookup);
                             }
                         }
                     });
@@ -93,40 +74,6 @@ namespace CoApp.Toolkit.Engine.Feeds {
                     Scanned = true;
                     Stale = false;
                 }
-            }
-        }
-
-        private void LoadCache() {
-            _nonCoAppMSIFiles.Clear();
-
-            var cache = PackageManagerSettings.CacheSettings["#nonCoAppPackageMap"].BinaryValue;
-            if (cache.IsNullOrEmpty()) {
-                return;
-            }
-
-            using (var ms = new MemoryStream(cache.ToArray())) {
-                var binaryReader = new BinaryReader(ms);
-                var count = binaryReader.ReadInt32();
-                for (var i = 0; i < count; i++) {
-                    var value = binaryReader.ReadInt64();
-                    if (!_nonCoAppMSIFiles.Contains(value)) {
-                        _nonCoAppMSIFiles.Add(value);
-                    }
-                }
-            }
-        }
-
-        private void SaveCache() {
-            using (var ms = new MemoryStream()) {
-                var binaryWriter = new BinaryWriter(ms);
-
-                // order of the following is very important.
-                binaryWriter.Write(_nonCoAppMSIFiles.Count);
-                foreach (var val in _nonCoAppMSIFiles) {
-                    binaryWriter.Write(val);
-                }
-
-                PackageManagerSettings.CacheSettings["#nonCoAppPackageMap"].BinaryValue = ms.GetBuffer();
             }
         }
 

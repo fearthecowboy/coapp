@@ -1,6 +1,8 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright company="CoApp Project">
-//     Copyright (c) 2011 Garrett Serack. All rights reserved.
+//     Copyright (c) 2010-2012 Garrett Serack and CoApp Contributors. 
+//     Contributors can be discovered using the 'git log' command.
+//     All rights reserved.
 // </copyright>
 // <license>
 //     The software is licensed under the Apache 2.0 License (the "License")
@@ -61,7 +63,7 @@ namespace CoApp.Toolkit.Engine.Client {
 
             public static ManualEventQueue GetQueue(int taskId) {
                 lock (EventQueues) {
-                    return EventQueues[taskId];
+                    return EventQueues.ContainsKey(taskId) ? EventQueues[taskId] : null;
                 }
             }
 
@@ -194,7 +196,11 @@ namespace CoApp.Toolkit.Engine.Client {
                         Logger.Message("Response:{0}".format(responseMessage.ToSmallerString()));
 
                         try {
-                            ManualEventQueue.GetQueue(rqid.GetValueOrDefault()).Enqueue(responseMessage);
+                            
+                            var queue = ManualEventQueue.GetQueue(rqid.GetValueOrDefault());
+                            if (queue != null) {
+                                queue.Enqueue(responseMessage);
+                            }
                         }
                         catch {
                             //  Console.WriteLine("Unable to queue the response to the right request event queue!");
@@ -233,25 +239,26 @@ namespace CoApp.Toolkit.Engine.Client {
             }
         }
 
+        // V1 api
+        public Task<IEnumerable<Package>> GetPackages(IEnumerable<string> parameters, ulong? minVersion, ulong? maxVersion ,bool? dependencies , bool? installed , bool? active , bool? required , bool? blocked , bool? latest,string location , bool? forceScan , PackageManagerMessages messages = null) {
+            return GetPackages(parameters, minVersion, maxVersion, dependencies, installed, active, required, blocked, latest, location,forceScan, null, null, null, messages);
+        }
+
+        // V1.1 api
         public Task<IEnumerable<Package>> GetPackages(IEnumerable<string> parameters, ulong? minVersion = null, ulong? maxVersion = null,
             bool? dependencies = null, bool? installed = null, bool? active = null, bool? required = null, bool? blocked = null, bool? latest = null,
-            string location = null, bool? forceScan = null, PackageManagerMessages messages = null) {
-            Connect().Wait();
+            string location = null, bool? forceScan = null, bool? updates = null, bool? upgrades = null, bool? trimable = null,  PackageManagerMessages messages = null) {
+            Connect(); 
 
             if (parameters.IsNullOrEmpty()) {
-                return GetPackages(string.Empty, minVersion, maxVersion, dependencies, installed, active, required, blocked, latest, location, forceScan,
-                    messages);
+                return GetPackages(string.Empty, minVersion, maxVersion, dependencies, installed, active, required, blocked, latest, location, forceScan,updates , upgrades , trimable, messages);
             }
 
             // spawn the tasks off in parallel
-            var tasks =
-                parameters.Select(
-                    each => GetPackages(each, minVersion, maxVersion, dependencies, installed, active, required, blocked, latest, location, forceScan, messages))
-                    .ToArray();
+            var tasks = parameters.Select(each => GetPackages(each, minVersion, maxVersion, dependencies, installed, active, required, blocked, latest, location, forceScan, updates, upgrades, trimable, messages)).ToArray();
 
             // return a task that is the sum of all the tasks.
             return Task<IEnumerable<Package>>.Factory.ContinueWhenAll((Task[])tasks, antecedents => {
-
                 var faulted = tasks.Where(each => each.IsFaulted);
                 if( faulted.Any()) {
                     throw faulted.FirstOrDefault().Exception.Flatten().InnerExceptions.FirstOrDefault();
@@ -261,16 +268,20 @@ namespace CoApp.Toolkit.Engine.Client {
                 TaskContinuationOptions.AttachedToParent);
         }
 
-        public Task<IEnumerable<Package>> GetPackages(string parameter, ulong? minVersion = null, ulong? maxVersion = null, bool? dependencies = null,
-            bool? installed = null, bool? active = null, bool? required = null, bool? blocked = null, bool? latest = null, string location = null,
-            bool? forceScan = null, PackageManagerMessages messages = null) {
-            Connect().Wait();
-            var packages = new List<Package>();
+        // v1 API
+        public Task<IEnumerable<Package>> GetPackages(string parameter, ulong? minVersion, ulong? maxVersion , bool? dependencies , bool? installed , bool? active , bool? required , bool? blocked , bool? latest , string location , bool? forceScan , PackageManagerMessages messages ) {
+            return GetPackages(parameter, minVersion, maxVersion, dependencies, installed, active, required, blocked, latest, location, forceScan, null, null, null, messages);
+        }
 
+        // V1.1 API
+        public Task<IEnumerable<Package>> GetPackages(string parameter, ulong? minVersion = null, ulong? maxVersion = null, bool? dependencies = null, bool? installed = null, bool? active = null, bool? required = null, bool? blocked = null, bool? latest = null, string location = null, bool? forceScan = null, bool? updates = null, bool? upgrades = null, bool? trimable = null, PackageManagerMessages messages = null) {
+            Connect();
+
+            var packages = new List<Package>();
             if (parameter.IsNullOrEmpty()) {
                 return FindPackages( /* canonicalName:*/
                     null, /* name */null, /* version */null, /* arch */ null, /* pkt */null, dependencies, installed, active, required, blocked, latest,
-                    /* index */null, /* max-results */null, location, forceScan, new PackageManagerMessages {
+                    /* index */null, /* max-results */null, location, forceScan, updates , upgrades , trimable, new PackageManagerMessages {
                         PackageInformation = package => packages.Add(package),
                     }.Extend(messages)).ContinueWith(antecedent => {
                         if( antecedent.IsFaulted || antecedent.IsCanceled ) {
@@ -302,9 +313,7 @@ namespace CoApp.Toolkit.Engine.Client {
 
                         // if it was a feed, then continue with the big query
                         if (feedAdded != null) {
-                            return
-                                InternalGetPackages(null, minVersion, maxVersion, dependencies, installed, active, required, blocked, latest, feedAdded,
-                                    forceScan, messages).Result;
+                            return InternalGetPackages(null, minVersion, maxVersion, dependencies, installed, active, required, blocked, latest, feedAdded,forceScan, updates , upgrades , trimable,  messages).Result;
                         }
 
                         // if we get here, that means that we didn't recognize the file. 
@@ -326,8 +335,7 @@ namespace CoApp.Toolkit.Engine.Client {
                     // if it was a feed, then continue with the big query
                     if (feedAdded != null) {
                         // this overrides any passed in locations with just the feed added.
-                        return InternalGetPackages(null, minVersion, maxVersion, dependencies, installed, active, required, blocked, latest, feedAdded, forceScan,
-                                messages).Result;
+                        return InternalGetPackages(null, minVersion, maxVersion, dependencies, installed, active, required, blocked, latest, feedAdded, forceScan, updates , upgrades , trimable,  messages).Result;
                     }
 
                     // if we get here, that means that we didn't recognize the file. 
@@ -336,21 +344,16 @@ namespace CoApp.Toolkit.Engine.Client {
                 }, TaskContinuationOptions.AttachedToParent);
             }
             // can only be a canonical name match, proceed with that.            
-            return InternalGetPackages(PackageName.Parse(parameter), minVersion, maxVersion, dependencies, installed, active, required, blocked, latest,
-                location, forceScan, messages);
+            return InternalGetPackages(PackageName.Parse(parameter), minVersion, maxVersion, dependencies, installed, active, required, blocked, latest, location, forceScan, updates , upgrades , trimable,  messages);
         }
 
-        private Task<IEnumerable<Package>> InternalGetPackages(PackageName packageName, FourPartVersion? minVersion = null, FourPartVersion? maxVersion = null,
-            bool? dependencies = null, bool? installed = null, bool? active = null, bool? required = null, bool? blocked = null, bool? latest = null,
-            string location = null, bool? forceScan = null, PackageManagerMessages messages = null) {
-            Connect().Wait();
-
+        private Task<IEnumerable<Package>> InternalGetPackages(PackageName packageName, FourPartVersion? minVersion , FourPartVersion? maxVersion ,bool? dependencies , bool? installed , bool? active , bool? required , bool? blocked , bool? latest ,string location , bool? forceScan , bool? updates , bool? upgrades , bool? trimable , PackageManagerMessages messages ) {
             var packages = new List<Package>();
 
             return FindPackages(packageName != null && packageName.IsFullMatch ? packageName.CanonicalName : null, packageName == null ? null : packageName.Name,
                 packageName == null ? null : packageName.Version, packageName == null ? null : packageName.Arch,
                 packageName == null ? null : packageName.PublicKeyToken, dependencies, installed, active, required, blocked, latest, null, null, location,
-                forceScan, new PackageManagerMessages {
+                forceScan, updates, upgrades, trimable, new PackageManagerMessages {
                     PackageInformation = package => {
                         if ((!minVersion.HasValue || package.Version >= minVersion) &&
                             (!maxVersion.HasValue || package.Version <= maxVersion)) {
@@ -365,9 +368,15 @@ namespace CoApp.Toolkit.Engine.Client {
                 }, TaskContinuationOptions.AttachedToParent);
         }
 
+        // v1 api
+        public Task FindPackages(string canonicalName, string name, string version, string arch, string publicKeyToken,bool? dependencies, bool? installed, bool? active, bool? required, bool? blocked, bool? latest,int? index, int? maxResults, string location, bool? forceScan, PackageManagerMessages messages) {
+            return FindPackages(canonicalName, name, version, arch, publicKeyToken,dependencies, installed, active, required, blocked, latest,index, maxResults, location, forceScan, null, null, null, messages);
+        }
+
+        // v1.1 api
         public Task FindPackages(string canonicalName = null, string name = null, string version = null, string arch = null, string publicKeyToken = null,
             bool? dependencies = null, bool? installed = null, bool? active = null, bool? required = null, bool? blocked = null, bool? latest = null,
-            int? index = null, int? maxResults = null, string location = null, bool? forceScan = null, PackageManagerMessages messages = null) {
+            int? index = null, int? maxResults = null, string location = null, bool? forceScan = null,bool? updates = null, bool? upgrades = null, bool? trimable = null, PackageManagerMessages messages = null) {
 
             return Connect().ContinueWith((antecedent) => {
                 if (messages != null) {
@@ -390,6 +399,9 @@ namespace CoApp.Toolkit.Engine.Client {
                         {"max-results", maxResults},
                         {"location", location},
                         {"force-scan", forceScan},
+                        {"updates", updates},
+                        {"upgrades", upgrades},
+                        {"trimable", trimable},
                         {"rqid", Task.CurrentId},
                     });
 
@@ -400,8 +412,7 @@ namespace CoApp.Toolkit.Engine.Client {
         }
 
         public Task GetPackageDetails(string canonicalName, PackageManagerMessages messages = null) {
-            
-            return  Connect().ContinueWith((antecedent) => {
+            return Connect().ContinueWith((antecedent) => {
                 if (messages != null) {
                     messages.Register();
                 }
@@ -417,8 +428,11 @@ namespace CoApp.Toolkit.Engine.Client {
             }, TaskContinuationOptions.OnlyOnRanToCompletion).AutoManage();
         }
 
-        public Task InstallPackage(string canonicalName, bool? autoUpgrade = null, bool? force = null, bool? download = null, bool? pretend = null,
-            PackageManagerMessages messages = null) {
+        public Task InstallPackage(string canonicalName, bool? autoUpgrade = null, bool? force = null, bool? download = null, bool? pretend = null, PackageManagerMessages messages = null) {
+            return InstallPackage(canonicalName, autoUpgrade, force, download, pretend, null, null, messages);
+        }
+
+        public Task InstallPackage(string canonicalName, bool? autoUpgrade, bool? force , bool? download , bool? pretend , bool? isUpdating, bool? isUpgrading, PackageManagerMessages messages = null) {
 
             return Connect().ContinueWith((antecedent) => {
                 var msgs = new PackageManagerMessages {
@@ -455,6 +469,8 @@ namespace CoApp.Toolkit.Engine.Client {
                         {"force", force},
                         {"download", download},
                         {"pretend", pretend},
+                        {"is-update", isUpdating},
+                        {"is-upgrade", isUpgrading},
                         {"rqid", Task.CurrentId},
                     });
 
@@ -535,7 +551,11 @@ namespace CoApp.Toolkit.Engine.Client {
             }, TaskContinuationOptions.OnlyOnRanToCompletion).AutoManage();
         }
 
-        public Task SetPackage(string canonicalName, bool? active = null, bool? required = null, bool? blocked = null, PackageManagerMessages messages = null) {
+        public Task SetPackage(string canonicalName, bool? active , bool? required , bool? blocked , PackageManagerMessages messages ) {
+            return SetPackage(canonicalName, active, required, blocked, null, null, messages);
+        }
+
+        public Task SetPackage(string canonicalName, bool? active = null, bool? required = null, bool? blocked = null, bool? doNotUpdate = null, bool? doNotUpgrade = null, PackageManagerMessages messages = null) {
             return Connect().ContinueWith((antecedent) => {
                 if (messages != null) {
                     messages.Register();
@@ -546,6 +566,26 @@ namespace CoApp.Toolkit.Engine.Client {
                         {"active", active},
                         {"required", required},
                         {"blocked", blocked},
+                        {"do-not-update", doNotUpdate},
+                        {"do-not-upgrade", doNotUpgrade},
+                        // active-configuration-name
+                        {"rqid", Task.CurrentId},
+                    });
+
+                    // will return when the final message comes thru.
+                    eventQueue.DispatchResponses();
+                }
+            }, TaskContinuationOptions.OnlyOnRanToCompletion).AutoManage();
+        }
+
+        public Task SetFeedStale(string feedLocation, PackageManagerMessages messages = null) {
+            return Connect().ContinueWith((antecedent) => {
+                if (messages != null) {
+                    messages.Register();
+                }
+                using (var eventQueue = new ManualEventQueue()) {
+                    WriteAsync(new UrlEncodedMessage("set-feed-stale") {
+                        {"feed-name", feedLocation},
                         {"rqid", Task.CurrentId},
                     });
 
@@ -645,6 +685,10 @@ namespace CoApp.Toolkit.Engine.Client {
         }
 
         public Task SetLogging( bool? Messages, bool? Warnings, bool? Errors ) {
+            return SetLogging(Messages, Warnings, Errors);
+        }
+
+        public Task SetLogging(bool? Messages = null, bool? Warnings = null, bool? Errors = null, PackageManagerMessages messages = null) {
             return Connect().ContinueWith((antecedent) => {
                 using (var eventQueue = new ManualEventQueue()) {
                     WriteAsync(new UrlEncodedMessage("set-logging") {
@@ -735,6 +779,96 @@ namespace CoApp.Toolkit.Engine.Client {
             }, TaskContinuationOptions.OnlyOnRanToCompletion).AutoManage();
           }
 
+        public Task AddScheduledTask(string taskName, string executable, string commandline, int hour, int minutes, DayOfWeek? dayOfWeek, int intervalInMinutes, PackageManagerMessages messages = null) {
+            return Connect().ContinueWith((antecedent) => {
+                if (messages != null) {
+                    messages.Register();
+                }
+                using (var eventQueue = new ManualEventQueue()) {
+                    WriteAsync(new UrlEncodedMessage("schedule-task") {
+                        {"name", taskName},
+                        {"executable", executable},
+                        {"command-line", commandline},
+                        {"hour", hour},
+                        {"minutes", minutes},
+                        {"day-of-week", dayOfWeek != null ? dayOfWeek.Value.ToString():null },
+                        {"interval", intervalInMinutes},
+                        {"rqid", Task.CurrentId},
+                    });
+
+                    // will return when the final message comes thru.
+                    eventQueue.DispatchResponses();
+                }
+            }, TaskContinuationOptions.OnlyOnRanToCompletion).AutoManage();
+        }
+
+        public Task RemoveScheduledTask(string taskName, PackageManagerMessages messages = null) {
+            return Connect().ContinueWith((antecedent) => {
+                if (messages != null) {
+                    messages.Register();
+                }
+                using (var eventQueue = new ManualEventQueue()) {
+                    WriteAsync(new UrlEncodedMessage("remove-scheduled-task") {
+                        {"name", taskName},
+                        {"rqid", Task.CurrentId},
+                    });
+
+                    // will return when the final message comes thru.
+                    eventQueue.DispatchResponses();
+                }
+            }, TaskContinuationOptions.OnlyOnRanToCompletion).AutoManage();
+        }
+
+        public Task GetScheduledTask(string taskName, PackageManagerMessages messages = null) {
+            return Connect().ContinueWith((antecedent) => {
+                if (messages != null) {
+                    messages.Register();
+                }
+                using (var eventQueue = new ManualEventQueue()) {
+                    WriteAsync(new UrlEncodedMessage("get-scheduled-tasks") {
+                        {"name", taskName},
+                        {"rqid", Task.CurrentId},
+                    });
+
+                    // will return when the final message comes thru.
+                    eventQueue.DispatchResponses();
+                }
+            }, TaskContinuationOptions.OnlyOnRanToCompletion).AutoManage();
+        }
+
+        public Task SetTelemetry(bool optIntoTelemetryTracking, PackageManagerMessages messages = null) {
+            return Connect().ContinueWith((antecedent) => {
+                if (messages != null) {
+                    messages.Register();
+                }
+                using (var eventQueue = new ManualEventQueue()) {
+                    WriteAsync(new UrlEncodedMessage("set-telemetry") {
+                        {"opt-in", optIntoTelemetryTracking},
+                        {"rqid", Task.CurrentId},
+                    });
+
+                    // will return when the final message comes thru.
+                    eventQueue.DispatchResponses();
+                }
+            }, TaskContinuationOptions.OnlyOnRanToCompletion).AutoManage();
+        }
+
+        public Task GetTelemetry(PackageManagerMessages messages = null) {
+            return Connect().ContinueWith((antecedent) => {
+                if (messages != null) {
+                    messages.Register();
+                }
+                using (var eventQueue = new ManualEventQueue()) {
+                    WriteAsync(new UrlEncodedMessage("get-telemetry") {
+                        {"rqid", Task.CurrentId},
+                    });
+
+                    // will return when the final message comes thru.
+                    eventQueue.DispatchResponses();
+                }
+            }, TaskContinuationOptions.OnlyOnRanToCompletion).AutoManage();
+        }
+
         internal static bool Dispatch(UrlEncodedMessage responseMessage = null) {
             switch (responseMessage.Command) {
                 case "failed-package-install":
@@ -773,18 +907,24 @@ namespace CoApp.Toolkit.Engine.Client {
                     result.LocalPackagePath = responseMessage["local-location"];
                     result.Name = responseMessage["name"];
                     result.Version = (FourPartVersion)(string)responseMessage["version"];
+                    result.MinPolicy= (FourPartVersion)(string)responseMessage["min-policy"];
+                    result.MaxPolicy = (FourPartVersion)(string)responseMessage["max-policy"];
                     result.Architecture = ((string)responseMessage["arch"]);
                     result.PublicKeyToken = responseMessage["public-key-token"];
                     result.ProductCode = responseMessage["product-code"];
                     result.IsInstalled = (bool?) responseMessage["installed"] ?? false;
                     result.IsBlocked = (bool?) responseMessage["blocked"] ?? false;
+                    
                     result.IsRequired = (bool?) responseMessage["required"] ?? false;
+                   
                     result.IsClientRequired = (bool?) responseMessage["client-required"] ?? false;
+                    
                     result.IsActive = (bool?) responseMessage["active"] ?? false;
                     result.IsDependency = (bool?) responseMessage["dependent"] ?? false;
                     result.RemoteLocations = responseMessage.GetCollection("remote-locations");
                     result.Dependencies = responseMessage.GetCollection("dependencies");
                     result.SupercedentPackages = responseMessage.GetCollection("supercedent-packages");
+                    result.IsPackageInfoStale = false;
 
                     PackageManagerMessages.Invoke.PackageInformation(result);
                     break;
@@ -855,6 +995,7 @@ namespace CoApp.Toolkit.Engine.Client {
                         msg.AddCollection("contributor-email", package.PackageDetails.Contributors.Select(each => each.Email));
                     }
                      * */
+                    details.IsPackageDetailsStale = false;
                     PackageManagerMessages.Invoke.PackageDetails(details);
                     break;
 
@@ -904,10 +1045,22 @@ namespace CoApp.Toolkit.Engine.Client {
                     PackageManagerMessages.Invoke.PolicyInformation(responseMessage["name"], responseMessage["description"], responseMessage.GetCollection("accounts"));
                     break;
 
+                case "telemetry":
+                    PackageManagerMessages.Invoke.CurrentTelemetryOption((bool?)responseMessage["opt-in"]??false);
+                    break;
+
                 case "restarting":
                     PackageManagerMessages.Invoke.Restarting();
                     // disconnect from the engine, and let the client reconnect on the next call.
                     Instance.Disconnect();
+                    break;
+
+                case "done-set-logging" :
+                    PackageManagerMessages.Invoke.LoggingSettings((bool?)responseMessage["is-logging-messages"] ?? false, (bool?)responseMessage["is-logging-warnings"] ?? false, (bool?)responseMessage["is-logging-errors"]??false);
+                    break;
+
+                case "scheduled-task-info" :
+                    PackageManagerMessages.Invoke.ScheduledTaskInfo(responseMessage["name"], responseMessage["executable"], responseMessage["command-line"], (int?)responseMessage["hour"] ?? 0, (int?)responseMessage["minutes"] ?? 0, (DayOfWeek?)(int?)responseMessage["day-of-week"], (int?)responseMessage["interval"]??0);
                     break;
 
                 case "task-complete":

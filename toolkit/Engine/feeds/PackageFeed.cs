@@ -14,6 +14,7 @@ namespace CoApp.Toolkit.Engine.Feeds {
     using System.IO;
     using System.Linq;
     using System.Threading.Tasks;
+    using Extensions;
     using Tasks;
 
     /// <summary>
@@ -67,9 +68,12 @@ namespace CoApp.Toolkit.Engine.Feeds {
 
 
         internal virtual bool Stale {
-            get { return _stale; }
+            get {
+                return _stale && LastScanned.Subtract(DateTime.Now) <= new TimeSpan(12, 0, 0);
+            }
             set { _stale = value; }
         }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="PackageFeed"/> class.
         /// </summary>
@@ -218,5 +222,52 @@ namespace CoApp.Toolkit.Engine.Feeds {
         }
 
         internal DateTime LastScanned = DateTime.FromFileTime(0);
+
+
+        protected HashSet<long> Cache {
+            get {
+                lock (typeof (PackageFeed)) {
+                    if (_nonCoAppMSIFiles != null) {
+                        return _nonCoAppMSIFiles;
+                    }
+
+                    _nonCoAppMSIFiles = new HashSet<long>();
+
+                    var cache = PackageManagerSettings.CacheSettings["#nonCoAppPackageMap"].BinaryValue;
+                    if (!cache.IsNullOrEmpty()) {
+
+                        using (var ms = new MemoryStream(cache.ToArray())) {
+                            var binaryReader = new BinaryReader(ms);
+                            var count = binaryReader.ReadInt32();
+                            for (var i = 0; i < count; i++) {
+                                var value = binaryReader.ReadInt64();
+                                if (!_nonCoAppMSIFiles.Contains(value)) {
+                                    _nonCoAppMSIFiles.Add(value);
+                                }
+                            }
+                        }
+                    }
+                    return _nonCoAppMSIFiles;
+                }
+            }
+        }
+
+        protected void SaveCache() {
+            lock (typeof(PackageFeed)) {
+                using (var ms = new MemoryStream()) {
+                    var binaryWriter = new BinaryWriter(ms);
+
+                    // order of the following is very important.
+                    binaryWriter.Write(_nonCoAppMSIFiles.Count);
+                    foreach (var val in _nonCoAppMSIFiles) {
+                        binaryWriter.Write(val);
+                    }
+
+                    PackageManagerSettings.CacheSettings["#nonCoAppPackageMap"].BinaryValue = ms.GetBuffer();
+                }
+            }
+        }
+
+        private HashSet<long> _nonCoAppMSIFiles;
     }
 }

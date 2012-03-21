@@ -64,14 +64,23 @@ namespace CoApp.Toolkit.Scripting.Languages.PropertySheet {
         protected override bool PoachParse() {
             if (CurrentCharacter == '-') {
             }
+            var squareStack = 0;
 
             if (CurrentCharacter == '[') {
                 int start = Index + 1;
                 while (CharsLeft > 0) {
                     AdvanceAndRecognize();
 
-                    if (CurrentCharacter == ']') {
+                    if( CurrentCharacter == '[') {
+                        squareStack++;
+                    }
+
+                    if (CurrentCharacter == ']' && squareStack == 0) {
                         break;
+                    }
+
+                    if(CurrentCharacter == ']' ) {
+                        squareStack--;
                     }
                 }
 

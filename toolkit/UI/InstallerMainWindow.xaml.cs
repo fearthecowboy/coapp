@@ -5,8 +5,10 @@
     using System.Windows.Controls.Primitives;
     using System.Windows.Data;
     using System.Windows.Input;
+    using System.Windows.Media;
     using System.Windows.Media.Animation;
     using Engine.Client;
+
 
     /// <summary>
     ///   Interaction logic for InstallerMainWindow.xaml
@@ -19,34 +21,44 @@
             Opacity = 0;
             Installer = installer;
             InitializeComponent();
-
+            
             OrganizationName.SetBinding(TextBlock.TextProperty, new Binding("Organization") { Source = Installer });
             ProductName.SetBinding(TextBlock.TextProperty, new Binding("Product") { Source = Installer });
             PackageIcon.SetBinding(Image.SourceProperty, new Binding("PackageIcon") { Source = Installer });
             DescriptionText.SetBinding(TextBlock.TextProperty, new Binding("Description") { Source = Installer });
-            UpgradeToLatestVersion.SetBinding(ToggleButton.IsCheckedProperty, new Binding("AutomaticallyUpgrade") { Source = Installer });
+            WhichVersionToInstall.SetBinding(ComboBox.ItemsSourceProperty, new Binding("InstallChoices") {Source = Installer});
+            WhichVersionToInstall.DisplayMemberPath = "Value";
+            WhichVersionToInstall.SelectedValuePath = "Key";
+            WhichVersionToInstall.SetBinding(ComboBox.SelectedValueProperty, new Binding("Choice") { Source = Installer});
+            
+
             ProductVersion.SetBinding(TextBlock.TextProperty, new Binding("ProductVersion") { Source = Installer });
             InstallButton.SetBinding(UIElement.IsEnabledProperty, new Binding("ReadyToInstall") { Source = Installer });
             InstallButton.SetBinding(FrameworkElement.ToolTipProperty , new Binding("InstallButtonText") { Source = Installer });
             InstallText.SetBinding(TextBlock.TextProperty, new Binding("InstallButtonText") { Source = Installer });
             RemoveButton.SetBinding(Button.VisibilityProperty, new Binding("RemoveButtonVisibility") { Source = Installer });
+            RemoveAdvanced.SetBinding(Button.VisibilityProperty, new Binding("RemoveButtonVisibility") { Source = Installer });
             InstallationProgress.SetBinding(ProgressBar.ValueProperty, new Binding("Progress") { Source = Installer });
             CancelButton.SetBinding(Button.VisibilityProperty, new Binding("CancelButtonVisibility") { Source = Installer });
 
+            RemoveContextMenu.SetBinding(ContextMenu.ItemsSourceProperty, new Binding("RemoveChoices") {Source = Installer});
+            
             try {
                 VisibilityAnimation.SetAnimationType(RemoveButton, VisibilityAnimation.AnimationType.Fade);
                 VisibilityAnimation.SetAnimationType(InstallButton, VisibilityAnimation.AnimationType.Fade);
                 VisibilityAnimation.SetAnimationType(InstallationProgress, VisibilityAnimation.AnimationType.Fade);
-                VisibilityAnimation.SetAnimationType(UpgradeToLatestVersion, VisibilityAnimation.AnimationType.Fade);
+                VisibilityAnimation.SetAnimationType(WhichVersionToInstall, VisibilityAnimation.AnimationType.Fade);
                 VisibilityAnimation.SetAnimationType(CancelButton, VisibilityAnimation.AnimationType.Fade);
             } catch {
                 
             }
+
             Loaded += (src, evnt) => {
-                if (!(Opacity > 0) && Installer.ReadyToDisplay) {
+                if (Opacity <= 0 && Installer.HasPackage ) {
                     ((Storyboard)FindResource("showWindow")).Begin();
                 }
             };
+            
 
             Installer.Ready += (src, evnt) => Invoke(() => {
                if (!(Opacity > 0)) {
@@ -65,6 +77,17 @@
             
         }
 
+        private void MenuItemClick(object sender, RoutedEventArgs e) {
+            var v = e.OriginalSource as MenuItem;
+            if( v != null ) {
+                var commandAction = v.CommandParameter as Action;
+                if( commandAction != null) {
+                    InstallationProgress.Foreground = new SolidColorBrush(Colors.Red);
+                    TakeAction();
+                    commandAction();
+                }
+            }
+        }
 
         private void HeaderMouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
             DragMove();
@@ -72,6 +95,16 @@
 
         private void CloseBtnClick(object sender, RoutedEventArgs e) {
             Installer.CancelRequested = true;
+        }
+
+        private void ShowRemoveMenu(object sender, RoutedEventArgs e) {
+            RemoveContextMenu.PlacementTarget = RemoveAdvanced;
+            RemoveContextMenu.Placement = PlacementMode.Custom;
+            
+            RemoveContextMenu.CustomPopupPlacementCallback = (size, targetSize, offset) => {
+                return new[] { new CustomPopupPlacement(new Point(RemoveAdvanced.Width, (RemoveAdvanced.Height-size.Height) - 10), PopupPrimaryAxis.None) };
+            };
+            RemoveContextMenu.IsOpen = !RemoveContextMenu.IsOpen ;
         }
 
         private void InstallButtonClick(object sender, RoutedEventArgs e) {
@@ -89,16 +122,19 @@
             _actionTaken = true;
 
             InstallationProgress.Visibility = Visibility.Visible;
-            UpgradeToLatestVersion.Visibility = Visibility.Hidden;
+            WhichVersionToInstall.Visibility = Visibility.Hidden;
             InstallButton.Visibility = Visibility.Hidden;
             RemoveButton.Visibility = Visibility.Hidden;
+            RemoveAdvanced.Visibility = Visibility.Hidden;
+            
             ((Storyboard)FindResource("slideTrans")).Begin();
         }
 
         private void RemoveButtonClick(object sender, RoutedEventArgs e) {
             if (!_actionTaken) {
                 TakeAction();
-                Installer.Remove();
+                InstallationProgress.Foreground = new SolidColorBrush(Colors.Red);
+                Installer.RemoveAll();
             }
         }
     }

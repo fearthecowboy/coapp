@@ -10,10 +10,12 @@
 
 namespace CoApp.Toolkit.Engine.Client {
     using System;
+    using System.Collections.Generic;
     using System.ComponentModel;
     using System.Diagnostics;
     using System.IO;
     using System.Linq;
+    using System.Net;
     using System.Reflection;
     using System.Threading;
     using System.Threading.Tasks;
@@ -27,315 +29,310 @@ namespace CoApp.Toolkit.Engine.Client {
     using UI;
     using MessageBox = System.Windows.Forms.MessageBox;
 
+
+    [Flags]
+    public enum InstallChoice {
+        _Unknown = 0,
+        // this choice is informational, not valid
+        _InvalidChoice  = 0x10000000,
+
+        // flags indicating that during the install, the package installed should be marked.
+        _DoNotUpdate    = 0x00010000,
+        _DoNotUpgrade   = 0x00020000,
+        
+        // flags indicating which actual package to install
+        _InstallSpecificVersion = 0x00000001,
+        _InstallLatestUpdate    = 0x00000002,
+        _InstallLatestUpgrade   = 0x00000004,
+
+
+        _Scenario1 = 0x01000000,
+        _Scenario2 = 0x02000000,
+        _Scenario3  = 0x04000000,
+        _Scenario4  = 0x08000000,
+
+        AutoInstallLatest = _Scenario1 | _InstallLatestUpgrade,
+        AutoInstallLatestCompatible = _Scenario1 | _DoNotUpgrade | _InstallLatestUpdate,
+        InstallSpecificVersion = _Scenario1 | _DoNotUpdate | _InstallSpecificVersion,
+
+        UpdateToLatestVersion = _Scenario2 | _InstallLatestUpdate,
+        UpdateToLatestVersionNotUpgrade = _Scenario2 | _DoNotUpgrade | _InstallLatestUpdate,
+        UpgradeToLatestVersion = _Scenario2 | _InstallLatestUpgrade,
+
+        UpgradeToLatestVersion2 = _Scenario3 | _InstallLatestUpgrade,
+        UpdateToLatestVersionNotUpgrade2 = _Scenario3 | _DoNotUpgrade | _InstallLatestUpdate,
+        InstallSpecificVersion2 = _Scenario3 | _DoNotUpdate | _DoNotUpgrade | _InstallSpecificVersion,
+
+        UpgradeToLatestVersion3 = _Scenario4 | _InstallLatestUpgrade,
+        // UpdateToLatestVersion3          = _Scenario4 | _DoNotUpgrade | 0x002,
+        AutoInstallLatestCompatible3 = _Scenario4 | _DoNotUpgrade | _InstallLatestUpdate,
+        InstallSpecificVersion3 = _Scenario4 | _DoNotUpdate | _InstallSpecificVersion,
+
+        NewerVersionAlreadyInstalled = _InvalidChoice | 0x001,
+        OlderVersionAlreadyInstalled = _InvalidChoice | 0x002,
+        ThisVersionAlreadyInstalled  = _InvalidChoice | 0x003
+    }
+
+    internal enum InstallerFailureState {
+        FailedToGetPackageFromFile,
+        FailedToGetPackageDetails
+    }
+
+    public class InstSelection {
+        public InstSelection(InstallChoice key, string value, params object[] args) {
+            Key = key;
+            Value = value.format(args);
+        }
+
+        public InstallChoice Key { get; set; }
+        public string Value{ get; set; }
+    }
+
+    public class RemoveCommand {
+        public string Text { get; set; }
+        public Action CommandParam { get; set; }
+    }
+
     public class Installer : MarshalByRefObject, INotifyPropertyChanged {
         internal string MsiFilename;
         internal Task InstallTask;
-        private PackageManagerMessages _messages;
         public event PropertyChangedEventHandler PropertyChanged;
+
         public event PropertyChangedEventHandler Ready;
         public event PropertyChangedEventHandler Finished;
-        private Package _specifiedPackage;
-        private Package _upgradedPackage;
-        private bool _automaticallyUpgrade = true;
-        public bool ReadyToDisplay { get; set; }
+        
+        private InstallChoice _choice = InstallChoice.InstallSpecificVersion;
 
-        public bool AutomaticallyUpgrade {
-            get { return _automaticallyUpgrade; }
-            set {
-                _automaticallyUpgrade = value;
+        
+        public InstallChoice Choice {
+            get { return _choice; }
+            set { 
+                _choice = value;
+                // PackageIcon = GetPackageBitmap(SelectedPackage.Icon);
+                OnPropertyChanged("SelectedPackage");
                 OnPropertyChanged();
-                ProbeForNewerPackageInfo();
             }
         }
+        /*
+        public InstSelection _selection;
 
-        public Package UpgradedPackage {
-            get { return _upgradedPackage; }
+        public InstSelection Selection {
+            get {
+                
+            }
             set {
-                _upgradedPackage = value;
-                if (AutomaticallyUpgrade) {
-                    OnPropertyChanged();
+                
+            }
+        } 
+        */
+
+        public IEnumerable<RemoveCommand> RemoveChoices {
+            get {
+                if (HasPackage) {
+                    var ct = PackageSet.InstalledPackages.Count();
+                    if (ct > 0) {
+
+                        if (ct == 1) {
+                            yield return new RemoveCommand {
+                                Text = "Remove current version ({0}) [Default]".format(PackageSet.InstalledNewest.Version),
+                                CommandParam = () => RemovePackage(PackageSet.InstalledNewest.CanonicalName)
+                            };
+                        } else {
+                            if (!PackageSet.Trimable.IsNullOrEmpty()) {
+                                yield return new RemoveCommand {
+                                    Text = "Trim {0} unused versions".format(PackageSet.Trimable.Count()),
+                                    CommandParam = () => RemovePackages(PackageSet.Trimable.Select(each => each.CanonicalName).ToArray())
+                                };
+                            }
+
+                            if (PackageSet.Package.IsInstalled) {
+                                yield return new RemoveCommand {
+                                    Text = "Remove this version ({0})".format(PackageSet.Package.Version),
+                                    CommandParam = () => RemovePackage(PackageSet.Package.CanonicalName)
+                                };
+                            }
+
+                            if (PackageSet.InstalledNewest != null ) {
+                                yield return new RemoveCommand {
+                                    Text = "Remove current version ({0})".format(PackageSet.InstalledNewest.Version),
+                                    CommandParam = () => RemovePackage(PackageSet.InstalledNewest.CanonicalName)
+                                };
+                            }
+
+                            yield return new RemoveCommand {
+                                Text = "Remove all {0} versions [Default]".format(ct),
+                                CommandParam = () => RemovePackages(PackageSet.InstalledPackages.Select(each => each.CanonicalName).ToArray())
+                            };
+                        }
+                    }
                 }
-                OnPropertyChanged("UpgradedPackage");
             }
         }
 
-        public Package SpecifiedPackage {
-            get { return _specifiedPackage; }
+        public IEnumerable<InstSelection> InstallChoices {
+            get {
+                _choice = InstallChoice._Unknown;
+                if (HasPackage) {
+                    // When there isn't anything at all installed already
+                    if (PackageSet.InstalledNewest == null) {
+                        if (PackageSet.AvailableNewer != null) {
+                            _choice = InstallChoice.AutoInstallLatest;
+                            yield return new InstSelection(InstallChoice.AutoInstallLatest, "Install the latest version of this package ({0})", PackageSet.AvailableNewer.Version);
+                        }
+
+                        if (PackageSet.AvailableNewerCompatible != null && PackageSet.AvailableNewerCompatible != PackageSet.AvailableNewer) {
+                            if( _choice == InstallChoice._Unknown ) {
+                                _choice = InstallChoice.AutoInstallLatest;
+                            }
+                            yield return new InstSelection(InstallChoice.AutoInstallLatestCompatible, "Install the latest compatible version of this package ({0})", PackageSet.AvailableNewerCompatible.Version);
+                        }
+
+                        if (_choice == InstallChoice._Unknown) {
+                            _choice = InstallChoice.InstallSpecificVersion;
+                        }
+
+                        yield return new InstSelection(InstallChoice.InstallSpecificVersion, "Install this version of package ({0})", PackageSet.Package.Version);
+                    } else {
+                        if (PackageSet.Package == PackageSet.InstalledNewest) {
+                            _choice = InstallChoice.ThisVersionAlreadyInstalled;
+
+                            yield return new InstSelection(InstallChoice.ThisVersionAlreadyInstalled, "This version is currently installed ({0})", PackageSet.Package.Version);
+
+                            if (PackageSet.AvailableNewerCompatible != null && PackageSet.AvailableNewer == null) {
+                                yield return new InstSelection(InstallChoice.UpdateToLatestVersion, "Update to the latest compatible version ({0})", PackageSet.AvailableNewerCompatible.Version);
+                            }
+
+                            if (PackageSet.AvailableNewerCompatible != null && PackageSet.AvailableNewer != null) {
+                                yield return new InstSelection(InstallChoice.UpdateToLatestVersionNotUpgrade, "Update to the latest compatible version ({0})", PackageSet.AvailableNewerCompatible.Version);
+                            }
+
+                            if (PackageSet.AvailableNewer != null) {
+                                yield return new InstSelection(InstallChoice.UpgradeToLatestVersion, "Upgrade to the latest version ({0})", PackageSet.AvailableNewer.Version);
+                            }
+
+                        } else if (PackageSet.InstalledNewest.Version > PackageSet.Package.Version) {
+                            // a newer version is already installed    
+                            _choice = InstallChoice.NewerVersionAlreadyInstalled;
+                            yield return new InstSelection(InstallChoice.NewerVersionAlreadyInstalled, "A newer version is currently installed ({0})", PackageSet.InstalledNewest.Version);
+
+                            if (PackageSet.AvailableNewer != null) {
+                                yield return new InstSelection(InstallChoice.UpgradeToLatestVersion2, "Upgrade to the latest version ({0})", PackageSet.AvailableNewer.Version);
+                            }
+
+                            if (PackageSet.AvailableNewerCompatible != null) {
+                                yield return new InstSelection(InstallChoice.UpdateToLatestVersionNotUpgrade2, "Install the latest compatible version ({0})", PackageSet.AvailableNewerCompatible.Version);
+                            }
+
+                            if (PackageSet.Package.IsInstalled) {
+                                yield return new InstSelection(InstallChoice.ThisVersionAlreadyInstalled, "This version is currently installed ({0})", PackageSet.Package.Version);
+                            } else {
+                                yield return new InstSelection(InstallChoice.InstallSpecificVersion2, "Install this version of package ({0})", PackageSet.Package.Version);
+                            }
+                        } else {
+                            // an older version is installed
+                            _choice = InstallChoice.OlderVersionAlreadyInstalled;
+                            yield return new InstSelection(InstallChoice.OlderVersionAlreadyInstalled, "A older version is currently installed ({0})", PackageSet.InstalledNewest.Version);
+
+                            if (PackageSet.AvailableNewer != null) {
+                                yield return new InstSelection(InstallChoice.UpgradeToLatestVersion2, "Upgrade to the latest version of this package ({0})", PackageSet.AvailableNewer.Version);
+                            }
+
+                            if (PackageSet.AvailableNewerCompatible != null) {
+                                yield return new InstSelection(InstallChoice.AutoInstallLatestCompatible3, "Install the latest version of this package ({0})", PackageSet.AvailableNewer.Version);
+                            }
+
+                            yield return new InstSelection(InstallChoice.InstallSpecificVersion2, "Install this version of package ({0})", PackageSet.Package.Version);
+                        }
+                    }
+                }
+            }
+        }
+
+        private PackageSet _packageSet;
+        private PackageSet PackageSet {
+            get {
+                return _packageSet;
+            }
+
             set {
-                _specifiedPackage = value;
-                if (!AutomaticallyUpgrade) {
+                if( _packageSet != value ) {
+                    _packageSet = value;
                     OnPropertyChanged();
+                    OnPropertyChanged("InstallChoices");
+                    OnPropertyChanged("RemoveChoices");
+                    if (Ready != null) {
+                        Ready(this, new PropertyChangedEventArgs("InstallChoice"));
+                    }
                 }
-                OnPropertyChanged("SpecifiedPackage");
             }
         }
 
-        public Package Package { get {
-            return AutomaticallyUpgrade ?  UpgradedPackage ?? SpecifiedPackage : SpecifiedPackage;
+        public Package SelectedPackage { get {
+            if( PackageSet == null ) {
+                return null;
+            }
+
+            if (Choice == InstallChoice.NewerVersionAlreadyInstalled) {
+                return PackageSet.InstalledNewer ?? PackageSet.InstalledNewerCompatable;
+            }
+
+            if (Choice == InstallChoice.OlderVersionAlreadyInstalled) {
+                return PackageSet.InstalledOlder ?? PackageSet.InstalledOlderCompatable;
+            }
+
+            if (Choice == InstallChoice.ThisVersionAlreadyInstalled) {
+                return PackageSet.Package;
+            }
+
+            if( Choice.HasFlag(InstallChoice._InstallSpecificVersion)) {
+                return PackageSet.Package;
+            }
+
+            if (Choice.HasFlag(InstallChoice._InstallLatestUpgrade)) {
+                return PackageSet.AvailableNewer;
+            }
+
+            if (Choice.HasFlag(InstallChoice._InstallLatestUpdate)) {
+                return PackageSet.AvailableNewerCompatible;
+            }
+
+            return PackageSet.InstalledNewest ?? PackageSet.Package;
         } }
 
-        public bool HasPackage { get { return Package != null; }}
-
-        public Installer(string filename)   {
-            // we'll take it from here...
-            try {
-                MsiFilename = filename;
-                InstallTask = Task.Factory.StartNew(StartInstall);
-                
-                // if we got this far, CoApp must be running. 
-                try {
-                    Application.ResourceAssembly = Assembly.GetExecutingAssembly();
-                }
-                catch { }
-
-                var window = new InstallerMainWindow(this);
-                window.ShowDialog();
-
-                if (Application.Current != null) {
-                    Application.Current.Shutdown(0);
-                }
-            } catch (Exception e) {
-                MessageBox.Show(e.StackTrace, e.Message);
-            }
-        }
-
-        /// <summary>
-        /// Main install process 
-        /// </summary>
-        internal void StartInstall() {
-            _messages = new PackageManagerMessages {
-                UnexpectedFailure = UnexpectedFailure,
-                NoPackagesFound = NoPackagesFound,
-                PermissionRequired = OperationRequiresPermission,
-                Error = MessageArgumentError,
-                RequireRemoteFile =
-                    (canonicalName, remoteLocations, localFolder, force) =>
-                        Downloader.GetRemoteFile(
-                            canonicalName, remoteLocations, localFolder, force, new RemoteFileMessages {
-                                Progress = (itemUri, percent) => {
-                                    "Downloading {0}".format(itemUri.AbsoluteUri).PrintProgressBar(percent);
-                                },
-                            }, _messages),
-                OperationCancelled = CancellationRequested,
-                PackageSatisfiedBy = (original, satisfiedBy) => {
-                    original.SatisfiedBy = satisfiedBy;
-                },
-                PackageBlocked = BlockedPackage,
-                UnknownPackage = UnknownPackage,
-            };
-            LoadPackageDetails();
-        }
-
-        private void ProbeForNewerPackageInfo() {
-            if (AutomaticallyUpgrade) {
-                PackageManager.Instance.GetPackages(SpecifiedPackage.Name + "-*-" + SpecifiedPackage.Architecture + "-" + SpecifiedPackage.PublicKeyToken, latest: true, forceScan: true, messages: _messages).ContinueWith((antecedent) => {
-                    if (antecedent.IsFaulted || antecedent.Result.IsNullOrEmpty()) {
-                        UpgradedPackage = null;
-                        // DOERROR
-                        OnReady();
-                        return;
-                    }
-
-                    PackageManager.Instance.GetPackageDetails(antecedent.Result.FirstOrDefault().CanonicalName, _messages).ContinueWith((antecedent2) => {
-                        if (antecedent.IsFaulted || antecedent.Result.IsNullOrEmpty()) {
-                            OnReady();
-                            // DOERROR
-                            return;
-                        }
-
-                        try {
-                            UpgradedPackage = antecedent.Result.FirstOrDefault();
-                            ExtractTrickyPackageInfo();
-                        } catch {
-
-                        }
-                        OnPropertyChanged();
-                        OnReady();
-                    }, TaskContinuationOptions.AttachedToParent);
-                }, TaskContinuationOptions.AttachedToParent);
-            }
-        }
-
-        private void LoadPackageDetails() {
-            PackageManager.Instance.GetPackages(Path.GetFullPath(MsiFilename), latest: false, messages: _messages).ContinueWith((antecedent) => {
-                if (antecedent.IsFaulted || antecedent.Result.IsNullOrEmpty() ) {
-                    // DOERROR
-                    OnReady();
-                    return;
-                }
-
-                PackageManager.Instance.GetPackageDetails(antecedent.Result.FirstOrDefault().CanonicalName, _messages).ContinueWith((antecedent2) => {
-                    if (antecedent.IsFaulted || antecedent.Result.IsNullOrEmpty()) {
-                        OnReady();
-                        // DOERROR
-                        return;
-                    }
-
-                    try {
-                        SpecifiedPackage = antecedent.Result.FirstOrDefault();
-                        ExtractTrickyPackageInfo();
-                    } catch {
-                        
-                    }
-                    ProbeForNewerPackageInfo();
-                    OnPropertyChanged();
-                    OnReady();
-                }, TaskContinuationOptions.AttachedToParent);
-    
-            }, TaskContinuationOptions.AttachedToParent);
-        }
-
-        private void OnReady() {
-            ReadyToDisplay = true;
-            if (Ready != null) {
-                Ready(this, new PropertyChangedEventArgs("package"));
-            }
-        }
-
-        private void OnFinished() {
-            IsWorking = false;
-            if (Finished != null) {
-                Finished(this, new PropertyChangedEventArgs("Finished"));
-            }
-        }
-
-        private void ExtractTrickyPackageInfo() {
-            try {
-                var image = new BitmapImage();
-                // Property changes outside of Begin/EndInit are ignored
-                image.BeginInit();
-                var srcStream = new MemoryStream(Convert.FromBase64String(Package.Icon));
-                image.StreamSource = srcStream;
-                image.EndInit();
-                image.Freeze();
-                _packageIcon = image;
-            } catch {
-                // didn't take?
-            }
-        }
-
-        private void Error(Exception e) {
-            System.Windows.MessageBox.Show("Exception: " + e.Message + "\nInner:" + e.InnerException + "\nStackTrace: " + e.StackTrace);
-            throw e;
-        }
-
-        private void UnknownPackage(string canonicalName) {
-            Logger.Message("Unknown Package {0}", canonicalName);
-        }
-
-        private void BlockedPackage(string canonicalName) {
-            Logger.Message("Package {0} is blocked", canonicalName);
-        }
-
-        private void CancellationRequested(string obj) {
-            Logger.Message("Cancellation Requested (engine is restarting.)");
-            // we will try to just reload the window
-            LoadPackageDetails();
-        }
-
-        private void CancellationRequestedDuringInstall(string obj) {
-            Logger.Message("Cancellation Requested during install (engine is restarting.)");
-            // we *could* try to see if the service comes back here; or we could just kill this window.
-            // if we kill the window, we *could* do a restart of the msi just to make sure that it gets installed 
-            // (since, if the toolkit got updated as part of the install, the engine will restart)
-
-            if (Package.IsInstalled) {
-                // it was done, lets just quit nicely
-                OnFinished();
-                return;
-            }
-            // otherwise, try again?
-            Install();
-        }
-
-        private void CancellationRequestedDuringRemove(string obj) {
-            Logger.Message("Cancellation Requested during remove (engine is restarting.)");
-
-            if (!Package.IsInstalled) {
-                OnFinished();
-                return;
-            }
-            // otherwise, try again?
-            Remove();
-        }
-
-        private void MessageArgumentError(string arg1, string arg2, string arg3) {
-            Logger.Message("Message Argument Error {0}, {1}, {2}.", arg1, arg2, arg3);
-        }
-
-        private void OperationRequiresPermission(string policyName) {
-            Logger.Message("Operation requires permission Policy:{0}", policyName);
-        }
-
-        private void NoPackagesFound() {
-            Logger.Message("Did not find any packages.");
-        }
-
-        private void UnexpectedFailure(Exception obj) {
-            Logger.Error(obj);
-            Error(new ConsoleException("SERVER EXCEPTION: {0}\r\n{1}", obj.Message, obj.StackTrace));
-        }
-
-        private BitmapImage _packageIcon;
-        public BitmapImage PackageIcon { get { return _packageIcon; }
-            set {
-                _packageIcon = value;
-                OnPropertyChanged("PackageIcon");
-            }
-        }
+        public bool CanRemove { get { return HasPackage && RemoveChoices.Any(); } }
+        public bool CanInstall { get { return HasPackage && !SelectedPackage.IsInstalled; } }
+        public bool HasPackage { get { return SelectedPackage != null; } }
 
         public bool ReadyToInstall {
-            get { return HasPackage && (AutomaticallyUpgrade ? UpgradedPackage != null && !UpgradedPackage.IsInstalled : !Package.IsInstalled); }
+            get { return HasPackage && SelectedPackage.IsInstalled == false; }
         }
         
-        public bool CanUpgrade {
-            get {
-                return _specifiedPackage != null && (_specifiedPackage.IsInstalled && (_upgradedPackage != null && !_upgradedPackage.IsInstalled));
-            }
-        }
-
         private int _progress;
         public int Progress {
             get { return _progress; } set { _progress = value; OnPropertyChanged("Progress");}
         }
 
-        public Visibility RemoveButtonVisibility { get { return HasPackage && Package.IsInstalled ? Visibility.Visible : Visibility.Hidden; }}
+        public Visibility RemoveButtonVisibility { get { return CanRemove ? Visibility.Visible : Visibility.Hidden; } }
         public Visibility CancelButtonVisibility { get { return CancelRequested ? Visibility.Hidden : Visibility.Visible; } }
 
-        public string InstallButtonText {
-            get {
-                if( _specifiedPackage != null ) {
-                    if (_specifiedPackage.IsInstalled) {
-                        if( _upgradedPackage != null ) {
-                            if (!_upgradedPackage.IsInstalled) {
-                                return "Upgrade";
-                            }
-                        }
-                    }
-                    
-                }
-                return "Install";
-            }
-        }
+        public bool IsInstalled { get { return HasPackage && SelectedPackage.IsInstalled; } }
 
-        public bool IsInstalled { get { return HasPackage && Package.IsInstalled; }}
-        public string Organization { get { return HasPackage ? Package.PublisherName : string.Empty; } }
-        public string Description { get { return HasPackage ? Package.Description: string.Empty; } }
+        public string Organization { get { return HasPackage ? SelectedPackage.PublisherName : string.Empty; } }
+        public string Description { get { return HasPackage ? SelectedPackage.Description : string.Empty; } }
 
         public string Product {
             get {
-                return HasPackage ? "{0} - {1}".format(Package.DisplayName, string.IsNullOrEmpty(Package.AuthorVersion) ? (string)Package.Version : Package.AuthorVersion) : string.Empty;
+                return HasPackage ? "{0} - {1}".format(SelectedPackage.DisplayName, string.IsNullOrEmpty(SelectedPackage.AuthorVersion) ? (string)SelectedPackage.Version : SelectedPackage.AuthorVersion) : string.Empty;
             }
         }
 
         public string ProductVersion {
             get {
-                return HasPackage ? (string)Package.Version : string.Empty;
+                return HasPackage ? (string)SelectedPackage.Version : string.Empty;
             }
         }
 
         private bool _working;
-
         public bool IsWorking {
             get { return _working; }
             set {
@@ -345,7 +342,6 @@ namespace CoApp.Toolkit.Engine.Client {
         }
 
         private bool _cancel;
-
         public bool CancelRequested {
             get { return _cancel; }
             set {
@@ -362,36 +358,242 @@ namespace CoApp.Toolkit.Engine.Client {
             }
         }
 
-        public void Install() {
-            if( !IsWorking) {
-                IsWorking = true;
-                PackageManager.Instance.InstallPackage(Package.CanonicalName, autoUpgrade: false, messages: new PackageManagerMessages {
-                    InstallingPackageProgress = (canonicalName, progress, overallProgress) => { Progress = overallProgress; },
-                    InstalledPackage = (canonicalName) => { Package.GetPackage(canonicalName).IsInstalled = true; },
-                    OperationCancelled = CancellationRequestedDuringInstall,
-                }.Extend(_messages)).ContinueWith(antecedent => OnFinished(), TaskContinuationOptions.AttachedToParent);
+        private BitmapImage _packageIcon;
+        public BitmapImage PackageIcon { get { return _packageIcon; }
+            set {
+                _packageIcon = value;
+                OnPropertyChanged("PackageIcon");
             }
         }
 
-        public void Remove() {
-            if (!IsWorking) {
+        public string InstallButtonText {
+            get {
+                switch( Choice ) {
+                    case InstallChoice.UpgradeToLatestVersion:
+                    case InstallChoice.UpgradeToLatestVersion2:
+                    case InstallChoice.UpgradeToLatestVersion3:
+                        return "Upgrade";
+
+                     case InstallChoice.UpdateToLatestVersion:
+                    case InstallChoice.UpdateToLatestVersionNotUpgrade:
+                    case InstallChoice.UpdateToLatestVersionNotUpgrade2:
+                        return "Update";
+
+                }
+                return "Install";
+            }
+        }
+        private EasyPackageManager _easyPackageManager = new EasyPackageManager();
+
+        public Installer(string filename)   {
+            // we'll take it from here...
+            try {
+                //Debugger.Break();
+                MsiFilename = filename;
+                InstallTask = LoadPackageDetails();
+                PackageManager.Instance.Connect();
+
+                // if we got this far, CoApp must be running. 
+                try {
+                    Application.ResourceAssembly = Assembly.GetExecutingAssembly();
+                }
+                catch { }
+
+                var window = new InstallerMainWindow(this);
+                window.ShowDialog();
+
+                if (Application.Current != null) {
+                    Application.Current.Shutdown(0);
+                }
+            } catch (Exception e) {
+                MessageBox.Show(e.StackTrace, e.Message);
+            }
+        }
+        
+        private void DoError(InstallerFailureState state, Exception error) {
+            MessageBox.Show(error.StackTrace, error.Message);
+            switch( state ) {
+                case InstallerFailureState.FailedToGetPackageFromFile:
+                    break;
+
+                default:
+                    break;
+            }
+        }
+
+        private Task LoadPackageDetails() {
+            return  _easyPackageManager.GetPackageFromFile(Path.GetFullPath(MsiFilename)).ContinueWith(antecedent => {
+                if (antecedent.IsFaulted) {
+                    DoError(InstallerFailureState.FailedToGetPackageFromFile, antecedent.Exception.Unwrap());
+                    return;
+                }
+
+                _easyPackageManager.GetPackageDetails(antecedent.Result).ContinueWith(antecedent2 => {
+                    if( antecedent2.IsFaulted ) {
+                        DoError(InstallerFailureState.FailedToGetPackageDetails, antecedent2.Exception.Unwrap());
+                        return;
+                    }
+
+                    PackageSet = new PackageSet {Package = antecedent2.Result};
+                    // PackageIcon = GetPackageBitmap(SelectedPackage.Icon);
+
+                    // now get additonal package information...
+                    _easyPackageManager.GetPackageSet(PackageSet.Package.CanonicalName).ContinueWith(
+                        antecedent3 => {
+                            if (antecedent3.IsFaulted) {
+                                DoError(InstallerFailureState.FailedToGetPackageDetails, antecedent3.Exception.Unwrap());
+                                return;
+                            }
+                            PackageSet = antecedent3.Result;
+                        });
+                });
+            });
+        }
+
+        private void OnFinished() {
+            IsWorking = false;
+            if (Finished != null) {
+                Finished(this, new PropertyChangedEventArgs("Finished"));
+            }
+        }
+
+        private static BitmapImage GetPackageBitmap( string iconData ) {
+            // if it's empty, return an empty image.
+            if (!string.IsNullOrEmpty(iconData)) {
+                // is it a reference to a file somewhere?
+                try {
+                    var uri = new Uri(iconData);
+                    switch (uri.Scheme.ToLower()) {
+                        case "http":
+                        case "https":
+                        case "ftp":
+                            // download the file
+                            var filename = "packageIcon".GenerateTemporaryFilename();
+                            try {
+                                new WebClient().DownloadFile(uri, filename);
+                                if( File.Exists(filename)) {
+                                    return GetPackageBitmap(filename);
+                                }
+                            } catch { }
+                            break;
+
+                        case "file":
+                            var image = new BitmapImage();
+                            image.BeginInit();
+                            using( var srcStream = File.OpenRead(uri.LocalPath)) {
+                                image.StreamSource = srcStream;
+                                image.EndInit();
+                                return image;
+                            }
+                            break;
+                    }
+                } catch {
+                }
+
+                // is it a base64 encoded image?
+                try {
+                    var image = new BitmapImage();
+                    image.BeginInit();
+                    using (var srcStream = new MemoryStream(Convert.FromBase64String(iconData))) {
+                        image.StreamSource = srcStream;
+                        image.EndInit();
+                        return image;
+                    }
+                } catch {
+                }
+            }
+            
+            var img = new BitmapImage();
+            img.Freeze();
+            return img;
+        }
+
+
+        private void Error(Exception e) {
+            System.Windows.MessageBox.Show("Exception: " + e.Message + "\nInner:" + e.InnerException + "\nStackTrace: " + e.StackTrace);
+            throw e;
+        }
+
+        private void CancellationRequestedDuringInstall(string obj) {
+            Logger.Message("Cancellation Requested during install (engine is restarting.)");
+            // we *could* try to see if the service comes back here; or we could just kill this window.
+            // if we kill the window, we *could* do a restart of the msi just to make sure that it gets installed 
+            // (since, if the toolkit got updated as part of the install, the engine will restart)
+
+            if (SelectedPackage.IsInstalled) {
+                // it was done, lets just quit nicely
+                OnFinished();
+                return;
+            }
+            // otherwise, try again?
+            Install();
+        }
+
+        private void CancellationRequestedDuringRemove(string obj) {
+            Logger.Message("Cancellation Requested during remove (engine is restarting.)");
+
+            if (!SelectedPackage.IsInstalled) {
+                OnFinished();
+                return;
+            }
+            // otherwise, try again?
+            RemoveAll();
+        }
+
+        public void Install() {
+            if( !IsWorking) {
                 IsWorking = true;
-                PackageManager.Instance.RemovePackage(Package.CanonicalName, messages: new PackageManagerMessages {
-                    RemovingPackageProgress= (canonicalName, progress) => {
-                        Progress = progress;
-                    },
-                    RemovedPackage = (canonicalName ) => { Package.GetPackage(canonicalName).IsInstalled = false; },
-                    OperationCancelled = CancellationRequestedDuringRemove,
-                }).ContinueWith(antecedent => {
+                PackageManager.Instance.InstallPackage(SelectedPackage.CanonicalName, autoUpgrade: false, messages: new PackageManagerMessages {
+                    InstallingPackageProgress = (canonicalName, progress, overallProgress) => { Progress = overallProgress; },
+                    InstalledPackage = (canonicalName) => { Package.GetPackage(canonicalName).IsInstalled = true; },
+                    OperationCancelled = CancellationRequestedDuringInstall,
+                }.Extend(_messages)).ContinueWith(antecedent => {
+                    
                     OnFinished();
                 }, TaskContinuationOptions.AttachedToParent);
             }
         }
 
+        public void RemoveAll() {
+            RemovePackages(PackageSet.InstalledPackages.Select(each => each.CanonicalName).ToArray());
+        }
+
+        private void RemovePackage( string canonicalVersion ) {
+            RemovePackages(new []{ canonicalVersion});
+        }
+
+        private void RemovePackages(string[] canonicalVersions) {
+            if (!IsWorking) {
+                IsWorking = true;
+                Task.Factory.StartNew(()=> {
+                    var taskCount = canonicalVersions.Length;
+                    if (canonicalVersions.Length > 0) {
+                        for (var index = 0; index < taskCount; index++) {
+                            var taskNumber = index;
+                            var v = canonicalVersions[index];
+
+                            PackageManager.Instance.RemovePackage(
+                                v, messages: new PackageManagerMessages {
+                                    RemovingPackageProgress = (canonicalName, progress) => {
+                                        Progress = (progress / taskCount) + taskNumber * 100 / taskCount;
+                                    },
+                                    RemovedPackage = (canonicalName) => {
+                                        Package.GetPackage(canonicalName).IsInstalled = false;
+                                    },
+                                    OperationCancelled = CancellationRequestedDuringRemove,
+                                }).Wait();
+                        }
+                    }
+                    }).ContinueWith(antecedent => {OnFinished();}, TaskContinuationOptions.AttachedToParent);
+
+            }
+        }
+
+
         protected void OnPropertyChanged(string name=null) {
             if (PropertyChanged != null) {
                 if (name == null) {
-                    foreach (var propertyName in GetType().GetProperties().Select(each => each.Name)) {
+                    foreach (var propertyName in GetType().GetProperties().Where(each => each.Name != "InstallChoices" ).Select(each => each.Name)) {
                         PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
                     }
                 } else {

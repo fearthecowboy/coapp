@@ -281,6 +281,9 @@ namespace CoApp.Toolkit.Engine {
                 UnexpectedFailure = SendUnexpectedFailure,
                 UnknownPackage = SendUnknownPackage,
                 Warning = SendMessageWarning,
+                ScheduledTaskInfo = SendScheduledTaskInfo,
+                CurrentTelemetryOption = SendTelemetrySetting,
+
             };
         
 
@@ -594,7 +597,7 @@ namespace CoApp.Toolkit.Engine {
                     return NewPackageManager.Instance.FindPackages(requestMessage["canonical-name"], requestMessage["name"], requestMessage["version"],
                         requestMessage["arch"], requestMessage["public-key-token"], requestMessage["dependencies"], requestMessage["installed"],
                         requestMessage["active"], requestMessage["required"], requestMessage["blocked"], requestMessage["latest"], requestMessage["index"],
-                        requestMessage["max-results"], requestMessage["location"], requestMessage["force-scan"], new PackageManagerMessages {
+                        requestMessage["max-results"], requestMessage["location"], requestMessage["force-scan"], requestMessage["updates"], requestMessage["upgrades"], requestMessage["trimable"], new PackageManagerMessages {
                             RequestId = requestMessage["rqid"],
                         }.Extend(_messages));
 
@@ -605,7 +608,7 @@ namespace CoApp.Toolkit.Engine {
 
                 case "install-package":
                     return NewPackageManager.Instance.InstallPackage(requestMessage["canonical-name"], requestMessage["auto-upgrade"], requestMessage["force"],
-                        requestMessage["download"], requestMessage["pretend"], new PackageManagerMessages {
+                        requestMessage["download"], requestMessage["pretend"], requestMessage["is-update"], requestMessage["is-upgrade"], new PackageManagerMessages {
                             RequestId = requestMessage["rqid"],
                         }.Extend(_messages));
 
@@ -632,7 +635,7 @@ namespace CoApp.Toolkit.Engine {
 
                 case "set-package":
                     return NewPackageManager.Instance.SetPackage(requestMessage["canonical-name"], requestMessage["active"], requestMessage["required"],
-                        requestMessage["blocked"], new PackageManagerMessages {
+                        requestMessage["blocked"], requestMessage["do-not-update"], requestMessage["do-not-upgrade"], new PackageManagerMessages {
                             RequestId = requestMessage["rqid"],
                         }.Extend(_messages));
 
@@ -668,20 +671,22 @@ namespace CoApp.Toolkit.Engine {
                         }.Extend(_messages).Register();
 
                         var policyName = requestMessage["name"].ToString();
-                        var policy = PermissionPolicy.AllPolicies.Where(each => each.Name.Equals(policyName, StringComparison.CurrentCultureIgnoreCase)).FirstOrDefault();
-                        if( policy == null ) {
+                        var policies = PermissionPolicy.AllPolicies.Where(each => each.Name.IsWildcardMatch(policyName));
+                        if (policies.IsNullOrEmpty()) {
                             SendMessageArgumentError("get-policy", "name", "policy '{0}' not found".format(policyName));
                             return;
+                        } else {
+                            foreach (var policy in policies) {
+                                var msg = new UrlEncodedMessage("policy") {
+                                    {"name", policy.Name},
+                                    {"description", policy.Description},
+                                };
+                                // msg.AddCollection("sids",policy.Sids);
+                                msg.AddCollection("accounts", policy.Accounts);
+
+                                WriteAsync(msg);
+                            }
                         }
-
-                        var msg = new UrlEncodedMessage("policy") {
-                            { "name" , policy.Name },
-                            { "description" , policy.Description},
-                        };
-                        // msg.AddCollection("sids",policy.Sids);
-                        msg.AddCollection("accounts", policy.Accounts);
-
-                        WriteAsync(msg);
                     });
 
                 case "add-to-policy":
@@ -803,6 +808,15 @@ namespace CoApp.Toolkit.Engine {
                     }
                     return null;
 
+                case "set-feed-stale" :
+                    var feed = requestMessage["feed-name"];
+                    return PackageFeed.GetPackageFeedFromLocation(feed).ContinueWith(
+                        antecedent => {
+                            if (!(antecedent.IsFaulted && antecedent.IsCanceled)) {
+                                antecedent.Result.Stale = true;
+                            }
+                        });
+
                 case "stop-service":
                     if (PackageManagerSession.Invoke.CheckForPermission(PermissionPolicy.StopService)) {
                         _cancellationTokenSource.Cancel();
@@ -834,6 +848,26 @@ namespace CoApp.Toolkit.Engine {
                     } catch {
                     }
                     return null; //"set-logging".AsResultTask();
+
+                case "schedule-task":
+                    return null;
+                    break;
+                case "remove-schedule-task":
+                    return null;
+                    break;
+                case "get-schedule-tasks":
+                    return null;
+                    break;
+
+                case "add-trusted-publisher":
+                    return null;
+                    break;
+                case "remove-trusted-publisher":
+                    return null;
+                    break;
+                case "get-trusted-publishers":
+                    return null;
+                    break;
 
                 default:
                     // not recognized command, return error code.
@@ -869,9 +903,11 @@ namespace CoApp.Toolkit.Engine {
                 {"installed", package.IsInstalled.ToString()},
                 {"blocked", package.IsBlocked.ToString()},
                 {"required", package.IsRequired.ToString()},
-                {"client-required", package.IsClientRequired.ToString()},
+                {"client-required", package.IsClientRequested.ToString()},
                 {"active", package.IsActive.ToString()},
                 {"dependent", package.PackageSessionData.IsDependency.ToString()},
+                {"min-policy", package.InternalPackageData.PolicyMinimumVersion.ToString()},
+                {"max-policy", package.InternalPackageData.PolicyMaximumVersion.ToString()},
             };
 
             msg.AddCollection("remote-locations", package.InternalPackageData.RemoteLocations);
@@ -1086,6 +1122,24 @@ namespace CoApp.Toolkit.Engine {
             msg.AddCollection("supercedent-packages", supercedents.Select(each => each.CanonicalName));
 
             WriteAsync(msg);
+        }
+
+        private void SendScheduledTaskInfo(string taskName, string executable, string commandline, int hour, int minutes, DayOfWeek? dayOfWeek, int intervalInMinutes) {
+            WriteAsync(new UrlEncodedMessage("scheduled-task-info") {
+                {"name", taskName},
+                {"executable", executable},
+                {"command-line", commandline},
+                {"hour", hour},
+                {"minutes", minutes},
+                {"day-of-week", dayOfWeek != null ? dayOfWeek.Value.ToString():null },
+                {"interval", intervalInMinutes},
+            });
+        }
+
+        private void SendTelemetrySetting(bool optIntoTelemetryTracking) {
+            WriteAsync(new UrlEncodedMessage("telemetry") {
+                {"opt-in", optIntoTelemetryTracking},
+            });
         }
 
         private void SendNoFeedsFound() {

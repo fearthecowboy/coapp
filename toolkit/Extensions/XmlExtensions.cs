@@ -357,6 +357,11 @@ namespace CoApp.Toolkit.Extensions {
             try {
                 if (File.Exists(filename)) {
                     using (var s = File.OpenText(filename)) {
+                        if ( ! s.ReadLine().Trim().StartsWith("<") ) {
+                            return false;
+                        }
+                    }
+                    using (var s = File.OpenText(filename)) {
                         var xr = XmlReader.Create(s);
                         xr.Read();
                         xr.Read();

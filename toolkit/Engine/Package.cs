@@ -743,7 +743,9 @@ namespace CoApp.Toolkit.Engine {
                 }
             }
 
-            var view = RegistryView.System["SOFTWARE"];
+            
+            var view = Architecture == Architecture.x64 ? RegistryView.System["SOFTWARE"] :RegistryView.System["SOFTWARE\\Wow6432Node"];
+
             foreach (var rule in rules.Where(r => r.Action == CompositionAction.Registry)) {
                 var regKey = ResolveVariables(rule.Key);
                 var regValue = ResolveVariables(rule.Value);
@@ -811,39 +813,45 @@ namespace CoApp.Toolkit.Engine {
         ///  Indicates that the client specifically requested the package, or is the dependency of a requested package
         /// </summary>
         public bool IsRequired { 
-            get { return IsClientRequired || PackageSessionData.IsDependency; } 
-            set { IsClientRequired = value; }
+            get { return IsClientRequested || PackageSessionData.IsDependency; } 
+            set { IsClientRequested = value; }
         }
 
         /// <summary>
         ///  Indicates that the client specifically requested the package
         /// </summary>
-        public bool IsClientRequired {
-            get { return PackageSessionData.PackageSettings["#Required"].BoolValue; }
-            set { PackageSessionData.PackageSettings["#Required"].BoolValue = value;}
+        public bool IsClientRequested {
+            get { return PackageSessionData.PackageSettings["#Requested"].BoolValue; }
+            set { PackageSessionData.PackageSettings["#Requested"].BoolValue = value;}
+        }
+     
+        public bool DoNotUpdate {
+            get { return PackageSessionData.PackageSettings["#DoNotUpdate"].BoolValue; }
+            set { PackageSessionData.PackageSettings["#DoNotUpdate"].BoolValue = value; }
         }
 
-        public bool IsBlocked { 
-            get { return PackageSessionData.GeneralPackageSettings["#Blocked"].BoolValue; } 
+        public bool IsBlocked {
+            get { return PackageSessionData.GeneralPackageSettings["#Blocked"].BoolValue; }
             set { PackageSessionData.GeneralPackageSettings["#Blocked"].BoolValue = value; }
+        }
+
+        public bool DoNotUpgrade {
+            get { return PackageSessionData.GeneralPackageSettings["#DoNotUpgrade"].BoolValue; }
+            set { PackageSessionData.GeneralPackageSettings["#DoNotUpgrade"].BoolValue = value; }
         }
 
         public void SetPackageCurrent() {
             if (!IsInstalled) {
                 throw new PackageNotInstalledException(this);
             }
-            var generalName = GeneralName;
 
             if (Version == (ulong) PackageSessionData.GeneralPackageSettings["#CurrentVersion"].LongValue) {
                 return; // it's already set to the current version.
             }
 
             DoPackageComposition(true);
-
-            //if (0 != (ulong) PackageSessionData.GeneralPackageSettings["#CurrentVersion"].LongValue) {
-                // if there isn't a forced current version, let's not force it
-                PackageSessionData.GeneralPackageSettings["#CurrentVersion"].LongValue = (long)(ulong) Version;
-            //}
+            PackageSessionData.GeneralPackageSettings["#CurrentVersion"].LongValue = (long)(ulong) Version;
+            
         }
          #endregion
     }

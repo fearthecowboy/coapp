@@ -194,6 +194,9 @@ namespace CoApp.Toolkit.Scripting.Languages.PropertySheet {
 
                             case TokenType.SelectorParameter:
                                 ruleParameter = token.Data;
+                                if( ruleParameter.IndexOfAny("\r\n".ToCharArray()) >= 0) {
+                                    throw new EndUserParseException(token, _filename, "PSP 123", "Selector parameter may not contain CR/LFs (missing close bracket?): {0} ", Rule.CreateSelectorString(ruleName, ruleParameter,ruleClass, ruleId ));     
+                                }
                                 continue;
 
                             case TokenType.OpenBrace:
@@ -220,7 +223,7 @@ namespace CoApp.Toolkit.Scripting.Languages.PropertySheet {
 
                     case ParseState.SelectorDot:
                         switch (token.Type) {
-                            case TokenType.Identifier:
+                            case TokenType.Identifier: 
                                 ruleClass = token.Data;
                                 state = ParseState.Selector;
                                 continue;

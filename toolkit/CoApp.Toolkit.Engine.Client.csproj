@@ -57,6 +57,7 @@
   <ItemGroup>
     <Compile Include="Engine\Client\Downloader.cs" />
     <Compile Include="Engine\Client\Dummy.cs" />
+    <Compile Include="Engine\Client\EasyPackageManager.cs" />
     <Compile Include="Engine\Client\Installer.cs" />
     <Compile Include="Engine\Client\InstallerPrep.cs" />
     <Compile Include="Engine\Client\Package.cs" />

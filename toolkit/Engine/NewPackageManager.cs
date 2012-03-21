@@ -136,8 +136,8 @@ namespace CoApp.Toolkit.Engine {
         }
 
         public Task FindPackages( string canonicalName, string name, string version, string arch, string publicKeyToken,
-            bool? dependencies, bool? installed, bool? active, bool? required, bool? blocked, bool? latest, 
-            int? index, int? maxResults, string location, bool? forceScan, PackageManagerMessages messages ) {
+            bool? dependencies, bool? installed, bool? active, bool? required, bool? blocked, bool? latest,
+            int? index, int? maxResults, string location, bool? forceScan, bool? updates, bool? upgrades , bool? trimable , PackageManagerMessages messages) {
 
             var t = Task.Factory.StartNew(() => {
                 if (messages != null) {
@@ -188,6 +188,27 @@ namespace CoApp.Toolkit.Engine {
 
                     select package;
 
+                // if the client is asking for Updates:
+                //      - get the packages that match the search criteria. 'pkgs'
+                //      - filter out 'do-not-update' and 'blocked' packages (unless passing in blocked flag)
+                //      - filter 'pkgs' so that every package in the list is the most recent binary compatible one.
+                //      - for each package in 'pkgs', find out if there is a higher binary compatible one available that is not installed.
+                //          - add that to the list of results; return the distinct results
+
+                // if the client is asking for Upgrades:
+                //      - get list packages that meet the search criteria. 'pkgs'. 
+                //      - filter out 'do-not-upgrade' and 'do-not-update' and 'blocked' packages--(unless passing in blocked flag)
+                //      - (by definition upgrades exclude updates)
+                //      - for each packge in 'pkgs' find out if ther is a higher (non-compatible) version that is not installed.
+                //          - add that to the list of results; return the distinct results
+
+                // if the client is asking for Trimable packages
+                //      -  get the list of packages that meet the search criteria. 'pkgs'.
+                //      -  a package is not 'trimable' if:
+                //          - if it is marked client-requested 
+                //          - if it is a required dependency of another package that is client requested and that doesn't have a binary compatible update insatlled.
+                //          - it is blocked (unless passing in the blocked flag)
+                //          - it is marked 'do-not-update'
 
                 // only the latest?
                 if (latest == true) {
@@ -260,7 +281,7 @@ namespace CoApp.Toolkit.Engine {
             return t;
         }
 
-        public Task InstallPackage(string canonicalName, bool? autoUpgrade, bool? force, bool? download, bool? pretend, PackageManagerMessages messages) {
+        public Task InstallPackage(string canonicalName, bool? autoUpgrade, bool? force, bool? download, bool? pretend,bool? isUpdating, bool? isUpgrading, PackageManagerMessages messages) {
             var t = Task.Factory.StartNew(() => {
                 if (messages != null) {
                     messages.Register();
@@ -311,6 +332,14 @@ namespace CoApp.Toolkit.Engine {
                                 return;
                             }
                         }
+
+                        // if this is an update, 
+                        //      - check to see if there is a compatible package already installed that is marked do-not-update
+                        //        fail if so.
+                        
+                        // if this is an upgrade, 
+                        //      - check to see if this package has the do-not-upgrade flag.
+
 
                         // mark the package as the client requested.
                         package.PackageSessionData.DoNotSupercede = (false == autoUpgrade);
@@ -457,6 +486,17 @@ namespace CoApp.Toolkit.Engine {
                                     }
                                 }
                                 if (!failed) {
+                                    if( isUpdating == true ) {
+                                        // if this is marked as an update
+                                        // remove REQUESTED flag from all older compatible version 
+                                        
+                                    }
+                                    if (isUpgrading == true) {
+                                        // if this is marked as an update
+                                        // remove REQUESTED flag from all older compatible version 
+
+                                    }
+
                                     // W00T ... We did it!
                                     // check for restart required...
                                     if (EngineService.DoesTheServiceNeedARestart) {
@@ -768,7 +808,7 @@ namespace CoApp.Toolkit.Engine {
             return t;
         }
 
-        public Task SetPackage(string canonicalName, bool? active, bool? required, bool? blocked, PackageManagerMessages messages) {
+        public Task SetPackage(string canonicalName, bool? active, bool? required, bool? blocked, bool? doNotUpdate, bool? doNotUpgrade, PackageManagerMessages messages) {
             var t = Task.Factory.StartNew(() => {
                 if (messages != null) {
                     messages.Register();
@@ -778,7 +818,6 @@ namespace CoApp.Toolkit.Engine {
                     PackageManagerMessages.Invoke.OperationCancelled("set-package");
                     return;
                 }
-
 
                 var package = GetSinglePackage(canonicalName, "set-package");
 
@@ -853,6 +892,36 @@ namespace CoApp.Toolkit.Engine {
                     }
                 }
 
+                if( true == doNotUpdate) {
+                    if (!PackageManagerSession.Invoke.CheckForPermission(PermissionPolicy.InstallPackage)) {
+                        PackageManagerMessages.Invoke.PermissionRequired("InstallPackage");
+                    } else {
+                        package.DoNotUpdate = true;
+                    }
+                }
+                if (false == doNotUpdate) {
+                    if (!PackageManagerSession.Invoke.CheckForPermission(PermissionPolicy.InstallPackage)) {
+                        PackageManagerMessages.Invoke.PermissionRequired("InstallPackage");
+                    } else {
+                        package.DoNotUpdate = false;
+                    }
+                }
+
+                if (true == doNotUpgrade) {
+                    if (!PackageManagerSession.Invoke.CheckForPermission(PermissionPolicy.InstallPackage)) {
+                        PackageManagerMessages.Invoke.PermissionRequired("InstallPackage");
+                    } else {
+                        package.DoNotUpgrade = true;
+                    }
+                }
+                if (false == doNotUpgrade) {
+                    if (!PackageManagerSession.Invoke.CheckForPermission(PermissionPolicy.InstallPackage)) {
+                        PackageManagerMessages.Invoke.PermissionRequired("InstallPackage");
+                    } else {
+                        package.DoNotUpgrade = false;
+                    }
+                }
+
                 PackageManagerMessages.Invoke.PackageInformation(package, Enumerable.Empty<Package>());
 
             }, TaskCreationOptions.AttachedToParent);
@@ -916,6 +985,7 @@ namespace CoApp.Toolkit.Engine {
 
                     PackageManagerMessages.Invoke.RemovingPackageProgress(canonicalName, 100);
                     PackageManagerMessages.Invoke.RemovedPackage(canonicalName);
+                    
                     Signals.RemovedPackage(canonicalName);
                 }
                 catch (OperationCompletedBeforeResultException e) {
