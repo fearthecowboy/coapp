@@ -8,7 +8,7 @@
     <ProjectGuid>{0EB44E9E-2674-4C0E-AE3F-E9071F45A765}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>CoApp.CLI</RootNamespace>
+    <RootNamespace>CoApp</RootNamespace>
     <AssemblyName>CoApp</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <TargetFrameworkProfile>
@@ -56,68 +56,41 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CoAppMain.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="CLI\CoAppMain.cs" />
+    <Compile Include="CLI\Properties\AssemblyInfo.cs" />
     <Compile Include="$(SolutionDir)Source\CoApp.Toolkit.AssemblyStrongName.cs" />
-    <Compile Include="Properties\Resources.Designer.cs">
+    <Compile Include="CLI\Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <BootstrapperPackage Include=".NETFramework,Version=v4.0,Profile=Client">
-      <Visible>False</Visible>
-      <ProductName>Microsoft .NET Framework 4 Client Profile %28x86 and x64%29</ProductName>
-      <Install>true</Install>
-    </BootstrapperPackage>
-    <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
-      <Visible>False</Visible>
-      <ProductName>.NET Framework 3.5 SP1 Client Profile</ProductName>
-      <Install>false</Install>
-    </BootstrapperPackage>
-    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
-      <Visible>False</Visible>
-      <ProductName>.NET Framework 3.5 SP1</ProductName>
-      <Install>false</Install>
-    </BootstrapperPackage>
-    <BootstrapperPackage Include="Microsoft.Windows.Installer.3.1">
-      <Visible>False</Visible>
-      <ProductName>Windows Installer 3.1</ProductName>
-      <Install>true</Install>
-    </BootstrapperPackage>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="$(SolutionDir)\toolkit\CoApp.Toolkit.csproj">
+    <ProjectReference Include="CoApp.Toolkit.csproj">
       <Project>{8B7E0D2F-6CA0-4E5E-BF52-1E4BDB132BBC}</Project>
       <Name>CoApp.Toolkit</Name>
     </ProjectReference>
-    <ProjectReference Include="$(SolutionDir)\toolkit\CoApp.Toolkit.Engine.Client.csproj">
+    <ProjectReference Include="CoApp.Client.csproj">
       <Project>{CC917E10-0068-4E91-8D3D-3276846F7E43}</Project>
-      <Name>CoApp.Toolkit.Engine.Client</Name>
+      <Name>CoApp.Client</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="app.config">
+    <None Include="CLI\app.config">
       <SubType>Designer</SubType>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Properties\Resources.resx">
+    <EmbeddedResource Include="CLI\Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <SubType>Designer</SubType>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\HelpText.txt" />
+    <None Include="CLI\Resources\HelpText.txt" />
     <Content Include="$(SolutionDir)resources\icons\CoApp.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

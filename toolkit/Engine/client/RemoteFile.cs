@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright company="CoApp Project">
 //     Copyright (c) 2011 Garrett Serack. All rights reserved.
 // </copyright>
@@ -9,17 +9,15 @@
 //-----------------------------------------------------------------------
 
 
-namespace CoApp.Toolkit.Network {
+namespace CoApp.Toolkit.toolkit.Engine.Client {
     using System;
     using System.Collections.Generic;
-    using System.Dynamic;
     using System.IO;
     using System.Linq;
     using System.Net;
     using System.Net.Configuration;
     using System.Reflection;
     using System.Security.Cryptography;
-    using System.Text;
     using System.Threading.Tasks;
     using Exceptions;
     using Extensions;

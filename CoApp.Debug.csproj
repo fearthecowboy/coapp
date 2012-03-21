@@ -9,7 +9,7 @@
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>CoApp.Toolkit</RootNamespace>
-    <AssemblyName>CoApp.Toolkit.Debug</AssemblyName>
+    <AssemblyName>CoApp.Debug</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -49,17 +49,10 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Runtime.Serialization" />
-    <Reference Include="System.Web" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Debug\DumpExtension.cs" />
-    <Compile Include="Properties\Debug.AssemblyInfo.cs" />
+    <Compile Include="toolkit\Debug\DumpExtension.cs" />
+    <Compile Include="toolkit\Properties\Debug.AssemblyInfo.cs" />
     <Compile Include="$(SolutionDir)Source\CoApp.Toolkit.AssemblyStrongName.cs" />
   </ItemGroup>
   <ItemGroup>

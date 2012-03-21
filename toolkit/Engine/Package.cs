@@ -1045,7 +1045,7 @@ namespace CoApp.Toolkit.Engine {
         public IEnumerable<CompositionRule> CompositionRules { get { return CompositionData.CompositionRules ?? Enumerable.Empty<CompositionRule>(); } }
         public IEnumerable<WebApplication> WebApplications { get { return CompositionData.WebApplications ?? Enumerable.Empty<WebApplication>(); } }
         public IEnumerable<DeveloperLibrary> DeveloperLibraries { get { return CompositionData.DeveloperLibraries?? Enumerable.Empty<DeveloperLibrary>(); } }
-        public IEnumerable<Service> Services { get { return CompositionData.Services?? Enumerable.Empty<Service>(); } }
+        public IEnumerable<CoApp.Toolkit.Engine.Model.Roles.Service> Services { get { return CompositionData.Services ?? Enumerable.Empty<CoApp.Toolkit.Engine.Model.Roles.Service>(); } }
         public IEnumerable<Driver> Drivers { get { return CompositionData.Drivers ?? Enumerable.Empty<Driver>(); } }
         public IEnumerable<SourceCode> SourceCodes { get { return CompositionData.SourceCodes ?? Enumerable.Empty<SourceCode>(); } }
         

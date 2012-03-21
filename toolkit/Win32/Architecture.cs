@@ -10,7 +10,6 @@
 
 using System;
 using System.Diagnostics;
-using CoApp.Toolkit.Exceptions;
 using CoApp.Toolkit.Extensions;
 
 namespace CoApp.Toolkit.Win32 {

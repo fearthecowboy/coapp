@@ -1,31 +1,31 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoApp.Toolkit", "toolkit\CoApp.Toolkit.csproj", "{8B7E0D2F-6CA0-4E5E-BF52-1E4BDB132BBC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoApp.Toolkit", "CoApp.Toolkit.csproj", "{8B7E0D2F-6CA0-4E5E-BF52-1E4BDB132BBC}"
 	ProjectSection(ProjectDependencies) = postProject
 		{ACF26B97-45CF-4D0C-9C6A-7CAFB740C563} = {ACF26B97-45CF-4D0C-9C6A-7CAFB740C563}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cli", "cli\Cli.csproj", "{0EB44E9E-2674-4C0E-AE3F-E9071F45A765}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cli", "Cli.csproj", "{0EB44E9E-2674-4C0E-AE3F-E9071F45A765}"
 	ProjectSection(ProjectDependencies) = postProject
 		{8B7E0D2F-6CA0-4E5E-BF52-1E4BDB132BBC} = {8B7E0D2F-6CA0-4E5E-BF52-1E4BDB132BBC}
 		{A126ABBC-9199-4096-9714-4A1BEF84EE89} = {A126ABBC-9199-4096-9714-4A1BEF84EE89}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoApp.Toolkit.Engine.Core", "toolkit\CoApp.Toolkit.Engine.Core.csproj", "{CC917E10-0068-4E91-8D3D-76CB446F7E43}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoApp.Engine", "CoApp.Engine.csproj", "{CC917E10-0068-4E91-8D3D-76CB446F7E43}"
 	ProjectSection(ProjectDependencies) = postProject
 		{8B7E0D2F-6CA0-4E5E-BF52-1E4BDB132BBC} = {8B7E0D2F-6CA0-4E5E-BF52-1E4BDB132BBC}
 		{ACF26B97-45CF-4D0C-9C6A-7CAFB740C563} = {ACF26B97-45CF-4D0C-9C6A-7CAFB740C563}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoApp.Toolkit.Debug", "toolkit\CoApp.Toolkit.Debug.csproj", "{A126ABBC-9199-4096-9714-4A1BEF84EE89}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoApp.Debug", "CoApp.Debug.csproj", "{A126ABBC-9199-4096-9714-4A1BEF84EE89}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoApp.Toolkit.Engine.Client", "toolkit\CoApp.Toolkit.Engine.Client.csproj", "{CC917E10-0068-4E91-8D3D-3276846F7E43}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoApp.Client", "CoApp.Client.csproj", "{CC917E10-0068-4E91-8D3D-3276846F7E43}"
 	ProjectSection(ProjectDependencies) = postProject
 		{CC917E10-0068-4E91-8D3D-76CB446F7E43} = {CC917E10-0068-4E91-8D3D-76CB446F7E43}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoApp.Service", "service\CoApp.Service.csproj", "{93838A7A-1024-2048-BB75-E9B25471E4AF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoApp.Service", "CoApp.Service.csproj", "{93838A7A-1024-2048-BB75-E9B25471E4AF}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CoApp.Rehash.x86", "rehash\CoApp.Rehash.x86.vcxproj", "{4EA8493D-D7B5-41E1-86C8-F253637820E8}"
 EndProject
@@ -39,7 +39,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CoApp.Resources", "resource
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "prerequisites", "prerequisites", "{27AAF502-F065-4AAD-B893-4B77E3E10AE9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoApp.Cleaner", "cleaner\CoApp.Cleaner.csproj", "{680E9074-7D37-4A93-9560-122686340435}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoApp.Cleaner", "CoApp.Cleaner.csproj", "{680E9074-7D37-4A93-9560-122686340435}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

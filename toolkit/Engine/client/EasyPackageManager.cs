@@ -22,6 +22,7 @@ namespace CoApp.Toolkit.Engine.Client {
     using Tasks;
     using Toolkit.Exceptions;
     using Win32;
+    using toolkit.Engine.Client;
 
     public class Feed {
         public string Location { get; internal set; }

@@ -8,8 +8,8 @@
     <ProjectGuid>{CC917E10-0068-4E91-8D3D-3276846F7E43}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>CoApp.Toolkit</RootNamespace>
-    <AssemblyName>CoApp.Toolkit.Engine.Client</AssemblyName>
+    <RootNamespace>CoApp</RootNamespace>
+    <AssemblyName>CoApp.Client</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile>
@@ -47,56 +47,53 @@
     <Reference Include="System.ServiceProcess" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xaml" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Engine\Client\Downloader.cs" />
-    <Compile Include="Engine\Client\Dummy.cs" />
-    <Compile Include="Engine\Client\EasyPackageManager.cs" />
-    <Compile Include="Engine\Client\Installer.cs" />
-    <Compile Include="Engine\Client\InstallerPrep.cs" />
-    <Compile Include="Engine\Client\Package.cs" />
-    <Compile Include="Engine\Client\PackageManager.cs">
+    <Compile Include="Toolkit\Engine\Client\Downloader.cs" />
+    <Compile Include="Toolkit\Engine\Client\Dummy.cs" />
+    <Compile Include="Toolkit\Engine\Client\EasyPackageManager.cs" />
+    <Compile Include="Toolkit\Engine\Client\Installer.cs" />
+    <Compile Include="Toolkit\Engine\Client\InstallerPrep.cs" />
+    <Compile Include="Toolkit\Engine\Client\Package.cs" />
+    <Compile Include="Toolkit\Engine\Client\PackageManager.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Engine\LinkType.cs" />
-    <Compile Include="Engine\Model\CompositionAction.cs" />
-    <Compile Include="Engine\Model\CompositionRule.cs" />
-    <Compile Include="Engine\EngineServiceManager.cs" />
-    <Compile Include="Engine\Exceptions\ConfigurationException.cs" />
-    <Compile Include="Engine\Model\Atom\AtomFeed.cs" />
-    <Compile Include="Engine\Model\Atom\AtomItem.cs" />
-    <Compile Include="Engine\Model\Identity.cs" />
-    <Compile Include="Engine\Model\License.cs" />
-    <Compile Include="Engine\Model\LicenseId.cs" />
-    <Compile Include="Engine\Model\LocationAttribute.cs" />
-    <Compile Include="Engine\Model\PackageModel.cs" />
-    <Compile Include="Engine\Model\Role.cs" />
-    <Compile Include="Engine\PackageManagerSettings.cs" />
-    <Compile Include="Engine\PackageName.cs" />
-    <Compile Include="Engine\Exceptions\UnableToStartServiceException.cs" />
-    <Compile Include="Engine\PackageManagerMessages.cs" />
-    <Compile Include="Engine\Model\PackageRole.cs" />
-    <Compile Include="Properties\InstallerResources.Designer.cs">
+    <Compile Include="Toolkit\Engine\Client\RemoteFile.cs" />
+    <Compile Include="Toolkit\Engine\LinkType.cs" />
+    <Compile Include="Toolkit\Engine\Model\CompositionAction.cs" />
+    <Compile Include="Toolkit\Engine\Model\CompositionRule.cs" />
+    <Compile Include="Toolkit\Engine\EngineServiceManager.cs" />
+    <Compile Include="Toolkit\Engine\Exceptions\ConfigurationException.cs" />
+    <Compile Include="Toolkit\Engine\Model\Atom\AtomFeed.cs" />
+    <Compile Include="Toolkit\Engine\Model\Atom\AtomItem.cs" />
+    <Compile Include="Toolkit\Engine\Model\Identity.cs" />
+    <Compile Include="Toolkit\Engine\Model\License.cs" />
+    <Compile Include="Toolkit\Engine\Model\LicenseId.cs" />
+    <Compile Include="Toolkit\Engine\Model\LocationAttribute.cs" />
+    <Compile Include="Toolkit\Engine\Model\PackageModel.cs" />
+    <Compile Include="Toolkit\Engine\Model\Role.cs" />
+    <Compile Include="Toolkit\Engine\PackageManagerSettings.cs" />
+    <Compile Include="Toolkit\Engine\PackageName.cs" />
+    <Compile Include="Toolkit\Engine\Exceptions\UnableToStartServiceException.cs" />
+    <Compile Include="Toolkit\Engine\PackageManagerMessages.cs" />
+    <Compile Include="Toolkit\Engine\Model\PackageRole.cs" />
+    <Compile Include="Toolkit\Properties\InstallerResources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>InstallerResources.resx</DependentUpon>
     </Compile>
-    <Compile Include="Properties\Engine.Core.AssemblyInfo.cs" />
+    <Compile Include="Toolkit\Properties\Engine.Core.AssemblyInfo.cs" />
     <Compile Include="$(SolutionDir)Source\CoApp.Toolkit.AssemblyStrongName.cs" />
-    <Compile Include="UI\InstallerMainWindow.xaml.cs">
+    <Compile Include="Toolkit\UI\InstallerMainWindow.xaml.cs">
       <DependentUpon>InstallerMainWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="UI\VisibilityAnimation.cs" />
+    <Compile Include="Toolkit\UI\VisibilityAnimation.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Images\logo-only1.png" />
-    <Resource Include="Images\coapp-background1.png" />
+    <Resource Include="Toolkit\Images\logo-only1.png" />
+    <Resource Include="Toolkit\Images\coapp-background1.png" />
     <ProjectReference Include="CoApp.Toolkit.csproj">
       <Project>{8B7E0D2F-6CA0-4E5E-BF52-1E4BDB132BBC}</Project>
       <Name>CoApp.Toolkit</Name>
@@ -104,17 +101,17 @@
     <Content Include="$(SolutionDir)resources\icons\CoApp.ico" />
   </ItemGroup>
   <ItemGroup>
-    <Page Include="UI\InstallerMainWindow.xaml">
+    <Page Include="Toolkit\UI\InstallerMainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="UI\Styles.xaml">
+    <Page Include="Toolkit\UI\Styles.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Properties\InstallerResources.resx">
+    <EmbeddedResource Include="Toolkit\Properties\InstallerResources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>InstallerResources.Designer.cs</LastGenOutput>
     </EmbeddedResource>

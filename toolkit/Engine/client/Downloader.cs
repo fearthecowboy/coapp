@@ -8,6 +8,7 @@ namespace CoApp.Toolkit.Engine.Client {
     using System.Threading.Tasks;
     using Extensions;
     using Network;
+    using toolkit.Engine.Client;
 
     public class Downloader {
         private static readonly Dictionary<string, Task> _currentDownloads = new Dictionary<string, Task>();

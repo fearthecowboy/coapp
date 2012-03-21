@@ -543,14 +543,11 @@ namespace CoApp.Toolkit.Engine.Client {
         public void Install() {
             if( !IsWorking) {
                 IsWorking = true;
-                PackageManager.Instance.InstallPackage(SelectedPackage.CanonicalName, autoUpgrade: false, messages: new PackageManagerMessages {
-                    InstallingPackageProgress = (canonicalName, progress, overallProgress) => { Progress = overallProgress; },
-                    InstalledPackage = (canonicalName) => { Package.GetPackage(canonicalName).IsInstalled = true; },
-                    OperationCancelled = CancellationRequestedDuringInstall,
-                }.Extend(_messages)).ContinueWith(antecedent => {
-                    
-                    OnFinished();
-                }, TaskContinuationOptions.AttachedToParent);
+                _easyPackageManager.InstallPackage(
+                    SelectedPackage.CanonicalName, autoUpgrade: false, installProgress: (canonicalName, progress, overallProgress) => { Progress = overallProgress; }).ContinueWith((antecedent) => {
+                        OnFinished();    
+                    }, TaskContinuationOptions.AttachedToParent);
+                
             }
         }
 

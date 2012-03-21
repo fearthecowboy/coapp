@@ -1,29 +1,23 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoApp.Toolkit", "toolkit\CoApp.Toolkit.csproj", "{8B7E0D2F-6CA0-4E5E-BF52-1E4BDB132BBC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoApp.Toolkit", "CoApp.Toolkit.csproj", "{8B7E0D2F-6CA0-4E5E-BF52-1E4BDB132BBC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cli", "cli\Cli.csproj", "{0EB44E9E-2674-4C0E-AE3F-E9071F45A765}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cli", "Cli.csproj", "{0EB44E9E-2674-4C0E-AE3F-E9071F45A765}"
 	ProjectSection(ProjectDependencies) = postProject
 		{8B7E0D2F-6CA0-4E5E-BF52-1E4BDB132BBC} = {8B7E0D2F-6CA0-4E5E-BF52-1E4BDB132BBC}
 		{A126ABBC-9199-4096-9714-4A1BEF84EE89} = {A126ABBC-9199-4096-9714-4A1BEF84EE89}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoApp.Toolkit.Engine.Core", "toolkit\CoApp.Toolkit.Engine.Core.csproj", "{CC917E10-0068-4E91-8D3D-76CB446F7E43}"
-	ProjectSection(ProjectDependencies) = postProject
-		{8B7E0D2F-6CA0-4E5E-BF52-1E4BDB132BBC} = {8B7E0D2F-6CA0-4E5E-BF52-1E4BDB132BBC}
-	EndProjectSection
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoApp.Debug", "CoApp.Debug.csproj", "{A126ABBC-9199-4096-9714-4A1BEF84EE89}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoApp.Toolkit.Debug", "toolkit\CoApp.Toolkit.Debug.csproj", "{A126ABBC-9199-4096-9714-4A1BEF84EE89}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoApp.Client", "CoApp.Client.csproj", "{CC917E10-0068-4E91-8D3D-3276846F7E43}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoApp.Toolkit.Engine.Client", "toolkit\CoApp.Toolkit.Engine.Client.csproj", "{CC917E10-0068-4E91-8D3D-3276846F7E43}"
-	ProjectSection(ProjectDependencies) = postProject
-		{CC917E10-0068-4E91-8D3D-76CB446F7E43} = {CC917E10-0068-4E91-8D3D-76CB446F7E43}
-	EndProjectSection
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoApp.Service", "CoApp.Service.csproj", "{93838A7A-1024-2048-BB75-E9B25471E4AF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoApp.Service", "service\CoApp.Service.csproj", "{93838A7A-1024-2048-BB75-E9B25471E4AF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoApp.Cleaner", "CoApp.Cleaner.csproj", "{680E9074-7D37-4A93-9560-122686340435}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoApp.Cleaner", "cleaner\CoApp.Cleaner.csproj", "{680E9074-7D37-4A93-9560-122686340435}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Scratch", "Scratch.csproj", "{0E5EDF4B-5BC5-439E-B5EB-0534005CB4C3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,10 +33,6 @@ Global
 		{0EB44E9E-2674-4C0E-AE3F-E9071F45A765}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0EB44E9E-2674-4C0E-AE3F-E9071F45A765}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0EB44E9E-2674-4C0E-AE3F-E9071F45A765}.Release|Any CPU.Build.0 = Release|Any CPU
-		{CC917E10-0068-4E91-8D3D-76CB446F7E43}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{CC917E10-0068-4E91-8D3D-76CB446F7E43}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{CC917E10-0068-4E91-8D3D-76CB446F7E43}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{CC917E10-0068-4E91-8D3D-76CB446F7E43}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A126ABBC-9199-4096-9714-4A1BEF84EE89}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A126ABBC-9199-4096-9714-4A1BEF84EE89}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A126ABBC-9199-4096-9714-4A1BEF84EE89}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -59,6 +49,10 @@ Global
 		{680E9074-7D37-4A93-9560-122686340435}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{680E9074-7D37-4A93-9560-122686340435}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{680E9074-7D37-4A93-9560-122686340435}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0E5EDF4B-5BC5-439E-B5EB-0534005CB4C3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0E5EDF4B-5BC5-439E-B5EB-0534005CB4C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0E5EDF4B-5BC5-439E-B5EB-0534005CB4C3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0E5EDF4B-5BC5-439E-B5EB-0534005CB4C3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -29,7 +29,7 @@ namespace CoApp.Toolkit.Engine {
         public List<WebApplication> WebApplications { get; set; }
 
         [XmlArray(IsNullable = false)]
-        public List<Service> Services { get; set; }
+        public List<CoApp.Toolkit.Engine.Model.Roles.Service> Services { get; set; }
 
         [XmlArray(IsNullable = false)]
         public List<SourceCode> SourceCodes { get; set; }
