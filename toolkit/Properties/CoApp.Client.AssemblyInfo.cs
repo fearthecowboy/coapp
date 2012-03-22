@@ -15,10 +15,10 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("CoApp.Toolkit.Engine")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyTitle("CoApp.Client")]
+[assembly: AssemblyDescription("Toolkit Engine Client")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyProduct("CoApp.Toolkit")]
+[assembly: AssemblyProduct("CoApp")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -28,8 +28,4 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("5648abc3-656a-401d-88d5-c3a639955632")]
-#if DEBUG
-[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Test.CoApp.Toolkit.Engine")]
-#endif
-
+[assembly: Guid("5648abc3-9919-401d-4096-327689955632")]
