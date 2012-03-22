@@ -20,7 +20,7 @@ CoApp, is the Common Opensource Application Publishing Platform, an open-source 
 The goal of the CoApp project is to create a community of developers dedicated to creating a set of tools and processes that enable other open source developers to create and maintain their open source products with Windows as a primary build target.."; // or path to a file...
     icon: @"images\logo3.png";
     
-    author-version : "1.0 Beta3";
+    author-version : "1.2 PRE-RC";
     bug-tracker: "https://github.com/organizations/coapp/dashboard/issues";
     stability : "-100";
     tags : {
