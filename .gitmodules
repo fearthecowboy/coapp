@@ -2,6 +2,3 @@
 [submodule "ext/tools"]
 	path = ext/tools
 	url = git://github.com/coapp/tools.git
-[submodule "ext/libraries"]
-	path = ext/libraries
-	url = git://github.com/coapp/libraries.git

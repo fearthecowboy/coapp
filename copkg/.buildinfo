@@ -204,8 +204,7 @@ anycpu {
         @"output\any\${cfg}\bin\CoApp.exe",
         @"output\any\${cfg}\bin\CoApp.Service.exe",
         @"output\any\${cfg}\bin\CoApp.Toolkit.dll",
-        @"output\any\${cfg}\bin\CoApp.Toolkit.Engine.Client.dll",
-        @"output\any\${cfg}\bin\CoApp.Toolkit.Engine.dll",
+        @"output\any\${cfg}\bin\CoApp.Client.dll",
     };
 
     build-command: @"
