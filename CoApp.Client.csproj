@@ -84,7 +84,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>InstallerResources.resx</DependentUpon>
     </Compile>
-    <Compile Include="Toolkit\Properties\Engine.Core.AssemblyInfo.cs" />
+    <Compile Include="Toolkit\Properties\CoApp.Client.AssemblyInfo.cs" />
     <Compile Include="$(SolutionDir)Source\CoApp.Toolkit.AssemblyStrongName.cs" />
     <Compile Include="Toolkit\UI\InstallerMainWindow.xaml.cs">
       <DependentUpon>InstallerMainWindow.xaml</DependentUpon>

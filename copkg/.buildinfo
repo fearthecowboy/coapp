@@ -11,7 +11,7 @@ release {
     // builds the binaries in "Release" mode but does not sign them.
     set : cfg = "Release";
     uses : {
-        x86, x64, anycpu 
+        anycpu 
     };
     
     build-command: @"
@@ -25,7 +25,7 @@ debug {
     default: false;
     set : cfg = "Debug";
     uses : {
-        x86, x64, anycpu 
+        anycpu 
     };
     
     build-command: @"echo DEBUG build done.";
@@ -35,7 +35,7 @@ debug {
 package { 
     default: false;
     set : cfg = "Release";
-    uses : sign;
+    uses : sign-anycpu;
     build-command: @"
         cscript //e:jscript scripts\increment-build-version.js
         
@@ -65,43 +65,6 @@ install {
     ";
 }
 
-sign { 
-    // builds all the binaries in "Release" mode and digitally signs and 
-    // strong-names the binaries.
-    default: false;
-    set : cfg = "Release";
-    uses : { 
-        sign-prerequisites,
-        sign-anycpu
-    };
-    
-    build-command: @"
-        echo Built singed RELEASE binaries.
-    ";
-}
-
-sign-prerequisites {
-    set : release_dir = @"output\any\Release\bin\";
-    default: false;
-    
-    uses: {
-        x86,
-        x64,
-    };
-    
-    targets: {
-    };
-    
-    
-    //REM for %%F in (ptk.exe) do set SIMPLESIGNER=%%~f$PATH:F
-    build-command: @" 
-        REM Add the coapp tools folder to the end of the path, in case we don't have the tools in the path
-        PATH=%PATH%;%CD%\ext\tools
-    
-        REM sign files in release directory
-        simplesigner --nologo --sign --strong-name ""${release_dir}CoApp.Rehash.x86.dll"" ""${release_dir}CoApp.Rehash.x64.dll"" ""${release_dir}CoApp.Resources.dll""  || goto failed
-    ";
-}
 
 sign-anycpu {
     set : release_dir = @"output\any\Release\bin\";
@@ -120,43 +83,68 @@ sign-anycpu {
         PATH=%PATH%;%CD%\ext\tools
         
         REM sign files in release directory
-        simplesigner --nologo --sign --strong-name  ""${release_dir}CoApp.Toolkit.dll"" ""${release_dir}CoApp.Toolkit.Engine.dll"" ""${release_dir}CoApp.Toolkit.Engine.Client.dll"" ""${release_dir}CoApp.Service.exe"" ""${release_dir}CoApp.Cleaner.exe"" ""${release_dir}CoApp.exe"" || goto failed
+        simplesigner --nologo --sign --strong-name  ""${release_dir}CoApp.Toolkit.dll"" ""${release_dir}CoApp.Client.dll"" ""${release_dir}CoApp.Service.exe"" ""${release_dir}CoApp.Cleaner.exe"" ""${release_dir}CoApp.exe"" || goto failed
     ";
 }
 
-/*
-export {
-    set : release_dir = @"output\any\Release\bin\";
-    set : binaries_dir = @"..\binaries\";
-    set : tools_dir = @"..\tools\";
+anycpu {
+    default: no;
+    platform : x86;
+    compiler: vc10;
     
+    uses: clean;
+    
+    targets: { 
+        @"output\any\${cfg}\bin\CoApp.Cleaner.exe",
+        @"output\any\${cfg}\bin\CoApp.exe",
+        @"output\any\${cfg}\bin\CoApp.Service.exe",
+        @"output\any\${cfg}\bin\CoApp.Toolkit.dll",
+        @"output\any\${cfg}\bin\CoApp.Client.dll",
+    };
+
+    build-command: @"
+        msbuild  /p:Configuration=${cfg} ""/p:Platform=Any CPU"" coapp.sln || goto failed
+    ";
+}
+
+
+// Prerequisites are only built explicitly -- since they must always be signed 
+// (and *rarely* ever need modification 
+// we only build and sign them if we really, really need to 
+// (they are picked up by the build from the .\binaries folder)
+// use:
+// ptk release-prerequisites
+release-prerequisites {
+    set : cfg = "Release";
+    set : release_dir = @"output\any\Release\bin\";
     default: false;
+    
     uses: {
-        sign
+        x86,
+        x64,
     };
     
-    build-command: @"
-        mkdir ""${binaries_dir}"" 
+    targets: {
+        @"${release_dir}CoApp.Rehash.x86.dll",
+        @"${release_dir}CoApp.Rehash.x64.dll",
+        @"${release_dir}CoApp.Resources.dll"
+    };
+    
+    
+    //REM for %%F in (ptk.exe) do set SIMPLESIGNER=%%~f$PATH:F
+    build-command: @" 
+        REM Add the coapp tools folder to the end of the path, in case we don't have the tools in the path
+        PATH=%PATH%;%CD%\ext\tools
+    
+        REM sign files in release directory
+        simplesigner --nologo --sign --strong-name ""${release_dir}CoApp.Rehash.x86.dll"" ""${release_dir}CoApp.Rehash.x64.dll"" ""${release_dir}CoApp.Resources.dll""  || goto failed
         
-        REM copy binaries into ..\binaries folder (this should be the one that is committed back when exported)
-        xcopy /Q /D /Y  ""${release_dir}CoApp.Rehash.x86.dll""  ""${binaries_dir}"" || goto failed
-        xcopy /Q /D /Y  ""${release_dir}CoApp.Rehash.x64.dll""  ""${binaries_dir}"" || goto failed
-        xcopy /Q /D /Y  ""${release_dir}CoApp.Resources.dll""  ""${binaries_dir}""  || goto failed
-        xcopy /Q /D /Y  ""${release_dir}CoApp.Toolkit.dll"" ""${binaries_dir}"" || goto failed
-        xcopy /Q /D /Y  ""${release_dir}CoApp.Toolkit.Engine.dll""  ""${binaries_dir}"" || goto failed
-        xcopy /Q /D /Y  ""${release_dir}CoApp.Toolkit.Engine.Client.dll""  ""${binaries_dir}"" || goto failed
-        xcopy /Q /D /Y  ""${release_dir}CoApp.Service.exe""  ""${binaries_dir}"" || goto failed 
-        xcopy /Q /D /Y  ""${release_dir}CoApp.Cleaner.exe"" ""${binaries_dir}"" || goto failed 
-        xcopy /Q /D /Y  ""${release_dir}CoApp.exe"" ""${binaries_dir}"" || goto failed
-
-        rem TODO: package stuff too?
-        rem 
-        
-        REM update version
-        cscript //e:jscript scripts\increment-build-version.js
+        REM copy files to the .\binaries folder
+        copy /Y ""${release_dir}CoApp.Rehash.x86.dll""  binaries\
+        copy ""${release_dir}CoApp.Rehash.x64.dll"" binaries\
+        copy ""${release_dir}CoApp.Resources.dll"" binaries\
     ";
 }
-*/
 
 x86 {
     default: false;
@@ -192,33 +180,12 @@ x64 {
     ";
 }
 
-anycpu {
-    default: no;
-    platform : x86;
-    compiler: vc10;
-    
-    uses: clean;
-    
-    targets: { 
-        @"output\any\${cfg}\bin\CoApp.Cleaner.exe",
-        @"output\any\${cfg}\bin\CoApp.exe",
-        @"output\any\${cfg}\bin\CoApp.Service.exe",
-        @"output\any\${cfg}\bin\CoApp.Toolkit.dll",
-        @"output\any\${cfg}\bin\CoApp.Client.dll",
-    };
-
-    build-command: @"
-        msbuild  /p:Configuration=${cfg} ""/p:Platform=Any CPU"" coapp.sln || goto failed
-    ";
-  
-}
-
 clean {
     default: no;
     
     clean-command: @"
-        rmdir /s /q output intermediate  > nul 2>&1
-        for /d %%v in (*) do if exist %%v\obj rmdir /s /q %%v\obj        
-        for /d %%v in (*) do if exist %%v\bin rmdir /s /q %%v\bin
+        rmdir /s /q output intermediate obj bin > nul 2>&1
+        for /d %%v in (*) do if exist %%v\obj rmdir /s /q %%v\obj > nul 2>&1
+        for /d %%v in (*) do if exist %%v\bin rmdir /s /q %%v\bin > nul 2>&1
     ";
 }

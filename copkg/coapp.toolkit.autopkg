@@ -35,6 +35,7 @@ compatability-policy {
     versions : {
         "1.0",
         "1.1",
+        "1.2",
     }; // if not specified, find the versions by looking at the feeds and finding all the major/minor versions in range.
 }
 
@@ -55,8 +56,7 @@ files[dlls] {
     
     include: {
         "coapp.toolkit.dll",
-        "coapp.toolkit.engine.dll",
-        "coapp.toolkit.engine.client.dll"
+        "coapp.client.dll",
     };
     
     trim-path: minimal;
@@ -67,7 +67,7 @@ files[refasms] {
     
     include: {
         "coapp.toolkit.dll",
-        "coapp.toolkit.engine.client.dll"
+        "coapp.client.dll"
     };
     
     trim-path: minimal;
