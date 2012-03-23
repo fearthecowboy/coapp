@@ -970,6 +970,17 @@ namespace CoApp.Toolkit.Engine.Client {
             }, TaskContinuationOptions.AttachedToParent);
         }}
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="taskName">the name of the task. If a task with this name already exists, it will be overwritten.</param>
+        /// <param name="executable"></param>
+        /// <param name="commandline"></param>
+        /// <param name="hour"></param>
+        /// <param name="minutes"></param>
+        /// <param name="dayOfWeek"></param>
+        /// <param name="intervalInMinutes"> how often the scheduled task should consider running (on Windows XP/2003, it's not possible to run as soon as possible after a task was missed.</param>
+        /// <returns></returns>
         public Task AddScheduledTask(string taskName, string executable, string commandline, int hour, int minutes, DayOfWeek? dayOfWeek, int intervalInMinutes) {
             var handler = new RemoteCallResponse();
 
