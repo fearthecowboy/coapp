@@ -100,6 +100,26 @@ namespace CoApp.Toolkit.Engine {
             }
         }
 
+        public bool IsSameFamily(Package olderPackage) {
+            return Name == olderPackage.Name &&
+                Architecture == olderPackage.Architecture &&
+                PublicKeyToken == olderPackage.PublicKeyToken;
+        }
+
+        public bool IsAnUpdateFor( Package olderPackage ) {
+            return IsSameFamily(olderPackage) &&
+                InternalPackageData.PolicyMinimumVersion <= olderPackage.Version &&
+                InternalPackageData.PolicyMaximumVersion >= olderPackage.Version;
+        }
+
+        public bool IsAnUpgradeFor(Package olderPackage) {
+            return
+                IsSameFamily(olderPackage) &&
+                Version > olderPackage.Version && 
+                !(InternalPackageData.PolicyMinimumVersion <= olderPackage.Version &&
+                InternalPackageData.PolicyMaximumVersion >= olderPackage.Version);
+        }
+
         public bool IsActive {
             get { 
                 return GetCurrentPackageVersion(Name, PublicKeyToken) == Version;

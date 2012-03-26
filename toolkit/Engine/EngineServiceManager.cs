@@ -189,12 +189,14 @@ namespace CoApp.Toolkit.Engine {
         }
 
         public static bool Available { get {
-            using (var kernelEvent = Kernel32.OpenEvent(0x00100000, false, "Global\\CoAppAvailable")) {
-                if (!kernelEvent.IsInvalid && Kernel32.WaitForSingleObject(kernelEvent, 0) == 0) {
-                    return true;
+            lock (typeof(EngineServiceManager)) {
+                using (var kernelEvent = Kernel32.OpenEvent(0x00100000, false, "Global\\CoAppAvailable")) {
+                    if (!kernelEvent.IsInvalid && Kernel32.WaitForSingleObject(kernelEvent, 0) == 0) {
+                        return true;
+                    }
                 }
+                return false;
             }
-            return false;
         }}
 
         public static bool StartingUp {

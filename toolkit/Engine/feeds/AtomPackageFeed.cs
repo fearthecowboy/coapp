@@ -106,6 +106,8 @@ namespace CoApp.Toolkit.Engine.Feeds {
         /// <remarks></remarks>
         protected void Scan() {
             if (!Scanned || Stale) {
+                Stale = false;
+
                 // bring the file local first
                 EnsureFileIsLocal().ContinueWith(antecedent => {
                     if (antecedent.IsFaulted || antecedent.IsCanceled || !antecedent.Result) {              
@@ -113,7 +115,7 @@ namespace CoApp.Toolkit.Engine.Feeds {
                         LastScanned = DateTime.MinValue;
                         return false;
                     }
-                    Stale = false;
+                    
 
                     // we're good to load the file from the _localLocation
                     var feed = AtomFeed.LoadFile(_localLocation);

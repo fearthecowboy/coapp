@@ -90,7 +90,7 @@ namespace CoApp.Toolkit.Tasks {
                 } 
 
                 // if we are inheriting from a parent instance, check that first
-                if (inheritFrom != null && inheritFrom.GetType() == GetType() ) {
+                if (inheritFrom != null && GetType().IsAssignableFrom(inheritFrom.GetType())) {
                     var inheritedDelegate = field.GetValue(inheritFrom);
                     if (inheritedDelegate != null) {
                         // found one, copy it.

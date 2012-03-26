@@ -17,6 +17,7 @@ using System.Text;
 using CoApp.Toolkit.Extensions;
 
 namespace CoApp.Toolkit.Engine.Client {
+    using System.Threading;
     using System.Threading.Tasks;
     using Tasks;
     using Toolkit.Exceptions;
@@ -535,11 +536,13 @@ namespace CoApp.Toolkit.Engine.Client {
         }
 
         public Task<IEnumerable<Package>> GetPackages(IEnumerable<string> packageNames, FourPartVersion? minVersion = null, FourPartVersion? maxVersion = null, bool? dependencies = null, bool? installed = null, bool? active = null, bool? requested = null, bool? blocked = null, bool? latest = null, string locationFeed = null, bool? updates = null, bool? upgrades = null, bool? trimable = null) {
-            
             var handler = new RemoteCallResponse {
                 DownloadProgress = _downloadProgress,
                 DownloadCompleted = _downloadCompleted,
             };
+            if( packageNames.IsNullOrEmpty() ) {
+                packageNames = "*".SingleItemAsEnumerable();
+            }
 
             return PackageManager.Instance.GetPackages(packageNames, minVersion, maxVersion, dependencies, installed, active, requested, blocked, latest, locationFeed,false , updates, upgrades, trimable, handler).ContinueWith(antecedent => {
                 if( handler.EngineRestarting ) {
@@ -718,6 +721,32 @@ namespace CoApp.Toolkit.Engine.Client {
                         return antecedent.Result.Errors;
                     }, TaskContinuationOptions.AttachedToParent);
             }
+        }
+
+        public Task RemoveSystemFeed( string feedLocation ) {
+            var handler = new RemoteCallResponse();
+
+            return PackageManager.Instance.RemoveFeed(feedLocation, false, handler).ContinueWith(antecedent => {
+                if (handler.EngineRestarting) {
+                    RemoveSystemFeed(feedLocation);
+                    return;
+                }
+                handler.ThrowWhenFaulted(antecedent);
+
+            }, TaskContinuationOptions.AttachedToParent);
+        }
+
+        public Task RemoveSessionFeed(string feedLocation) {
+            var handler = new RemoteCallResponse();
+
+            return PackageManager.Instance.RemoveFeed(feedLocation, true, handler).ContinueWith(antecedent => {
+                if (handler.EngineRestarting) {
+                    RemoveSessionFeed(feedLocation);
+                    return;
+                }
+                handler.ThrowWhenFaulted(antecedent);
+
+            }, TaskContinuationOptions.AttachedToParent);
         }
 
         public Task AddSystemFeed(string feedLocation ) {

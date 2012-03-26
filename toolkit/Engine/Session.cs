@@ -851,23 +851,23 @@ namespace CoApp.Toolkit.Engine {
 
                 case "schedule-task":
                     return null;
-                    break;
+                    
                 case "remove-schedule-task":
                     return null;
-                    break;
+                    
                 case "get-schedule-tasks":
                     return null;
-                    break;
+                    
 
                 case "add-trusted-publisher":
                     return null;
-                    break;
+                    
                 case "remove-trusted-publisher":
                     return null;
-                    break;
+                    
                 case "get-trusted-publishers":
                     return null;
-                    break;
+                    
 
                 default:
                     // not recognized command, return error code.

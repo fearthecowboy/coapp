@@ -115,8 +115,14 @@ namespace CoApp.Toolkit.Logging {
 
                 // we're gonna output this to dbgview too for now.
                 if (eventID == 0 && category == 0) {
+#if COAPP_ENGINE_CORE && DEBUG
+                    Console.WriteLine(string.Format("«{0}/{1}»-{2}", type, Source, message.Replace("\r\n", "\r\n»")));
+#endif
                     OutputDebugString(string.Format("«{0}/{1}»-{2}", type, Source, message.Replace("\r\n", "\r\n»")));
                 } else {
+#if COAPP_ENGINE_CORE && DEBUG
+                    Console.WriteLine(string.Format("«{0}/{1}»({2}/{3})-{4}", type, Source, eventID, category, message.Replace("\r\n", "\r\n»")));
+#endif
                     OutputDebugString(string.Format("«{0}/{1}»({2}/{3})-{4}", type, Source, eventID, category, message.Replace("\r\n", "\r\n»")));
                 }
                 if (!rawData.IsNullOrEmpty()) {

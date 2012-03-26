@@ -155,13 +155,14 @@ CoApp.Service [options]
                                     Thread.Sleep(100);
                                 }
 
-                                foreach (var proc in Process.GetProcessesByName("coapp.service").Where(each => each.Id != Process.GetCurrentProcess().Id).ToArray()) {
-                                    try {
-                                        Console.Write("Killing Process...");
-                                        proc.Kill();
-                                    } catch { }
-                                }
                             }
+                            foreach (var proc in Process.GetProcessesByName("coapp.service").Where(each => each.Id != Process.GetCurrentProcess().Id).ToArray()) {
+                                try {
+                                    Console.WriteLine("Killing Process... {0}", proc.Id);
+                                    proc.Kill();
+                                } catch { }
+                            }
+
 
                             _interactive = true;
                             break;

@@ -69,9 +69,14 @@ namespace CoApp.Toolkit.Engine.Feeds {
 
         internal virtual bool Stale {
             get {
-                return _stale && LastScanned.Subtract(DateTime.Now) <= new TimeSpan(12, 0, 0);
+                return _stale || DateTime.Now.Subtract(LastScanned) >= new TimeSpan(12, 0, 0);
             }
-            set { _stale = value; }
+            set {
+                if( value == false ) {
+                    LastScanned = DateTime.Now;
+                }
+                _stale = value;
+            }
         }
 
         /// <summary>

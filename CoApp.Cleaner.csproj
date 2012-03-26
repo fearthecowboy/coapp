@@ -8,7 +8,7 @@
     <ProjectGuid>{680E9074-7D37-4A93-9560-122686340435}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>CoApp.Cleaner</RootNamespace>
+    <RootNamespace>CoApp</RootNamespace>
     <AssemblyName>CoApp.Cleaner</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <TargetFrameworkProfile>

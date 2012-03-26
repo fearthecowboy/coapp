@@ -188,19 +188,52 @@ namespace CoApp.Toolkit.Engine {
 
                     select package;
 
-                // if the client is asking for Updates:
-                //      - get the packages that match the search criteria. 'pkgs'
-                //      - filter out 'do-not-update' and 'blocked' packages (unless passing in blocked flag)
-                //      - filter 'pkgs' so that every package in the list is the most recent binary compatible one.
-                //      - for each package in 'pkgs', find out if there is a higher binary compatible one available that is not installed.
-                //          - add that to the list of results; return the distinct results
+                if( updates == true ) {
+                    // if the client is asking for Updates:
+                    //      - get the packages that match the search criteria. 'pkgs'
+                    //      - filter 'pkgs' so that every package in the list is the most recent binary compatible one.
+                    //      - filter out 'do-not-update' and 'blocked' packages (unless passing in blocked flag)
+                    //      - for each package in 'pkgs', find out if there is a higher binary compatible one available that is not installed.
+                    //          - add that to the list of results; return the distinct results
 
-                // if the client is asking for Upgrades:
-                //      - get list packages that meet the search criteria. 'pkgs'. 
-                //      - filter out 'do-not-upgrade' and 'do-not-update' and 'blocked' packages--(unless passing in blocked flag)
-                //      - (by definition upgrades exclude updates)
-                //      - for each packge in 'pkgs' find out if ther is a higher (non-compatible) version that is not installed.
-                //          - add that to the list of results; return the distinct results
+                    var tmp = results.ToArray();
+
+                    results = tmp.Where(each => 
+                        !tmp.Any(x => x.IsAnUpdateFor(each)) &&
+                        !each.DoNotUpdate &&
+                        (blocked??!each.IsBlocked));
+
+                    // set the new results set 
+                    results = 
+                        from r in results 
+                        let familyPackages = SearchForPackages(r.Name, null, r.Architecture, r.PublicKeyToken, null).Where(each => !each.IsInstalled).OrderByDescending(each => each.Version) 
+                            select familyPackages.FirstOrDefault(each => each.IsAnUpdateFor(r)) into updatePkg 
+                        where updatePkg != null 
+                        select updatePkg;
+                }else if( upgrades == true ) {
+                    // if the client is asking for Upgrades:
+                    //      - get list packages that meet the search criteria. 'pkgs'. 
+                    //      - filter out 'do-not-upgrade' and 'do-not-update' and 'blocked' packages--(unless passing in blocked flag)
+                    //      - (by definition upgrades exclude updates)
+                    //      - for each packge in 'pkgs' find out if ther is a higher (non-compatible) version that is not installed.
+                    //          - add that to the list of results; return the distinct results
+                    results = results.Where(each =>
+                        !each.DoNotUpgrade &&
+                        !each.DoNotUpdate &&
+                        (blocked ?? !each.IsBlocked));
+
+                    results =
+                         from r in results
+                         let familyPackages = SearchForPackages(r.Name, null, r.Architecture, r.PublicKeyToken, null).Where(each => !each.IsInstalled).OrderByDescending(each => each.Version)
+                         select familyPackages.FirstOrDefault(each => each.IsAnUpgradeFor(r)) into upgradePkg
+                         where upgradePkg != null
+                         select upgradePkg;
+
+                } else if (trimable == true ) {
+                    
+                }
+
+                
 
                 // if the client is asking for Trimable packages
                 //      -  get the list of packages that meet the search criteria. 'pkgs'.
@@ -244,7 +277,6 @@ namespace CoApp.Toolkit.Engine {
                             return;
                         }
 
-                        // otherwise, we're installing a dependency, and we need something compatable.
                         var supercedents = (from p in SearchForPackages(package.Name, null, package.Architecture.ToString(), package.PublicKeyToken)
                             where p.InternalPackageData.PolicyMinimumVersion <= package.Version && p.InternalPackageData.PolicyMaximumVersion >= package.Version
                             select p).OrderByDescending(p => p.Version).ToArray();
@@ -312,14 +344,18 @@ namespace CoApp.Toolkit.Engine {
                             return;
                         }
 
+                        if (package.IsBlocked) {
+                            PackageManagerMessages.Invoke.PackageBlocked(canonicalName);
+                            return;
+                        }
+
+                        var installedPackages = SearchForInstalledPackages(package.Name, null, package.Architecture.ToString(), package.PublicKeyToken).ToArray();
+                        var installedCompatibleVersions = installedPackages.Where(each => each.Version >= package.InternalPackageData.PolicyMinimumVersion && each.Version <= package.InternalPackageData.PolicyMaximumVersion ).ToArray();
+
                         // is the user authorized to install this?
-                        var highestInstalledPackage =
-                            SearchForInstalledPackages(package.Name, null, package.Architecture.ToString(), package.PublicKeyToken).HighestPackages();
+                        var highestInstalledPackage = installedPackages.HighestPackages();
+
                         if (highestInstalledPackage.Any() && highestInstalledPackage.FirstOrDefault().Version < package.Version) {
-                            if (package.IsBlocked) {
-                                PackageManagerMessages.Invoke.PackageBlocked(canonicalName);
-                                return;
-                            }
 
                             if (!PackageManagerSession.Invoke.CheckForPermission(PermissionPolicy.UpdatePackage)) {
                                 PackageManagerMessages.Invoke.PermissionRequired("UpdatePackage");
@@ -336,9 +372,15 @@ namespace CoApp.Toolkit.Engine {
                         // if this is an update, 
                         //      - check to see if there is a compatible package already installed that is marked do-not-update
                         //        fail if so.
-                        
+                        if (isUpdating == true && installedCompatibleVersions.Any(each => each.DoNotUpdate ) ) {
+                            PackageManagerMessages.Invoke.PackageBlocked(canonicalName);                                
+                        }
+
                         // if this is an upgrade, 
                         //      - check to see if this package has the do-not-upgrade flag.
+                        if( isUpgrading == true &&  package.DoNotUpgrade  ) {
+                            PackageManagerMessages.Invoke.PackageBlocked(canonicalName);
+                        }
 
 
                         // mark the package as the client requested.
@@ -489,12 +531,17 @@ namespace CoApp.Toolkit.Engine {
                                     if( isUpdating == true ) {
                                         // if this is marked as an update
                                         // remove REQUESTED flag from all older compatible version 
+                                        foreach( var pkg in installedCompatibleVersions ) {
+                                            pkg.IsClientRequested = false;
+                                        }
                                         
                                     }
                                     if (isUpgrading == true) {
                                         // if this is marked as an update
                                         // remove REQUESTED flag from all older compatible version 
-
+                                        foreach (var pkg in installedPackages) {
+                                            pkg.IsClientRequested = false;
+                                        }
                                     }
 
                                     // W00T ... We did it!
@@ -1237,7 +1284,36 @@ namespace CoApp.Toolkit.Engine {
         /// <returns></returns>
         internal IEnumerable<Package> SearchForPackages(string name, string version, string arch, string publicKeyToken, string location = null) {
             var feeds = string.IsNullOrEmpty(location) ? Feeds : Feeds.Where(each => each.IsLocationMatch(location));
-            return feeds.SelectMany(each => each.FindPackages(name, version, arch, publicKeyToken)).Distinct().ToArray();
+            if (location != null || ((!string.IsNullOrEmpty(version)) && version.IndexOf("*") == -1) ) {
+                // asking a specific feed, or they are not asking for more than one version of a given package.
+                // or asking for a specific version.
+                return feeds.SelectMany(each => each.FindPackages(name, version, arch, publicKeyToken)).Distinct().ToArray();
+            }
+
+            var feedLocations = Feeds.Select(each => each.Location);
+            var packages = feeds.SelectMany(each => each.FindPackages(name, version, arch, publicKeyToken)).Distinct().ToArray();
+            
+            var otherFeeds = packages.SelectMany(each => each.InternalPackageData.FeedLocations).Distinct().Where(each => !feedLocations.Contains(each));
+            // given a list of other feeds that we're not using, we can search each of those feeds for newer versions of the packages that we already have.
+            var tf = TransientFeeds(otherFeeds);
+            return packages.Union(packages.SelectMany(p => tf.SelectMany(each => each.FindPackages(p.Name, version, p.Architecture, p.PublicKeyToken)))).Distinct().ToArray();
+        }
+
+        /// <summary>
+        /// This returns an collection of feed objects when given a list of feed locations.
+        /// The items are cached in the session, so if mutliple calls ask for repeat items, it's not creating new objects all the time.
+        /// </summary>
+        /// <param name="locations"> List of feed locations </param>
+        /// <returns></returns>
+        internal IEnumerable<PackageFeed> TransientFeeds( IEnumerable<string> locations ) {
+            var locs = locations.ToArray();
+            var tf = SessionCache<List<PackageFeed>>.Value["TransientFeeds"] ?? (SessionCache<List<PackageFeed>>.Value["TransientFeeds"] = new List<PackageFeed>());
+            var existingLocations = tf.Select(each => each.Location);
+            var newLocations = locs.Where(each => !existingLocations.Contains(each));
+            var tasks = newLocations.Select(PackageFeed.GetPackageFeedFromLocation);
+            var newFeeds = tasks.Where(each => each.Result != null).Select(each => each.Result);
+            tf.AddRange(newFeeds);
+            return tf.Where(each => locs.Contains(each.Location));
         }
 
         /// <summary>

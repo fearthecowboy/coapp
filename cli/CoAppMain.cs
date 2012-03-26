@@ -67,13 +67,6 @@ namespace CoApp.CLI {
         /// <returns>int value representing the ERRORLEVEL.</returns>
         /// <remarks></remarks>coapp.service
         private static int Main(string[] args) {
-#if DEBUG
-            if( System.Diagnostics.Debugger.IsAttached) {
-                // wait for service to start if we're attached to the debugger
-                // (it could be starting still)
-                Thread.Sleep(250);
-            }
-#endif
             return new CoAppMain().Startup(args);
         }
 
@@ -293,7 +286,7 @@ namespace CoApp.CLI {
 
                         task =
                             _pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, _installed, _active, _required, _blocked, _latest, _location, _forceScan, messages: _messages).
-                                ContinueWith(antecedent => Install(antecedent.Result));
+                                ContinueWith(antecedent => Install(antecedent.Result), TaskContinuationOptions.AttachedToParent);
                         break;
 
                     case "-r":
@@ -308,7 +301,7 @@ namespace CoApp.CLI {
                         }
                         task =
                             _pm.GetPackages(parameters, _minVersion, _maxVersion,_dependencies, true,  _active, _required, _blocked, _latest,_location,_forceScan,  messages: _messages).
-                                ContinueWith(antecedent => Remove(antecedent.Result));
+                                ContinueWith(antecedent => Remove(antecedent.Result), TaskContinuationOptions.AttachedToParent);
 
                         break;
 
@@ -342,7 +335,7 @@ namespace CoApp.CLI {
                         
                         task =
                             _pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, false, _latest ,_location,_forceScan,  messages: _messages).
-                                ContinueWith(antecedent => Upgrade(antecedent.Result));
+                                ContinueWith(antecedent => Upgrade(antecedent.Result), TaskContinuationOptions.AttachedToParent);
                         break;
 
                     case "-A":
@@ -372,7 +365,7 @@ namespace CoApp.CLI {
                             throw new ConsoleException(Resources.TrimErrorMessage);
                         }
                         task = _pm.GetPackages("*", _minVersion, _maxVersion, _dependencies, true, false, false, _blocked, _latest, _location,
-                            _forceScan, messages: _messages).ContinueWith(antecedent => Remove(antecedent.Result));
+                            _forceScan, messages: _messages).ContinueWith(antecedent => Remove(antecedent.Result), TaskContinuationOptions.AttachedToParent);
                         break;
 
                     case "-a":
@@ -381,21 +374,21 @@ namespace CoApp.CLI {
                     case "activate-packages":
                         task =
                             _pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location,_forceScan,  messages: _messages).
-                                ContinueWith(antecedent => Activate(antecedent.Result));
+                                ContinueWith(antecedent => Activate(antecedent.Result), TaskContinuationOptions.AttachedToParent);
 
                         break;
 
                     case "-g":
                     case "get-packageinfo":
                     case "info":
-                        task = _pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, _installed, _active, _required, _blocked, _latest, _location,_forceScan,  messages: _messages).ContinueWith(antecedent => GetPackageInfo(antecedent.Result));
+                        task = _pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, _installed, _active, _required, _blocked, _latest, _location, _forceScan, messages: _messages).ContinueWith(antecedent => GetPackageInfo(antecedent.Result), TaskContinuationOptions.AttachedToParent);
                         break;
 
                     case "-b":
                     case "block-packages":
                     case "block-package":
                     case "block":
-                        task =_pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location,_forceScan,  messages: _messages). ContinueWith(antecedent => Block(antecedent.Result));
+                        task = _pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location, _forceScan, messages: _messages).ContinueWith(antecedent => Block(antecedent.Result), TaskContinuationOptions.AttachedToParent);
 
                         break;
 
@@ -403,7 +396,7 @@ namespace CoApp.CLI {
                     case "unblock-packages":
                     case "unblock-package":
                     case "unblock":
-                        task = _pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location,_forceScan,  messages: _messages).ContinueWith(antecedent => UnBlock(antecedent.Result));
+                        task = _pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location, _forceScan, messages: _messages).ContinueWith(antecedent => UnBlock(antecedent.Result), TaskContinuationOptions.AttachedToParent);
 
                         break;
 
@@ -413,7 +406,7 @@ namespace CoApp.CLI {
                     case "mark":
                         task =
                             _pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location,_forceScan,  messages: _messages).
-                                ContinueWith(antecedent => Mark(antecedent.Result));
+                                ContinueWith(antecedent => Mark(antecedent.Result), TaskContinuationOptions.AttachedToParent);
                         break;
 
                     case "-M":
@@ -422,7 +415,7 @@ namespace CoApp.CLI {
                     case "unmark":
                         task =
                             _pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location,_forceScan,  messages: _messages).
-                                ContinueWith(antecedent => UnMark(antecedent.Result));
+                                ContinueWith(antecedent => UnMark(antecedent.Result), TaskContinuationOptions.AttachedToParent);
                         break;
 
                     case "create-symlink":
@@ -510,12 +503,15 @@ namespace CoApp.CLI {
                         throw new ConsoleException(Resources.UnknownCommand, command);
                 }
 
+                // Thread.Sleep(2000);
+
                 if (task != null) {
                     task.ContinueWith(antecedent => {
                         if (!(antecedent.IsFaulted || antecedent.IsCanceled)) {
+                            // Console.WriteLine("Waiting for call to complete.");
                             WaitForPackageManagerToComplete();
                         }
-                    }).Wait();
+                    }, TaskContinuationOptions.AttachedToParent).Wait();
                 }
 
 
@@ -559,7 +555,7 @@ namespace CoApp.CLI {
         private object UnMark(IEnumerable<Package> packages) {
             if (packages.Any()) {
                 var remoteTasks = packages.Select(package => _pm.SetPackage(package.CanonicalName,required: false)).ToArray();
-                return Task.Factory.ContinueWhenAll(remoteTasks, antecedents => { });
+                return Task.Factory.ContinueWhenAll(remoteTasks, antecedents => { }, TaskContinuationOptions.AttachedToParent);
             }
             return null;
         }
@@ -567,7 +563,7 @@ namespace CoApp.CLI {
         private object Mark(IEnumerable<Package> packages) {
             if (packages.Any()) {
                 var remoteTasks = packages.Select(package => _pm.SetPackage(package.CanonicalName,required: true)).ToArray();
-                return Task.Factory.ContinueWhenAll(remoteTasks, antecedents => { });
+                return Task.Factory.ContinueWhenAll(remoteTasks, antecedents => { }, TaskContinuationOptions.AttachedToParent);
             }
             return null;
         }
@@ -575,7 +571,7 @@ namespace CoApp.CLI {
         private object UnBlock(IEnumerable<Package> packages) {
             if (packages.Any()) {
                 var remoteTasks = packages.Select(package => _pm.SetPackage(package.CanonicalName, blocked: false)).ToArray();
-                return Task.Factory.ContinueWhenAll(remoteTasks, antecedents => { });
+                return Task.Factory.ContinueWhenAll(remoteTasks, antecedents => { }, TaskContinuationOptions.AttachedToParent);
             }
             return null;
         }
@@ -583,7 +579,7 @@ namespace CoApp.CLI {
         private object Block(IEnumerable<Package> packages) {
             if (packages.Any()) {
                 var remoteTasks = packages.Select(package => _pm.SetPackage(package.CanonicalName, blocked: true)).ToArray();
-                return Task.Factory.ContinueWhenAll(remoteTasks, antecedents => { });
+                return Task.Factory.ContinueWhenAll(remoteTasks, antecedents => { }, TaskContinuationOptions.AttachedToParent);
             }
             return null;
         }
@@ -591,7 +587,7 @@ namespace CoApp.CLI {
         private Task Activate(IEnumerable<Package> packages) {
             if (packages.Any()) {
                 var remoteTasks = packages.Select(package => _pm.SetPackage(package.CanonicalName, active: true)).ToArray();
-                return Task.Factory.ContinueWhenAll(remoteTasks, antecedents => { });
+                return Task.Factory.ContinueWhenAll(remoteTasks, antecedents => { }, TaskContinuationOptions.AttachedToParent);
             }
             return null;
         }
@@ -712,7 +708,7 @@ namespace CoApp.CLI {
                         Version = pkg.Version,
                         Arch = pkg.Architecture,
                         Status = (pkg.IsInstalled ? "Installed " + (pkg.IsBlocked ? "Blocked " : "") + (pkg.IsClientRequired ? "Required ": pkg.IsRequired ? "Dependency " : "")+ (pkg.IsActive ? "Active " : "" ) : ""),
-                        Location = pkg.IsInstalled ? "(installed)" : !string.IsNullOrEmpty(pkg.LocalPackagePath) ? pkg.LocalPackagePath : (pkg.RemoteLocations.IsNullOrEmpty() ? "<unknown>" :  pkg.RemoteLocations.FirstOrDefault()),
+                        Location = pkg.IsInstalled ? "(installed)" : !string.IsNullOrEmpty(pkg.LocalPackagePath) ? pkg.LocalPackagePath : (pkg.RemoteLocations.IsNullOrEmpty() ? "<unknown>" :  pkg.RemoteLocations.FirstOrDefault().UrlDecode()),
                     }).ToTable().ConsoleOut();
             }
             else {
@@ -907,7 +903,16 @@ namespace CoApp.CLI {
         }
 
         private Task NewListPackages(IEnumerable<string> packageNames) {
-            return null;
+            if( _forceScan == true ) {
+                _easyPackageManager.SetAllFeedsStale();
+            }
+
+            return _easyPackageManager.GetPackages(packageNames).ContinueWith(
+                antecedent => {
+                    antecedent.ThrowOnFaultOrCancel();
+                    ListPackages(antecedent.Result);
+
+                }, TaskContinuationOptions.AttachedToParent);
         }
 
         private void ListPolicies() {
