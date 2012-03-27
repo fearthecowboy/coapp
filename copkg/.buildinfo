@@ -46,8 +46,8 @@ package {
         start output\any\Release\bin\coapp.service --interactive
         cd copkg
         autopackage coapp.toolkit.autopkg  || goto failed
+        erase /Q *.wixpdb
         pskill coapp.service
-        
 
         echo Done Packaging!
     ";
