@@ -130,7 +130,7 @@ namespace CoApp.Toolkit.Tasks {
 
             // if the current task has an entry.
             if( _tasks.ContainsKey(task)) {
-                return (from handler in _tasks[task] where handler.GetType() == messageHandlerType select handler).FirstOrDefault() ??
+                return (from handler in _tasks[task] where messageHandlerType.IsInstanceOfType(handler)  select handler).FirstOrDefault() ??
                     GetMessageHandler(task.GetParentTask(), messageHandlerType);
             }
 

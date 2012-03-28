@@ -13,6 +13,7 @@ using CoApp.Toolkit.Win32;
 namespace CoApp.CLI {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.IO;
     using System.Linq;
     using System.Resources;
@@ -25,6 +26,7 @@ namespace CoApp.CLI {
     using Toolkit.Exceptions;
     using Toolkit.Extensions;
     using Toolkit.Logging;
+    using Toolkit.Tasks;
 
     /// <summary>
     /// Main Program for command line coapp tool
@@ -67,10 +69,17 @@ namespace CoApp.CLI {
         /// <returns>int value representing the ERRORLEVEL.</returns>
         /// <remarks></remarks>coapp.service
         private static int Main(string[] args) {
+#if DEBUG
+            if( Debugger.IsAttached ) {
+                Thread.Sleep(1000);
+            }
+#endif 
             return new CoAppMain().Startup(args);
         }
 
         private readonly PackageManager _pm = PackageManager.Instance;
+
+        private readonly List<Task> preCommandTasks = new List<Task>();
 
         private readonly EasyPackageManager _easyPackageManager = new EasyPackageManager((itemUri, localLocation, progress) => {
             "Downloading {0}".format(itemUri).PrintProgressBar(progress);
@@ -86,7 +95,7 @@ namespace CoApp.CLI {
         /// <returns>Process return code.</returns>
         /// <remarks></remarks>
         protected override int Main(IEnumerable<string> args) {
-            
+            preCommandTasks.Add("".AsResultTask());
 
             _messages = new PackageManagerMessages {
                 UnexpectedFailure = UnexpectedFailure,
@@ -157,7 +166,7 @@ namespace CoApp.CLI {
                         case "force-scan":
                         case "scan":
                         case "rescan":
-                            _easyPackageManager.SetAllFeedsStale();
+                            preCommandTasks.Add(_easyPackageManager.SetAllFeedsStale());
                             break;
 
                         case "download":
@@ -269,7 +278,10 @@ namespace CoApp.CLI {
                     case "list":
                     case "list-package":
                     case "list-packages":
-                        task = NewListPackages(parameters);
+                        task = Task.Factory.ContinueWhenAll(
+                            preCommandTasks.ToArray(), antecedents => {
+                                NewListPackages(parameters);
+                            }, TaskContinuationOptions.AttachedToParent);
                         break;
 
                     case "-i":
