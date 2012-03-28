@@ -457,7 +457,7 @@ namespace CoApp.Toolkit.Engine {
                             readTask = _serverPipe.ReadAsync(serverInput, 0, serverInput.Length).AutoManage();
                             
                             readTask.ContinueWith(antecedent => {
-                                if (antecedent.IsFaulted || antecedent.IsCanceled || !_serverPipe.IsConnected) {
+                                if (antecedent.IsFaulted || antecedent.IsCanceled || _serverPipe == null || !_serverPipe.IsConnected) {
                                     Disconnect();
                                     return;
                                 }
@@ -742,6 +742,10 @@ namespace CoApp.Toolkit.Engine {
                     });
 
                 case "symlink" :
+                    new PackageManagerMessages {
+                        RequestId = requestMessage["rqid"],
+                    }.Extend(_messages).Register();
+
                     if (!_packageManagerSession.CheckForPermission(PermissionPolicy.Symlink)) {
                         PackageManagerMessages.Invoke.PermissionRequired("Symlink");
                         return null;
@@ -810,9 +814,14 @@ namespace CoApp.Toolkit.Engine {
 
                 case "set-feed-stale" :
                     var feed = requestMessage["feed-name"];
+                    
+                    new PackageManagerMessages {
+                        RequestId = requestMessage["rqid"],
+                    }.Extend(_messages).Register();
+
                     return PackageFeed.GetPackageFeedFromLocation(feed).ContinueWith(
                         antecedent => {
-                            if (!(antecedent.IsFaulted && antecedent.IsCanceled)) {
+                            if (!(antecedent.IsFaulted || antecedent.IsCanceled || antecedent.Result == null)) {
                                 antecedent.Result.Stale = true;
                             }
                         });
@@ -826,6 +835,10 @@ namespace CoApp.Toolkit.Engine {
                     return null; // "Unable to Stop Service".AsResultTask();
 
                 case "set-logging" :
+                    new PackageManagerMessages {
+                        RequestId = requestMessage["rqid"],
+                    }.Extend(_messages).Register();
+
                     try {
                         var b = (bool?)requestMessage["messages"];
                         if (b.HasValue) {
@@ -850,22 +863,46 @@ namespace CoApp.Toolkit.Engine {
                     return null; //"set-logging".AsResultTask();
 
                 case "schedule-task":
+                    new PackageManagerMessages {
+                        RequestId = requestMessage["rqid"],
+                    }.Extend(_messages).Register();
+
                     return null;
                     
                 case "remove-schedule-task":
+                    new PackageManagerMessages {
+                        RequestId = requestMessage["rqid"],
+                    }.Extend(_messages).Register();
+
                     return null;
                     
                 case "get-schedule-tasks":
+                    new PackageManagerMessages {
+                        RequestId = requestMessage["rqid"],
+                    }.Extend(_messages).Register();
+
                     return null;
                     
 
                 case "add-trusted-publisher":
+                    new PackageManagerMessages {
+                        RequestId = requestMessage["rqid"],
+                    }.Extend(_messages).Register();
+
                     return null;
                     
                 case "remove-trusted-publisher":
+                    new PackageManagerMessages {
+                        RequestId = requestMessage["rqid"],
+                    }.Extend(_messages).Register();
+
                     return null;
                     
                 case "get-trusted-publishers":
+                    new PackageManagerMessages {
+                        RequestId = requestMessage["rqid"],
+                    }.Extend(_messages).Register();
+
                     return null;
                     
 

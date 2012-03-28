@@ -26,10 +26,13 @@ namespace CoApp.Toolkit.Engine.Client {
                     return _currentDownloads[targetFilename];
                 }
 
-                if (File.Exists(targetFilename) && !forceDownload) {
+                /*
+                 // the download logic has the ability to check the size/md5/timestamp to validate that it's got a valid file now.
+                if (File.Exists(targetFilename) && !forceDownload ) {
                     PackageManager.Instance.RecognizeFile(canonicalName, targetFilename, "<file exists>", new PackageManagerMessages().Extend(messages));
                     return null;
                 }
+                */
 
                 // gotta download the file...
                 var task = Task.Factory.StartNew(() => {
@@ -42,8 +45,7 @@ namespace CoApp.Toolkit.Engine.Client {
 
                                 // if this fails, we'll just move down the line.
                                 File.Copy(remoteFile, targetFilename);
-                                PackageManager.Instance.RecognizeFile(canonicalName, targetFilename, uri.AbsoluteUri,
-                                    new PackageManagerMessages().Extend(messages));
+                                PackageManager.Instance.RecognizeFile(canonicalName, targetFilename, uri.AbsoluteUri, new PackageManagerMessages().Extend(messages));
                                 return;
                             }
                             Task progressTask = null;

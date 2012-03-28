@@ -489,29 +489,7 @@ namespace CoApp.Toolkit.Engine.Client {
             return GetPackages( parsedName.Name + "-*.*.*.*-*-" + parsedName.PublicKeyToken, null, null, null, null, null, null, null, null, null, null, null, null);
         }
       
-        public Task SetFeedStale(string feedLocation) {
-            var handler = new RemoteCallResponse();
-
-            return PackageManager.Instance.SetFeedStale(feedLocation, handler).ContinueWith(antecedent => {
-                if( handler.EngineRestarting) {
-                    SetFeedStale(feedLocation).Wait();
-                    return;
-                }
-
-                handler.ThrowWhenFaulted(antecedent);
-            }, TaskContinuationOptions.AttachedToParent);
-        }
-
-        public Task SetAllFeedsStale() {
-            return Feeds.ContinueWith( antecedent => {
-                antecedent.ThrowOnFaultOrCancel();
-                
-                foreach( var feed in antecedent.Result ) {
-                    System.Console.WriteLine("Setting Feed Stale : {0}", feed.Location);
-                    SetFeedStale(feed.Location).ThrowOnFaultOrCancel();
-                }
-            }, TaskContinuationOptions.AttachedToParent);
-        }
+        
 
         public Task<IEnumerable<Package>> GetInstalledPackages(string packageName, bool? active = null, bool? requested = null, bool? blocked = null, string locationFeed = null) {
             return GetPackages(packageName, null, null, null, true, active, requested, blocked, null, locationFeed, null, null, null);
@@ -801,7 +779,6 @@ namespace CoApp.Toolkit.Engine.Client {
             var handler = new RemoteCallResponse {  
                 FeedDetails = (location, lastScanned,isSession, isSuppressed, isValidated ) => {
                     result.Add(new Feed {Location = location, LastScanned = lastScanned, IsSession = isSession, IsSuppressed = isSuppressed});
-                    System.Console.WriteLine("Feed: {0}", location);
                 }
             };
 
@@ -816,6 +793,29 @@ namespace CoApp.Toolkit.Engine.Client {
                 return (IEnumerable<Feed>)result;
             }, TaskContinuationOptions.AttachedToParent);
         }}
+
+        public Task SetFeedStale(string feedLocation) {
+            var handler = new RemoteCallResponse();
+
+            return PackageManager.Instance.SetFeedStale(feedLocation, handler).ContinueWith(antecedent => {
+                if (handler.EngineRestarting) {
+                    SetFeedStale(feedLocation).Wait();
+                    return;
+                }
+
+                handler.ThrowWhenFaulted(antecedent);
+            }, TaskContinuationOptions.AttachedToParent);
+        }
+
+        public Task SetAllFeedsStale() {
+            return Feeds.ContinueWith(antecedent => {
+                antecedent.ThrowOnFaultOrCancel();
+
+                foreach (var feed in antecedent.Result) {
+                    SetFeedStale(feed.Location).ThrowOnFaultOrCancel();
+                }
+            }, TaskContinuationOptions.AttachedToParent);
+        }
 
         public Task<Package> RefreshPackageDetails(string canonicalName) {
             var failed = ValidateCanonicalName<Package>(canonicalName);
