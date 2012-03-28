@@ -20,6 +20,7 @@ namespace CoApp.Toolkit.Engine {
     using System.Runtime.InteropServices;
     using System.Security.AccessControl;
     using System.Security.Principal;
+    using System.ServiceProcess;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
@@ -30,25 +31,50 @@ namespace CoApp.Toolkit.Engine {
     using Tasks;
 
     internal static class Signals {
-        private static readonly SafeWaitHandle _availableEvent = Kernel32.CreateEvent(IntPtr.Zero, true, false, "Global\\CoAppAvailable");
-        private static readonly SafeWaitHandle _startingupEvent = Kernel32.CreateEvent(IntPtr.Zero, true, false, "Global\\CoAppStartingUp");
-        private static readonly SafeWaitHandle _shuttingdownEvent = Kernel32.CreateEvent(IntPtr.Zero, true, false, "Global\\CoAppShuttingDown");
-        private static readonly SafeWaitHandle _shuttingdownRequestedEvent  = Kernel32.CreateEvent(IntPtr.Zero, true, false, "Global\\CoAppShutdownRequested");
-        private static readonly SafeWaitHandle _installedEvent = Kernel32.CreateEvent(IntPtr.Zero, true, false, "Global\\CoAppInstalledPackage");
-        private static readonly SafeWaitHandle _removedEvent = Kernel32.CreateEvent(IntPtr.Zero, true, false, "Global\\CoAppRemovedPackage");
+        /*
+        [StructLayout(LayoutKind.Sequential)]
+        public struct SECURITY_ATTRIBUTES {
+            public int nLength;
+            public IntPtr lpSecurityDescriptor;
+            public int bInheritHandle;
+        }
+        */
+
+        static Signals() {
+            bool wasCreated;
+            var ewhSec = new EventWaitHandleSecurity();
+            ewhSec.AddAccessRule(new EventWaitHandleAccessRule(new SecurityIdentifier(WellKnownSidType.WorldSid, null), EventWaitHandleRights.Synchronize | EventWaitHandleRights.Modify, AccessControlType.Allow));
+
+            _availableEvent = new EventWaitHandle(false, EventResetMode.ManualReset, "Global\\CoAppAvailable", out wasCreated, ewhSec);
+            _startingupEvent = new EventWaitHandle(false, EventResetMode.ManualReset, "Global\\CoAppStartingUp", out wasCreated, ewhSec);
+            _shuttingdownEvent = new EventWaitHandle(false, EventResetMode.ManualReset, "Global\\CoAppShuttingDown", out wasCreated, ewhSec);
+            _shuttingdownRequestedEvent = new EventWaitHandle(false, EventResetMode.ManualReset, "Global\\CoAppShutdownRequested", out wasCreated, ewhSec);
+            _installedEvent = new EventWaitHandle(false, EventResetMode.ManualReset, "Global\\CoAppInstalledPackage", out wasCreated, ewhSec);
+            _removedEvent = new EventWaitHandle(false, EventResetMode.ManualReset, "Global\\CoAppRemovedPackage", out wasCreated, ewhSec);
+        }
+
+        // private static readonly SafeWaitHandle _availableEvent = Kernel32.CreateEvent(IntPtr.Zero, true, false, "Global\\CoAppAvailable");
+        private static readonly EventWaitHandle _availableEvent;
+        private static readonly EventWaitHandle _startingupEvent;
+        private static readonly EventWaitHandle _shuttingdownEvent;
+        private static readonly EventWaitHandle _shuttingdownRequestedEvent;
+        private static readonly EventWaitHandle _installedEvent;
+        private static readonly EventWaitHandle _removedEvent;
 
         private static bool _available;
         public static bool Available {
 
             get { return _available; }
             set {
+               
+
                 _available = value;
-                Kernel32.ResetEvent(_availableEvent);
+                _availableEvent.Reset();
 
                 if (value) {
                     StartingUp = false;
                     ShuttingDown = false;
-                    Kernel32.SetEvent(_availableEvent);
+                    _availableEvent.Set();
                 }
                 
             }
@@ -59,12 +85,12 @@ namespace CoApp.Toolkit.Engine {
             get { return _startingUp; }
             set {
                 _startingUp = value;
-                Kernel32.ResetEvent(_startingupEvent);
+                _startingupEvent.Reset();
 
                 if (value) {
                     Available = false;
                     ShuttingDown = false;
-                    Kernel32.SetEvent(_startingupEvent);
+                    _startingupEvent.Set();
                 }
             }
         }
@@ -74,11 +100,11 @@ namespace CoApp.Toolkit.Engine {
             get { return _shuttingDown; }
             set {
                 _shuttingDown = value;
-                Kernel32.ResetEvent(_shuttingdownEvent);
+                _shuttingdownEvent.Reset();
                 if (value) {
                     StartingUp = false;
                     Available = false;
-                    Kernel32.SetEvent(_shuttingdownEvent);
+                    _shuttingdownEvent.Set();
                 }
             }
         }
@@ -88,9 +114,9 @@ namespace CoApp.Toolkit.Engine {
             get { return _shutdownRequested; }
             set {
                 _shutdownRequested = value;
-                Kernel32.ResetEvent(_shuttingdownRequestedEvent);
+                _shuttingdownRequestedEvent.Reset();
                 if (value) {
-                    Kernel32.SetEvent(_shuttingdownRequestedEvent);
+                    _shuttingdownRequestedEvent.Set();
                 }
             }
         }
@@ -99,10 +125,10 @@ namespace CoApp.Toolkit.Engine {
             Task.Factory.StartNew(() => {
                 PackageManagerSettings.CoAppInformation["InstalledPackages"].StringsValue =
                     PackageManagerSettings.CoAppInformation["InstalledPackages"].StringsValue.UnionSingleItem(canonicalPackageName);
-                Kernel32.ResetEvent(_installedEvent);
-                Kernel32.SetEvent(_installedEvent);
+                _installedEvent.Reset();
+                _installedEvent.Set();
                 Thread.Sleep(100); // give everyone a chance to wake up and do their job
-                Kernel32.ResetEvent(_installedEvent);
+                _installedEvent.Reset();
             });
         }
 
@@ -110,10 +136,10 @@ namespace CoApp.Toolkit.Engine {
             Task.Factory.StartNew(() => {
                 PackageManagerSettings.CoAppInformation["RemovedPackages"].StringsValue =
                     PackageManagerSettings.CoAppInformation["RemovedPackages"].StringsValue.UnionSingleItem(canonicalPackageName);
-                Kernel32.ResetEvent(_removedEvent);
-                Kernel32.SetEvent(_removedEvent);
+                _removedEvent.Reset();
+                _removedEvent.Set();
                 Thread.Sleep(100); // give everyone a chance to wake up and do their job
-                Kernel32.ResetEvent(_removedEvent);
+                _removedEvent.Reset();
             });
         }
 
@@ -213,6 +239,11 @@ namespace CoApp.Toolkit.Engine {
                 return _engineService;
             }
             Signals.EngineStartupStatus = 0;
+
+            if(!IsInteractive) {
+                EngineServiceManager.EnsureServiceAclsCorrect();
+            }
+
             var npmi = NewPackageManager.Instance;
 
             _cancellationTokenSource = new CancellationTokenSource();

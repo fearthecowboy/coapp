@@ -20,6 +20,7 @@ namespace CoApp.Toolkit.Engine {
     using System.Linq;
     using System.Reflection;
     using System.Runtime.InteropServices;
+    using System.Security.AccessControl;
     using System.Security.Principal;
     using System.ServiceProcess;
     using System.Threading;
@@ -27,6 +28,17 @@ namespace CoApp.Toolkit.Engine {
     using Extensions;
     using Logging;
     using TimeoutException = System.TimeoutException;
+
+    [Flags]
+    internal enum SERVICE_ACCESS {
+        SERVICE_INTERROGATE =0x0080,
+        SERVICE_PAUSE_CONTINUE = 0x0040,
+        SERVICE_QUERY_CONFIG =0x0001,
+        SERVICE_QUERY_STATUS =0x0004,
+        SERVICE_START =0x0010,
+        SERVICE_STOP =0x0020, 
+        SERVICE_COAPP = SERVICE_INTERROGATE | SERVICE_PAUSE_CONTINUE | SERVICE_QUERY_CONFIG | SERVICE_QUERY_STATUS | SERVICE_START | SERVICE_STOP
+    }
 
     public static class EngineServiceManager {
         public const string CoAppServiceName = "CoApp Package Installer Service";
@@ -37,6 +49,50 @@ namespace CoApp.Toolkit.Engine {
         }
 
         private static readonly Lazy<ServiceController> _controller = new Lazy<ServiceController>(() => new ServiceController(CoAppServiceName));
+
+        internal static void EnsureServiceAclsCorrect() {
+            var psd = new byte[0];
+            uint bufSizeNeeded;
+            var ok = Advapi32.QueryServiceObjectSecurity(_controller.Value.ServiceHandle, SecurityInfos.DiscretionaryAcl, psd, 0, out bufSizeNeeded);
+            if (!ok) {
+                int err = Marshal.GetLastWin32Error();
+                if (err == 122) {
+                    // ERROR_INSUFFICIENT_BUFFER
+                    // expected; now we know bufsize
+                    psd = new byte[bufSizeNeeded];
+                    ok = Advapi32.QueryServiceObjectSecurity(
+                        _controller.Value.ServiceHandle, SecurityInfos.DiscretionaryAcl, psd, bufSizeNeeded, out bufSizeNeeded);
+                } else {
+                    throw new ApplicationException("error calling QueryServiceObjectSecurity() to get DACL for Service: error code=" + err);
+                }
+            }
+            if (!ok)
+                throw new ApplicationException("error calling QueryServiceObjectSecurity(2) to get DACL for Service: error code=" + Marshal.GetLastWin32Error());
+
+            // get security descriptor via raw into DACL form so ACE
+            // ordering checks are done for us.
+            RawSecurityDescriptor rsd = new RawSecurityDescriptor(psd, 0);
+            DiscretionaryAcl dacl = new DiscretionaryAcl(false, false, rsd.DiscretionaryAcl);
+
+            // TODO: fiddle with the dacl to SetAccess() etc
+            dacl.AddAccess(AccessControlType.Allow, new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null), (int)SERVICE_ACCESS.SERVICE_COAPP,InheritanceFlags.None, PropagationFlags.None );
+
+            // convert discretionary ACL back to raw form; looks like via byte[] is only way
+            var rawdacl = new byte[dacl.BinaryLength];
+            dacl.GetBinaryForm(rawdacl, 0);
+            rsd.DiscretionaryAcl = new RawAcl(rawdacl, 0);
+
+            // set raw security descriptor on service again
+            var rawsd = new byte[rsd.BinaryLength];
+            rsd.GetBinaryForm(rawsd, 0);
+
+            ok = Advapi32.SetServiceObjectSecurity(_controller.Value.ServiceHandle, SecurityInfos.DiscretionaryAcl, rawsd);
+            if (!ok) {
+                throw new ApplicationException("error calling SetServiceObjectSecurity(); error code=" + Marshal.GetLastWin32Error());
+            }
+        }
+
+
 
         // some dumbass thought that they should just return the last value, forcing developers to 'refresh' to get the current value. 
         // Not quite sure WHY THIS EVER SOUNDED LIKE A GOOD IDEA!? IF I WANTED THE LAST F$(*&%^*ING VALUE, I'D HAVE CACHED IT MYSELF DUMBASS!
@@ -190,45 +246,46 @@ namespace CoApp.Toolkit.Engine {
 
         public static bool Available { get {
             lock (typeof(EngineServiceManager)) {
-                using (var kernelEvent = Kernel32.OpenEvent(0x00100000, false, "Global\\CoAppAvailable")) {
-                    if (!kernelEvent.IsInvalid && Kernel32.WaitForSingleObject(kernelEvent, 0) == 0) {
-                        return true;
-                    }
-                }
+                try {
+                    return EventWaitHandle.OpenExisting("Global\\CoAppAvailable", EventWaitHandleRights.Synchronize).WaitOne(0);
+                }catch {}
                 return false;
             }
         }}
 
         public static bool StartingUp {
             get {
-                using (var kernelEvent = Kernel32.OpenEvent(0x00100000, false, "Global\\CoAppStartingUp")) {
-                    if (!kernelEvent.IsInvalid && Kernel32.WaitForSingleObject(kernelEvent, 0) == 0) {
-                        return true;
+                lock (typeof(EngineServiceManager)) {
+                    try {
+                        return EventWaitHandle.OpenExisting("Global\\CoAppStartingUp", EventWaitHandleRights.Synchronize).WaitOne(0);
                     }
+                    catch { }
+                    return false;
                 }
-                return false;
             }
         }
 
         public static bool ShuttingDown {
             get {
-                using (var kernelEvent = Kernel32.OpenEvent(0x00100000, false, "Global\\CoAppShuttingDown")) {
-                    if (!kernelEvent.IsInvalid && Kernel32.WaitForSingleObject(kernelEvent, 0) == 0) {
-                        return true;
+                lock (typeof(EngineServiceManager)) {
+                    try {
+                        return EventWaitHandle.OpenExisting("Global\\CoAppShuttingDown", EventWaitHandleRights.Synchronize).WaitOne(0);
                     }
+                    catch { }
+                    return false;
                 }
-                return false;
             }
         }
 
         public static bool ShutdownRequested {
             get {
-                using (var kernelEvent = Kernel32.OpenEvent(0x00100000, false, "Global\\CoAppShutdownRequested")) {
-                    if (!kernelEvent.IsInvalid && Kernel32.WaitForSingleObject(kernelEvent, 0) == 0) {
-                        return true;
+                lock (typeof(EngineServiceManager)) {
+                    try {
+                        return EventWaitHandle.OpenExisting("Global\\CoAppShutdownRequested", EventWaitHandleRights.Synchronize).WaitOne(0);
                     }
+                    catch { }
+                    return false;
                 }
-                return false;
             }
         }
 

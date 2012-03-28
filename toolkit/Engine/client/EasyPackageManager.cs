@@ -507,6 +507,7 @@ namespace CoApp.Toolkit.Engine.Client {
                 antecedent.ThrowOnFaultOrCancel();
                 
                 foreach( var feed in antecedent.Result ) {
+                    System.Console.WriteLine("Setting Feed Stale : {0}", feed.Location);
                     SetFeedStale(feed.Location).ThrowOnFaultOrCancel();
                 }
             }, TaskContinuationOptions.AttachedToParent);
@@ -798,9 +799,11 @@ namespace CoApp.Toolkit.Engine.Client {
         public Task<IEnumerable<Feed>> Feeds { get {
             var result = new List<Feed>();
             var handler = new RemoteCallResponse {  
-                FeedDetails = (location, lastScanned,isSession, isSuppressed, isValidated ) => result.Add(new Feed { Location = location, LastScanned = lastScanned, IsSession = isSession, IsSuppressed = isSuppressed})
-
-                };
+                FeedDetails = (location, lastScanned,isSession, isSuppressed, isValidated ) => {
+                    result.Add(new Feed {Location = location, LastScanned = lastScanned, IsSession = isSession, IsSuppressed = isSuppressed});
+                    System.Console.WriteLine("Feed: {0}", location);
+                }
+            };
 
             return PackageManager.Instance.ListFeeds(messages:handler).ContinueWith((antecedent) => {
                 if (handler.EngineRestarting) {
