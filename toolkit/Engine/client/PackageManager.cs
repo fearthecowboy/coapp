@@ -880,7 +880,7 @@ namespace CoApp.Toolkit.Engine.Client {
                     break;
 
                 case "found-feed":
-                    PackageManagerMessages.Invoke.FeedDetails(responseMessage["location"], DateTime.FromFileTime((long?) responseMessage["last-scanned"] ?? 0),
+                    PackageManagerMessages.Invoke.FeedDetails(responseMessage["location"], new DateTime( long.Parse(responseMessage["last-scanned"]) ), 
                         (bool?) responseMessage["session"] ?? false, (bool?) responseMessage["suppressed"] ?? false,
                         (bool?) responseMessage["validated"] ?? false);
                     break;

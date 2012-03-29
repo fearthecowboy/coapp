@@ -656,7 +656,7 @@ namespace CoApp.Toolkit.Engine {
                     let validated = theFeed != null
                     select new {
                         feed = feedLocation,
-                        LastScanned = validated ? theFeed.LastScanned : DateTime.FromFileTime(0),
+                        LastScanned = validated ? theFeed.LastScanned : DateTime.MinValue,
                         session = false,
                         suppressed = canFilterSystem && BlockedScanLocations.Contains(feedLocation),
                         validated,
@@ -667,7 +667,7 @@ namespace CoApp.Toolkit.Engine {
                     let validated = theFeed != null
                     select new {
                         feed = feedLocation,
-                        LastScanned = validated ? theFeed.LastScanned : DateTime.FromFileTime(0),
+                        LastScanned = validated ? theFeed.LastScanned : DateTime.MinValue,
                         session = true,
                         suppressed = canFilterSession && BlockedScanLocations.Contains(feedLocation),
                         validated,

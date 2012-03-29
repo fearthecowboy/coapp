@@ -918,13 +918,41 @@ namespace CoApp.Toolkit.Engine.Client {
             }, TaskContinuationOptions.AttachedToParent);
         }
 
-        public Task CreateSymlink(string existingLocation, string newLink, LinkType linkType ) {
+        public Task CreateSymlink(string existingLocation, string newLink) {
             var handler = new RemoteCallResponse();
 
-            return PackageManager.Instance.CreateSymlink(existingLocation, newLink, linkType, handler).ContinueWith(
+            return PackageManager.Instance.CreateSymlink(existingLocation, newLink, LinkType.Symlink, handler).ContinueWith(
                 antecedent => {
                     if (handler.EngineRestarting) {
-                        CreateSymlink(existingLocation, newLink, linkType).Wait();
+                        CreateSymlink(existingLocation, newLink).Wait();
+                        return;
+                    }
+
+                    // take care of error conditions...
+                    handler.ThrowWhenFaulted(antecedent);
+                }, TaskContinuationOptions.AttachedToParent);
+        }
+        public Task CreateHardlink(string existingLocation, string newLink) {
+            var handler = new RemoteCallResponse();
+
+            return PackageManager.Instance.CreateSymlink(existingLocation, newLink, LinkType.Hardlink, handler).ContinueWith(
+                antecedent => {
+                    if (handler.EngineRestarting) {
+                        CreateHardlink(existingLocation, newLink).Wait();
+                        return;
+                    }
+
+                    // take care of error conditions...
+                    handler.ThrowWhenFaulted(antecedent);
+                }, TaskContinuationOptions.AttachedToParent);
+        }
+        public Task CreateShortcut(string existingLocation, string newLink) {
+            var handler = new RemoteCallResponse();
+
+            return PackageManager.Instance.CreateSymlink(existingLocation, newLink, LinkType.Shortcut, handler).ContinueWith(
+                antecedent => {
+                    if (handler.EngineRestarting) {
+                        CreateShortcut(existingLocation, newLink).Wait();
                         return;
                     }
 
