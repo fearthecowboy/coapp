@@ -226,8 +226,7 @@ namespace CoApp.Toolkit.Engine.Feeds {
             throw new NotImplementedException();
         }
 
-        internal DateTime LastScanned = DateTime.FromFileTime(0);
-
+        internal DateTime LastScanned = DateTime.MinValue;
 
         protected HashSet<long> Cache {
             get {

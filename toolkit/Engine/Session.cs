@@ -991,7 +991,7 @@ namespace CoApp.Toolkit.Engine {
         private void SendFoundFeed(string location, DateTime lastScanned, bool session, bool suppressed, bool validated) {
             WriteAsync(new UrlEncodedMessage("found-feed") {
                 {"location", location},
-                {"last-scanned", lastScanned.ToFileTime().ToString()},
+                {"last-scanned", lastScanned.Ticks.ToString()},
                 {"session", session},
                 {"suppressed", suppressed},
                 {"validated", validated},
