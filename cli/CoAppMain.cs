@@ -296,7 +296,8 @@ namespace CoApp.CLI {
                     case "list":
                     case "list-package":
                     case "list-packages":
-                        task = preCommandTasks.Continue(() => NewListPackages(parameters));
+                        task = preCommandTasks.Continue(() => _easyPackageManager.GetPackages(parameters)
+                            .Continue(packages => ListPackages(packages)));
                         break;
 
                     case "-i":
@@ -308,14 +309,9 @@ namespace CoApp.CLI {
                         
                         }
 
-                        _easyPackageManager.GetPackages("").Continue(
-                            (fo) => {
-                                return 100.AsResultTask();
-                            });
-
                         task = preCommandTasks
                             .Continue(() =>_easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, false, false, null, null, false, _latest ?? true, _location, false, false, false)
-                                .Continue(Install));
+                                .Continue(packages => Install(packages)));
                         break;
 
                     case "-r":
@@ -332,7 +328,7 @@ namespace CoApp.CLI {
                         task = preCommandTasks
                             .Continue(() => _pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location, _forceScan,messages: _messages)
                                 .Continue(packages => Remove(packages)));
-                        );
+                        
 
                         break;
 
@@ -356,13 +352,7 @@ namespace CoApp.CLI {
                             throw new ConsoleException(Resources.MissingParameterForUpgrade);
                         }
 
-                        _easyPackageManager.GetUpdatablePackages(parameters).Continue( packages => Upgrade(packages) );
-
-
-                        task = DoCommand(() => {
-                            _pm.GetPackages( parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, false, _latest, _location, _forceScan ?? true, messages: _messages).
-                                ContinueWith(antecedent => Upgrade(antecedent.Result), TaskContinuationOptions.AttachedToParent);
-                        });
+                        task = preCommandTasks.Continue(() => _easyPackageManager.GetUpdatablePackages(parameters)).Continue( packages => Upgrade(packages) );
 
                         break;
 
@@ -373,7 +363,7 @@ namespace CoApp.CLI {
                         if (!parameters.Any()) {
                             throw new ConsoleException(Resources.AddFeedRequiresLocation);
                         }
-                        task = DoCommand(() => AddFeed(parameters));
+                        task =  preCommandTasks.Continue(() => AddFeed(parameters));
                         break;
 
                     case "-R":
@@ -382,7 +372,7 @@ namespace CoApp.CLI {
                         if (!parameters.Any()) {
                             throw new ConsoleException(Resources.DeleteFeedRequiresLocation);
                         }
-                        task =  DoCommand(() =>DeleteFeed(parameters));
+                        task = preCommandTasks.Continue(() => DeleteFeed(parameters));
                         break;
 
                     case "-t":
@@ -393,14 +383,14 @@ namespace CoApp.CLI {
                             throw new ConsoleException(Resources.TrimErrorMessage);
                         }
 
-                        task = DoCommand(() => _pm.GetPackages("*", _minVersion, _maxVersion, _dependencies, true, false, false, _blocked, _latest, _location,_forceScan, messages: _messages).ContinueWith(antecedent => Remove(antecedent.Result), TaskContinuationOptions.AttachedToParent));
+                        task =preCommandTasks.Continue(() =>  _pm.GetPackages("*", _minVersion, _maxVersion, _dependencies, true, false, false, _blocked, _latest, _location,_forceScan, messages: _messages).ContinueWith(antecedent => Remove(antecedent.Result), TaskContinuationOptions.AttachedToParent));
                         break;
 
                     case "-a":
                     case "activate":
                     case "activate-package":
                     case "activate-packages":
-                        task = DoCommand(() => _pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location, _forceScan,messages: _messages).
+                        task = preCommandTasks.Continue(() =>  _pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location, _forceScan,messages: _messages).
                                     ContinueWith(antecedent => Activate(antecedent.Result), TaskContinuationOptions.AttachedToParent));
 
                         break;
@@ -408,14 +398,14 @@ namespace CoApp.CLI {
                     case "-g":
                     case "get-packageinfo":
                     case "info": 
-                        task =  DoCommand(() => _pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, _installed, _active, _required, _blocked, _latest, _location, _forceScan, messages: _messages).ContinueWith(antecedent => GetPackageInfo(antecedent.Result), TaskContinuationOptions.AttachedToParent) );
+                        task =  preCommandTasks.Continue(() =>  _pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, _installed, _active, _required, _blocked, _latest, _location, _forceScan, messages: _messages).ContinueWith(antecedent => GetPackageInfo(antecedent.Result), TaskContinuationOptions.AttachedToParent) );
                         break;
 
                     case "-b":
                     case "block-packages":
                     case "block-package":
                     case "block":
-                        task = DoCommand(() =>_pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location, _forceScan, messages: _messages).ContinueWith(antecedent => Block(antecedent.Result), TaskContinuationOptions.AttachedToParent) );
+                        task = preCommandTasks.Continue(() => _pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location, _forceScan, messages: _messages).ContinueWith(antecedent => Block(antecedent.Result), TaskContinuationOptions.AttachedToParent) );
 
                         break;
 
@@ -423,7 +413,7 @@ namespace CoApp.CLI {
                     case "unblock-packages":
                     case "unblock-package":
                     case "unblock":
-                        task = DoCommand(() =>_pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location, _forceScan, messages: _messages).ContinueWith(antecedent => UnBlock(antecedent.Result), TaskContinuationOptions.AttachedToParent));
+                        task =preCommandTasks.Continue(() => _pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location, _forceScan, messages: _messages).ContinueWith(antecedent => UnBlock(antecedent.Result), TaskContinuationOptions.AttachedToParent));
 
                         break;
 
@@ -431,7 +421,7 @@ namespace CoApp.CLI {
                     case "mark-packages":
                     case "mark-package":
                     case "mark":
-                        task =DoCommand(() =>
+                        task =preCommandTasks.Continue(() => 
                             _pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location,_forceScan,  messages: _messages).
                                 ContinueWith(antecedent => Mark(antecedent.Result), TaskContinuationOptions.AttachedToParent));
                         break;
@@ -440,7 +430,7 @@ namespace CoApp.CLI {
                     case "unmark-packages":
                     case "unmark-package":
                     case "unmark":
-                        task =DoCommand(() =>
+                        task =preCommandTasks.Continue(() => 
                             _pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location,_forceScan,  messages: _messages).
                                 ContinueWith(antecedent => UnMark(antecedent.Result), TaskContinuationOptions.AttachedToParent));
                         break;
@@ -449,28 +439,28 @@ namespace CoApp.CLI {
                         if (parameters.Count() != 2) {
                             throw new ConsoleException("Create-symlink requires two parameters: existing-location and new-link");
                         }
-                        task = DoCommand(() => _easyPackageManager.CreateSymlink(parameters.First().GetFullPath(), parameters.Last().GetFullPath()));
+                        task = preCommandTasks.Continue(() =>  _easyPackageManager.CreateSymlink(parameters.First().GetFullPath(), parameters.Last().GetFullPath()));
                         break;
 
                     case "create-hardlink":
                         if (parameters.Count() != 2) {
                             throw new ConsoleException("Create-hardlink requires two parameters: existing-location and new-link");
                         }
-                        task = DoCommand(() => _easyPackageManager.CreateHardlink(parameters.First().GetFullPath(), parameters.Last().GetFullPath()));
+                        task = preCommandTasks.Continue(() =>  _easyPackageManager.CreateHardlink(parameters.First().GetFullPath(), parameters.Last().GetFullPath()));
                         break;
 
                     case "create-shortcut":
                         if (parameters.Count() != 2) {
                             throw new ConsoleException("Create-shortcut requires two parameters: existing-location and new-link");
                         }
-                        task = DoCommand(() => _easyPackageManager.CreateShortcut(parameters.First().GetFullPath(), parameters.Last().GetFullPath()));
+                        task = preCommandTasks.Continue(() =>  _easyPackageManager.CreateShortcut(parameters.First().GetFullPath(), parameters.Last().GetFullPath()));
                         break;
 
                     case "-p" :
                     case "list-policies":
                     case "list-policy":
                     case "policies":
-                        DoCommand(() => ListPolicies() );
+                        task = preCommandTasks.Continue(() =>  ListPolicies() );
                         break;
 
                     case "add-to-policy": {
@@ -947,19 +937,6 @@ namespace CoApp.CLI {
         
         private int InstallFiles(IEnumerable<string> filenames ) {
             return 0;
-        }
-
-        private Task NewListPackages(IEnumerable<string> packageNames) {
-            if( _forceScan == true ) {
-                _easyPackageManager.SetAllFeedsStale();
-            }
-
-            return _easyPackageManager.GetPackages(packageNames).ContinueWith(
-                antecedent => {
-                    antecedent.ThrowOnFaultOrCancel();
-                    ListPackages(antecedent.Result);
-
-                }, TaskContinuationOptions.AttachedToParent);
         }
 
         private void ListPolicies() {
