@@ -9,7 +9,6 @@
 //-----------------------------------------------------------------------
 
 namespace CoApp.Toolkit.Engine.Exceptions {
-    using System;
     using Toolkit.Exceptions;
 
     /// <summary>

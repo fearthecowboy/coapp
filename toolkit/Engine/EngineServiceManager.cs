@@ -73,8 +73,7 @@ namespace CoApp.Toolkit.Engine {
             // ordering checks are done for us.
             RawSecurityDescriptor rsd = new RawSecurityDescriptor(psd, 0);
             DiscretionaryAcl dacl = new DiscretionaryAcl(false, false, rsd.DiscretionaryAcl);
-
-            // TODO: fiddle with the dacl to SetAccess() etc
+            
             dacl.AddAccess(AccessControlType.Allow, new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null), (int)SERVICE_ACCESS.SERVICE_COAPP,InheritanceFlags.None, PropagationFlags.None );
 
             // convert discretionary ACL back to raw form; looks like via byte[] is only way
@@ -91,8 +90,6 @@ namespace CoApp.Toolkit.Engine {
                 throw new ApplicationException("error calling SetServiceObjectSecurity(); error code=" + Marshal.GetLastWin32Error());
             }
         }
-
-
 
         // some dumbass thought that they should just return the last value, forcing developers to 'refresh' to get the current value. 
         // Not quite sure WHY THIS EVER SOUNDED LIKE A GOOD IDEA!? IF I WANTED THE LAST F$(*&%^*ING VALUE, I'D HAVE CACHED IT MYSELF DUMBASS!
@@ -131,11 +128,11 @@ namespace CoApp.Toolkit.Engine {
                 return;
             }
 
-            Logger.Warning("==[Trying to start Win32 Service]==");
+            Logger.Message("==[Trying to start Win32 Service]==");
 
             switch (Status) {
                 case ServiceControllerStatus.ContinuePending:
-                    Logger.Warning("==[State:Continuing]==");
+                   // Logger.Message("==[State:Continuing]==");
                     // wait for it to continue.
                     try {
                         _controller.Value.WaitForStatus(ServiceControllerStatus.Running, new TimeSpan(0, 0, 0, 10));
@@ -153,7 +150,7 @@ namespace CoApp.Toolkit.Engine {
                     }
                     break;
                 case ServiceControllerStatus.PausePending:
-                    Logger.Warning("==[State:Pausing]==");
+                    //Logger.Message("==[State:Pausing]==");
                     try {
                         _controller.Value.WaitForStatus(ServiceControllerStatus.Paused, new TimeSpan(0, 0, 0, 10));
                     }
@@ -173,7 +170,7 @@ namespace CoApp.Toolkit.Engine {
                     }
                     break;
                 case ServiceControllerStatus.Paused:
-                    Logger.Warning("==[State:Paused]==");
+                    //Logger.Message("==[State:Paused]==");
                     _controller.Value.Continue();
                     try {
                         _controller.Value.WaitForStatus(ServiceControllerStatus.Running, new TimeSpan(0, 0, 0, 10));
@@ -188,12 +185,12 @@ namespace CoApp.Toolkit.Engine {
                     break;
 
                 case ServiceControllerStatus.Running:
-                    Logger.Warning("==[State:Running]==");
+                    //Logger.Message("==[State:Running]==");
                     // duh!
                     break;
 
                 case ServiceControllerStatus.StartPending:
-                    Logger.Warning("==[State:Starting]==");
+                    Logger.Message("==[State:Starting]==");
                     try {
                         _controller.Value.WaitForStatus(ServiceControllerStatus.Running, new TimeSpan(0, 0, 0, 10));
                     }
@@ -207,7 +204,7 @@ namespace CoApp.Toolkit.Engine {
                     break;
 
                 case ServiceControllerStatus.StopPending:
-                    Logger.Warning("==[State:Stopping]==");
+                    Logger.Message("==[State:Stopping]==");
                     try {
                         _controller.Value.WaitForStatus(ServiceControllerStatus.Stopped, new TimeSpan(0, 0, 0, 10));
                     }
@@ -228,7 +225,7 @@ namespace CoApp.Toolkit.Engine {
                     break;
 
                 case ServiceControllerStatus.Stopped:
-                    Logger.Warning("==[State:Stopped]==");
+                    //Logger.Message("==[State:Stopped]==");
                     _controller.Value.Start();
                     try {
                         _controller.Value.WaitForStatus(ServiceControllerStatus.Running, new TimeSpan(0, 0, 0, 10));

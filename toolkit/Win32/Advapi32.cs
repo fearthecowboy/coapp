@@ -151,7 +151,11 @@ namespace CoApp.Toolkit.Win32 {
         [DllImport("advapi32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         public static extern IntPtr GetSidSubAuthority(IntPtr pSid, UInt32 nSubAuthority);
 
+        [DllImport("advapi32.dll", SetLastError = true)]
+        public static extern bool InitializeSecurityDescriptor(ref SECURITY_DESCRIPTOR sd, uint dwRevision);
 
+        [DllImport("advapi32.dll", SetLastError = true)]
+        public static extern bool SetSecurityDescriptorDacl(ref SECURITY_DESCRIPTOR sd, bool daclPresent, IntPtr dacl, bool daclDefaulted);
 
         [DllImport("advapi32.dll", SetLastError = true)]
         public static extern bool QueryServiceObjectSecurity(IntPtr serviceHandle, System.Security.AccessControl.SecurityInfos secInfo, ref SECURITY_DESCRIPTOR lpSecDesrBuf, uint bufSize, out uint bufSizeNeeded);
@@ -172,5 +176,12 @@ namespace CoApp.Toolkit.Win32 {
         public IntPtr group;
         public IntPtr sacl;
         public IntPtr dacl;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct SECURITY_ATTRIBUTES {
+        public int nLength;
+        public IntPtr lpSecurityDescriptor;
+        public int bInheritHandle;
     }
 }

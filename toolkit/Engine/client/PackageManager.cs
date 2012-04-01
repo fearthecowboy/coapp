@@ -36,6 +36,7 @@ namespace CoApp.Toolkit.Engine.Client {
         internal class ManualEventQueue : Queue<UrlEncodedMessage>, IDisposable {
             internal static readonly Dictionary<int, ManualEventQueue> EventQueues = new Dictionary<int, ManualEventQueue>();
             private readonly ManualResetEvent _resetEvent = new ManualResetEvent(true);
+            private bool _stillWorking;
 
             public ManualEventQueue() {
                 var tid = Task.CurrentId.GetValueOrDefault();
@@ -55,9 +56,6 @@ namespace CoApp.Toolkit.Engine.Client {
             public void Dispose() {
                 lock (EventQueues) {
                     EventQueues.Remove(Task.CurrentId.GetValueOrDefault());
-                    if (EventQueues.Count == 0) {
-                        Instance.OnCompleted();
-                    }
                 }
             }
 
@@ -67,27 +65,32 @@ namespace CoApp.Toolkit.Engine.Client {
                 }
             }
 
+            internal static void ResetAllQueues() {
+                if (EventQueues.Any()) {
+                    Logger.Warning("Forcing clearing out event queues in client library");
+                    var oldQueues = EventQueues.Values.ToArray();
+                    //EventQueues.Clear();
+                    foreach( var q in oldQueues ) {
+                        q._stillWorking = false;
+                        q._resetEvent.Set();
+                    }
+                }
+            }
+            
             internal void DispatchResponses() {
-                var continueHandlingMessages = true;
+                _stillWorking = true;
 
-                while (continueHandlingMessages && _resetEvent.WaitOne()) {
+                while (_stillWorking && _resetEvent.WaitOne()) {
                     _resetEvent.Reset();
                     while (Count > 0) {
                         if (!Dispatch(Dequeue())) {
-                            continueHandlingMessages = false;
+                            _stillWorking = false;
                         }
                     }
                 }
             }
         }
 
-        public event Action Completed;
-
-        private void OnCompleted() {
-            if( Completed != null ) {
-                Completed();
-            }
-        }
 
         public static PackageManager Instance = new PackageManager();
         private NamedPipeClientStream _pipe;
@@ -222,10 +225,8 @@ namespace CoApp.Toolkit.Engine.Client {
         public void Disconnect() {
             lock (this) {
                 try {
-                    if (ManualEventQueue.EventQueues.Any()) {
-                        Logger.Error("Manually clearing out event queues in client library. This is a symptom of something unsavory.");
-                        ManualEventQueue.EventQueues.Clear();
-                    }
+                    // ensure all queues are stopped and cleared out.
+                    ManualEventQueue.ResetAllQueues();
 
                     if (_pipe != null) {
                         var pipe = _pipe;
@@ -1068,7 +1069,7 @@ namespace CoApp.Toolkit.Engine.Client {
                         TaskContinuationOptions.OnlyOnFaulted);
                 }
                 catch /* (Exception e) */ {
-                    Console.WriteLine("Async Write Fail!? (2)");
+                    
                 }
             }
         }

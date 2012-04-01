@@ -233,8 +233,6 @@ namespace CoApp.Toolkit.Engine {
                     
                 }
 
-                
-
                 // if the client is asking for Trimable packages
                 //      -  get the list of packages that meet the search criteria. 'pkgs'.
                 //      -  a package is not 'trimable' if:
@@ -549,8 +547,8 @@ namespace CoApp.Toolkit.Engine {
                                     if (EngineService.DoesTheServiceNeedARestart) {
                                         // something has changed where we need restart the service before we can continue.
                                         // and the one place we don't wanna be when we issue a shutdown in in Install :) ...
+                                        PackageManagerMessages.Invoke.Restarting();
                                         EngineService.RestartService();
-                                        PackageManagerMessages.Invoke.OperationCancelled("install-package");
                                         return;
                                     }
                                     return;

@@ -230,6 +230,7 @@ namespace CoApp.Toolkit.Win32 {
         [DllImport("kernel32", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
         public static extern int WaitForSingleObject(SafeWaitHandle handle, int dwMilliseconds);
 
+
 #if !COAPP_ENGINE_CORE
         /// <summary>
         ///   Loads the specified module into the address space of the calling process. 
@@ -396,6 +397,32 @@ namespace CoApp.Toolkit.Win32 {
             CallingConvention = CallingConvention.StdCall)]
         public static extern bool EndUpdateResource(IntPtr hUpdate, bool fDiscard);
 
+
+        
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern IntPtr MapViewOfFile(IntPtr hFileMappingObject, uint dwDesiredAccess, uint dwFileOffsetHigh, uint dwFileOffsetLow, uint dwNumberOfBytesToMap);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool UnmapViewOfFile(IntPtr lpBaseAddress);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern IntPtr CreateFileMapping(IntPtr hFile, ref SECURITY_ATTRIBUTES lpFileMappingAttributes, PageProtection flProtect, uint dwMaximumSizeHigh, uint dwMaximumSizeLow, string lpName);
+
 #endif
+    }
+
+    [Flags]
+    public enum PageProtection : uint {
+        NoAccess = 0x01,
+        Readonly = 0x02,
+        ReadWrite = 0x04,
+        WriteCopy = 0x08,
+        Execute = 0x10,
+        ExecuteRead = 0x20,
+        ExecuteReadWrite = 0x40,
+        ExecuteWriteCopy = 0x80,
+        Guard = 0x100,
+        NoCache = 0x200,
+        WriteCombine = 0x400,
     }
 }

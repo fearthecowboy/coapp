@@ -31,6 +31,12 @@ namespace CoApp.Toolkit.Tasks {
             return x.Task;
         }
 
+        public static Task<T> AsCancelledTask<T>(this T result) {
+            var x = new TaskCompletionSource<T>(TaskCreationOptions.AttachedToParent);
+            x.SetCanceled();
+            return x.Task;
+        }
+
         private static bool IsTaskReallyCompleted(Task task) {
             if( !task.IsCompleted )
                 return false;

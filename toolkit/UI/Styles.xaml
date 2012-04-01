@@ -25,6 +25,10 @@
     <!-- Brushes -->
     <SolidColorBrush x:Key="HeaderBrush" Color="{StaticResource HeaderColor}" />
     <SolidColorBrush x:Key="MetroMainButtons" Color="{StaticResource MetroButtonColor}" />
+    <SolidColorBrush x:Key="RemoveStroke" Color="Red" />
+    <SolidColorBrush x:Key="InstallStroke" Color="Green" />
+    <SolidColorBrush x:Key="CancelStroke" Color="Blue" />
+    
     <SolidColorBrush x:Key="WhiteColorBrush" Color="{StaticResource WhiteColor}" />
     <SolidColorBrush x:Key="PageBorderBrush" Color="{StaticResource BorderColor}" />
 

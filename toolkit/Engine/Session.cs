@@ -283,7 +283,7 @@ namespace CoApp.Toolkit.Engine {
                 Warning = SendMessageWarning,
                 ScheduledTaskInfo = SendScheduledTaskInfo,
                 CurrentTelemetryOption = SendTelemetrySetting,
-
+                Restarting = SendRestarting,
             };
         
 
@@ -533,7 +533,7 @@ namespace CoApp.Toolkit.Engine {
                     }
                 }
                 catch (AggregateException ae) {
-                    if (_cancellationTokenSource.IsCancellationRequested) {
+                    if (IsCancelled) {
                         // ok, I'll assume you know what you're doing.
                         return;
                     }
@@ -541,12 +541,18 @@ namespace CoApp.Toolkit.Engine {
                     foreach (var e in ae.Flatten().InnerExceptions) {
                         if (e.GetType() == typeof (IOException)) {
                             // pipe got disconnected.
+                            return;
                         }
                         Logger.Error(e);
                     }
                 }
 
                 catch (Exception e) {
+                    if (IsCancelled) {
+                        // ok, I'll assume you know what you're doing.
+                        return;
+                    }
+
                     // something broke. Could be a closed pipe.
                     Logger.Error(e);
                 }

@@ -10,15 +10,14 @@
 // </license>
 //-----------------------------------------------------------------------
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using CoApp.Toolkit.Extensions;
-
 namespace CoApp.Toolkit.Engine.Client {
-    using System.Threading;
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
     using System.Threading.Tasks;
+    using Exceptions;
+    using Extensions;
+    using Logging;
     using Tasks;
     using Toolkit.Exceptions;
     using Win32;
@@ -45,65 +44,64 @@ namespace CoApp.Toolkit.Engine.Client {
     public class ScheduledTask {
         public string Name { get; set; }
         public string Executable { get; set; }
-        public string CommandLine{ get; set; }
-        public int Hour{ get; set; }
-        public int Minutes{ get; set; }
-        public DayOfWeek? DayOfWeek{ get; set; }
+        public string CommandLine { get; set; }
+        public int Hour { get; set; }
+        public int Minutes { get; set; }
+        public DayOfWeek? DayOfWeek { get; set; }
         public int IntervalInMinutes { get; set; }
     }
 
     public class PackageSet {
         public Package Package;
-        
+
         /// <summary>
-        /// The newest version of this package that is installed and newer than the given package and is binary compatible.
+        ///   The newest version of this package that is installed and newer than the given package and is binary compatible.
         /// </summary>
         public Package InstalledNewerCompatable;
 
         /// <summary>
-        /// The newest version of this package that is installed, and newer than the given package
+        ///   The newest version of this package that is installed, and newer than the given package
         /// </summary>
         public Package InstalledNewer;
 
         /// <summary>
-        /// The newest package that is currently installed, that the given package is a compatible update for.
+        ///   The newest package that is currently installed, that the given package is a compatible update for.
         /// </summary>
         public Package InstalledOlderCompatable;
 
         /// <summary>
-        /// The newest package that is currently installed, that the give package is an upgrade for.
+        ///   The newest package that is currently installed, that the give package is an upgrade for.
         /// </summary>
         public Package InstalledOlder;
 
         /// <summary>
-        /// The latest version of the package that is available that is newer than the current package.
+        ///   The latest version of the package that is available that is newer than the current package.
         /// </summary>
         public Package AvailableNewer;
 
         /// <summary>
-        /// The latest version of the package that is available and is binary compatable with the given package 
+        ///   The latest version of the package that is available and is binary compatable with the given package
         /// </summary>
         public Package AvailableNewerCompatible;
 
         /// <summary>
-        /// The latest version that is installed. 
+        ///   The latest version that is installed.
         /// </summary>
         public Package InstalledNewest;
 
         /// <summary>
-        /// All Installed versions of this package
+        ///   All Installed versions of this package
         /// </summary>
         public IEnumerable<Package> InstalledPackages;
 
         /// <summary>
-        /// All the trimable packages for this package
+        ///   All the trimable packages for this package
         /// </summary>
         public IEnumerable<Package> Trimable;
     }
 
     public class EasyPackageManager {
         internal class RemoteCallResponse : PackageManagerMessages {
-            
             internal bool EngineRestarting;
             internal bool NoPackages;
 
@@ -117,11 +115,11 @@ namespace CoApp.Toolkit.Engine.Client {
                     throw new RequiresPermissionException(permission);
                 };
 
-                OperationCancelled = (reason) => {
+                OperationCancelled = reason => {
                     OperationCancelledReason = reason;
                 };
 
-                UnexpectedFailure = (exception) => {
+                UnexpectedFailure = exception => {
                     throw exception;
                 };
 
@@ -137,7 +135,7 @@ namespace CoApp.Toolkit.Engine.Client {
                     original.SatisfiedBy = satisfiedBy;
                 };
 
-                UnknownPackage = (s) => {
+                UnknownPackage = s => {
                     throw new UnknownPackageException(s);
                 };
 
@@ -155,29 +153,27 @@ namespace CoApp.Toolkit.Engine.Client {
                     throw new Exception("restarting");
                 };
 
-                PackageBlocked = (canonicalname) => {
+                PackageBlocked = canonicalname => {
                     throw new PackageBlockedException(canonicalname);
                 };
 
                 RequireRemoteFile =
                     (canonicalName, remoteLocations, localFolder, force) => {
                         Downloader.GetRemoteFile(canonicalName, remoteLocations, localFolder, force, new RemoteFileMessages {
-                                Progress = (itemUri, percent) => {
-                                    if (DownloadProgress != null) {
-                                        DownloadProgress(itemUri.AbsoluteUri, localFolder, percent);
-                                    }
-                                },
-
-                                Completed = (itemUri) => {
-                                    if (DownloadCompleted != null) {
-                                        DownloadCompleted(itemUri.AbsoluteUri, localFolder);
-                                    }
+                            Progress = (itemUri, percent) => {
+                                if (DownloadProgress != null) {
+                                    DownloadProgress(itemUri.AbsoluteUri, localFolder, percent);
                                 }
-                            }, this);
-
+                            },
+                            Completed = itemUri => {
+                                if (DownloadCompleted != null) {
+                                    DownloadCompleted(itemUri.AbsoluteUri, localFolder);
+                                }
+                            }
+                        }, this);
                     };
 
-                this.Register();
+                Register();
             }
 
             public void ThrowWhenFaulted(Task antecedent) {
@@ -186,7 +182,7 @@ namespace CoApp.Toolkit.Engine.Client {
                     return;
                 }
 
-                if( !string.IsNullOrEmpty(OperationCancelledReason)) {
+                if (!string.IsNullOrEmpty(OperationCancelledReason)) {
                     throw new OperationCanceledException(OperationCancelledReason);
                 }
 
@@ -194,29 +190,121 @@ namespace CoApp.Toolkit.Engine.Client {
             }
         }
 
-        private Action<string, string, int> _downloadProgress;
-        private Action<string, string> _downloadCompleted;
+        private readonly Action<string, string, int> _downloadProgress;
+        private readonly Action<string, string> _downloadCompleted;
 
-        public EasyPackageManager(Action<string, string, int> downloadProgress = null, Action<string, string> downloadCompleted= null ) {
-            _downloadProgress = downloadProgress;
-            _downloadCompleted = downloadCompleted;
+        public EasyPackageManager(Action<string, string, int> downloadProgress = null, Action<string, string> downloadCompleted = null) {
+            _downloadProgress = downloadProgress ?? ((s, s2, i) => {
+            });
+            _downloadCompleted = downloadCompleted ?? ((s, i) => {
+            });
         }
-        /*
-         var failed = ValidateCanonicalName<IEnumerable<Package>>(canonicalName);
-            if (failed != null) {
-                return failed;
+
+        /// <summary>
+        ///   Returns a collection of packages that are filtered to the platform switches passed on the command line.
+        /// </summary>
+        /// <param name="packages"> The collection to filter packages for </param>
+        /// <param name="x86"> Accept x86 packages? </param>
+        /// <param name="x64"> Accept x64 packages? </param>
+        /// <param name="cpuany"> Accept CPUANY packages? </param>
+        /// <returns> </returns>
+        public IEnumerable<Package> FilterPackagesForPlatforms(IEnumerable<Package> packages, bool? x86 = null, bool? x64 = null, bool? cpuany = null) {
+            if ((true == x64) || (true == x86) || (true == cpuany)) {
+                return packages.Where(each => (x64 == true && each.Architecture == Architecture.x64) || (x86 == true && each.Architecture == Architecture.x86) || (cpuany == true && each.Architecture == Architecture.Any));
             }
-            var handler = new RemoteCallResponse();
+            return packages;
+        }
 
-            return PackageManager.Instance.XXX().ContinueWith(antecedent => {
-                if (handler.EngineRestarting) {
-                    //  re-run
-                    return;
+        /// <summary>
+        ///   makes sure that there isn't a conflict in the packages that are being installed. This will call FilterPackagesForPlatforms, so you don't need to call that beforehand.
+        /// </summary>
+        /// <param name="packages"> the collection of packages to check for conflicts </param>
+        /// <param name="x86"> </param>
+        /// <param name="x64"> </param>
+        /// <param name="cpuany"> </param>
+        /// <returns> A filtered collection of packages to install </returns>
+        public IEnumerable<Package> FilterConflictsForInstall(IEnumerable<Package> packages, bool? x86 = null, bool? x64 = null, bool? cpuany = null) {
+            var isFiltering = (true == x64) || (true == x86) || (true == cpuany);
+
+            var pkgs = FilterPackagesForPlatforms(packages, x86, x64, cpuany).Distinct().ToArray();
+
+            // get an collection for each package of all the other packages that it matches.
+            var packageFamilies = pkgs.Select(package => pkgs.Where(each => each.Name == package.Name && each.PublicKeyToken == package.PublicKeyToken && (!isFiltering || each.Architecture == package.Architecture)).ToArray()).ToArray();
+
+            // get the packages that could be conflicting.
+            var conflictedFamilies = packageFamilies.Where(eachFamily => eachFamily.Count() > 1);
+
+            if (conflictedFamilies.Any()) {
+                var nonConflictedPackages = packageFamilies.Where(eachFamily => eachFamily.Count() == 1).Select(eachFamily => eachFamily.FirstOrDefault());
+
+                if (!isFiltering) {
+                    var actualConflicts = new List<Package[]>();
+                    foreach (var conflictedPackages in conflictedFamilies) {
+                        // we're really only interested in one platform for a given package here (since the user didn't specify any preference directly)
+
+                        if (Environment.Is64BitOperatingSystem) {
+                            // if there is a single x64 package, take that.
+                            var x64Pkgs = conflictedPackages.Where(each => each.Architecture == Architecture.x64).ToArray();
+                            if (x64Pkgs.Count() == 1) {
+                                nonConflictedPackages = nonConflictedPackages.Union(x64Pkgs);
+                                continue;
+                            }
+
+                            if (x64Pkgs.Count() > 1) {
+                                // we've got more than one package of a single platform. just add it to the conflicts and move along.
+                                actualConflicts.Add(conflictedPackages);
+                                continue;
+                            }
+                        }
+
+                        // if there are no x64 packages, see if there is a single x86 package, take that.
+                        var x86Pkgs = conflictedPackages.Where(each => each.Architecture == Architecture.x86).ToArray();
+                        if (x86Pkgs.Length == 1) {
+                            nonConflictedPackages = nonConflictedPackages.Union(x86Pkgs);
+                            continue;
+                        }
+
+                        // if we got here, that means no x64  and no x86 packages, and we should just have a plurality of cpuany packages.
+                        // we've got more than one package of a single platform, or that means no x64  and no x86 packages, 
+                        // and we just have a plurality of cpuany packages.
+
+                        // Either way just add it to the conflicts and move along.
+                        actualConflicts.Add(conflictedPackages);
+                        continue;
+                    }
+                    if (actualConflicts.Any()) {
+                        throw new ConflictedPackagesException(actualConflicts);
+                    }
+
+                    // hmm, we resolved our conflicts automagically.
+                    return nonConflictedPackages;
                 }
-                handler.ThrowWhenFaulted(antecedent);
-            }, TaskContinuationOptions.AttachedToParent);
-         */
+                // architectures are not factored in here. 
+                // we must have multiple packages of a given architecture.
+                throw new ConflictedPackagesException(conflictedFamilies);
+            }
 
+            return pkgs;
+        }
+
+        /// <summary>
+        ///   This identifies the actual list of packages to install for a given requested set of packages
+        /// </summary>
+        /// <param name="packages"> </param>
+        /// <returns> </returns>
+        public Task<IEnumerable<Package>> IdentifyPackageAndDependenciesToInstall(IEnumerable<Package> packages, bool? autoUpgrade = null, bool? download = null) {
+            var pTasks = packages.Select(
+                package => Install(package.CanonicalName, autoUpgrade, pretend: true, download: download).ContinueWith(
+                    antecedent => antecedent.Result, TaskContinuationOptions.AttachedToParent));
+
+            return pTasks.Continue(allResults => allResults.SelectMany(each => each).Distinct());
+        }
+
+        public Task Elevate() {
+            return Task.Factory.StartNew(
+                () => {
+                });
+        }
 
         public Task<bool> VerifyFileSignature(string filename) {
             var result = false;
@@ -243,7 +331,7 @@ namespace CoApp.Toolkit.Engine.Client {
         }
 
         public Task<PackageSet> GetPackageSet(string canonicalName) {
-            var result= new PackageSet();
+            var result = new PackageSet();
 
             return GetPackage(canonicalName).ContinueWith(antecedent => {
                 var tasks = new List<Task>();
@@ -252,9 +340,9 @@ namespace CoApp.Toolkit.Engine.Client {
 
                 // the given package.
                 result.Package = antecedent.Result;
-                
+
                 // get all the related packages
-                var allPackages =GetAllVersionsOfPackage(canonicalName).Result.OrderByDescending(each => each.Version);
+                var allPackages = GetAllVersionsOfPackage(canonicalName).Result.OrderByDescending(each => each.Version);
 
                 result.InstalledPackages = allPackages.Where(each => each.IsInstalled).ToArray();
                 result.InstalledNewerCompatable = NewestCompatablePackageIn(result.Package, result.InstalledPackages);
@@ -266,41 +354,38 @@ namespace CoApp.Toolkit.Engine.Client {
                 result.AvailableNewerCompatible = NewestCompatablePackageIn(result.Package, notInstalledPackges);
                 result.AvailableNewer = notInstalledPackges.FirstOrDefault(each => each.Version > result.Package.Version);
 
-
                 result.InstalledOlderCompatable =
                     result.InstalledPackages.FirstOrDefault(
                         each => each.Version < result.Package.Version && result.Package.MinPolicy <= each.Version && result.Package.MaxPolicy >= each.Version);
-
 
                 result.InstalledOlder =
                     result.InstalledPackages.FirstOrDefault(
                         each => each.Version < result.Package.Version && (result.Package.MinPolicy > each.Version || result.Package.MaxPolicy < each.Version));
 
-
                 if (result.AvailableNewerCompatible == result.Package) {
                     result.AvailableNewerCompatible = null;
                 }
                 if (result.AvailableNewer == result.Package) {
-                    result.AvailableNewer= null;
+                    result.AvailableNewer = null;
                 }
-                if (result.InstalledNewerCompatable== result.Package) {
+                if (result.InstalledNewerCompatable == result.Package) {
                     result.InstalledNewerCompatable = null;
                 }
                 if (result.InstalledOlderCompatable == result.Package) {
                     result.InstalledOlderCompatable = null;
                 }
-                if (result.InstalledOlder== result.Package) {
-                    result.InstalledOlder= null;
+                if (result.InstalledOlder == result.Package) {
+                    result.InstalledOlder = null;
                 }
                 if (result.InstalledNewer == result.Package) {
                     result.InstalledNewer = null;
                 }
 
-                tasks.Add( GetTrimablePackages(canonicalName).ContinueWith(a2 => {
+                tasks.Add(GetTrimablePackages(canonicalName).ContinueWith(a2 => {
                     result.Trimable = !a2.IsFaulted ? a2.Result : Enumerable.Empty<Package>();
                 }));
 
-                if( result.InstalledNewer != null ) {
+                if (result.InstalledNewer != null) {
                     tasks.Add(GetPackageDetails(result.InstalledNewer));
                 }
 
@@ -312,7 +397,7 @@ namespace CoApp.Toolkit.Engine.Client {
                     tasks.Add(GetPackageDetails(result.InstalledNewerCompatable));
                 }
 
-                if (result.InstalledNewest!= null) {
+                if (result.InstalledNewest != null) {
                     tasks.Add(GetPackageDetails(result.InstalledNewest));
                 }
 
@@ -320,7 +405,7 @@ namespace CoApp.Toolkit.Engine.Client {
                     tasks.Add(GetPackageDetails(result.InstalledOlder));
                 }
 
-                if (result.InstalledOlderCompatable!= null) {
+                if (result.InstalledOlderCompatable != null) {
                     tasks.Add(GetPackageDetails(result.InstalledOlderCompatable));
                 }
 
@@ -328,7 +413,7 @@ namespace CoApp.Toolkit.Engine.Client {
                     tasks.Add(GetPackageDetails(result.AvailableNewer));
                 }
 
-                if (result.AvailableNewerCompatible!= null) {
+                if (result.AvailableNewerCompatible != null) {
                     tasks.Add(GetPackageDetails(result.AvailableNewerCompatible));
                 }
 
@@ -342,7 +427,7 @@ namespace CoApp.Toolkit.Engine.Client {
             }, TaskContinuationOptions.AttachedToParent);
         }
 
-        private Package NewestCompatablePackageIn(Package aPackage, IEnumerable<Package> packages ) {
+        private Package NewestCompatablePackageIn(Package aPackage, IEnumerable<Package> packages) {
             var result = aPackage;
             var pkgs = packages.OrderBy(each => each.Version).ToArray();
             Package pk;
@@ -357,7 +442,7 @@ namespace CoApp.Toolkit.Engine.Client {
         public Task<Package> GetLatestInstalledCompatableVersion(string canonicalName) {
             return GetPackage(canonicalName).ContinueWith(antecedent => {
                 antecedent.ThrowOnFaultOrCancel();
-                if( antecedent.Result == null ) {
+                if (antecedent.Result == null) {
                     throw new UnknownPackageException(canonicalName);
                 }
 
@@ -367,14 +452,14 @@ namespace CoApp.Toolkit.Engine.Client {
         }
 
         public Task<Package> GetActiveVersion(string packageName) {
-            return GetPackages(packageName, null, null, null, null,true , null, null, null, null, null, null, null).ContinueWith(antecedent => {
+            return GetPackages(packageName, null, null, null, null, true).ContinueWith(antecedent => {
                 antecedent.ThrowOnFaultOrCancel();
                 return antecedent.Result.FirstOrDefault();
             }, TaskContinuationOptions.AttachedToParent);
         }
 
         public Task<bool> IsPackageBlocked(string packageName) {
-            return GetPackages(packageName, null, null, null, null,null,null,true, null, null,null,null,null).ContinueWith(antecedent => {
+            return GetPackages(packageName, null, null, null, null, null, null, true).ContinueWith(antecedent => {
                 antecedent.ThrowOnFaultOrCancel();
                 return antecedent.Result.Any();
             }, TaskContinuationOptions.AttachedToParent);
@@ -420,11 +505,11 @@ namespace CoApp.Toolkit.Engine.Client {
             return SetPackageFlags(canonicalName, doNotUpgrade: true);
         }
 
-        public Task MarkPackageActive( string canonicalName ) {
+        public Task MarkPackageActive(string canonicalName) {
             return SetPackageFlags(canonicalName, active: true);
         }
 
-        public Task MarkPackageRequested( string canonicalName ) {
+        public Task MarkPackageRequested(string canonicalName) {
             return SetPackageFlags(canonicalName, requested: true);
         }
 
@@ -440,18 +525,18 @@ namespace CoApp.Toolkit.Engine.Client {
             return SetPackageFlags(canonicalName, doNotUpgrade: false);
         }
 
-        public Task MarkPackageNotRequested( string canonicalName ) {
+        public Task MarkPackageNotRequested(string canonicalName) {
             return SetPackageFlags(canonicalName, requested: false);
         }
 
-        private Task SetPackageFlags(string canonicalName,bool? active = null, bool? requested = null, bool? blocked = null, bool? doNotUpdate = null, bool? doNotUpgrade = null ) {
+        private Task SetPackageFlags(string canonicalName, bool? active = null, bool? requested = null, bool? blocked = null, bool? doNotUpdate = null, bool? doNotUpgrade = null) {
             var failed = ValidateCanonicalName<IEnumerable<Package>>(canonicalName);
             if (failed != null) {
                 return failed;
             }
             var handler = new RemoteCallResponse();
 
-            return PackageManager.Instance.SetPackage(canonicalName,active, requested,blocked, doNotUpdate, doNotUpgrade ).ContinueWith(antecedent => {
+            return PackageManager.Instance.SetPackage(canonicalName, active, requested, blocked, doNotUpdate, doNotUpgrade).ContinueWith(antecedent => {
                 if (handler.EngineRestarting) {
                     SetPackageFlags(canonicalName, active, requested, blocked, doNotUpdate, doNotUpgrade).Wait();
                     return;
@@ -461,23 +546,23 @@ namespace CoApp.Toolkit.Engine.Client {
         }
 
         public Task<IEnumerable<Package>> GetUpdatablePackages(string packageName) {
-            return GetPackages(packageName, null, null, null, null, null, null, null, null, null, true , null, null);
+            return GetPackages(packageName, null, null, null, null, null, null, null, null, null, true);
         }
 
         public Task<IEnumerable<Package>> GetUpgradablePackages(string packageName) {
-            return GetPackages(packageName, null, null, null, null, null, null, null, null, null, null, true, null);
+            return GetPackages(packageName, null, null, null, null, null, null, null, null, null, null, true);
         }
 
         public Task<IEnumerable<Package>> GetTrimablePackages(string packageName) {
-            return GetPackages(packageName, null, null, null, null, null, null, null, null, null, null, null,true);
+            return GetPackages(packageName, null, null, null, null, null, null, null, null, null, null, null, true);
         }
 
         public Task<IEnumerable<Package>> GetUpdatablePackages(IEnumerable<string> packageNames) {
-            return GetPackages(packageNames, null, null, null, null, null, null, null, null, null, true, null, null);
+            return GetPackages(packageNames, null, null, null, null, null, null, null, null, null, true);
         }
 
         public Task<IEnumerable<Package>> GetUpgradablePackages(IEnumerable<string> packageNames) {
-            return GetPackages(packageNames, null, null, null, null, null, null, null, null, null, null, true, null);
+            return GetPackages(packageNames, null, null, null, null, null, null, null, null, null, null, true);
         }
 
         public Task<IEnumerable<Package>> GetTrimablePackages(IEnumerable<string> packageNames) {
@@ -486,56 +571,65 @@ namespace CoApp.Toolkit.Engine.Client {
 
         public Task<IEnumerable<Package>> GetAllVersionsOfPackage(string packageName) {
             var parsedName = PackageName.Parse(packageName);
-            return GetPackages( parsedName.Name + "-*.*.*.*-*-" + parsedName.PublicKeyToken, null, null, null, null, null, null, null, null, null, null, null, null);
+            return GetPackages(parsedName.Name + "-*.*.*.*-*-" + parsedName.PublicKeyToken);
         }
-      
-        
 
         public Task<IEnumerable<Package>> GetInstalledPackages(string packageName, bool? active = null, bool? requested = null, bool? blocked = null, string locationFeed = null) {
-            return GetPackages(packageName, null, null, null, true, active, requested, blocked, null, locationFeed, null, null, null);
+            return GetPackages(packageName, null, null, null, true, active, requested, blocked, null, locationFeed);
         }
 
-        public Task<IEnumerable<Package>> GetInstalledPackages(IEnumerable<string> packageName, bool? active = null, bool? requested = null, bool? blocked = null, string locationFeed = null ) {
-            return GetPackages(packageName, null, null, null, true, active, requested, blocked, null, locationFeed,  null, null, null);
+        public Task<IEnumerable<Package>> GetInstalledPackages(IEnumerable<string> packageName, bool? active = null, bool? requested = null, bool? blocked = null, string locationFeed = null) {
+            return GetPackages(packageName, null, null, null, true, active, requested, blocked, null, locationFeed);
         }
 
-        public Task<Package> GetPackageFromFile( string filename ) {
+        public Task<Package> GetPackageFromFile(string filename) {
             return GetPackages(filename).ContinueWith(antecedent => {
                 antecedent.ThrowOnFaultOrCancel();
                 var pkg = antecedent.Result.FirstOrDefault();
-                if( pkg == null ) {
+                if (pkg == null) {
                     throw new UnknownPackageException("filename: {0}".format(filename));
                 }
                 return pkg;
             }, TaskContinuationOptions.AttachedToParent);
         }
 
-        public Task<IEnumerable<Package>> GetPackages(string packageName, FourPartVersion? minVersion = null, FourPartVersion? maxVersion = null, bool? dependencies = null, bool? installed = null, bool? active = null, bool? requested = null, bool? blocked = null, bool? latest = null, string locationFeed = null, bool? updates = null, bool? upgrades = null, bool? trimable = null) {
-            return GetPackages( packageName.SingleItemAsEnumerable(), minVersion, maxVersion, dependencies, installed, active, requested, blocked, latest, locationFeed,  updates, upgrades, trimable );
+        public Task<IEnumerable<Package>> GetPackages(string packageName, FourPartVersion? minVersion = null, FourPartVersion? maxVersion = null, bool? dependencies = null, bool? installed = null,
+            bool? active = null, bool? requested = null, bool? blocked = null, bool? latest = null, string locationFeed = null, bool? updates = null, bool? upgrades = null, bool? trimable = null) {
+            return GetPackages(packageName.SingleItemAsEnumerable(), minVersion, maxVersion, dependencies, installed, active, requested, blocked, latest, locationFeed, updates, upgrades, trimable);
         }
 
-        public Task<IEnumerable<Package>> GetPackages(IEnumerable<string> packageNames, FourPartVersion? minVersion = null, FourPartVersion? maxVersion = null, bool? dependencies = null, bool? installed = null, bool? active = null, bool? requested = null, bool? blocked = null, bool? latest = null, string locationFeed = null, bool? updates = null, bool? upgrades = null, bool? trimable = null) {
+        public Task<IEnumerable<Package>> GetPackages(IEnumerable<string> packageNames, FourPartVersion? minVersion = null, FourPartVersion? maxVersion = null, bool? dependencies = null,
+            bool? installed = null, bool? active = null, bool? requested = null, bool? blocked = null, bool? latest = null, string locationFeed = null, bool? updates = null, bool? upgrades = null,
+            bool? trimable = null) {
+
             var handler = new RemoteCallResponse {
                 DownloadProgress = _downloadProgress,
                 DownloadCompleted = _downloadCompleted,
             };
-            if( packageNames.IsNullOrEmpty() ) {
+
+            if (packageNames.IsNullOrEmpty()) {
                 packageNames = "*".SingleItemAsEnumerable();
             }
 
-            return PackageManager.Instance.GetPackages(packageNames, minVersion, maxVersion, dependencies, installed, active, requested, blocked, latest, locationFeed,false , updates, upgrades, trimable, handler).ContinueWith(antecedent => {
-                if( handler.EngineRestarting ) {
-                    return GetPackages(packageNames, minVersion, maxVersion, dependencies, installed, active, requested, blocked, latest, locationFeed, updates, upgrades, trimable ).Result;
-                }
-                handler.ThrowWhenFaulted(antecedent);
+            return
+                PackageManager.Instance.GetPackages(packageNames, minVersion, maxVersion, dependencies, installed, active, requested, blocked, latest, locationFeed, false, updates, upgrades, trimable,
+                    handler).ContinueWith(antecedent => {
+                        if (handler.EngineRestarting) {
+                            return GetPackages(packageNames, minVersion, maxVersion, dependencies, installed, active, requested, blocked, latest, locationFeed, updates, upgrades, trimable).Result;
+                        }
+                        handler.ThrowWhenFaulted(antecedent);
 
-                return antecedent.Result;
+                        if (!Environment.Is64BitOperatingSystem) {
+                            // remove x64 packages from the result set if you're not on an x64 system.
+                            return antecedent.Result.Where(each => each.Architecture != Architecture.x64);
+                        }
 
-            }, TaskContinuationOptions.AttachedToParent);
+                        return antecedent.Result;
+                    }, TaskContinuationOptions.AttachedToParent);
         }
 
         private Task<TReturnType> ValidateCanonicalName<TReturnType>(string canonicalName) {
-            if( !PackageName.Parse(canonicalName).IsFullMatch ) {
+            if (!PackageName.Parse(canonicalName).IsFullMatch) {
                 var failedResult = new TaskCompletionSource<TReturnType>();
                 failedResult.SetException(new InvalidCanonicalNameException(canonicalName));
                 return failedResult.Task;
@@ -547,19 +641,32 @@ namespace CoApp.Toolkit.Engine.Client {
             Action<string, int, int> installProgress = null,
             Action<string> packageInstalled = null) {
             var failed = ValidateCanonicalName<IEnumerable<Package>>(canonicalName);
-            if( failed != null ) {
+            if (failed != null) {
                 return failed;
             }
+
+
+            var completedThisPackage = false;
 
             var result = new List<Package>();
 
             var handler = new RemoteCallResponse {
-                PackageInformation = (package) => {
-                    // sent back when it tells us of a pckage
-                    result.Add(package);
+                PackageInformation = (package) => result.Add(package),
+
+                PackageSatisfiedBy = (pkg, satisfiedBy) => {
+                    pkg.SatisfiedBy = satisfiedBy;
+                    result.Add(pkg);
                 },
 
-                InstallingPackageProgress = installProgress,
+                InstallingPackageProgress = (packageName, progress, overall) => {
+                    if (overall == 100) {
+                        completedThisPackage = true;
+                    }
+                    if (installProgress != null) {
+                        installProgress(packageName, progress, overall);
+                    }
+                },
+
                 InstalledPackage = packageInstalled,
                 DownloadProgress = _downloadProgress,
                 DownloadCompleted = _downloadCompleted,
@@ -568,23 +675,24 @@ namespace CoApp.Toolkit.Engine.Client {
             return PackageManager.Instance.InstallPackage(canonicalName, autoUpgrade, false, download, pretend, isUpdate, isUpgrade, handler).ContinueWith(
                 antecedent => {
                     if (handler.EngineRestarting) {
-                        return Install(canonicalName, autoUpgrade, isUpdate, isUpgrade, pretend, download,  installProgress, packageInstalled).Result;
+                        if (!completedThisPackage) {
+                            return Install(canonicalName, autoUpgrade, isUpdate, isUpgrade, pretend, download, installProgress, packageInstalled).Result;
+                        }
+                    } else {
+                        handler.ThrowWhenFaulted(antecedent);
                     }
-
-                    handler.ThrowWhenFaulted(antecedent);
-
-                    return (IEnumerable<Package>)result;
+                    return result.Distinct();
                 }, TaskContinuationOptions.AttachedToParent);
         }
 
-        public Task InstallPackage( string canonicalName, bool? autoUpgrade = null,
+        public Task InstallPackage(string canonicalName, bool? autoUpgrade = null,
             Action<string, int, int> installProgress = null,
-            Action<string> packageInstalled= null) {
+            Action<string> packageInstalled = null) {
             return Install(canonicalName, autoUpgrade, false, false, false, null, installProgress, packageInstalled);
         }
 
         public Task UpgradeExistingPackage(string canonicalName, bool? autoUpgrade = null,
-            Action<string, int, int> installProgress = null, 
+            Action<string, int, int> installProgress = null,
             Action<string> packageInstalled = null) {
             return Install(canonicalName, autoUpgrade, false, true, false, null, installProgress, packageInstalled);
         }
@@ -596,11 +704,11 @@ namespace CoApp.Toolkit.Engine.Client {
         }
 
         public Task<IEnumerable<Package>> EnsurePackagesAndDependenciesAreLocal(string canonicalName, bool? autoUpgrade = null) {
-            return Install(canonicalName, autoUpgrade, false, false, true, true, null, null);
+            return Install(canonicalName, autoUpgrade, false, false, true, true);
         }
 
         public Task<IEnumerable<Package>> WhatWouldBeInstalled(string canonicalName, bool? autoUpgrade = null) {
-            return Install(canonicalName, autoUpgrade, false, false, false, false, null, null );
+            return Install(canonicalName, autoUpgrade, false, false, false, false);
         }
 
         public Task RemovePackage(string canonicalName, bool forceRemoval, Action<string, int> packageRemovalProgress = null, Action<string> packageRemoveCompleted = null) {
@@ -611,8 +719,7 @@ namespace CoApp.Toolkit.Engine.Client {
 
             var handler = new RemoteCallResponse {
                 RemovingPackageProgress = packageRemovalProgress,
-                RemovedPackage = packageRemoveCompleted, 
-
+                RemovedPackage = packageRemoveCompleted,
             };
 
             return PackageManager.Instance.RemovePackage(canonicalName, forceRemoval, handler).ContinueWith(
@@ -625,7 +732,7 @@ namespace CoApp.Toolkit.Engine.Client {
                 }, TaskContinuationOptions.AttachedToParent);
         }
 
-        private Task<LoggingSettings> SetLogging(bool? messages=null, bool? warnings=null, bool? errors=null ) {
+        private Task<LoggingSettings> SetLogging(bool? messages = null, bool? warnings = null, bool? errors = null) {
             LoggingSettings result = null;
 
             var handler = new RemoteCallResponse {
@@ -634,41 +741,42 @@ namespace CoApp.Toolkit.Engine.Client {
                 }
             };
 
-            return PackageManager.Instance.SetLogging(messages, warnings, errors, handler).ContinueWith((antecedent) => {
+            return PackageManager.Instance.SetLogging(messages, warnings, errors, handler).ContinueWith(antecedent => {
                 if (handler.EngineRestarting) {
                     return SetLogging(messages, warnings, errors).Result;
                 }
                 handler.ThrowWhenFaulted(antecedent);
                 return result;
             }, TaskContinuationOptions.AttachedToParent);
-            
         }
 
         public Task EnableMessageLogging() {
-            Logging.Logger.Messages = true;
+            Logger.Messages = true;
             return SetLogging(messages: true);
         }
 
         public Task DisableMessageLogging() {
-            Logging.Logger.Messages = false;
+            Logger.Messages = false;
             return SetLogging(messages: false);
         }
 
-        public Task<bool> IsMessageLogging { get {
-            return SetLogging().ContinueWith(
-                antecedent => {
-                    antecedent.ThrowOnFaultOrCancel();
-                    return antecedent.Result.Messages;
-                }, TaskContinuationOptions.AttachedToParent);
-        }}
+        public Task<bool> IsMessageLogging {
+            get {
+                return SetLogging().ContinueWith(
+                    antecedent => {
+                        antecedent.ThrowOnFaultOrCancel();
+                        return antecedent.Result.Messages;
+                    }, TaskContinuationOptions.AttachedToParent);
+            }
+        }
 
         public Task EnableWarningLogging() {
-            Logging.Logger.Warnings= true;
+            Logger.Warnings = true;
             return SetLogging(warnings: true);
         }
 
         public Task DisableWarningLogging() {
-            Logging.Logger.Warnings= false;
+            Logger.Warnings = false;
             return SetLogging(messages: false);
         }
 
@@ -683,12 +791,12 @@ namespace CoApp.Toolkit.Engine.Client {
         }
 
         public Task EnableErrorLogging() {
-            Logging.Logger.Errors= true;
+            Logger.Errors = true;
             return SetLogging(errors: true);
         }
 
         public Task DisableErrorLogging() {
-            Logging.Logger.Errors= false;
+            Logger.Errors = false;
             return SetLogging(errors: false);
         }
 
@@ -702,7 +810,7 @@ namespace CoApp.Toolkit.Engine.Client {
             }
         }
 
-        public Task RemoveSystemFeed( string feedLocation ) {
+        public Task RemoveSystemFeed(string feedLocation) {
             var handler = new RemoteCallResponse();
 
             return PackageManager.Instance.RemoveFeed(feedLocation, false, handler).ContinueWith(antecedent => {
@@ -711,7 +819,6 @@ namespace CoApp.Toolkit.Engine.Client {
                     return;
                 }
                 handler.ThrowWhenFaulted(antecedent);
-
             }, TaskContinuationOptions.AttachedToParent);
         }
 
@@ -724,18 +831,17 @@ namespace CoApp.Toolkit.Engine.Client {
                     return;
                 }
                 handler.ThrowWhenFaulted(antecedent);
-
             }, TaskContinuationOptions.AttachedToParent);
         }
 
-        public Task AddSystemFeed(string feedLocation ) {
+        public Task AddSystemFeed(string feedLocation) {
             var handler = new RemoteCallResponse {
-                FeedAdded = (location) => {
+                FeedAdded = location => {
                     // do something when a feed is added? Do we really care?
                 }
             };
 
-            return PackageManager.Instance.AddFeed(feedLocation, false, handler).ContinueWith((antecedent) => {
+            return PackageManager.Instance.AddFeed(feedLocation, false, handler).ContinueWith(antecedent => {
                 if (handler.EngineRestarting) {
                     AddSystemFeed(feedLocation);
                     return;
@@ -743,17 +849,16 @@ namespace CoApp.Toolkit.Engine.Client {
 
                 handler.ThrowWhenFaulted(antecedent);
             }, TaskContinuationOptions.AttachedToParent);
-
         }
 
         public Task AddSessionFeed(string feedLocation) {
             var handler = new RemoteCallResponse {
-                FeedAdded = (location) => {
+                FeedAdded = location => {
                     // do something when a feed is added? Do we really care?
                 }
             };
 
-            return PackageManager.Instance.AddFeed(feedLocation, true, handler).ContinueWith((antecedent) => {
+            return PackageManager.Instance.AddFeed(feedLocation, true, handler).ContinueWith(antecedent => {
                 if (handler.EngineRestarting) {
                     AddSessionFeed(feedLocation);
                     return;
@@ -762,11 +867,11 @@ namespace CoApp.Toolkit.Engine.Client {
             }, TaskContinuationOptions.AttachedToParent);
         }
 
-        public Task SuppressFeed( string feedLocation ) {
+        public Task SuppressFeed(string feedLocation) {
             var handler = new RemoteCallResponse();
 
-            return PackageManager.Instance.SuppressFeed(feedLocation, handler).ContinueWith((antecedent) => {
-                if( handler.EngineRestarting) {
+            return PackageManager.Instance.SuppressFeed(feedLocation, handler).ContinueWith(antecedent => {
+                if (handler.EngineRestarting) {
                     SuppressFeed(feedLocation);
                     return;
                 }
@@ -774,25 +879,25 @@ namespace CoApp.Toolkit.Engine.Client {
             }, TaskContinuationOptions.AttachedToParent);
         }
 
-        public Task<IEnumerable<Feed>> Feeds { get {
-            var result = new List<Feed>();
-            var handler = new RemoteCallResponse {  
-                FeedDetails = (location, lastScanned,isSession, isSuppressed, isValidated ) => {
-                    result.Add(new Feed {Location = location, LastScanned = lastScanned, IsSession = isSession, IsSuppressed = isSuppressed});
-                }
-            };
+        public Task<IEnumerable<Feed>> Feeds {
+            get {
+                var result = new List<Feed>();
+                var handler = new RemoteCallResponse {
+                    FeedDetails = (location, lastScanned, isSession, isSuppressed, isValidated) => result.Add(new Feed {Location = location, LastScanned = lastScanned, IsSession = isSession, IsSuppressed = isSuppressed})
+                };
 
-            return PackageManager.Instance.ListFeeds(messages:handler).ContinueWith((antecedent) => {
-                if (handler.EngineRestarting) {
-                    // if we got a restarting message in the middle of this, try the request again from the beginning.
-                    return Feeds.Result;
-                }
+                return PackageManager.Instance.ListFeeds(messages: handler).ContinueWith(antecedent => {
+                    if (handler.EngineRestarting) {
+                        // if we got a restarting message in the middle of this, try the request again from the beginning.
+                        return Feeds.Result;
+                    }
 
-                handler.ThrowWhenFaulted(antecedent);
+                    handler.ThrowWhenFaulted(antecedent);
 
-                return (IEnumerable<Feed>)result;
-            }, TaskContinuationOptions.AttachedToParent);
-        }}
+                    return (IEnumerable<Feed>)result;
+                }, TaskContinuationOptions.AttachedToParent);
+            }
+        }
 
         public Task SetFeedStale(string feedLocation) {
             var handler = new RemoteCallResponse();
@@ -825,7 +930,7 @@ namespace CoApp.Toolkit.Engine.Client {
 
             var handler = new RemoteCallResponse();
 
-            return PackageManager.Instance.GetPackageDetails(canonicalName, handler).ContinueWith((antecedent) => {
+            return PackageManager.Instance.GetPackageDetails(canonicalName, handler).ContinueWith(antecedent => {
                 if (handler.EngineRestarting) {
                     return RefreshPackageDetails(canonicalName).Result;
                 }
@@ -843,7 +948,7 @@ namespace CoApp.Toolkit.Engine.Client {
             }
 
             var pkg = Package.GetPackage(canonicalName);
-            if( pkg.IsPackageInfoStale ) {
+            if (pkg.IsPackageInfoStale) {
                 // no data retrieved yet at all.
                 var handler = new RemoteCallResponse();
 
@@ -869,11 +974,10 @@ namespace CoApp.Toolkit.Engine.Client {
                     antecedent.ThrowOnFaultOrCancel();
                     return GetPackageDetails(antecedent.Result).Result;
                 }, TaskContinuationOptions.AttachedToParent);
-            
         }
 
         public Task<Package> GetPackageDetails(Package package) {
-            if( package.IsPackageDetailsStale ) {
+            if (package.IsPackageDetailsStale) {
                 return GetPackage(package.CanonicalName).ContinueWith(antecedent => {
                     antecedent.ThrowOnFaultOrCancel();
                     return RefreshPackageDetails(package.CanonicalName).Result;
@@ -887,7 +991,7 @@ namespace CoApp.Toolkit.Engine.Client {
             var telemetryResult = false;
 
             var handler = new RemoteCallResponse {
-                CurrentTelemetryOption = (result) => {
+                CurrentTelemetryOption = result => {
                     telemetryResult = result;
                 }
             };
@@ -932,6 +1036,7 @@ namespace CoApp.Toolkit.Engine.Client {
                     handler.ThrowWhenFaulted(antecedent);
                 }, TaskContinuationOptions.AttachedToParent);
         }
+
         public Task CreateHardlink(string existingLocation, string newLink) {
             var handler = new RemoteCallResponse();
 
@@ -946,6 +1051,7 @@ namespace CoApp.Toolkit.Engine.Client {
                     handler.ThrowWhenFaulted(antecedent);
                 }, TaskContinuationOptions.AttachedToParent);
         }
+
         public Task CreateShortcut(string existingLocation, string newLink) {
             var handler = new RemoteCallResponse();
 
@@ -964,7 +1070,7 @@ namespace CoApp.Toolkit.Engine.Client {
         public Task RemoveFromPolicy(string policyName, string account) {
             var handler = new RemoteCallResponse();
 
-            return PackageManager.Instance.RemoveFromPolicy(policyName, account,handler ).ContinueWith(antecedent => {
+            return PackageManager.Instance.RemoveFromPolicy(policyName, account, handler).ContinueWith(antecedent => {
                 if (handler.EngineRestarting) {
                     RemoveFromPolicy(policyName, account);
                     return;
@@ -977,7 +1083,7 @@ namespace CoApp.Toolkit.Engine.Client {
 
         public Task AddToPolicy(string policyName, string account) {
             var handler = new RemoteCallResponse();
-         
+
             return PackageManager.Instance.AddToPolicy(policyName, account, handler).ContinueWith(antecedent => {
                 if (handler.EngineRestarting) {
                     AddToPolicy(policyName, account).Wait();
@@ -992,7 +1098,7 @@ namespace CoApp.Toolkit.Engine.Client {
         public Task<Policy> GetPolicy(string policyName) {
             Policy result = null;
             var handler = new RemoteCallResponse {
-                PolicyInformation = (name,description ,members) => {
+                PolicyInformation = (name, description, members) => {
                     result = new Policy {Name = name, Description = description, Members = members};
                 }
             };
@@ -1004,43 +1110,42 @@ namespace CoApp.Toolkit.Engine.Client {
 
                 // take care of error conditions...
                 handler.ThrowWhenFaulted(antecedent);
-                
+
                 return result;
             }, TaskContinuationOptions.AttachedToParent);
         }
 
-        public Task<IEnumerable<Policy>> Policies { get {
-            var result = new List<Policy>();
+        public Task<IEnumerable<Policy>> Policies {
+            get {
+                var result = new List<Policy>();
 
-            var handler = new RemoteCallResponse {
-                PolicyInformation = (name, description, members) => {
-                    result.Add( new Policy { Name = name, Description = description, Members = members });
-                }
-            };
+                var handler = new RemoteCallResponse {
+                    PolicyInformation = (name, description, members) => result.Add(new Policy {Name = name, Description = description, Members = members})
+                };
+                    
+                return PackageManager.Instance.GetPolicy("*", handler).ContinueWith(antecedent => {
+                    if (handler.EngineRestarting) {
+                        return Policies.Result;
+                    }
 
-            return PackageManager.Instance.GetPolicy("*", handler).ContinueWith(antecedent => {
-                if (handler.EngineRestarting) {
-                    return Policies.Result;
-                }
+                    // take care of error conditions...
+                    handler.ThrowWhenFaulted(antecedent);
 
-                // take care of error conditions...
-                handler.ThrowWhenFaulted(antecedent);
-
-                return (IEnumerable<Policy>)result;
-            }, TaskContinuationOptions.AttachedToParent);
-        }}
+                    return (IEnumerable<Policy>)result;
+                }, TaskContinuationOptions.AttachedToParent);
+            }
+        }
 
         /// <summary>
-        /// 
         /// </summary>
-        /// <param name="taskName">the name of the task. If a task with this name already exists, it will be overwritten.</param>
-        /// <param name="executable"></param>
-        /// <param name="commandline"></param>
-        /// <param name="hour"></param>
-        /// <param name="minutes"></param>
-        /// <param name="dayOfWeek"></param>
-        /// <param name="intervalInMinutes"> how often the scheduled task should consider running (on Windows XP/2003, it's not possible to run as soon as possible after a task was missed.</param>
-        /// <returns></returns>
+        /// <param name="taskName"> the name of the task. If a task with this name already exists, it will be overwritten. </param>
+        /// <param name="executable"> </param>
+        /// <param name="commandline"> </param>
+        /// <param name="hour"> </param>
+        /// <param name="minutes"> </param>
+        /// <param name="dayOfWeek"> </param>
+        /// <param name="intervalInMinutes"> how often the scheduled task should consider running (on Windows XP/2003, it's not possible to run as soon as possible after a task was missed. </param>
+        /// <returns> </returns>
         public Task AddScheduledTask(string taskName, string executable, string commandline, int hour, int minutes, DayOfWeek? dayOfWeek, int intervalInMinutes) {
             var handler = new RemoteCallResponse();
 
@@ -1053,7 +1158,7 @@ namespace CoApp.Toolkit.Engine.Client {
             }, TaskContinuationOptions.AttachedToParent);
         }
 
-        public Task RemoveScheduledTask(string taskName ) {
+        public Task RemoveScheduledTask(string taskName) {
             var handler = new RemoteCallResponse();
 
             return PackageManager.Instance.RemoveScheduledTask(taskName, handler).ContinueWith(antecedent => {
@@ -1096,7 +1201,7 @@ namespace CoApp.Toolkit.Engine.Client {
                 var result = new List<ScheduledTask>();
 
                 var handler = new RemoteCallResponse {
-                    ScheduledTaskInfo = (name, executable, commandline, hour, minutes, dayOfWeek, intervalInMinutes) => result.Add( new ScheduledTask {
+                    ScheduledTaskInfo = (name, executable, commandline, hour, minutes, dayOfWeek, intervalInMinutes) => result.Add(new ScheduledTask {
                         Name = name,
                         Executable = executable,
                         CommandLine = commandline,
