@@ -31,7 +31,7 @@ namespace CoApp.Toolkit.Win32 {
         static Rehash() {
             foreach( var arch in Enum.GetValues(typeof(ProcessorType)) ) {
                 var rehashFilename = Assembly.GetExecutingAssembly().GetManifestResourceNames().Where(
-                        each => each.Equals("CoApp.Toolkit.CoApp.Rehash.{0}.dll".format(arch.ToString()), StringComparison.CurrentCultureIgnoreCase)).
+                        each => each.Equals("CoApp.binaries.CoApp.Rehash.{0}.dll".format(arch.ToString()), StringComparison.CurrentCultureIgnoreCase)).
                         FirstOrDefault();
 
                 if (string.IsNullOrEmpty(rehashFilename)) {
@@ -79,14 +79,14 @@ namespace CoApp.Toolkit.Win32 {
                     // load the rehash dll into the target processes
                     if (processes.Any()) {
                         foreach (var proc in processes) {
-                            Logger.Message("Rehash: Going to rehash pid:{0} -- '{1}'", proc.Id, processName);
+                            //Logger.Message("Rehash: Going to rehash pid:{0} -- '{1}'", proc.Id, processName);
                             DoRehash(proc.Id);
                         }
                     }
                 }
 
                 // signal rehash to proceed.
-                Logger.Message("Rehash: Triggering Global Event");
+                //Logger.Message("Rehash: Triggering Global Event");
                 Kernel32.SetEvent(_globalResetEvent);
                 Thread.Sleep(200); // give everyone a chance to wake up and do their job
                 Kernel32.ResetEvent(_globalResetEvent);
@@ -183,7 +183,7 @@ namespace CoApp.Toolkit.Win32 {
                     return false;
                 }
             }
-            Logger.Warning("Rehash: Success with pid:{0}", processId);
+            //Logger.Warning("Rehash: Success with pid:{0}", processId);
             return true;
         }
     }

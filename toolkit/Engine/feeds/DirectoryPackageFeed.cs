@@ -57,24 +57,28 @@ namespace CoApp.Toolkit.Engine.Feeds {
         /// NOTE: Some of this may get refactored to change behavior before the end of the beta2.
         /// </remarks>
         protected void Scan() {
-            if (!Scanned || Stale) {
-                LastScanned = DateTime.Now;
+            lock (this) {
+                if (!Scanned || Stale) {
+                    LastScanned = DateTime.Now;
 
-                // GS01: BUG: recursive now should use ** in pattern match.
-                var files = _path.DirectoryEnumerateFilesSmarter(_filter, false ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly /*, NewPackageManager.Instance.BlockedScanLocations*/);
-                files = from file in files
-                    where Recognizer.Recognize(file).Result.IsPackageFile // Since we know this to be local, it'm ok with blocking on the result.
-                    select file;
+                    // GS01: BUG: recursive now should use ** in pattern match.
+                    var files = _path.DirectoryEnumerateFilesSmarter(
+                        _filter, false ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly /*, NewPackageManager.Instance.BlockedScanLocations*/);
+                    files = from file in files
+                        where Recognizer.Recognize(file).Result.IsPackageFile
+                        // Since we know this to be local, it'm ok with blocking on the result.
+                        select file;
 
-                foreach (var pkg in files.Select(Package.GetPackageFromFilename).Where(pkg => pkg != null)) {
-                    pkg.InternalPackageData.FeedLocation = Location;
+                    foreach (var pkg in files.Select(Package.GetPackageFromFilename).Where(pkg => pkg != null)) {
+                        pkg.InternalPackageData.FeedLocation = Location;
 
-                    if (!_packageList.Contains(pkg)) {
-                        _packageList.Add(pkg);
+                        if (!_packageList.Contains(pkg)) {
+                            _packageList.Add(pkg);
+                        }
                     }
+                    Stale = false;
+                    Scanned = true;
                 }
-                Stale = false;
-                Scanned = true;
             }
         }
 

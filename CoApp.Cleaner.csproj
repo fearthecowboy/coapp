@@ -64,15 +64,17 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="$(SolutionDir)resources\icons\CoApp.ico" />
-    <None Include="Cleaner\Resources\background.png" />
+    <None Include="resources\background.png" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Cleaner\CleanerMainWindow.resx">
       <DependentUpon>CleanerMainWindow.cs</DependentUpon>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
     <EmbeddedResource Include="Cleaner\Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

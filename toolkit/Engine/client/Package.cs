@@ -82,7 +82,7 @@ namespace CoApp.Toolkit.Engine.Client {
         public bool DoNotUpdate { get; set; }
         public bool DoNotUpgrade { get; set; }
 
-        public bool IsConflicted{ get; set; }
+        
         public Package SatisfiedBy{ get; set; }
 
         public IEnumerable<string> Tags{ get; set; }  
