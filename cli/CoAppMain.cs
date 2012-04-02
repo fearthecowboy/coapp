@@ -200,6 +200,11 @@ namespace CoApp.CLI {
                             _autoUpgrade = lastAsBool;
                             break;
 
+                        case "exact":
+                            _autoUpgrade = false;
+                            break;
+
+
                         case "use-feed":
                             _location = last;
                             break;
@@ -301,7 +306,7 @@ namespace CoApp.CLI {
                         task = preCommandTasks.Continue(() => _easyPackageManager.GetPackages(parameters)
                             .Continue(packages => {
                                 if (packages.IsNullOrEmpty()) {
-                                    NoPackages(parameters);
+                                    PrintNoPackagesFound(parameters);
                                     return;
                                 } 
 
@@ -317,57 +322,68 @@ namespace CoApp.CLI {
                             throw new ConsoleException(Resources.InstallRequiresPackageName);
                         }
                         
-                        task = preCommandTasks
+                        // given what the user requested, what packages are they really asking for?
+                        task  = preCommandTasks.Continue(() =>_easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, false, null, null, null, false, _latest ?? true, _location, false, false, false)).Continue(packages => {
+                            // we got back a package collection for what the user passed in.
 
-                            .Continue(() =>_easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, false, null, null, null, false, _latest ?? true, _location, false, false, false)
-                                .Continue(packages => {
-                                    // if we didn't find any packages to install
-                                    if( packages.IsNullOrEmpty()) {
-                                        NoPackages(parameters);
-                                        return;
-                                    } 
+                            // but, we *can* get back an empty collection...
+                            if( packages.IsNullOrEmpty()) {
+                                PrintNoPackagesFound(parameters);
+                                return;
+                            } 
 
-                                    try {
-                                        packages = _easyPackageManager.FilterConflictsForInstall(packages, _x86, _x64, _cpuany);
+                            // we have a collection of packages that the user has requested.
+                            // first, lets auto-filter out ones that we can obviously see are not what they wanted.
+                            var findConflictTask = _easyPackageManager.FilterConflictsForInstall(packages, _x86, _x64, _cpuany);
+                            
+                            // hmm. had a problem filtering out conflicts.
+                            findConflictTask.ContinueOnFail(exception => {
+                                Console.WriteLine("Conflict!");
+                                Console.WriteLine("{0} == {1}", exception.Message, exception.StackTrace);
+                            });
 
-                                        var allPkgsTask = _easyPackageManager.IdentifyPackageAndDependenciesToInstall(packages);
-                                        allPkgsTask.Continue(
-                                            (allPackages) => {
-                                                PrintPackageInstallPlan(allPackages, packages);
-                                                // actually run the installer for each package in our original collection
-                                                foreach( var p in packages ) {
-                                                    try {
-                                                        _easyPackageManager.InstallPackage(
-                                                            p.CanonicalName, _autoUpgrade, (canonicalName, progress, overall) => {
-                                                                ConsoleExtensions.PrintProgressBar("Installing: {0}".format(canonicalName), progress);
-                                                            }, (packageName) => {
-                                                                Console.WriteLine();
-                                                            }).Wait();
-                                                    } catch( Exception failed) {
-                                                        failed = failed.Unwrap();
-                                                        Console.WriteLine("Installation failed!");
-                                                        Console.WriteLine("{0} == {1}", failed.Message, failed.StackTrace);
-                                                    }
-                                                }
-                                            });
+                            findConflictTask.Continue(filteredPackages => {
+                                // lets get the package install plan.
+                                var getPackagePlanTask = _easyPackageManager.IdentifyPackageAndDependenciesToInstall(filteredPackages);
 
-                                        allPkgsTask.ContinueOnFail(
-                                            (exception) => {
-                                                // something went wrong during identification phase.
-                                                exception = exception.Unwrap();
-                                                Console.WriteLine("Something failed!");
-                                                Console.WriteLine("{0} == {1}", exception.Message, exception.StackTrace);
-                                            });
-
-
-                                    } catch( ConflictedPackagesException cpe ) {
-                                        Console.WriteLine("Conflict!");
-                                        Console.WriteLine("{0} == {1}", cpe.Message, cpe.StackTrace); 
-                                    }
-
+                                // hmm. The plan did not work out so well. 
+                                getPackagePlanTask.ContinueOnFail((exception) => {
                                     
-                                }));
-                         
+                                    exception = exception.Unwrap();
+                                    var phpue = exception as PackageHasPotentialUpgradesException;
+                                    if (phpue != null) {
+                                        // we've been told something we've asked for has a newer package available, and we didn't tell it that we either wanted it or an auto-upgrade
+                                        PrintPotentialUpgradeInformation(phpue.UnsatisfiedPackage, phpue.SatifactionOptions);
+                                        return;
+                                    }
+                                    
+                                    // else soemthing else went wrong...
+                                    Console.WriteLine("Something else failed!");
+                                    Console.WriteLine("{0} == {1}", exception.Message, exception.StackTrace);
+                                });
+
+                                // if we get a good plan back
+                                getPackagePlanTask.Continue(allPackages => {
+                                    PrintPackageInstallPlan(allPackages, packages);
+                                    // actually run the installer for each package in our original collection
+                                    foreach (var p in packages) {
+                                        try {
+                                            _easyPackageManager.InstallPackage(
+                                                p.CanonicalName, _autoUpgrade, (canonicalName, progress, overall) => {
+                                                    ConsoleExtensions.PrintProgressBar("Installing: {0}".format(canonicalName), progress);
+                                                }, (packageName) => {
+                                                    Console.WriteLine();
+                                                }).Wait();
+                                        } catch (Exception failed) {
+                                            failed = failed.Unwrap();
+                                            Console.WriteLine("Installation failed!");
+                                            Console.WriteLine("{0} == {1}", failed.Message, failed.StackTrace);
+                                        }
+                                    }
+                                });
+                            });
+                        });
+
                         break;
 
                     case "-r":
@@ -583,11 +599,17 @@ namespace CoApp.CLI {
                 }
 
                 // Thread.Sleep(2000);
+                task.ContinueOnCancelled(() => {
+                    // the task was cancelled, and presumably dealt with.
+                    Fail("Operation Cancelled.");
+                });
 
                 task.ContinueOnFail((exception) => {
                     exception = exception.Unwrap();
-                    Fail("Error: {0}\r\n\r\n{1}", exception.Message, exception.StackTrace);
+                    Fail("Error (???): {0}\r\n\r\n{1}", exception.Message, exception.StackTrace);
                 });
+
+               
 
                 task.Continue(() => {
                     Console.WriteLine("Done.");
@@ -603,7 +625,16 @@ namespace CoApp.CLI {
             return 0;
         }
 
-        private void NoPackages(string[] parameters) {
+        private void PrintPotentialUpgradeInformation(Package unsatisfiedPackage, IEnumerable<Package> satifactionOptions) {
+            Console.WriteLine("The requested package '{0}' has an versions that supercede it:", unsatisfiedPackage.CanonicalName);
+            foreach( var p in satifactionOptions) {
+                Console.WriteLine("\r\n      {0}", p.CanonicalName);
+            }
+            Console.WriteLine("\r\nEither use --auto-upgrade to select the most recent package");
+            Console.WriteLine("or use --exact to use what was specified");
+        }
+
+        private void PrintNoPackagesFound(string[] parameters) {
             Fail("Unable to find any packages matching :");
             foreach (var p in parameters) {
                 Console.WriteLine("   {0}", p);
@@ -865,7 +896,7 @@ namespace CoApp.CLI {
         private Task ListFeeds() {
             return _easyPackageManager.Feeds.ContinueWith(
                 antecedent => {
-                    antecedent.ThrowOnFaultOrCancel();
+                    antecedent.RethrowWhenFaulted();
 
                     var feeds = antecedent.Result;
                     if( feeds.IsNullOrEmpty()) {

@@ -124,16 +124,12 @@ namespace CoApp.Toolkit.Engine {
                         Cache<PackageFeed>.Value[feedLocation] = antecedent.Result;
                     }
                     else {
-                        LogMessage("Feed {0} was unable to load.", feedLocation);
+                        Logger.Error("Feed {0} was unable to load.", feedLocation);
                     }
                 }, TaskContinuationOptions.AttachedToParent);
             }
         }
 
-        private void LogMessage(string message, params object[] objs) {
-            string msg = message.format(objs);
-            // do something with the message?
-        }
 
         public Task FindPackages( string canonicalName, string name, string version, string arch, string publicKeyToken,
             bool? dependencies, bool? installed, bool? active, bool? required, bool? blocked, bool? latest,
@@ -778,7 +774,7 @@ namespace CoApp.Toolkit.Engine {
                         else {
                             PackageManagerMessages.Invoke.Error("add-feed", "location",
                                 "failed to recognize location '{0}' as a valid package feed".format(location));
-                            LogMessage("Feed {0} was unable to load.", location);
+                            Logger.Error("Feed {0} was unable to load.", location);
                         }
                     }, TaskContinuationOptions.AttachedToParent);
 
@@ -807,9 +803,8 @@ namespace CoApp.Toolkit.Engine {
                             }
                         }
                         else {
-                            PackageManagerMessages.Invoke.Error("add-feed", "location",
-                                "failed to recognize location '{0}' as a valid package feed".format(location));
-                            LogMessage("Feed {0} was unable to load.", location);
+                            PackageManagerMessages.Invoke.Error("add-feed", "location", "failed to recognize location '{0}' as a valid package feed".format(location));
+                            Logger.Error("Feed {0} was unable to load.", location);
                         }
                     }, TaskContinuationOptions.AttachedToParent);
                 }

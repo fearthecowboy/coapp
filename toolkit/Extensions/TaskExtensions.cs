@@ -11,13 +11,9 @@
         ///   Checks the antecedent task for two conditions: IsCancelled : throws an OperationCompletedBeforeResultException IsFaulted : throws the first non-aggregate inner exception from the faulted task Warning: This function will Wait() for the antecendent task to complete.
         /// </summary>
         /// <param name="antecedent"> The task to examine results for </param>
-        public static void ThrowOnFaultOrCancel(this Task antecedent) {
+        public static void RethrowWhenFaulted(this Task antecedent) {
             if (!antecedent.IsCompleted) {
                 antecedent.Wait();
-            }
-
-            if (antecedent.IsCanceled) {
-                throw new OperationCompletedBeforeResultException();
             }
 
             if (antecedent.IsFaulted) {
@@ -25,29 +21,14 @@
             }
         }
 
-        private static Exception AsException(this Task antecedent) {
-            if (antecedent.IsCanceled) {
-                return new OperationCompletedBeforeResultException();
-            }
-
-            if (antecedent.IsFaulted) {
-                return antecedent.Exception.Unwrap();
-            }
-
-            return null;
-        }
 
         /// <summary>
         ///   Checks the collection of antecedent tasks for two conditions: if any are cancelled, throws an OperationCompletedBeforeResultException if any are faulted, throws an AggregateException containing all the exceptions from the tasks Warning: This function will Wait() for the all the antecendent tasks to complete.
         /// </summary>
         /// <param name="antecedents"> </param>
-        public static void ThrowOnFaultOrCancel(this Task[] antecedents) {
+        public static void RethrowWhenFaulted(this Task[] antecedents) {
             if (antecedents.Any(each => !each.IsCompleted)) {
                 Task.WaitAll(antecedents);
-            }
-
-            if (antecedents.Any(each => each.IsCanceled)) {
-                throw new OperationCompletedBeforeResultException();
             }
 
             var exceptions = antecedents.Where(each => each.IsFaulted).SelectMany(each => each.Exception.InnerExceptions);
@@ -56,29 +37,19 @@
             }
         }
 
-        private static Exception AsException(this Task[] antecedents) {
-            if (antecedents.Any(each => each.IsCanceled)) {
-                return new OperationCompletedBeforeResultException();
-            }
-
-            var exceptions = antecedents.Where(each => each.IsFaulted).SelectMany(each => each.Exception.InnerExceptions);
-            if (!exceptions.IsNullOrEmpty()) {
-                return new AggregateException(exceptions);
-            }
-            return null;
+        public static void RethrowWhenFaulted(this IEnumerable<Task> antecedents) {
+            antecedents.ToArrayEvenIfNull().RethrowWhenFaulted();
         }
+
+
 
         /// <summary>
         ///   Checks the collection of antecedent tasks for two conditions: if any are cancelled, throws an OperationCompletedBeforeResultException if any are faulted, throws an AggregateException containing all the exceptions from the tasks Warning: This function will Wait() for the all the antecendent tasks to complete.
         /// </summary>
         /// <param name="antecedent"> </param>
-        public static void ThrowOnFaultOrCancel<T>(this Task<T>[] antecedents) {
+        public static void RethrowWhenFaulted<T>(this Task<T>[] antecedents) {
             if (antecedents.Any(each => !each.IsCompleted)) {
                 Task.WaitAll(antecedents);
-            }
-
-            if (antecedents.Any(each => each.IsCanceled)) {
-                throw new OperationCompletedBeforeResultException();
             }
 
             var exceptions = antecedents.Where(each => each.IsFaulted).SelectMany(each => each.Exception.InnerExceptions);
@@ -87,16 +58,8 @@
             }
         }
 
-        private static Exception AsException<T>(this Task<T>[] antecedents) {
-            if (antecedents.Any(each => each.IsCanceled)) {
-                return new OperationCompletedBeforeResultException();
-            }
-
-            var exceptions = antecedents.Where(each => each.IsFaulted).SelectMany(each => each.Exception.InnerExceptions);
-            if (!exceptions.IsNullOrEmpty()) {
-                return new AggregateException(exceptions);
-            }
-            return null;
+        public static void RethrowWhenFaulted<T>(this IEnumerable<Task<T>> antecedents) {
+            antecedents.ToArrayEvenIfNull().RethrowWhenFaulted();
         }
 
         /// <summary>
@@ -235,7 +198,7 @@
             return antecedent.ContinueWith(a => childAction(), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.AttachedToParent);
         }
         public static Task ContinueOnFail(this Task antecedent, Action<Exception> childAction) {
-            return antecedent.ContinueWith(a => childAction(a.Exception.Unwrap()), TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.AttachedToParent);
+            return antecedent.ContinueWith(a => {childAction( a.Exception.Unwrap());}, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.AttachedToParent);
         }
         public static Task ContinueOnCancelled(this Task antecedent, Action childAction) {
             return antecedent.ContinueWith(a => childAction(), TaskContinuationOptions.OnlyOnCanceled | TaskContinuationOptions.AttachedToParent);

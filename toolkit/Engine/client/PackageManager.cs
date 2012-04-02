@@ -152,6 +152,7 @@ namespace CoApp.Toolkit.Engine.Client {
                                 break;
                             }
                             catch {
+                                // it's not connecting.
                                 _pipe = null;
                             }
                         }
@@ -225,10 +226,10 @@ namespace CoApp.Toolkit.Engine.Client {
         public void Disconnect() {
             lock (this) {
                 try {
-                    // ensure all queues are stopped and cleared out.
-                    ManualEventQueue.ResetAllQueues();
-
                     if (_pipe != null) {
+                        // ensure all queues are stopped and cleared out.
+                        ManualEventQueue.ResetAllQueues();
+                    
                         var pipe = _pipe;
                         _pipe = null;
                         pipe.Close();
@@ -309,13 +310,13 @@ namespace CoApp.Toolkit.Engine.Client {
 
                         // if we get here, that means that we didn't recognize the file. 
                         // we're gonna return an empty collection at this point.
-                        return singleResult.SingleItemAsEnumerable();
+                        return Enumerable.Empty<Package>();
                     }, TaskContinuationOptions.AttachedToParent);
                 }
                 // if we don't get back a local path for the file... this is pretty odd. DUnno what we should really do here yet.
                 return Enumerable.Empty<Package>().AsResultTask();
             }
-
+            
             if (Directory.Exists(parameter) || parameter.IndexOf('\\') > -1 || parameter.IndexOf('/') > -1 ||
                 (parameter.IndexOf('*') > -1 && parameter.ToLower().EndsWith(".msi"))) {
                 // specified a folder, or some kind of path that looks like a feed.
@@ -985,7 +986,16 @@ namespace CoApp.Toolkit.Engine.Client {
                     break;
 
                 case "package-has-potential-upgrades":
-                    // PackageManagerMessages.Invoke.PackageHasPotentialUpgrades(new Package(), Enumerable.Empty<Package>());
+                    var supercedents = responseMessage.GetCollection("supercedent-packages");
+                    var pkg = responseMessage["canonical-name"];
+                    // first, make sure we have the canonical package
+                    PackageManager.Instance.GetPackages(pkg).Continue(pkgResult => {
+                        supercedents.Select(each => PackageManager.Instance.GetPackages(each)).Continue(superpkgs => {
+                            PackageManagerMessages.Invoke.PackageHasPotentialUpgrades(pkgResult.FirstOrDefault(), superpkgs.SelectMany(each => each));
+                        });
+                    });
+                    
+                    
                     break;
 
                 case "package-is-blocked":

@@ -104,6 +104,7 @@ namespace CoApp.Toolkit.Engine.Client {
         internal class RemoteCallResponse : PackageManagerMessages {
             internal bool EngineRestarting;
             internal bool NoPackages;
+            internal Exception Exception;
 
             internal string OperationCancelledReason;
 
@@ -128,7 +129,7 @@ namespace CoApp.Toolkit.Engine.Client {
                 };
 
                 Error = (s, s1, arg3) => {
-                    throw new CoAppException("Message Argument Exception [{0}/{1}/{2}]".format(s, s1, arg3));
+                    Exception = new CoAppException("Message Argument Exception [{0}/{1}/{2}]".format(s, s1, arg3));
                 };
 
                 PackageSatisfiedBy = (original, satisfiedBy) => {
@@ -136,15 +137,15 @@ namespace CoApp.Toolkit.Engine.Client {
                 };
 
                 UnknownPackage = s => {
-                    throw new UnknownPackageException(s);
+                    Exception = new  UnknownPackageException(s);
                 };
 
                 FailedPackageRemoval = (canonicalname, reason) => {
-                    throw new FailedPackageRemoveException(canonicalname, reason);
+                    Exception = new FailedPackageRemoveException(canonicalname, reason);
                 };
 
                 FailedPackageInstall = (canonicalname, filename, reason) => {
-                    throw new FailedPackageRemoveException(canonicalname, reason);
+                    Exception = new CoAppException("Package Failed Install {0} => {1}".format(canonicalname, reason));
                 };
 
                 Restarting = () => {
@@ -154,7 +155,7 @@ namespace CoApp.Toolkit.Engine.Client {
                 };
 
                 PackageBlocked = canonicalname => {
-                    throw new PackageBlockedException(canonicalname);
+                    Exception = new PackageBlockedException(canonicalname);
                 };
 
                 RequireRemoteFile =
@@ -186,7 +187,7 @@ namespace CoApp.Toolkit.Engine.Client {
                     throw new OperationCanceledException(OperationCancelledReason);
                 }
 
-                antecedent.ThrowOnFaultOrCancel();
+                antecedent.RethrowWhenFaulted();
             }
         }
 
@@ -203,7 +204,7 @@ namespace CoApp.Toolkit.Engine.Client {
         /// <summary>
         ///   Returns a collection of packages that are filtered to the platform switches passed on the command line.
         /// </summary>
-        /// <param name="packages"> The collection to filter packages for </param>
+            /// <param name="packages"> The collection to filter packages for </param>
         /// <param name="x86"> Accept x86 packages? </param>
         /// <param name="x64"> Accept x64 packages? </param>
         /// <param name="cpuany"> Accept CPUANY packages? </param>
@@ -223,68 +224,70 @@ namespace CoApp.Toolkit.Engine.Client {
         /// <param name="x64"> </param>
         /// <param name="cpuany"> </param>
         /// <returns> A filtered collection of packages to install </returns>
-        public IEnumerable<Package> FilterConflictsForInstall(IEnumerable<Package> packages, bool? x86 = null, bool? x64 = null, bool? cpuany = null) {
-            var isFiltering = (true == x64) || (true == x86) || (true == cpuany);
+        public Task<IEnumerable<Package>> FilterConflictsForInstall(IEnumerable<Package> packages, bool? x86 = null, bool? x64 = null, bool? cpuany = null) {
+            return Task.Factory.StartNew(() => {
+                var isFiltering = (true == x64) || (true == x86) || (true == cpuany);
 
-            var pkgs = FilterPackagesForPlatforms(packages, x86, x64, cpuany).Distinct().ToArray();
+                var pkgs = FilterPackagesForPlatforms(packages, x86, x64, cpuany).Distinct().ToArray();
 
-            // get an collection for each package of all the other packages that it matches.
-            var packageFamilies = pkgs.Select(package => pkgs.Where(each => each.Name == package.Name && each.PublicKeyToken == package.PublicKeyToken && (!isFiltering || each.Architecture == package.Architecture)).ToArray()).ToArray();
+                // get an collection for each package of all the other packages that it matches.
+                var packageFamilies = pkgs.Select(package => pkgs.Where(each => each.Name == package.Name && each.PublicKeyToken == package.PublicKeyToken && (!isFiltering || each.Architecture == package.Architecture)).ToArray()).ToArray();
 
-            // get the packages that could be conflicting.
-            var conflictedFamilies = packageFamilies.Where(eachFamily => eachFamily.Count() > 1);
+                // get the packages that could be conflicting.
+                var conflictedFamilies = packageFamilies.Where(eachFamily => eachFamily.Count() > 1);
 
-            if (conflictedFamilies.Any()) {
-                var nonConflictedPackages = packageFamilies.Where(eachFamily => eachFamily.Count() == 1).Select(eachFamily => eachFamily.FirstOrDefault());
+                if (conflictedFamilies.Any()) {
+                    var nonConflictedPackages = packageFamilies.Where(eachFamily => eachFamily.Count() == 1).Select(eachFamily => eachFamily.FirstOrDefault());
 
-                if (!isFiltering) {
-                    var actualConflicts = new List<Package[]>();
-                    foreach (var conflictedPackages in conflictedFamilies) {
-                        // we're really only interested in one platform for a given package here (since the user didn't specify any preference directly)
+                    if (!isFiltering) {
+                        var actualConflicts = new List<Package[]>();
+                        foreach (var conflictedPackages in conflictedFamilies) {
+                            // we're really only interested in one platform for a given package here (since the user didn't specify any preference directly)
 
-                        if (Environment.Is64BitOperatingSystem) {
-                            // if there is a single x64 package, take that.
-                            var x64Pkgs = conflictedPackages.Where(each => each.Architecture == Architecture.x64).ToArray();
-                            if (x64Pkgs.Count() == 1) {
-                                nonConflictedPackages = nonConflictedPackages.Union(x64Pkgs);
+                            if (Environment.Is64BitOperatingSystem) {
+                                // if there is a single x64 package, take that.
+                                var x64Pkgs = conflictedPackages.Where(each => each.Architecture == Architecture.x64).ToArray();
+                                if (x64Pkgs.Count() == 1) {
+                                    nonConflictedPackages = nonConflictedPackages.Union(x64Pkgs);
+                                    continue;
+                                }
+
+                                if (x64Pkgs.Count() > 1) {
+                                    // we've got more than one package of a single platform. just add it to the conflicts and move along.
+                                    actualConflicts.Add(conflictedPackages);
+                                    continue;
+                                }
+                            }
+
+                            // if there are no x64 packages, see if there is a single x86 package, take that.
+                            var x86Pkgs = conflictedPackages.Where(each => each.Architecture == Architecture.x86).ToArray();
+                            if (x86Pkgs.Length == 1) {
+                                nonConflictedPackages = nonConflictedPackages.Union(x86Pkgs);
                                 continue;
                             }
 
-                            if (x64Pkgs.Count() > 1) {
-                                // we've got more than one package of a single platform. just add it to the conflicts and move along.
-                                actualConflicts.Add(conflictedPackages);
-                                continue;
-                            }
-                        }
+                            // if we got here, that means no x64  and no x86 packages, and we should just have a plurality of cpuany packages.
+                            // we've got more than one package of a single platform, or that means no x64  and no x86 packages, 
+                            // and we just have a plurality of cpuany packages.
 
-                        // if there are no x64 packages, see if there is a single x86 package, take that.
-                        var x86Pkgs = conflictedPackages.Where(each => each.Architecture == Architecture.x86).ToArray();
-                        if (x86Pkgs.Length == 1) {
-                            nonConflictedPackages = nonConflictedPackages.Union(x86Pkgs);
+                            // Either way just add it to the conflicts and move along.
+                            actualConflicts.Add(conflictedPackages);
                             continue;
                         }
+                        if (actualConflicts.Any()) {
+                            throw new ConflictedPackagesException(actualConflicts);
+                        }
 
-                        // if we got here, that means no x64  and no x86 packages, and we should just have a plurality of cpuany packages.
-                        // we've got more than one package of a single platform, or that means no x64  and no x86 packages, 
-                        // and we just have a plurality of cpuany packages.
-
-                        // Either way just add it to the conflicts and move along.
-                        actualConflicts.Add(conflictedPackages);
-                        continue;
+                        // hmm, we resolved our conflicts automagically.
+                        return nonConflictedPackages;
                     }
-                    if (actualConflicts.Any()) {
-                        throw new ConflictedPackagesException(actualConflicts);
-                    }
-
-                    // hmm, we resolved our conflicts automagically.
-                    return nonConflictedPackages;
+                    // architectures are not factored in here. 
+                    // we must have multiple packages of a given architecture.
+                    throw new ConflictedPackagesException(conflictedFamilies);
                 }
-                // architectures are not factored in here. 
-                // we must have multiple packages of a given architecture.
-                throw new ConflictedPackagesException(conflictedFamilies);
-            }
 
-            return pkgs;
+                return pkgs;
+            }, TaskCreationOptions.AttachedToParent);
         }
 
         /// <summary>
@@ -293,11 +296,13 @@ namespace CoApp.Toolkit.Engine.Client {
         /// <param name="packages"> </param>
         /// <returns> </returns>
         public Task<IEnumerable<Package>> IdentifyPackageAndDependenciesToInstall(IEnumerable<Package> packages, bool? autoUpgrade = null, bool? download = null) {
-            var pTasks = packages.Select(
-                package => Install(package.CanonicalName, autoUpgrade, pretend: true, download: download).ContinueWith(
-                    antecedent => antecedent.Result, TaskContinuationOptions.AttachedToParent));
+            var pTasks = packages.Select(package => Install(package.CanonicalName, autoUpgrade, pretend: true, download: download)).ToArray();
 
-            return pTasks.Continue(allResults => allResults.SelectMany(each => each).Distinct());
+            return pTasks.ContinueAlways(antecedentTasks => {
+                antecedentTasks.RethrowWhenFaulted();
+
+                return antecedentTasks.SelectMany(each => each.Result).Distinct();
+            });
         }
 
         public Task Elevate() {
@@ -314,32 +319,29 @@ namespace CoApp.Toolkit.Engine.Client {
                 }
             };
 
-            return PackageManager.Instance.VerifyFileSignature(filename, handler).ContinueWith(antecedent => {
+            return PackageManager.Instance.VerifyFileSignature(filename, handler).ContinueAlways(antecedent => {
                 if (handler.EngineRestarting) {
                     return VerifyFileSignature(filename).Result;
                 }
                 handler.ThrowWhenFaulted(antecedent);
                 return result;
-            }, TaskContinuationOptions.AttachedToParent);
+            });
         }
 
         public Task<Package> GetLatestInstalledVersion(string canonicalName) {
-            return GetInstalledPackages(canonicalName).ContinueWith(antecedent => {
-                antecedent.ThrowOnFaultOrCancel();
+            return GetInstalledPackages(canonicalName).ContinueAlways(antecedent => {
+                antecedent.RethrowWhenFaulted();
                 return antecedent.Result.OrderByDescending(each => each.Version).FirstOrDefault();
-            }, TaskContinuationOptions.AttachedToParent);
+            });
         }
 
         public Task<PackageSet> GetPackageSet(string canonicalName) {
             var result = new PackageSet();
 
-            return GetPackage(canonicalName).ContinueWith(antecedent => {
+            return GetPackage(canonicalName).Continue(package => {
                 var tasks = new List<Task>();
-
-                antecedent.ThrowOnFaultOrCancel();
-
                 // the given package.
-                result.Package = antecedent.Result;
+                result.Package = package;
 
                 // get all the related packages
                 var allPackages = GetAllVersionsOfPackage(canonicalName).Result.OrderByDescending(each => each.Version);
@@ -424,7 +426,7 @@ namespace CoApp.Toolkit.Engine.Client {
                 Task.WaitAll(tasks.ToArray());
 
                 return result;
-            }, TaskContinuationOptions.AttachedToParent);
+            });
         }
 
         private Package NewestCompatablePackageIn(Package aPackage, IEnumerable<Package> packages) {
@@ -441,7 +443,7 @@ namespace CoApp.Toolkit.Engine.Client {
 
         public Task<Package> GetLatestInstalledCompatableVersion(string canonicalName) {
             return GetPackage(canonicalName).ContinueWith(antecedent => {
-                antecedent.ThrowOnFaultOrCancel();
+                antecedent.RethrowWhenFaulted();
                 if (antecedent.Result == null) {
                     throw new UnknownPackageException(canonicalName);
                 }
@@ -453,42 +455,42 @@ namespace CoApp.Toolkit.Engine.Client {
 
         public Task<Package> GetActiveVersion(string packageName) {
             return GetPackages(packageName, null, null, null, null, true).ContinueWith(antecedent => {
-                antecedent.ThrowOnFaultOrCancel();
+                antecedent.RethrowWhenFaulted();
                 return antecedent.Result.FirstOrDefault();
             }, TaskContinuationOptions.AttachedToParent);
         }
 
         public Task<bool> IsPackageBlocked(string packageName) {
             return GetPackages(packageName, null, null, null, null, null, null, true).ContinueWith(antecedent => {
-                antecedent.ThrowOnFaultOrCancel();
+                antecedent.RethrowWhenFaulted();
                 return antecedent.Result.Any();
             }, TaskContinuationOptions.AttachedToParent);
         }
 
         public Task<bool> IsPackageMarkedRequested(string canonicalName) {
             return GetPackage(canonicalName).ContinueWith(antecedent => {
-                antecedent.ThrowOnFaultOrCancel();
+                antecedent.RethrowWhenFaulted();
                 return antecedent.Result.IsClientRequired;
             }, TaskContinuationOptions.AttachedToParent);
         }
 
         public Task<bool> IsPackageMarkedDoNotUpgrade(string canonicalName) {
             return GetPackage(canonicalName).ContinueWith(antecedent => {
-                antecedent.ThrowOnFaultOrCancel();
+                antecedent.RethrowWhenFaulted();
                 return antecedent.Result.DoNotUpgrade;
             }, TaskContinuationOptions.AttachedToParent);
         }
 
         public Task<bool> IsPackageMarkedDoNotUpdate(string canonicalName) {
             return GetPackage(canonicalName).ContinueWith(antecedent => {
-                antecedent.ThrowOnFaultOrCancel();
+                antecedent.RethrowWhenFaulted();
                 return antecedent.Result.DoNotUpdate;
             }, TaskContinuationOptions.AttachedToParent);
         }
 
         public Task<bool> IsPackageActive(string canonicalName) {
             return GetPackage(canonicalName).ContinueWith(antecedent => {
-                antecedent.ThrowOnFaultOrCancel();
+                antecedent.RethrowWhenFaulted();
                 return antecedent.Result.IsActive;
             }, TaskContinuationOptions.AttachedToParent);
         }
@@ -584,7 +586,7 @@ namespace CoApp.Toolkit.Engine.Client {
 
         public Task<Package> GetPackageFromFile(string filename) {
             return GetPackages(filename).ContinueWith(antecedent => {
-                antecedent.ThrowOnFaultOrCancel();
+                antecedent.RethrowWhenFaulted();
                 var pkg = antecedent.Result.FirstOrDefault();
                 if (pkg == null) {
                     throw new UnknownPackageException("filename: {0}".format(filename));
@@ -649,6 +651,8 @@ namespace CoApp.Toolkit.Engine.Client {
             var completedThisPackage = false;
 
             var result = new List<Package>();
+            Package upgradablePackage = null;
+            IEnumerable<Package> potentialUpgrades = null;
 
             var handler = new RemoteCallResponse {
                 PackageInformation = (package) => result.Add(package),
@@ -667,6 +671,11 @@ namespace CoApp.Toolkit.Engine.Client {
                     }
                 },
 
+                PackageHasPotentialUpgrades = (package, supercedents) => {
+                    upgradablePackage = package;
+                    potentialUpgrades = supercedents;
+                },
+
                 InstalledPackage = packageInstalled,
                 DownloadProgress = _downloadProgress,
                 DownloadCompleted = _downloadCompleted,
@@ -679,6 +688,9 @@ namespace CoApp.Toolkit.Engine.Client {
                             return Install(canonicalName, autoUpgrade, isUpdate, isUpgrade, pretend, download, installProgress, packageInstalled).Result;
                         }
                     } else {
+                        if (potentialUpgrades != null) {
+                            throw new PackageHasPotentialUpgradesException(upgradablePackage, potentialUpgrades);
+                        }
                         handler.ThrowWhenFaulted(antecedent);
                     }
                     return result.Distinct();
@@ -764,7 +776,7 @@ namespace CoApp.Toolkit.Engine.Client {
             get {
                 return SetLogging().ContinueWith(
                     antecedent => {
-                        antecedent.ThrowOnFaultOrCancel();
+                        antecedent.RethrowWhenFaulted();
                         return antecedent.Result.Messages;
                     }, TaskContinuationOptions.AttachedToParent);
             }
@@ -784,7 +796,7 @@ namespace CoApp.Toolkit.Engine.Client {
             get {
                 return SetLogging().ContinueWith(
                     antecedent => {
-                        antecedent.ThrowOnFaultOrCancel();
+                        antecedent.RethrowWhenFaulted();
                         return antecedent.Result.Warnings;
                     }, TaskContinuationOptions.AttachedToParent);
             }
@@ -804,7 +816,7 @@ namespace CoApp.Toolkit.Engine.Client {
             get {
                 return SetLogging().ContinueWith(
                     antecedent => {
-                        antecedent.ThrowOnFaultOrCancel();
+                        antecedent.RethrowWhenFaulted();
                         return antecedent.Result.Errors;
                     }, TaskContinuationOptions.AttachedToParent);
             }
@@ -914,10 +926,10 @@ namespace CoApp.Toolkit.Engine.Client {
 
         public Task SetAllFeedsStale() {
             return Feeds.ContinueWith(antecedent => {
-                antecedent.ThrowOnFaultOrCancel();
+                antecedent.RethrowWhenFaulted();
 
                 foreach (var feed in antecedent.Result) {
-                    SetFeedStale(feed.Location).ThrowOnFaultOrCancel();
+                    SetFeedStale(feed.Location).RethrowWhenFaulted();
                 }
             }, TaskContinuationOptions.AttachedToParent);
         }
@@ -971,7 +983,7 @@ namespace CoApp.Toolkit.Engine.Client {
 
             return GetPackage(canonicalName).ContinueWith(
                 antecedent => {
-                    antecedent.ThrowOnFaultOrCancel();
+                    antecedent.RethrowWhenFaulted();
                     return GetPackageDetails(antecedent.Result).Result;
                 }, TaskContinuationOptions.AttachedToParent);
         }
@@ -979,7 +991,7 @@ namespace CoApp.Toolkit.Engine.Client {
         public Task<Package> GetPackageDetails(Package package) {
             if (package.IsPackageDetailsStale) {
                 return GetPackage(package.CanonicalName).ContinueWith(antecedent => {
-                    antecedent.ThrowOnFaultOrCancel();
+                    antecedent.RethrowWhenFaulted();
                     return RefreshPackageDetails(package.CanonicalName).Result;
                 }, TaskContinuationOptions.AttachedToParent);
             }
@@ -1154,7 +1166,7 @@ namespace CoApp.Toolkit.Engine.Client {
                     AddScheduledTask(taskName, executable, commandline, hour, minutes, dayOfWeek, intervalInMinutes);
                     return;
                 }
-                antecedent.ThrowOnFaultOrCancel();
+                antecedent.RethrowWhenFaulted();
             }, TaskContinuationOptions.AttachedToParent);
         }
 
@@ -1166,7 +1178,7 @@ namespace CoApp.Toolkit.Engine.Client {
                     RemoveScheduledTask(taskName);
                     return;
                 }
-                antecedent.ThrowOnFaultOrCancel();
+                antecedent.RethrowWhenFaulted();
             }, TaskContinuationOptions.AttachedToParent);
         }
 
@@ -1191,7 +1203,7 @@ namespace CoApp.Toolkit.Engine.Client {
                 if (handler.EngineRestarting) {
                     return GetScheduledTask(taskName).Result;
                 }
-                antecedent.ThrowOnFaultOrCancel();
+                antecedent.RethrowWhenFaulted();
                 return result;
             }, TaskContinuationOptions.AttachedToParent);
         }
@@ -1216,7 +1228,7 @@ namespace CoApp.Toolkit.Engine.Client {
                     if (handler.EngineRestarting) {
                         return ScheduledTasks.Result;
                     }
-                    antecedent.ThrowOnFaultOrCancel();
+                    antecedent.RethrowWhenFaulted();
                     return result;
                 }, TaskContinuationOptions.AttachedToParent);
             }

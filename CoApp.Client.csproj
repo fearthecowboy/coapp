@@ -62,6 +62,7 @@
     </Compile>
     <Compile Include="Toolkit\Engine\Client\RemoteFile.cs" />
     <Compile Include="Toolkit\Engine\Exceptions\ConflictedPackageException.cs" />
+    <Compile Include="Toolkit\Engine\Exceptions\PackageHasPotentialUpgradesException.cs" />
     <Compile Include="Toolkit\Engine\LinkType.cs" />
     <Compile Include="Toolkit\Engine\Model\CompositionAction.cs" />
     <Compile Include="Toolkit\Engine\Model\CompositionRule.cs" />
