@@ -14,8 +14,10 @@ namespace CoApp.Toolkit.Engine.Feeds {
     using System.IO;
     using System.Linq;
     using System.ServiceModel.Syndication;
+    using System.Threading;
     using System.Threading.Tasks;
     using Extensions;
+    using Logging;
     using Model;
     using Model.Atom;
     using Tasks;

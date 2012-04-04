@@ -257,6 +257,8 @@
     <Compile Include="toolkit\Exceptions\OperationCompletedBeforeResultException.cs" />
     <Compile Include="toolkit\Exceptions\UnknownAccountException.cs" />
     <Compile Include="toolkit\Extensions\EnumExtensions.cs" />
+    <Compile Include="toolkit\Extensions\ExceptionExtensions.cs" />
+    <Compile Include="toolkit\Extensions\TaskExtensions.cs" />
     <Compile Include="toolkit\Logging\Logger.cs" />
     <Compile Include="toolkit\Pipes\AsyncPipeExtensions.cs" />
     <Compile Include="toolkit\Engine\EngineService.cs" />

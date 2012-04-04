@@ -44,13 +44,14 @@ namespace CoApp.Toolkit.Exceptions {
         }
     }
 
-    public class OperationCancelledException : CoAppException {
+    /* public class OperationCanceledException : CoAppException {
         public string Reason { get; internal set; }
 
-        public OperationCancelledException(string reason) {
+        public OperationCanceledException(string reason) {
             Reason = reason;
         }
     }
+    */
 
     public class InvalidCanonicalNameException : CoAppException {
         public string CanonicalName { get; internal set; }

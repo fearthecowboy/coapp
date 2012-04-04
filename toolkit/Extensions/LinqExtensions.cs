@@ -73,7 +73,7 @@ namespace CoApp.Toolkit.Extensions {
         /// <param name="source">The sole element in the return IEnumerable</param>
         /// <returns>An <see cref="IEnumerable{T}"/> with <paramref name="source"/> as it's only element.</returns>
         public static IEnumerable<T> SingleItemAsEnumerable<T>(this T source) {
-            return new[] { source };
+            return source as object == null ? Enumerable.Empty<T>() : new[] { source };
         }
 
         /// <summary>

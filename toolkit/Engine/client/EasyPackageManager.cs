@@ -21,6 +21,7 @@ namespace CoApp.Toolkit.Engine.Client {
     using Tasks;
     using Toolkit.Exceptions;
     using Win32;
+    using OperationCanceledException = System.OperationCanceledException;
 
     public class Feed {
         public string Location { get; internal set; }
@@ -104,9 +105,9 @@ namespace CoApp.Toolkit.Engine.Client {
         internal class RemoteCallResponse : PackageManagerMessages {
             internal bool EngineRestarting;
             internal bool NoPackages;
-            internal Exception Exception;
+            // internal Exception Exception;
 
-            internal string OperationCancelledReason;
+            internal string OperationCanceledReason;
 
             internal Action<string, string, int> DownloadProgress;
             internal Action<string, string> DownloadCompleted;
@@ -116,8 +117,8 @@ namespace CoApp.Toolkit.Engine.Client {
                     throw new RequiresPermissionException(permission);
                 };
 
-                OperationCancelled = reason => {
-                    OperationCancelledReason = reason;
+                OperationCanceled = reason => {
+                    OperationCanceledReason = reason;
                 };
 
                 UnexpectedFailure = exception => {
@@ -128,8 +129,11 @@ namespace CoApp.Toolkit.Engine.Client {
                     NoPackages = true;
                 };
 
-                Error = (s, s1, arg3) => {
-                    Exception = new CoAppException("Message Argument Exception [{0}/{1}/{2}]".format(s, s1, arg3));
+                Error = (message, parameter, reason) => {
+                    if( message == "add-feed" ) {
+                        throw new CoAppException(reason);
+                    }
+                    throw new CoAppException("Message Argument Exception [{0}/{1}/{2}]".format(message, parameter, reason));
                 };
 
                 PackageSatisfiedBy = (original, satisfiedBy) => {
@@ -137,15 +141,15 @@ namespace CoApp.Toolkit.Engine.Client {
                 };
 
                 UnknownPackage = s => {
-                    Exception = new  UnknownPackageException(s);
+                    throw new  UnknownPackageException(s);
                 };
 
                 FailedPackageRemoval = (canonicalname, reason) => {
-                    Exception = new FailedPackageRemoveException(canonicalname, reason);
+                    throw new FailedPackageRemoveException(canonicalname, reason);
                 };
 
                 FailedPackageInstall = (canonicalname, filename, reason) => {
-                    Exception = new CoAppException("Package Failed Install {0} => {1}".format(canonicalname, reason));
+                    throw new CoAppException("Package Failed Install {0} => {1}".format(canonicalname, reason));
                 };
 
                 Restarting = () => {
@@ -155,7 +159,7 @@ namespace CoApp.Toolkit.Engine.Client {
                 };
 
                 PackageBlocked = canonicalname => {
-                    Exception = new PackageBlockedException(canonicalname);
+                    throw new PackageBlockedException(canonicalname);
                 };
 
                 RequireRemoteFile =
@@ -183,8 +187,8 @@ namespace CoApp.Toolkit.Engine.Client {
                     return;
                 }
 
-                if (!string.IsNullOrEmpty(OperationCancelledReason)) {
-                    throw new OperationCanceledException(OperationCancelledReason);
+                if (!string.IsNullOrEmpty(OperationCanceledReason)) {
+                    throw new OperationCanceledException(OperationCanceledReason);
                 }
 
                 antecedent.RethrowWhenFaulted();
@@ -723,6 +727,40 @@ namespace CoApp.Toolkit.Engine.Client {
             return Install(canonicalName, autoUpgrade, false, false, false, false);
         }
 
+        public Task<int> RemovePackages(IEnumerable<string> canonicalNames, bool forceRemoval, Action<string, int> packageRemovalProgress = null, Action<string> packageRemoveCompleted = null) {
+            var packagesToRemove = canonicalNames.ToList();
+            
+            return Task.Factory.StartNew(() => {
+                int[] total = {0};
+                int packageCount;
+
+                // this will keep looping around as long as the last pass removed a package
+                // it was way easier to do this than to figure out what the order of removal is. :P
+                while ((packageCount = packagesToRemove.Count) > 0) {
+                    var packageFailures = new List<Exception>();
+
+                    foreach (var cn in packagesToRemove.ToArray()) {
+                        var canonicalName = cn;
+                        try {
+                            // remove the package and wait for completion.
+                            RemovePackage(canonicalName, forceRemoval, packageRemovalProgress, packageRemoveCompleted).Wait();
+
+                            packagesToRemove.Remove(canonicalName);
+                            total[0] = total[0] + 1;
+                        } catch( Exception exception) {
+                            packageFailures.Add(exception);
+                        }
+                    }
+
+                    if (packagesToRemove.Any() && packageCount == packagesToRemove.Count) {
+                        // it didn't remove any on that pass. we're boned.
+                        throw new AggregateException(packageFailures);
+                    }
+                }
+                return total[0];
+            }, TaskCreationOptions.AttachedToParent);
+        }
+
         public Task RemovePackage(string canonicalName, bool forceRemoval, Action<string, int> packageRemovalProgress = null, Action<string> packageRemoveCompleted = null) {
             var failed = ValidateCanonicalName<int>(canonicalName);
             if (failed != null) {
@@ -822,31 +860,32 @@ namespace CoApp.Toolkit.Engine.Client {
             }
         }
 
-        public Task RemoveSystemFeed(string feedLocation) {
+        public Task<string> RemoveSystemFeed(string feedLocation) {
             var handler = new RemoteCallResponse();
 
             return PackageManager.Instance.RemoveFeed(feedLocation, false, handler).ContinueWith(antecedent => {
                 if (handler.EngineRestarting) {
-                    RemoveSystemFeed(feedLocation);
-                    return;
+                    return RemoveSystemFeed(feedLocation).Result;
                 }
                 handler.ThrowWhenFaulted(antecedent);
+                return feedLocation;
             }, TaskContinuationOptions.AttachedToParent);
         }
 
-        public Task RemoveSessionFeed(string feedLocation) {
+        public Task<string> RemoveSessionFeed(string feedLocation) {
             var handler = new RemoteCallResponse();
 
             return PackageManager.Instance.RemoveFeed(feedLocation, true, handler).ContinueWith(antecedent => {
                 if (handler.EngineRestarting) {
-                    RemoveSessionFeed(feedLocation);
-                    return;
+                    return RemoveSessionFeed(feedLocation).Result;
+                    
                 }
                 handler.ThrowWhenFaulted(antecedent);
+                return feedLocation;
             }, TaskContinuationOptions.AttachedToParent);
         }
 
-        public Task AddSystemFeed(string feedLocation) {
+        public Task<string> AddSystemFeed(string feedLocation) {
             var handler = new RemoteCallResponse {
                 FeedAdded = location => {
                     // do something when a feed is added? Do we really care?
@@ -855,15 +894,15 @@ namespace CoApp.Toolkit.Engine.Client {
 
             return PackageManager.Instance.AddFeed(feedLocation, false, handler).ContinueWith(antecedent => {
                 if (handler.EngineRestarting) {
-                    AddSystemFeed(feedLocation);
-                    return;
+                    return AddSystemFeed(feedLocation).Result;
                 }
 
                 handler.ThrowWhenFaulted(antecedent);
+                return feedLocation;
             }, TaskContinuationOptions.AttachedToParent);
         }
 
-        public Task AddSessionFeed(string feedLocation) {
+        public Task<string> AddSessionFeed(string feedLocation) {
             var handler = new RemoteCallResponse {
                 FeedAdded = location => {
                     // do something when a feed is added? Do we really care?
@@ -872,10 +911,11 @@ namespace CoApp.Toolkit.Engine.Client {
 
             return PackageManager.Instance.AddFeed(feedLocation, true, handler).ContinueWith(antecedent => {
                 if (handler.EngineRestarting) {
-                    AddSessionFeed(feedLocation);
-                    return;
+                    return AddSessionFeed(feedLocation).Result;
+                    
                 }
                 handler.ThrowWhenFaulted(antecedent);
+                return feedLocation;
             }, TaskContinuationOptions.AttachedToParent);
         }
 
@@ -1122,6 +1162,10 @@ namespace CoApp.Toolkit.Engine.Client {
 
                 // take care of error conditions...
                 handler.ThrowWhenFaulted(antecedent);
+
+                if( result == null ) {
+                    throw new CoAppException("Policy '{0}' does not exist".format(policyName));
+                }
 
                 return result;
             }, TaskContinuationOptions.AttachedToParent);

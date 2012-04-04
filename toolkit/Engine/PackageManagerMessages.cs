@@ -120,7 +120,7 @@ namespace CoApp.Toolkit.Engine {
         /// <summary>
         /// not used
         /// </summary>
-        public Action<string> OperationCancelled;
+        public Action<string> OperationCanceled;
         
         /// <summary>
         /// 

@@ -141,7 +141,7 @@ namespace CoApp.Toolkit.Engine {
                 }
 
                 if (CancellationRequested) {
-                    PackageManagerMessages.Invoke.OperationCancelled("find-package");
+                    PackageManagerMessages.Invoke.OperationCanceled("find-package");
                     return;
                 }
 
@@ -267,14 +267,13 @@ namespace CoApp.Toolkit.Engine {
                 if (results.Any()) {
                     foreach (var package in results) {
                         if (CancellationRequested) {
-                            PackageManagerMessages.Invoke.OperationCancelled("find-packages");
+                            PackageManagerMessages.Invoke.OperationCanceled("find-packages");
                             return;
                         }
 
                         var supercedents = (from p in SearchForPackages(package.Name, null, package.Architecture.ToString(), package.PublicKeyToken)
                             where p.InternalPackageData.PolicyMinimumVersion <= package.Version && p.InternalPackageData.PolicyMaximumVersion >= package.Version
                             select p).OrderByDescending(p => p.Version).ToArray();
-
                         PackageManagerMessages.Invoke.PackageInformation(package, supercedents);
                     }
                 }
@@ -293,7 +292,7 @@ namespace CoApp.Toolkit.Engine {
                 }
 
                 if (CancellationRequested) {
-                    PackageManagerMessages.Invoke.OperationCancelled("get-package-details");
+                    PackageManagerMessages.Invoke.OperationCanceled("get-package-details");
                     return;
                 }
 
@@ -314,7 +313,7 @@ namespace CoApp.Toolkit.Engine {
                 }
 
                 if (CancellationRequested) {
-                    PackageManagerMessages.Invoke.OperationCancelled("install-package");
+                    PackageManagerMessages.Invoke.OperationCanceled("install-package");
                     return;
                 }
 
@@ -389,7 +388,7 @@ namespace CoApp.Toolkit.Engine {
                             manualResetEvent.Reset();
 
                             if (CancellationRequested) {
-                                PackageManagerMessages.Invoke.OperationCancelled("install-package");
+                                PackageManagerMessages.Invoke.OperationCanceled("install-package");
                                 return;
                             }
 
@@ -407,7 +406,7 @@ namespace CoApp.Toolkit.Engine {
 
                             // seems like a good time to check if we're supposed to bail...
                             if (CancellationRequested) {
-                                PackageManagerMessages.Invoke.OperationCancelled("install-package");
+                                PackageManagerMessages.Invoke.OperationCanceled("install-package");
                                 return;
                             }
 
@@ -424,7 +423,7 @@ namespace CoApp.Toolkit.Engine {
                             // let's see if we've got all the files
                             var missingFiles = from p in installGraph where !p.InternalPackageData.HasLocalLocation select p;
 
-                            if( download == true ) {
+                            if( download == true) {
                                 // we want to try downloading all the files that we're missing, regardless if we've tried before.
                                 // unless we've already tried in this task once. 
                                 foreach( var p in missingFiles.Where( each => packagesTriedToDownloadThisTask.Contains(each)) ) {
@@ -468,10 +467,10 @@ namespace CoApp.Toolkit.Engine {
                                     var pkg = p;
                                     // seems like a good time to check if we're supposed to bail...
                                     if (CancellationRequested) {
-                                        PackageManagerMessages.Invoke.OperationCancelled("install-package");
+                                        PackageManagerMessages.Invoke.OperationCanceled("install-package");
                                         return;
                                     }
-                                    var validLocation = package.PackageSessionData.LocalValidatedLocation;
+                                    var validLocation = pkg.PackageSessionData.LocalValidatedLocation;
 
                                     try {
                                         if (!pkg.IsInstalled) {
@@ -490,7 +489,7 @@ namespace CoApp.Toolkit.Engine {
                                                         // something has changed where we need restart the service before we can continue.
                                                         // and the one place we don't wanna be when we issue a shutdown in in Install :) ...
                                                         EngineService.RestartService();
-                                                        PackageManagerMessages.Invoke.OperationCancelled("install-package");
+                                                        PackageManagerMessages.Invoke.OperationCanceled("install-package");
                                                         return;
                                                     }
 
@@ -558,7 +557,7 @@ namespace CoApp.Toolkit.Engine {
                             // to see if the client has cancelled the operation.
                             while (!manualResetEvent.WaitOne(500)) {
                                 if (CancellationRequested) {
-                                    PackageManagerMessages.Invoke.OperationCancelled("install-package");
+                                    PackageManagerMessages.Invoke.OperationCanceled("install-package");
                                     return;
                                 }
 
@@ -634,7 +633,7 @@ namespace CoApp.Toolkit.Engine {
                 }
 
                 if (CancellationRequested) {
-                    PackageManagerMessages.Invoke.OperationCancelled("list-feeds");
+                    PackageManagerMessages.Invoke.OperationCanceled("list-feeds");
                     return;
                 }
 
@@ -699,7 +698,7 @@ namespace CoApp.Toolkit.Engine {
                 }
 
                 if (CancellationRequested) {
-                    PackageManagerMessages.Invoke.OperationCancelled("remove-feed");
+                    PackageManagerMessages.Invoke.OperationCanceled("remove-feed");
                     return;
                 }
 
@@ -737,7 +736,7 @@ namespace CoApp.Toolkit.Engine {
                 }
 
                 if (CancellationRequested) {
-                    PackageManagerMessages.Invoke.OperationCancelled("add-feed");
+                    PackageManagerMessages.Invoke.OperationCanceled("add-feed");
                     return;
                 }
 
@@ -760,13 +759,14 @@ namespace CoApp.Toolkit.Engine {
                         return;
                     }
 
-                    AddSessionFeed(location);
-                    PackageManagerMessages.Invoke.FeedAdded(location);
-
                     // add feed to the session feeds.
                     PackageFeed.GetPackageFeedFromLocation(location).ContinueWith(antecedent => {
                         var foundFeed = antecedent.Result;
                         if (foundFeed != null) {
+
+                            AddSessionFeed(location);
+                            PackageManagerMessages.Invoke.FeedAdded(location);
+
                             if (foundFeed != SessionPackageFeed.Instance || foundFeed != InstalledPackageFeed.Instance ) {
                                 SessionCache<PackageFeed>.Value[location] = foundFeed;    
                             }
@@ -791,13 +791,14 @@ namespace CoApp.Toolkit.Engine {
                         return;
                     }
 
-                    AddSystemFeed(location);
-                    PackageManagerMessages.Invoke.FeedAdded(location);
-
                     // add feed to the system feeds.
                     PackageFeed.GetPackageFeedFromLocation(location).ContinueWith(antecedent => {
                         var foundFeed = antecedent.Result;
                         if (foundFeed != null) {
+
+                            AddSystemFeed(location);
+                            PackageManagerMessages.Invoke.FeedAdded(location);
+
                             if (foundFeed != SessionPackageFeed.Instance || foundFeed != InstalledPackageFeed.Instance) {
                                 Cache<PackageFeed>.Value[location] = foundFeed;
                             }
@@ -820,7 +821,7 @@ namespace CoApp.Toolkit.Engine {
                 }
 
                 if (CancellationRequested) {
-                    PackageManagerMessages.Invoke.OperationCancelled("verify-signature");
+                    PackageManagerMessages.Invoke.OperationCanceled("verify-signature");
                     return;
                 }
 
@@ -855,7 +856,7 @@ namespace CoApp.Toolkit.Engine {
                 }
 
                 if (CancellationRequested) {
-                    PackageManagerMessages.Invoke.OperationCancelled("set-package");
+                    PackageManagerMessages.Invoke.OperationCanceled("set-package");
                     return;
                 }
 
@@ -873,7 +874,7 @@ namespace CoApp.Toolkit.Engine {
 
                 // seems like a good time to check if we're supposed to bail...
                 if (CancellationRequested) {
-                    PackageManagerMessages.Invoke.OperationCancelled("set-package");
+                    PackageManagerMessages.Invoke.OperationCanceled("set-package");
                     return;
                 }
 
@@ -975,7 +976,7 @@ namespace CoApp.Toolkit.Engine {
                 }
 
                 if (CancellationRequested) {
-                    PackageManagerMessages.Invoke.OperationCancelled("remove-package");
+                    PackageManagerMessages.Invoke.OperationCanceled("remove-package");
                     return;
                 }
 
@@ -1016,7 +1017,7 @@ namespace CoApp.Toolkit.Engine {
                 }
                 // seems like a good time to check if we're supposed to bail...
                 if (CancellationRequested) {
-                    PackageManagerMessages.Invoke.OperationCancelled("remove-package");
+                    PackageManagerMessages.Invoke.OperationCanceled("remove-package");
                     return;
                 }
 
@@ -1044,7 +1045,7 @@ namespace CoApp.Toolkit.Engine {
                 }
 
                 if (CancellationRequested) {
-                    PackageManagerMessages.Invoke.OperationCancelled("unable-to-acquire");
+                    PackageManagerMessages.Invoke.OperationCanceled("unable-to-acquire");
                     return;
                 }
 
@@ -1092,7 +1093,7 @@ namespace CoApp.Toolkit.Engine {
                 }
 
                 if (CancellationRequested) {
-                    PackageManagerMessages.Invoke.OperationCancelled("recognize-file");
+                    PackageManagerMessages.Invoke.OperationCanceled("recognize-file");
                     return;
                 }
 
@@ -1111,8 +1112,6 @@ namespace CoApp.Toolkit.Engine {
                     return;
                 }
 
-                
-
                 // if there is a continuation task for the canonical name that goes along with this, 
                 // we should continue with that task, and get the heck out of here.
                 // 
@@ -1124,6 +1123,7 @@ namespace CoApp.Toolkit.Engine {
                         if (state != null) {
                             state.LocalLocation = localLocation;
                         }
+                        
                         continuationTask.Start();
                         return;
                     }
@@ -1172,7 +1172,7 @@ namespace CoApp.Toolkit.Engine {
                 }
 
                 if (CancellationRequested) {
-                    PackageManagerMessages.Invoke.OperationCancelled("suppress-feed");
+                    PackageManagerMessages.Invoke.OperationCanceled("suppress-feed");
                     return;
                 }
 
@@ -1289,7 +1289,8 @@ namespace CoApp.Toolkit.Engine {
             var otherFeeds = packages.SelectMany(each => each.InternalPackageData.FeedLocations).Distinct().Where(each => !feedLocations.Contains(each));
             // given a list of other feeds that we're not using, we can search each of those feeds for newer versions of the packages that we already have.
             var tf = TransientFeeds(otherFeeds);
-            return packages.Union(packages.SelectMany(p => tf.SelectMany(each => each.FindPackages(p.Name, version, p.Architecture, p.PublicKeyToken)))).Distinct().ToArray();
+            var result = packages.Union(packages.SelectMany(p => tf.SelectMany(each => each.FindPackages(p.Name, version, p.Architecture, p.PublicKeyToken)))).Distinct().ToArray();
+            return result;
         }
 
         /// <summary>
@@ -1303,7 +1304,7 @@ namespace CoApp.Toolkit.Engine {
             var tf = SessionCache<List<PackageFeed>>.Value["TransientFeeds"] ?? (SessionCache<List<PackageFeed>>.Value["TransientFeeds"] = new List<PackageFeed>());
             var existingLocations = tf.Select(each => each.Location);
             var newLocations = locs.Where(each => !existingLocations.Contains(each));
-            var tasks = newLocations.Select(PackageFeed.GetPackageFeedFromLocation);
+            var tasks = newLocations.Select(PackageFeed.GetPackageFeedFromLocation).ToArray();
             var newFeeds = tasks.Where(each => each.Result != null).Select(each => each.Result);
             tf.AddRange(newFeeds);
             return tf.Where(each => locs.Contains(each.Location));

@@ -91,7 +91,7 @@ namespace CoApp.Toolkit.Engine.Client {
         private readonly string _localDirectory;
         private string _filename;
         private Task _getTask = null;
-        private bool IsCancelled = false;
+        private bool IsCanceled = false;
         private string _fullPath;
         private DateTime _lastModified;
         private long _contentLength;
@@ -188,7 +188,7 @@ namespace CoApp.Toolkit.Engine.Client {
                         messages.Register();
                     }
                     try {
-                            if (IsCancelled) {
+                            if (IsCanceled) {
                                 _cancel();
                             }
                             
@@ -200,7 +200,7 @@ namespace CoApp.Toolkit.Engine.Client {
                                 _contentLength = httpWebResponse.ContentLength;
                                 ActualRemoteLocation = httpWebResponse.ResponseUri;
 
-                                if (IsCancelled) {
+                                if (IsCanceled) {
                                     _cancel();
                                 }
 
@@ -260,7 +260,7 @@ namespace CoApp.Toolkit.Engine.Client {
 
                                     _filestream = File.Open(Filename, FileMode.Create);
 
-                                    if (IsCancelled) {
+                                    if (IsCanceled) {
                                         _cancel();
                                         return;
                                     }
@@ -324,7 +324,7 @@ namespace CoApp.Toolkit.Engine.Client {
                 var total = 0L;
                 var buffer = new byte[BUFFER_SIZE];
                 while (true) {
-                    if (IsCancelled) {
+                    if (IsCanceled) {
                         _cancel();
                         tcs.SetResult(null);
                         break;
@@ -353,7 +353,7 @@ namespace CoApp.Toolkit.Engine.Client {
                 _filestream = null;
 
                 try {
-                    if (IsCancelled) {
+                    if (IsCanceled) {
                         _cancel();
                         tcs.SetResult(null);
                     }

@@ -44,7 +44,7 @@ namespace Scratch {
                     // this is called when the antecedent task throws an exception
                 });
 
-            var oncan = s.OnCancelled(
+            var oncan = s.OnCanceled(
                 () => {
                     // this is called when the antecedent task is cancelled either by token, or by not being called.
                 });

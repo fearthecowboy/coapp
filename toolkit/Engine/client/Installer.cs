@@ -576,7 +576,7 @@ namespace CoApp.Toolkit.Engine.Client {
                                     RemovedPackage = (canonicalName) => {
                                         Package.GetPackage(canonicalName).IsInstalled = false;
                                     },
-                                    OperationCancelled = CancellationRequestedDuringRemove,
+                                    OperationCanceled = CancellationRequestedDuringRemove,
                                 }).Wait();
                         }
                     }

@@ -127,7 +127,7 @@ namespace CoApp.Toolkit.Win32 {
                 {
                     throw new PathTooLongException();
                 }
-                case 995: // Operation cancelled
+                case 995: // Operation canceled
                 {
                     throw new OperationCanceledException();
                 }

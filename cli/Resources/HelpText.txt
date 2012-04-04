@@ -11,28 +11,37 @@ Options:
     --verbose               prints verbose messages
 
     --pretend               doesn't actually alter the system
+    --scan                  requests the feed data be refreshed
+    --download              requests the packages be downloaded
 
-    --as-specified[=<pkg>]  Install the specific package(s) specified 
-                            even if a newer version is available. 
+Filter Options:
+---------------
 
-    --upgrade[=<pkg>]       Accept any newer version of the package if 
-                            one is available.
+    --min-version=<ver>     packages where Version is <ver> or greater    
+    --max-version=<ver>     packages where Version is <ver> or lower
+    --installed             select packages that are installed
+    --installed=false       select packages that are not installed
+    --active                packages that are active
+    --active=false          packages that are not active
+    --required              packages that are required
+    --required=false        packages that are not required
+    --blocked               packages that are blocked
+    --blocked=false         packages that are not blocked
+    --latest                packages that are the latest version
+    --latest=false          packages that are not the latest version
+    --feed=<feed>           selects package from only that feed
+    
 
-    --scan=<location>       Adds the location as a place to find additional
-                            packages.  May be a directory, package feed file 
-                            or package feed URL           
+Install Options:
+----------------
 
-    --no-scan[=<location>]  Doesn't scan the given location (or feed) for 
-                            additional packages.        
-
-    --no-network            Doesn't scan locations over the network.
-                            (same as --no-scan=*://* )
-
-    --flush-cache           Drops all cached information.
-
-    --maximum=<num>         If the total number of packages to install is more
-                            than num the installer will notify the user and 
-                            exit. (Defaults to 10)
+    --auto-upgrade          automatically selects the latest version
+    --exact                 selects the version requested
+    --force                 forces the operation (install/remove)
+    --x64                   selects the x64 version of the package to install
+    --x86                   selects the x86 version of the package to install
+    --any                   selects the any/anycpu version of the package
+    --all                   selects all platforms to install
 
 Commands:
 ---------    
@@ -40,17 +49,31 @@ Commands:
     command             short form        description
     ---------------------------------------------------------------------------
     list-package        list        -l    lists packages
-    get-packageinfo     info        -g    shows extended package information
     install-package     install     -i    installs a package
-    remove-package      remove *    -r    removes a package
+    remove-package      remove      -r    removes a package
     update-package      update      -u    updates a package
+    upgrade-package     upgrade     -U    upgrades a package
     trim-packages       trim        -t    trims unneccessary packages
+
+    list-feed           feeds       -L    lists the feeds known to the system
+    add-feed            add         -A    adds a feed to the system
+    delete-feed         delete      -D    removes a feed from the system
+
+    get-packageinfo     info        -g    shows extended package information
+    
     activate-package    activate    -a    makes specific package the 'current'
     block-package       block       -b    marks a package as 'blocked'
     unblock-package     unblock     -B    unblocks a package
-    mark-package        mark        -m    marks a package as 'required'
-    unmark-package      unmark      -M    unmarks a package as 'required'
-    list-feed           feeds       -f    lists the feeds known to the system
-    add-feed            add         -A    adds a feed to the system
-    remove-feed         remove *    -R    removes a feed from the system
+    require-package     require     -w    marks a package as 'required'
+    unrequire-package   unrequire   -W    unmarks a package as 'required'
+    do-not-update       hold              marks a package as 'do-not-update'
+    do-not-upgrade      freeze            marks a package as 'do-not-upgrade'
+    do-update           release           marks a package as 'do-not-update'
+    do-upgrade          thaw              marks a package as 'do-not-upgrade'
 
+    enable-telemetry                      enables anonymous feedback
+    disaable-telemetry                    disables anonymous feedback
+
+    list-policies       policies    -p    lists the security policies
+    add-to-policy                         adds a user/group to a policy
+    remove-from-policy                    removes a user/group from a policy

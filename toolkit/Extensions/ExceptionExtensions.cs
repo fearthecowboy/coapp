@@ -16,12 +16,38 @@ using System.Linq;
 using System.Text;
 
 namespace CoApp.Toolkit.Extensions {
+    using System.Threading.Tasks;
+    using Exceptions;
+
     public static class ExceptionExtensions {
+        /// <summary>
+        /// This method will unwrap an AggregateException as far as it can be to get either 
+        /// a single Exception or
+        /// a single AggregateException that has a flattened collection of Exceptions
+        /// The unwrap process removes CoApp canceled exceptions, OperationCanceledExceptions and TaskCanceledExceptions and 
+        /// returns an OperationCanceledException if there is no valid exceptions left.
+        /// Exception Exception Exception Exception Exception. 
+        /// </summary>
+        /// <param name="exception"></param>
+        /// <returns></returns>
         public static Exception Unwrap(this Exception exception) {
             var aggregate = exception as AggregateException;
             if( aggregate != null ) {
-                var result = aggregate.Flatten().InnerExceptions.FirstOrDefault();
-                return result is AggregateException ? result.Unwrap() : result;
+                var allActualExceptions = (from e in aggregate.Flatten().InnerExceptions 
+                                    let coappexception = e as CoAppException 
+                                    where (coappexception == null || !coappexception.IsCanceled) 
+                                    && e as OperationCanceledException == null 
+                                    && e as TaskCanceledException == null  
+                                    select e).ToArray();
+                
+                switch( allActualExceptions.Length) {
+                    case 0:
+                        return new OperationCanceledException("All exceptions have been cancelled");
+                    case 1:
+                        return allActualExceptions.FirstOrDefault();
+                    case 2:
+                        return new AggregateException(allActualExceptions);
+                }
             }
             return exception;
         }

@@ -131,13 +131,13 @@ namespace CoApp.Toolkit.Engine.Client {
 
         public Task Connect(string clientName, string sessionId = null) {
             
-            if (IsConnected && _isProcessingMessages.WaitOne(0) ) {
+            if (IsConnected && _isBufferReady.WaitOne(0) ) {
                 return "Completed".AsResultTask();
             }
 
             lock (this) {
                 if (ConnectingTask == null) {
-                    _isProcessingMessages.Reset();
+                    _isBufferReady.Reset();
 
                     ConnectingTask = Task.Factory.StartNew(() => {
                         EngineServiceManager.EnsureServiceIsResponding();
@@ -164,7 +164,7 @@ namespace CoApp.Toolkit.Engine.Client {
                         StartSession(clientName, sessionId);
 
                         Task.Factory.StartNew(ProcessMessages,TaskCreationOptions.None).AutoManage();
-                        _isProcessingMessages.WaitOne();
+                        _isBufferReady.WaitOne();
                     }, TaskCreationOptions.AttachedToParent);
                 }
             }
@@ -172,13 +172,18 @@ namespace CoApp.Toolkit.Engine.Client {
             return ConnectingTask;
         }
 
-        private ManualResetEvent _isProcessingMessages = new ManualResetEvent(false);
+        private readonly ManualResetEvent _isBufferReady = new ManualResetEvent(false);
         private void ProcessMessages() {
+            var incomingMessage = new byte[BufferSize];
+            _isBufferReady.Set();
+
             try {
                 do {
-                    var incomingMessage = new byte[BufferSize];
-
-                    _isProcessingMessages.Set();
+                    // we need to wait for the buffer to become available.
+                    _isBufferReady.WaitOne();
+                    
+                    // now we claim the buffer 
+                    _isBufferReady.Reset();
 
                     var readTask = _pipe.ReadAsync(incomingMessage, 0, BufferSize);
 
@@ -188,30 +193,31 @@ namespace CoApp.Toolkit.Engine.Client {
                                 Disconnect();
                                 return;
                             }
-
-                            var rawMessage = Encoding.UTF8.GetString(incomingMessage, 0, antecedent.Result);
-
-                            if (string.IsNullOrEmpty(rawMessage)) {
-                                return;
-                            }
-
-                            var responseMessage = new UrlEncodedMessage(rawMessage);
-                            int? rqid = responseMessage["rqid"];
-
-                            Logger.Message("Response:{0}".format(responseMessage.ToSmallerString()));
-                            //  Console.WriteLine("Response:{0}".format(responseMessage.ToSmallerString()));
-                            try {
-
-                                var queue = ManualEventQueue.GetQueue(rqid.GetValueOrDefault());
-                                if (queue != null) {
-                                    queue.Enqueue(responseMessage);
+                            if (antecedent.Result > 0) {
+                                var rawMessage = Encoding.UTF8.GetString(incomingMessage, 0, antecedent.Result);
+                                var responseMessage = new UrlEncodedMessage(rawMessage);
+                                int? rqid = responseMessage["rqid"];
+                                try {
+                                    var queue = ManualEventQueue.GetQueue(rqid.GetValueOrDefault());
+                                    if (queue != null) {
+                                        queue.Enqueue(responseMessage);
+                                    }
+                                } catch {
+                                    //  Console.WriteLine("Unable to queue the response to the right request event queue!");
+                                    // Console.WriteLine("    Response:{0}", responseMessage.Command);
+                                    // not able to queue up the response to the right task?
                                 }
-                            } catch {
-                                //  Console.WriteLine("Unable to queue the response to the right request event queue!");
-                                // Console.WriteLine("    Response:{0}", responseMessage.Command);
-                                // not able to queue up the response to the right task?
+
+                                // it's ok to let the next readTask use the buffer, we've got the data out & queued.
+                                _isBufferReady.Set();
+                                
+                                // lazy log the response (since we're at the end of this task)
+                                Logger.Message("Response:{0}".format(responseMessage.ToSmallerString()));
                             }
                         }).AutoManage();
+
+                    // this wait just makes sure that we're only asking for one message at a time
+                    // but does not throttle the messages themselves.
                     readTask.Wait();
                 } while (IsConnected);
             }
@@ -229,7 +235,7 @@ namespace CoApp.Toolkit.Engine.Client {
                     if (_pipe != null) {
                         // ensure all queues are stopped and cleared out.
                         ManualEventQueue.ResetAllQueues();
-                    
+                        _isBufferReady.Set();
                         var pipe = _pipe;
                         _pipe = null;
                         pipe.Close();
@@ -284,7 +290,7 @@ namespace CoApp.Toolkit.Engine.Client {
             }
 
             Package singleResult = null;
-            var feedAdded = string.Empty;
+            string feedAdded = null;
 
             if (File.Exists(parameter)) {
                 var localPath = parameter.EnsureFileIsLocal();
@@ -304,7 +310,7 @@ namespace CoApp.Toolkit.Engine.Client {
                         }
 
                         // if it was a feed, then continue with the big query
-                        if (feedAdded != null) {
+                        if (string.IsNullOrEmpty(feedAdded)) {
                             return InternalGetPackages(null, minVersion, maxVersion, dependencies, installed, active, required, blocked, latest, feedAdded,forceScan, updates , upgrades , trimable,  messages).Result;
                         }
 
@@ -322,17 +328,38 @@ namespace CoApp.Toolkit.Engine.Client {
                 // specified a folder, or some kind of path that looks like a feed.
                 // add it as a feed, and then get the contents of that feed.
                 return AddFeed(parameter, true, new PackageManagerMessages {
-                    FeedAdded = feedLocation => { feedAdded = feedLocation; }
+                    FeedAdded = feedLocation => { feedAdded = feedLocation; }, 
+                    Error = (s, s1, arg3) => {
+                        // suppress this error when guessing this is a feed.
+                    }
                 }.Extend(messages)).ContinueWith(antecedent => {
                     // if it was a feed, then continue with the big query
-                    if (feedAdded != null) {
+                    if (!string.IsNullOrEmpty(feedAdded)) {
                         // this overrides any passed in locations with just the feed added.
                         return InternalGetPackages(null, minVersion, maxVersion, dependencies, installed, active, required, blocked, latest, feedAdded, forceScan, updates , upgrades , trimable,  messages).Result;
                     }
 
+                    // maybe it's a relative path from where we are.
+                    // let's try that before giving up.
+                    parameter = parameter.GetFullPath();
+                    AddFeed(parameter, true, new PackageManagerMessages {
+                        FeedAdded = feedLocation => {
+                            feedAdded = feedLocation;
+                        }, 
+                        Error = (s, s1, arg3) => {
+                            // suppress this error when guessing this is a feed.
+                        }
+                    }.Extend(messages)).Wait();
+
+                    // if it was a feed, then continue with the big query
+                    if (!string.IsNullOrEmpty(feedAdded)) {
+                        // this overrides any passed in locations with just the feed added.
+                        return InternalGetPackages(null, minVersion, maxVersion, dependencies, installed, active, required, blocked, latest, feedAdded, forceScan, updates, upgrades, trimable, messages).Result;
+                    }
+
                     // if we get here, that means that we didn't recognize the file. 
                     // we're gonna return an empty collection at this point.
-                    return singleResult.SingleItemAsEnumerable();
+                    return Enumerable.Empty<Package>();
                 }, TaskContinuationOptions.AttachedToParent);
             }
             // can only be a canonical name match, proceed with that.            
@@ -940,8 +967,8 @@ namespace CoApp.Toolkit.Engine.Client {
                     PackageManagerMessages.Invoke.NoPackagesFound();
                     break;
 
-                case "operation-cancelled":
-                    PackageManagerMessages.Invoke.OperationCancelled(responseMessage["message"]);
+                case "operation-canceled":
+                    PackageManagerMessages.Invoke.OperationCanceled(responseMessage["message"]);
                     return false;
 
                 case "operation-requires-permission":

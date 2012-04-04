@@ -22,6 +22,7 @@ namespace CoApp.Toolkit.Console {
     using Exceptions;
     using Extensions;
     using Tasks;
+    using OperationCanceledException = System.OperationCanceledException;
 
     public abstract class AsyncConsoleProgram {
         protected abstract ResourceManager Res { get; }
@@ -45,7 +46,7 @@ namespace CoApp.Toolkit.Console {
             try {
                 Console.CancelKeyPress += (x, y) => {
                     if (!CancellationTokenSource.IsCancellationRequested) {
-                        Console.WriteLine("Operation Cancelled...");
+                        Console.WriteLine("Operation Canceled...");
                         CancellationTokenSource.Cancel();
                         if (y.SpecialKey == ConsoleSpecialKey.ControlBreak) {
                             // can't cancel so we just block on the task.
@@ -57,12 +58,8 @@ namespace CoApp.Toolkit.Console {
 
                 };
                 task.Wait(CancellationTokenSource.Token);
-            }
-            catch( AggregateException ae ) {
-                ae.Flatten().Handle(HandleException);
-                return 1;
             } catch( Exception e ) {
-                 HandleException(e);
+                 HandleException(e.Unwrap());
                  return 1;
             }
             FilesystemExtensions.RemoveTemporaryFiles();

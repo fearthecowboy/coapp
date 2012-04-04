@@ -59,9 +59,6 @@ namespace CoApp.CLI {
 
         private bool IsFiltering { get { return (true == _x64) || (true == _x86) || (true == _cpuany); } }
 
-
-        private PackageManagerMessages _messages;
-
         /// <summary>
         /// Gets the res.
         /// </summary>
@@ -110,33 +107,7 @@ namespace CoApp.CLI {
         /// <returns>Process return code.</returns>
         /// <remarks></remarks>
         protected override int Main(IEnumerable<string> args) {
-            _messages = new PackageManagerMessages {
-                UnexpectedFailure = UnexpectedFailure,
-                NoPackagesFound = NoPackagesFound,
-                PermissionRequired = OperationRequiresPermission,
-                Error = MessageArgumentError,
-                RequireRemoteFile = (canonicalName, remoteLocations, localFolder, force ) => Downloader.GetRemoteFile(canonicalName, remoteLocations, localFolder, force, new RemoteFileMessages {
-                    Progress = (itemUri, percent) => {
-                        if (!activeDownloads.Contains(itemUri.ToString())) {
-                            activeDownloads.Add(itemUri.ToString());
-                        }
-                        "Downloading {0}".format(itemUri.AbsoluteUri).PrintProgressBar(percent);
-                    }, Completed = (itemUri) => {
-                        if (activeDownloads.Contains(itemUri.ToString())) {
-                            Console.WriteLine();
-                            activeDownloads.Remove(itemUri.ToString());
-                        }
-                    }
-                } ,_messages),
-                OperationCancelled = CancellationRequested,
-                Restarting = RestartingEngine,
-                PackageSatisfiedBy = (original, satisfiedBy) => {
-                    original.SatisfiedBy = satisfiedBy;
-                },
-                PackageBlocked = BlockedPackage,
-                UnknownPackage = UnknownPackage,
-            };
-
+           
             try {
                 #region command line parsing
 
@@ -183,6 +154,7 @@ namespace CoApp.CLI {
                             break;
 
                         case "force-scan":
+                        case "force-rescan":
                         case "scan":
                         case "rescan":
                             preCommandTasks.Add(_easyPackageManager.SetAllFeedsStale());
@@ -204,8 +176,8 @@ namespace CoApp.CLI {
                             _autoUpgrade = false;
                             break;
 
-
                         case "use-feed":
+                        case "feed":
                             _location = last;
                             break;
 
@@ -278,22 +250,25 @@ namespace CoApp.CLI {
                 if (parameters.IsNullOrEmpty()) {
                     return Help();
                 }
+                string command = string.Empty;
 
                 if (parameters[0].ToLower().EndsWith(".msi")) {
                     var files = parameters.FindFilesSmarter().ToArray();
                     if( files.Length > 0 ) {
                         // assume install if just given filenames 
-                        return InstallFiles(files);
+                        command = "install";
+                        parameters = files;
                     }
                 }
 
-                var command = parameters.FirstOrDefault();
-                parameters = parameters.Skip(1).ToArray();
+                if (string.IsNullOrEmpty(command)) {
+                    command = parameters.FirstOrDefault();
+                    parameters = parameters.Skip(1).ToArray();
+                }
 
                 if (!command.StartsWith("-")) {
                     command = command.ToLower();
                 }
-
 
                 switch (command) {
                     case "-?":
@@ -303,7 +278,7 @@ namespace CoApp.CLI {
                     case "list":
                     case "list-package":
                     case "list-packages":
-                        task = preCommandTasks.Continue(() => _easyPackageManager.GetPackages(parameters)
+                        task = preCommandTasks.Continue(() => _easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, false, _installed, _active, null, _blocked, _latest, _location )
                             .Continue(packages => {
                                 if (packages.IsNullOrEmpty()) {
                                     PrintNoPackagesFound(parameters);
@@ -321,69 +296,7 @@ namespace CoApp.CLI {
                         if (!parameters.Any()) {
                             throw new ConsoleException(Resources.InstallRequiresPackageName);
                         }
-                        
-                        // given what the user requested, what packages are they really asking for?
-                        task  = preCommandTasks.Continue(() =>_easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, false, null, null, null, false, _latest ?? true, _location, false, false, false)).Continue(packages => {
-                            // we got back a package collection for what the user passed in.
-
-                            // but, we *can* get back an empty collection...
-                            if( packages.IsNullOrEmpty()) {
-                                PrintNoPackagesFound(parameters);
-                                return;
-                            } 
-
-                            // we have a collection of packages that the user has requested.
-                            // first, lets auto-filter out ones that we can obviously see are not what they wanted.
-                            var findConflictTask = _easyPackageManager.FilterConflictsForInstall(packages, _x86, _x64, _cpuany);
-                            
-                            // hmm. had a problem filtering out conflicts.
-                            findConflictTask.ContinueOnFail(exception => {
-                                Console.WriteLine("Conflict!");
-                                Console.WriteLine("{0} == {1}", exception.Message, exception.StackTrace);
-                            });
-
-                            findConflictTask.Continue(filteredPackages => {
-                                // lets get the package install plan.
-                                var getPackagePlanTask = _easyPackageManager.IdentifyPackageAndDependenciesToInstall(filteredPackages);
-
-                                // hmm. The plan did not work out so well. 
-                                getPackagePlanTask.ContinueOnFail((exception) => {
-                                    
-                                    exception = exception.Unwrap();
-                                    var phpue = exception as PackageHasPotentialUpgradesException;
-                                    if (phpue != null) {
-                                        // we've been told something we've asked for has a newer package available, and we didn't tell it that we either wanted it or an auto-upgrade
-                                        PrintPotentialUpgradeInformation(phpue.UnsatisfiedPackage, phpue.SatifactionOptions);
-                                        return;
-                                    }
-                                    
-                                    // else soemthing else went wrong...
-                                    Console.WriteLine("Something else failed!");
-                                    Console.WriteLine("{0} == {1}", exception.Message, exception.StackTrace);
-                                });
-
-                                // if we get a good plan back
-                                getPackagePlanTask.Continue(allPackages => {
-                                    PrintPackageInstallPlan(allPackages, packages);
-                                    // actually run the installer for each package in our original collection
-                                    foreach (var p in packages) {
-                                        try {
-                                            _easyPackageManager.InstallPackage(
-                                                p.CanonicalName, _autoUpgrade, (canonicalName, progress, overall) => {
-                                                    ConsoleExtensions.PrintProgressBar("Installing: {0}".format(canonicalName), progress);
-                                                }, (packageName) => {
-                                                    Console.WriteLine();
-                                                }).Wait();
-                                        } catch (Exception failed) {
-                                            failed = failed.Unwrap();
-                                            Console.WriteLine("Installation failed!");
-                                            Console.WriteLine("{0} == {1}", failed.Message, failed.StackTrace);
-                                        }
-                                    }
-                                });
-                            });
-                        });
-
+                        task = preCommandTasks.Continue(() =>InstallPackages(parameters));
                         break;
 
                     case "-r":
@@ -397,10 +310,7 @@ namespace CoApp.CLI {
                             throw new ConsoleException(Resources.RemoveRequiresPackageName);
                         }
 
-                        task = preCommandTasks
-                            .Continue(() => _pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location, null ,messages: _messages)
-                                .Continue(packages => Remove(packages)));
-                        
+                        task = preCommandTasks.Continue(() =>RemovePackages(parameters));
                         break;
 
                     case "-L":
@@ -438,9 +348,10 @@ namespace CoApp.CLI {
                         task =  preCommandTasks.Continue(() => AddFeed(parameters));
                         break;
 
-                    case "-R":
-                    case "remove-feed":
-                    case "remove-feeds":
+                    case "-D":
+                    case "delete":
+                    case "delete-feed":
+                    case "delete-feeds":
                         if (!parameters.Any()) {
                             throw new ConsoleException(Resources.DeleteFeedRequiresLocation);
                         }
@@ -466,22 +377,24 @@ namespace CoApp.CLI {
                     case "activate":
                     case "activate-package":
                     case "activate-packages":
-                        task = preCommandTasks.Continue(() => _pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location, null, messages: _messages).
-                                    ContinueWith(antecedent => Activate(antecedent.Result), TaskContinuationOptions.AttachedToParent));
+                        task = preCommandTasks.Continue(() => _easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, false, true, _active, _required, false, _latest, _location)
+                            .Continue(packages => Activate(parameters, packages)));
 
                         break;
 
                     case "-g":
                     case "get-packageinfo":
                     case "info":
-                        task = preCommandTasks.Continue(() => _pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, _installed, _active, _required, _blocked, _latest, _location, null, messages: _messages).ContinueWith(antecedent => GetPackageInfo(antecedent.Result), TaskContinuationOptions.AttachedToParent));
+                        task = preCommandTasks.Continue(() => _easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, _installed, _active, _required, _blocked, _latest, _location)
+                            .Continue(packages => GetPackageInfo(parameters,packages)));
                         break;
 
                     case "-b":
                     case "block-packages":
                     case "block-package":
                     case "block":
-                        task = preCommandTasks.Continue(() => _pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location, null, messages: _messages).ContinueWith(antecedent => Block(antecedent.Result), TaskContinuationOptions.AttachedToParent));
+                        task = preCommandTasks.Continue(() => _easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, _installed, _active, _required, _blocked, _latest, _location)
+                            .Continue(packages=> Block(parameters, packages)));
 
                         break;
 
@@ -489,26 +402,62 @@ namespace CoApp.CLI {
                     case "unblock-packages":
                     case "unblock-package":
                     case "unblock":
-                        task = preCommandTasks.Continue(() => _pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location, null, messages: _messages).ContinueWith(antecedent => UnBlock(antecedent.Result), TaskContinuationOptions.AttachedToParent));
-
+                        task = preCommandTasks.Continue(() => _easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, _installed, _active, _required, _blocked, _latest, _location)
+                            .Continue(packages => UnBlock(parameters,packages)));
                         break;
 
-                    case "-m":
-                    case "mark-packages":
-                    case "mark-package":
-                    case "mark":
-                        task =preCommandTasks.Continue(() =>
-                            _pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location, null, messages: _messages).
-                                ContinueWith(antecedent => Mark(antecedent.Result), TaskContinuationOptions.AttachedToParent));
+                    case "-w":
+                    case "require-package":
+                    case "require-packages":
+                    case "require":
+                        task = preCommandTasks.Continue(() => _easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
+                            .Continue(packages => Require(parameters, packages)));
+                        
                         break;
 
-                    case "-M":
-                    case "unmark-packages":
-                    case "unmark-package":
-                    case "unmark":
-                        task =preCommandTasks.Continue(() =>
-                            _pm.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location, null, messages: _messages).
-                                ContinueWith(antecedent => UnMark(antecedent.Result), TaskContinuationOptions.AttachedToParent));
+                    case "-W":
+                    case "unrequire-package":
+                    case "unrequire-packages":
+                    case "unrequire":
+                    case "notrequire":
+                        task = preCommandTasks.Continue(() => _easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
+                            .Continue(packages => UnRequire(parameters, packages)));
+                        break;
+
+                    case "do-not-update":
+                    case "hold":
+                        task = preCommandTasks.Continue(() => _easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
+                            .Continue(packages => DoNotUpdate(parameters, packages)));
+                        break;
+
+                    case "do-update":
+                    case "release":
+                        task = preCommandTasks.Continue(() => _easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
+                           .Continue(packages => DoUpdate(parameters, packages)));
+                        break;
+
+                    case "do-not-upgrade":
+                    case "freeze":
+                        task = preCommandTasks.Continue(() => _easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
+                           .Continue(packages => DoNotUpgrade(parameters, packages)));
+                        break;
+
+                    case "do-upgrade":
+                    case "thaw":
+                        task = preCommandTasks.Continue(() => _easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
+                           .Continue(packages => DoUpgrade(parameters, packages)));
+                        break;
+
+                    case "enable-telemetry":
+                        task = preCommandTasks.Continue(() => _easyPackageManager.SetTelemetry(true)).ContinueAlways((a)=> {
+                            Console.WriteLine("Telemetry is currently set to : {0}", _easyPackageManager.GetTelemetry().Result ? "Enabled" : "Disabled");
+                        });
+                        break;
+
+                    case "disable-telemetry":
+                        task = preCommandTasks.Continue(() => _easyPackageManager.SetTelemetry(false)).ContinueAlways((a) => {
+                            Console.WriteLine("Telemetry is currently set to : {0}", _easyPackageManager.GetTelemetry().Result ? "Enabled" : "Disabled");
+                        });
                         break;
 
                     case "create-symlink":
@@ -541,57 +490,42 @@ namespace CoApp.CLI {
 
                     case "add-to-policy": {
                         if (parameters.Count() != 2) {
-                            throw new ConsoleException("Add-to-policy requires at two parameters (policy name and account)");
+                            throw new ConsoleException("Add-to-policy requires two parameters (policy name and account)");
                         }
 
                         var policyName = parameters.First();
                         var account = parameters.Last();
 
-                        task = _pm.AddToPolicy(policyName, account, _messages).ContinueWith(antecedent => {
-
-                            if( antecedent.IsFaulted ) {
-                                throw antecedent.Exception;
-                            }
-
-                            _pm.GetPolicy(policyName, new PackageManagerMessages {
-                                PolicyInformation = (polName, description, accounts) => {
-                                    Console.WriteLine("Policy: {0} -- {1} ", polName, description);
-                                    foreach (var acct in accounts) {
-                                        Console.WriteLine("   {0}", acct);
-                                    }
-                                }
-                            }.Extend(_messages)).Wait();
-
+                        task = preCommandTasks.Continue(() => {
+                            _easyPackageManager.GetPolicy(policyName).Continue(policy => {
+                                // found the policy, so continue.
+                                _easyPackageManager.AddToPolicy(policyName, account).Continue(() => {
+                                    Console.WriteLine("Account '{0} added to policy '{1}", account, policyName);
+                                    ListPolicies(policyName);
+                                });
+                            });
                         });
                     }
                         break;
 
                     case "remove-from-policy": {
-                        if (parameters.Count() != 2) {
-                            throw new ConsoleException("Remove-from-policy requires at two parameters (policy name and account)");
-                        }
-
-                        var policyName = parameters.First();
-                        var account = parameters.Last();
-
-                        task = _pm.RemoveFromPolicy(policyName, account, _messages).ContinueWith(antecedent => {
-
-                            if (antecedent.IsFaulted) {
-                                throw antecedent.Exception;
+                            if (parameters.Count() != 2) {
+                                throw new ConsoleException("remove-from-policy requires two parameters (policy name and account)");
                             }
 
+                            var policyName = parameters.First();
+                            var account = parameters.Last();
 
-                            _pm.GetPolicy(policyName, new PackageManagerMessages {
-                                PolicyInformation = (polName, description, accounts) => {
-                                    Console.WriteLine("Policy: {0} -- {1}", polName, description);
-                                    foreach (var acct in accounts) {
-                                        Console.WriteLine("   {0}", acct);
-                                    }
-                                }
-                            }.Extend(_messages)).Wait();
-
-                        });
-                    }
+                            task = preCommandTasks.Continue(() => {
+                                _easyPackageManager.GetPolicy(policyName).Continue(policy => {
+                                    // found the policy, so continue.
+                                    _easyPackageManager.RemoveFromPolicy(policyName, account).Continue(() => {
+                                        Console.WriteLine("Account '{0} removed from policy '{1}", account, policyName);
+                                        ListPolicies(policyName);
+                                    });
+                                });
+                            });
+                        }
                         break;
 
                     default:
@@ -599,14 +533,18 @@ namespace CoApp.CLI {
                 }
 
                 // Thread.Sleep(2000);
-                task.ContinueOnCancelled(() => {
+                task.ContinueOnCanceled(() => {
                     // the task was cancelled, and presumably dealt with.
-                    Fail("Operation Cancelled.");
+                    Fail("Operation Canceled.");
                 });
 
                 task.ContinueOnFail((exception) => {
                     exception = exception.Unwrap();
-                    Fail("Error (???): {0}\r\n\r\n{1}", exception.Message, exception.StackTrace);
+                    if( !(exception is OperationCanceledException)) {
+                        Fail("Error (???): {0}\r\n\r\n{1}", exception.Message, exception.StackTrace);
+                    }
+
+                    // it's all been handled then.
                 });
 
                
@@ -625,142 +563,221 @@ namespace CoApp.CLI {
             return 0;
         }
 
-        private void PrintPotentialUpgradeInformation(Package unsatisfiedPackage, IEnumerable<Package> satifactionOptions) {
-            Console.WriteLine("The requested package '{0}' has an versions that supercede it:", unsatisfiedPackage.CanonicalName);
-            foreach( var p in satifactionOptions) {
-                Console.WriteLine("\r\n      {0}", p.CanonicalName);
+        private Task DoNotUpdate(IEnumerable<string> parameters, IEnumerable<Package> packages) {
+            if (!packages.Any()) {
+                PrintNoPackagesFound(parameters);
+                return "".AsResultTask();
             }
-            Console.WriteLine("\r\nEither use --auto-upgrade to select the most recent package");
-            Console.WriteLine("or use --exact to use what was specified");
-        }
 
-        private void PrintNoPackagesFound(string[] parameters) {
-            Fail("Unable to find any packages matching :");
-            foreach (var p in parameters) {
-                Console.WriteLine("   {0}", p);
+            var remoteTasks = packages.Select(package => _easyPackageManager.MarkPackageDoNotUpdate(package.CanonicalName)).ToArray();
+            remoteTasks.ContinueOnFail(ex => FailOnExceptions(ex));
+            return remoteTasks.Continue(() => {
+                Console.WriteLine("Marked packages as 'do-not-update' :");
+                foreach (var pkg in packages) {
+                    Console.WriteLine("   {0}", pkg.CanonicalName);
+                }
+            });
+        }
+        private Task DoUpdate(IEnumerable<string> parameters, IEnumerable<Package> packages) {
+            if (!packages.Any()) {
+                PrintNoPackagesFound(parameters);
+                return "".AsResultTask();
             }
-            return;
-        }
 
-        private void PrintPackageInstallPlan(IEnumerable<Package> allPackages, IEnumerable<Package> requestedPackages) {
-            if (!_verbose) {
-                (from pkg in allPackages.Where(each => !each.IsInstalled)
-                    let getsSatisfied = !(pkg.SatisfiedBy == null || pkg.SatisfiedBy == pkg)
-                    where !getsSatisfied
-                    orderby pkg.Name
-                    select new {
-                        pkg.Name,
-                        pkg.Version,
-                        Arch = pkg.Architecture,
-                        Type = getsSatisfied ? "(superceded)" : requestedPackages.Contains(pkg) ? "Requested" : "Dependency",
-                        Location =
-                            getsSatisfied
-                                ? "Satisfied by {0}".format(pkg.SatisfiedBy.CanonicalName)
-                                : !string.IsNullOrEmpty(pkg.LocalPackagePath)
-                                    ? pkg.LocalPackagePath : (pkg.RemoteLocations.IsNullOrEmpty() ? "<unknown>" : pkg.RemoteLocations.FirstOrDefault())
-                        // Satisfied_By = getsSatisfied ? "" : pkg.SatisfiedBy.CanonicalName ,
-                        // Satisfied_By = pkg.SatisfiedBy == null ? pkg.CanonicalName : pkg.SatisfiedBy.CanonicalName ,
-                        // Status = pkg.IsInstalled ? "Installed" : "will install",
-                    }).OrderBy(each => each.Type).ToTable().ConsoleOut();
-            } else {
-                // print out the install plan of all packages
-                (from pkg in allPackages.Where(each => !each.IsInstalled)
-                    let getsSatisfied = !(pkg.SatisfiedBy == null || pkg.SatisfiedBy == pkg)
-                    orderby pkg.Name
-                    select new {
-                        pkg.Name,
-                        Version = pkg.Version,
-                        Arch = pkg.Architecture,
-                        Type = getsSatisfied ? "(superceded)" : requestedPackages.Contains(pkg) ? "Requested" : "Dependency",
-                        Location =
-                            getsSatisfied
-                                ? "Satisfied by {0}".format(pkg.SatisfiedBy.CanonicalName)
-                                : !string.IsNullOrEmpty(pkg.LocalPackagePath)
-                                    ? pkg.LocalPackagePath : (pkg.RemoteLocations.IsNullOrEmpty() ? "<unknown>" : pkg.RemoteLocations.FirstOrDefault())
-                        // Satisfied_By = getsSatisfied ? "" : pkg.SatisfiedBy.CanonicalName ,
-                        // Satisfied_By = pkg.SatisfiedBy == null ? pkg.CanonicalName : pkg.SatisfiedBy.CanonicalName ,
-                        // Status = pkg.IsInstalled ? "Installed" : "will install",
-                    }).OrderBy(each => each.Type).ToTable().ConsoleOut();
+            var remoteTasks = packages.Select(package => _easyPackageManager.MarkPackageOkToUpdate(package.CanonicalName)).ToArray();
+            remoteTasks.ContinueOnFail(ex => FailOnExceptions(ex));
+            return remoteTasks.Continue(() => {
+                Console.WriteLine("Marked packages as 'do-update' :");
+                foreach (var pkg in packages) {
+                    Console.WriteLine("   {0}", pkg.CanonicalName);
+                }
+            });
+        }
+        private Task DoNotUpgrade(IEnumerable<string>  parameters, IEnumerable<Package> packages) {
+            if (!packages.Any()) {
+                PrintNoPackagesFound(parameters);
+                return "".AsResultTask();
             }
-        }
 
-        private void UnknownPackage(string canonicalName) {
-            Console.WriteLine("Unknown Package {0}", canonicalName);
+            var remoteTasks = packages.Select(package => _easyPackageManager.MarkPackageDoNotUpgrade(package.CanonicalName)).ToArray();
+            remoteTasks.ContinueOnFail(ex => FailOnExceptions(ex));
+            return remoteTasks.Continue(() => {
+                Console.WriteLine("Marked packages as 'do-not-upgrade' :");
+                foreach (var pkg in packages) {
+                    Console.WriteLine("   {0}", pkg.CanonicalName);
+                }
+            });
         }
+        private Task DoUpgrade(IEnumerable<string> parameters, IEnumerable<Package> packages) {
+            if (!packages.Any()) {
+                PrintNoPackagesFound(parameters);
+                return "".AsResultTask();
+            }
 
-        private void BlockedPackage(string canonicalName) {
-            Console.WriteLine("Package {0} is blocked", canonicalName);
+            var remoteTasks = packages.Select(package => _easyPackageManager.MarkPackageOkToUpgrade(package.CanonicalName)).ToArray();
+            remoteTasks.ContinueOnFail(ex => FailOnExceptions(ex));
+            return remoteTasks.Continue(() => {
+                Console.WriteLine("Marked packages as 'do-upgrade' :");
+                foreach (var pkg in packages) {
+                    Console.WriteLine("   {0}", pkg.CanonicalName);
+                }
+            });
         }
 
         private Task AddFeed(IEnumerable<string> feeds) {
-            var tasks = feeds.Select(each => _pm.AddFeed(each, false, new PackageManagerMessages {
-                FeedAdded = (f) => { Console.WriteLine("Adding Feed: {0}", f); }
-            }.Extend(_messages))).ToArray();
+            var tasks = feeds.Select(each => _easyPackageManager.AddSystemFeed(each));
+            return tasks.ContinueAlways(antecedents => {
+                foreach( var ex in antecedents.Where(each => each.IsFaulted).Select(each => each.Exception.Unwrap()) ) {
+                    var coappEx = ex as CoAppException;
+                    if (coappEx != null) {
+                        Console.WriteLine("    {0}", ex.Message);
+                        coappEx.Cancel();
+                    }
+                }
+                
+                foreach (var f in antecedents.Where(each => !each.IsFaulted).Select(each => each.Result)) {
+                    Console.WriteLine("Adding Feed: {0}", f);
+                }
 
-            return Task.Factory.ContinueWhenAll(tasks, antecdent => {
-                // 
-            }, TaskContinuationOptions.AttachedToParent);
+            });
         }
 
         private Task DeleteFeed(IEnumerable<string> feeds) {
-            var tasks = feeds.Select(each => _pm.RemoveFeed(each, false, new PackageManagerMessages {
-                FeedRemoved = (f) => { Console.WriteLine("Feed Removed: {0}", f); }
-            }.Extend(_messages))).ToArray();
-
-            return Task.Factory.ContinueWhenAll(tasks, antecdent => {
-                // 
-            }, TaskContinuationOptions.AttachedToParent);
-        }
-
-        private object UnMark(IEnumerable<Package> packages) {
-            if (packages.Any()) {
-                var remoteTasks = packages.Select(package => _pm.SetPackage(package.CanonicalName,required: false)).ToArray();
-                return Task.Factory.ContinueWhenAll(remoteTasks, antecedents => { }, TaskContinuationOptions.AttachedToParent);
+            var systemFeeds = _easyPackageManager.Feeds.Result.Select(each => each.Location).ToArray();
+            
+            foreach( var notFeed in feeds.Where(each => !systemFeeds.Contains(each))) {
+                Console.WriteLine("Skipping '{0}' -- is not registered as a system feed.", notFeed);
             }
-            return null;
+
+            var tasks = feeds.Where(each => systemFeeds.Contains(each)).Select(each => _easyPackageManager.RemoveSystemFeed(each));
+            return tasks.ContinueAlways(antecedents => {
+                foreach (var ex in antecedents.Where(each => each.IsFaulted).Select(each => each.Exception.Unwrap())) {
+                    var coappEx = ex as CoAppException;
+                    if (coappEx != null) {
+                        Console.WriteLine("    {0}", ex.Message);
+                        coappEx.Cancel();
+                    }
+                }
+
+                foreach (var f in antecedents.Where(each => !each.IsFaulted).Select(each => each.Result)) {
+                    Console.WriteLine("Removing Feed: {0}", f);
+                }
+            });
         }
 
-        private object Mark(IEnumerable<Package> packages) {
-            if (packages.Any()) {
-                var remoteTasks = packages.Select(package => _pm.SetPackage(package.CanonicalName,required: true)).ToArray();
-                return Task.Factory.ContinueWhenAll(remoteTasks, antecedents => { }, TaskContinuationOptions.AttachedToParent);
+
+
+        private Task Require(IEnumerable<string> parameters, IEnumerable<Package> packages) {
+            if (!packages.Any()) {
+                PrintNoPackagesFound(parameters);
+                return "".AsResultTask();
             }
-            return null;
+
+            var remoteTasks = packages.Select(package => _easyPackageManager.MarkPackageRequested(package.CanonicalName)).ToArray();
+            remoteTasks.ContinueOnFail(ex => FailOnExceptions(ex));
+            return remoteTasks.Continue(() => {
+                Console.WriteLine("Marked packages as 'required' :");
+                foreach (var pkg in packages) {
+                    Console.WriteLine("   {0}", pkg.CanonicalName);
+                }
+            });
         }
 
-        private object UnBlock(IEnumerable<Package> packages) {
-            if (packages.Any()) {
-                var remoteTasks = packages.Select(package => _pm.SetPackage(package.CanonicalName, blocked: false)).ToArray();
-                return Task.Factory.ContinueWhenAll(remoteTasks, antecedents => { }, TaskContinuationOptions.AttachedToParent);
+        private Task UnRequire(IEnumerable<string> parameters, IEnumerable<Package> packages) {
+            if (!packages.Any()) {
+                PrintNoPackagesFound(parameters);
+                return "".AsResultTask();
             }
-            return null;
+
+            var remoteTasks = packages.Select(package => _easyPackageManager.MarkPackageNotRequested(package.CanonicalName)).ToArray();
+            remoteTasks.ContinueOnFail(ex => FailOnExceptions(ex));
+            return remoteTasks.Continue(() => {
+                Console.WriteLine("Marked packages as 'not-required' :");
+                foreach (var pkg in packages) {
+                    Console.WriteLine("   {0}", pkg.CanonicalName);
+                }
+            });
         }
 
-        private object Block(IEnumerable<Package> packages) {
-            if (packages.Any()) {
-                var remoteTasks = packages.Select(package => _pm.SetPackage(package.CanonicalName, blocked: true)).ToArray();
-                return Task.Factory.ContinueWhenAll(remoteTasks, antecedents => { }, TaskContinuationOptions.AttachedToParent);
+        private Task UnBlock(IEnumerable<string> parameters, IEnumerable<Package> packages) {
+            if (!packages.Any()) {
+                PrintNoPackagesFound(parameters);
+                return "".AsResultTask();
             }
-            return null;
+
+            var remoteTasks = packages.Select(package => _easyPackageManager.UnBlockPackage(package.CanonicalName)).ToArray();
+            remoteTasks.ContinueOnFail(ex => FailOnExceptions(ex));
+            return remoteTasks.Continue(() => {
+                Console.WriteLine("Marked packages as 'unblocked' :");
+                foreach (var pkg in packages) {
+                    Console.WriteLine("   {0}", pkg.CanonicalName);
+                }
+            });
         }
 
-        private Task Activate(IEnumerable<Package> packages) {
-            if (packages.Any()) {
-                var remoteTasks = packages.Select(package => _pm.SetPackage(package.CanonicalName, active: true)).ToArray();
-                return Task.Factory.ContinueWhenAll(remoteTasks, antecedents => { }, TaskContinuationOptions.AttachedToParent);
+        private Task Block(IEnumerable<string> parameters, IEnumerable<Package> packages) {
+            if (!packages.Any()) {
+                PrintNoPackagesFound(parameters);
+                return "".AsResultTask();
             }
-            return null;
+
+            var remoteTasks = packages.Select(package => _easyPackageManager.BlockPackage(package.CanonicalName)).ToArray();
+            remoteTasks.ContinueOnFail(ex => FailOnExceptions(ex));
+            return remoteTasks.Continue(() => {
+                Console.WriteLine("Marked packages as 'blocked' :");
+                foreach (var pkg in packages) {
+                    Console.WriteLine("   {0}", pkg.CanonicalName);
+                }
+            });
         }
 
-        private Task GetPackageInfo(IEnumerable<Package> packages) {
-            if(packages.Any()) {
-                var remoteTasks = packages.Select(package => _pm.GetPackageDetails(package.CanonicalName, _messages )).ToArray();
-                return Task.Factory.ContinueWhenAll(remoteTasks, antecedents => {
+        private Task Activate(IEnumerable<string> parameters, IEnumerable<Package> packages) {
+            if (!packages.Any()) {
+                PrintNoPackagesFound(parameters);
+                return "".AsResultTask();
+            }
 
-                    var length0 = packages.Max(each => Math.Max(Math.Max(each.Name.Length, each.Architecture.ToString().Length), each.PublisherName.Length)) + 1;
-                var length1 = packages.Max(each =>  Math.Max( Math.Max( ((string)each.Version).Length,each.AuthorVersion.Length),each.PublisherUrl.Length) )+1;
+            var remoteTasks = packages.Select(package => _easyPackageManager.MarkPackageActive(package.CanonicalName)).ToArray();
+            remoteTasks.ContinueOnFail(ex => FailOnExceptions(ex));
+            return remoteTasks.Continue(() => {
+                Console.WriteLine("Activated packages:");
+                foreach (var pkg in packages) {
+                    Console.WriteLine("   {0}", pkg.CanonicalName);
+                }
+            });
+        }
 
-                foreach (var package in packages) {
+        private void FailOnExceptions(Exception exception) {
+            if (exception is OperationCanceledException) {
+                // it's been dealt with.
+                return;
+            }
+
+            var ae = exception as AggregateException;
+            IEnumerable<CoAppException> exceptions = (exception as CoAppException).SingleItemAsEnumerable();
+            if (ae != null) {
+                exceptions = from each in ae.InnerExceptions let fpre = each as CoAppException where fpre != null select fpre;
+            }
+
+            if (!exceptions.IsNullOrEmpty()) {
+                foreach (var ex in exceptions) {
+                    Fail("{0}", ex.Message);
+                    ex.Cancel();
+                }
+            }
+        }
+
+        private void GetPackageInfo(IEnumerable<string> parameters, IEnumerable<Package> packages) {
+             if (!packages.Any()) {
+                PrintNoPackagesFound(parameters);
+                return;
+            }
+
+            packages.Select(package => _easyPackageManager.GetPackageDetails(package.CanonicalName)).ToArray().Continue(detailedPackages => {
+                var length0 = detailedPackages.Max(each => Math.Max(Math.Max(each.Name.Length, each.Architecture.ToString().Length), each.PublisherName.Length)) + 1;
+                var length1 = detailedPackages.Max(each => Math.Max(Math.Max(((string)each.Version).Length, each.AuthorVersion.Length), each.PublisherUrl.Length)) + 1;
+
+                foreach (var package in detailedPackages) {
                     var date = DateTime.FromFileTime(long.Parse(package.PublishDate));
                     Console.WriteLine("-----------------------------------------------------------");
                     Console.WriteLine("Package: {0}", package.DisplayName);
@@ -793,54 +810,13 @@ namespace CoApp.CLI {
                             Console.WriteLine("    {0}", dep);
                         }
                     }
-
-                    /*
-                        SupercedentPackages 
-                        SatisfiedBy;
-                     */
-
                 }
-                    Console.WriteLine("-----------------------------------------------------------");
-                }, TaskContinuationOptions.AttachedToParent);
-            }
-            return null;
+                Console.WriteLine("-----------------------------------------------------------");
+            });
+            
         }
 
 
-        /*
-        private Task Update(IEnumerable<Package> packages) {
-            // this is given a list of packages to install as updates.
-
-            if (packages.Any()) {
-                var upgrades = new List<Package>();
-                
-                var anyUpgrades = packages.Where(each => each.IsClientRequired).Select(package => _pm.FindPackages(null, package.Name, null, package.Architecture.ToString(), package.PublicKeyToken, installed: false, blocked: false, latest: true, messages: new PackageManagerMessages {
-                    PackageInformation = (pkg) => {
-                        if (pkg.Version > package.Version ) {
-                            upgrades.Add(pkg);
-                        }
-                    }
-                }.Extend(_messages)));
-
-                var policyUpgrades = packages.Where(each => each.IsDependency).Select(package => _pm.FindPackages(null, package.Name, null, package.Architecture.ToString(), package.PublicKeyToken, installed: false, blocked: false, latest: true, messages: new PackageManagerMessages {
-                    PackageInformation = (pkg) => {
-                        if (!pkg.SupercedentPackages.IsNullOrEmpty()) {
-                            var pkgToAdd = pkg.SupercedentPackages.Select(Package.GetPackage).MaxElement(each => each.Version);
-                            if (pkgToAdd.Version > package.Version) {
-                                upgrades.Add(pkgToAdd);
-                            }
-                        }
-                    }
-                }.Extend(_messages)));
-
-                return Task.Factory.ContinueWhenAll(anyUpgrades.Union(policyUpgrades).ToArray(), antecedent => {
-                    _autoUpgrade = true;
-                    Install(upgrades);
-                }, TaskContinuationOptions.AttachedToParent);
-            }
-            return null;
-        }
-        */
         
         /// <summary>
         /// Lists the packages.
@@ -869,30 +845,6 @@ namespace CoApp.CLI {
             }
         }
 
-        private void CancellationRequested(string obj) {
-            Console.WriteLine("Cancellation Requested.");
-        }
-
-        private void RestartingEngine() {
-            Console.WriteLine("CoApp Engine is Restarting. Attempting reconnect.");
-        }
-
-        private void MessageArgumentError(string arg1, string arg2, string arg3) {
-            throw new ConsoleException("Error from service: {0}", arg3);
-        }
-
-        private void OperationRequiresPermission(string policyName) {
-            Console.WriteLine("Operation requires permission Policy:{0}", policyName);
-        }
-
-        private void NoPackagesFound() {
-            Console.WriteLine("Did not find any packages.");
-        }
-
-        private void UnexpectedFailure(Exception obj) {
-            throw new ConsoleException("SERVER EXCEPTION: {0}\r\n{1}", obj.Message, obj.StackTrace);
-        }
-
         private Task ListFeeds() {
             return _easyPackageManager.Feeds.ContinueWith(
                 antecedent => {
@@ -912,45 +864,7 @@ namespace CoApp.CLI {
                 }, TaskContinuationOptions.AttachedToParent);
         }
 
-        /// <summary>
-        /// Removes the specified parameters.
-        /// </summary>
-        /// <param name="parameters">The parameters.</param>
-        /// <remarks></remarks>
-        private void Remove(IEnumerable<Package> parameters) {
-            var removedList = new List<string>();
-            var failedList = new List<string>();
-            var restartDuringOperation = false;
-            
-            do {
-                restartDuringOperation = false;
-                foreach( var package in parameters ) {
-                    _pm.RemovePackage(package.CanonicalName, _force, new PackageManagerMessages {
-                        RemovingPackageProgress= (canonicalName, progress) => {
-                            // installation progress
-                            ConsoleExtensions.PrintProgressBar("Removing {0}".format(canonicalName), progress);
-                        },
-                        RemovedPackage = (canonicalName) => {
-                            // completed install of package 
-                            removedList.Add(canonicalName);
-                             Console.WriteLine();
-                        },
-                        FailedPackageInstall = (canonicalName, filename, reason) => {
-                            // failed install of package 
-                            failedList.Add(canonicalName);
-                             Console.WriteLine();
-                        },
-                        PackageBlocked= (canonicalName) => {
-                            // failed install of package 
-                            failedList.Add(canonicalName);
-                        },
-                        Restarting = () => {
-                             restartDuringOperation = true;
-                        }
-                    }.Extend(_messages)).Wait();
-                }
-            } while (restartDuringOperation);
-        }    
+        
 
         private void UpdatePackages(IEnumerable<Package> packages) {
             ProcessPackages( packages, IsUpdate:true);
@@ -967,128 +881,190 @@ namespace CoApp.CLI {
         private void ProcessPackages( IEnumerable<Package> packages , bool IsUpdate = false, bool IsUpgrade = false) {
             
         }
-        /*
-        /// <summary>
-        /// Installs the packages specified.  
-        /// </summary>
-        /// <param name="parameters">The parameters.</param>
-        /// <remarks></remarks>
-        private void Install(IEnumerable<Package> packages) {
-            var failed = false;
-            foreach (var conflicts in packages.Select(package => packages.Where(each => each.Name == package.Name && each.PublicKeyToken == package.PublicKeyToken).ToArray()).Where(conflicts => conflicts.Count() > 1 && !conflicts.FirstOrDefault().IsConflicted)) {
-                failed = true;
-                // there are conflicting duplicates of a package in here. 
-                // tell the user and bail.
-                Console.WriteLine("A conflict exists between the following packages:");
-                foreach (var conflict in conflicts) {
-                    conflict.IsConflicted = true;
-                    Console.WriteLine("   {0}", conflict.CanonicalName);
-                }
-            }
+        
+        private Task InstallPackages(IEnumerable<string> parameters) {
+            // given what the user requested, what packages are they really asking for?
+            return _easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, false, null, null, null, false, _latest ?? true, _location, false, false, false).Continue(packages => {
+                // we got back a package collection for what the user passed in.
 
-            if (!failed) {
-                if (packages.Any()) {
-                    Console.WriteLine("Packages to install:\r\n");
-                    
-                    var pretendList = new List<Package>();
-                    foreach (var p in packages) {
-                        var package = p;
-
-                        _pm.InstallPackage(package.CanonicalName, _autoUpgrade, _force, _download, true, new PackageManagerMessages {
-                            PackageInformation = (pkg) => {
-                                // pretending to install package pkg
-                                pretendList.Add(pkg);
-                            },
-
-                            PackageSatisfiedBy = (pkg, satisfiedBy) => {
-                                pkg.SatisfiedBy = satisfiedBy;
-                                pretendList.Add(pkg);
-                            },
-                        }.Extend(_messages)).Wait();
-                    }
-
-                    (from pkg in pretendList.Distinct().Where(each => !each.IsInstalled)
-                        let getsSatisfied = !(pkg.SatisfiedBy == null || pkg.SatisfiedBy == pkg)
-                        orderby pkg.Name
-                        select new {
-                            pkg.Name,
-                            Version = pkg.Version,
-                            Arch = pkg.Architecture,
-                            Type = getsSatisfied ? "(superceded)" : packages.Contains(pkg) ? "Requested" : "Dependency",
-                            Location = getsSatisfied ? "Satisfied by {0}".format(pkg.SatisfiedBy.CanonicalName) : !string.IsNullOrEmpty(pkg.LocalPackagePath) ?pkg.LocalPackagePath :  (pkg.RemoteLocations.IsNullOrEmpty() ? "<unknown>" :  pkg.RemoteLocations.FirstOrDefault())
-                            // Satisfied_By = getsSatisfied ? "" : pkg.SatisfiedBy.CanonicalName ,
-                            // Satisfied_By = pkg.SatisfiedBy == null ? pkg.CanonicalName : pkg.SatisfiedBy.CanonicalName ,
-                            // Status = pkg.IsInstalled ? "Installed" : "will install",
-                        }).OrderBy(each => each.Type ).ToTable().ConsoleOut();
-                }
-                Console.WriteLine();
-
-                if( _pretend == true ) {
+                // but, we *can* get back an empty collection...
+                if (packages.IsNullOrEmpty()) {
+                    PrintNoPackagesFound(parameters);
                     return;
                 }
 
-                // now, each package in the list can be installed
-                var installedList= new List<string>();
-                var failedList = new List<string>();
-                var restartedDuringOperation = false;
-                do {
-                    restartedDuringOperation = false;
-                    foreach (var p in packages) {
-                        var package = p;
+                // we have a collection of packages that the user has requested.
+                // first, lets auto-filter out ones that we can obviously see are not what they wanted.
+                var findConflictTask = _easyPackageManager.FilterConflictsForInstall(packages, _x86, _x64, _cpuany);
 
-                        _pm.InstallPackage(package.CanonicalName, _autoUpgrade, _force, _download, _pretend, new PackageManagerMessages {
-                            InstallingPackageProgress = (canonicalName, progress, overallProgress) => {
-                                // installation progress
-                                ConsoleExtensions.PrintProgressBar("Installing: {0}".format(canonicalName), progress);
-                            },
+                // hmm. had a problem filtering out conflicts.
+                findConflictTask.ContinueOnFail(exception => {
+                    Console.WriteLine("Conflict!");
+                    Console.WriteLine("{0} == {1}", exception.Message, exception.StackTrace);
+                });
 
-                            InstalledPackage = (canonicalName) => {
-                                // completed install of package 
-                                installedList.Add(canonicalName);
-                                Console.WriteLine();
-                            },
+                findConflictTask.Continue(filteredPackages => {
+                    // lets get the package install plan.
+                    var getPackagePlanTask = _easyPackageManager.IdentifyPackageAndDependenciesToInstall(filteredPackages, _autoUpgrade);
 
-                            FailedPackageInstall = (canonicalName, filename, reason) => {
-                                // failed install of package 
-                                failedList.Add(canonicalName);
-
-                                if (packages.Contains(Package.GetPackage(canonicalName))) {
-                                    Console.WriteLine("\r\nNOTE: Requested package {0} failed to install [{1}]", canonicalName, reason);
-                                } else {
-                                    Console.WriteLine("\r\nNOTE: Dependent package {0} failed to install [{1}]", canonicalName, reason);
-                                    Console.WriteLine("    (attempting to find alternative)");
-                                }
-                            },
-                            Restarting = () => {
-                                restartedDuringOperation = true;
-                            }
-                        }.Extend(_messages)).Wait();
-
-                    }
-                } while (restartedDuringOperation);
-            }
-        }
-        */
-
-        static IEnumerable<string> policyNames = new[]{
-                "Connect", "EnumeratePackages", "UpdatePackage", "InstallPackage", "RemovePackage", "ChangeActivePackage", "ChangeRequiredState",
-                "ChangeBlockedState", "EditSystemFeeds", "EditSessionFeeds", "PauseService", "StopService", "ModifyPolicy", "Symlink",
-            };
-        
-        private int InstallFiles(IEnumerable<string> filenames ) {
-            return 0;
-        }
-
-        private void ListPolicies() {
-            foreach( var name in policyNames ) {
-                _pm.GetPolicy(name, new PackageManagerMessages {
-                    PolicyInformation = (polName, description, accounts) => {
-                        Console.WriteLine("\r\nPolicy: {0} -- {1} ", polName, description);
-                        foreach (var account in accounts) {
-                            Console.WriteLine("   {0}", account);
+                    // hmm. The plan did not work out so well. 
+                    getPackagePlanTask.ContinueOnFail((exception) => {
+                        exception = exception.Unwrap();
+                        var phpue = exception as PackageHasPotentialUpgradesException;
+                        if (phpue != null) {
+                            // we've been told something we've asked for has a newer package available, and we didn't tell it that we either wanted it or an auto-upgrade
+                            PrintPotentialUpgradeInformation(phpue.UnsatisfiedPackage, phpue.SatifactionOptions);
+                            phpue.Cancel(); // marks this exception as handled.
+                            return;
                         }
-                    } 
-                }.Extend(_messages)).Wait();
+
+                        // else soemthing else went wrong...
+                        Console.WriteLine("Something else failed!");
+                        Console.WriteLine("{0} == {1}", exception.Message, exception.StackTrace);
+                    });
+
+                    // if we get a good plan back
+                    getPackagePlanTask.Continue(allPackages => {
+                        PrintPackageInstallPlan(allPackages, filteredPackages);
+                        // actually run the installer for each package in our original collection
+                        if (_pretend == true) {
+                            Console.WriteLine(" --pretend specified, skipping install.");
+                            return;
+                        }
+
+                        foreach (var p in filteredPackages) {
+                            try {
+                                _easyPackageManager.InstallPackage(
+                                    p.CanonicalName, _autoUpgrade, (canonicalName, progress, overall) => {
+                                        ConsoleExtensions.PrintProgressBar("Installing: {0}".format(canonicalName), progress);
+                                    }, (packageName) => {
+                                        Console.WriteLine();
+                                    }).Wait();
+                            }
+                            catch (Exception failed) {
+                                failed = failed.Unwrap();
+                                Console.WriteLine("Installation failed!");
+                                Console.WriteLine("{0} == {1}", failed.Message, failed.StackTrace);
+                            }
+                        }
+                    });
+                });
+            });
+        }
+
+        private Task RemovePackages(IEnumerable<string> parameters ) {
+            var removePackagesTask = _easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
+                .Continue(packagesToRemove => {
+                    if (packagesToRemove.IsNullOrEmpty()) {
+                        PrintNoPackagesFound(parameters);
+                        return 0;
+                    }
+
+                    return _easyPackageManager.RemovePackages(packagesToRemove.Select(each => each.CanonicalName), _force == true, (packageCanonicalName, progress) => {
+                        ConsoleExtensions.PrintProgressBar("Removing {0}".format(packageCanonicalName), progress);
+                    }, packageCanonicalName => {
+                        Console.WriteLine();
+                    }).Result;
+                });
+                
+
+            removePackagesTask.ContinueOnFail(exception => {
+                if( exception is OperationCanceledException ) {
+                    // it's been dealt with.
+                    return;
+                }
+                var ae = exception as AggregateException;
+                IEnumerable<FailedPackageRemoveException> fpres = (exception as FailedPackageRemoveException).SingleItemAsEnumerable();
+                if( ae != null ) {
+                    fpres = from each in ae.InnerExceptions let fpre = each as FailedPackageRemoveException where fpre != null select fpre;
+                }
+
+                if( !fpres.IsNullOrEmpty()) {
+                    Fail("The following packages failed to remove:");
+                    foreach( var failedPackage in fpres) {
+                        Console.WriteLine("   {0}", failedPackage.Reason);
+                        failedPackage.Cancel();
+                    }
+                }
+            });
+
+            return removePackagesTask.Continue((total => {
+                Console.WriteLine("\r\nSuccessfully removed {0} packages", total);
+            }));
+        }
+
+        private void ListPolicies(string policyName = null) {
+            _easyPackageManager.Policies.Continue(policies => {
+                if (!string.IsNullOrEmpty(policyName)) {
+                    policies = policies.Where(each => each.Name == policyName);
+                }
+                foreach (var policy in policies) {
+                    Console.WriteLine("\r\nPolicy: {0} -- {1} ", policy.Name, policy.Description);
+                    foreach (var account in policy.Members) {
+                        Console.WriteLine("   {0}", account);
+                    }
+                }
+            });
+        }
+
+
+        private void PrintPotentialUpgradeInformation(Package unsatisfiedPackage, IEnumerable<Package> satifactionOptions) {
+            Console.WriteLine("The requested package '{0}' has an versions that supercede it:", unsatisfiedPackage.CanonicalName);
+            foreach (var p in satifactionOptions) {
+                Console.WriteLine("\r\n      {0}", p.CanonicalName);
+            }
+            Console.WriteLine("\r\nEither use --auto-upgrade to select the most recent package");
+            Console.WriteLine("or use --exact to use what was specified");
+        }
+
+        private void PrintNoPackagesFound(IEnumerable<string> parameters) {
+            Fail("Unable to find any packages matching :");
+            foreach (var p in parameters) {
+                Console.WriteLine("   {0}", p);
+            }
+            return;
+        }
+
+        private void PrintPackageInstallPlan(IEnumerable<Package> allPackages, IEnumerable<Package> requestedPackages) {
+            if (!_verbose) {
+                (from pkg in allPackages.Where(each => !each.IsInstalled)
+                 let getsSatisfied = !(pkg.SatisfiedBy == null || pkg.SatisfiedBy == pkg)
+                 where !getsSatisfied
+                 orderby pkg.Name
+                 select new {
+                     pkg.Name,
+                     pkg.Version,
+                     Arch = pkg.Architecture,
+                     Type = getsSatisfied ? "(superceded)" : requestedPackages.Contains(pkg) ? "Requested" : "Dependency",
+                     Location =
+                         getsSatisfied
+                             ? "Satisfied by {0}".format(pkg.SatisfiedBy.CanonicalName)
+                             : !string.IsNullOrEmpty(pkg.LocalPackagePath)
+                                 ? pkg.LocalPackagePath : (pkg.RemoteLocations.IsNullOrEmpty() ? "<unknown>" : pkg.RemoteLocations.FirstOrDefault())
+                     // Satisfied_By = getsSatisfied ? "" : pkg.SatisfiedBy.CanonicalName ,
+                     // Satisfied_By = pkg.SatisfiedBy == null ? pkg.CanonicalName : pkg.SatisfiedBy.CanonicalName ,
+                     // Status = pkg.IsInstalled ? "Installed" : "will install",
+                 }).OrderBy(each => each.Type).ToTable().ConsoleOut();
+            }
+            else {
+                // print out the install plan of all packages
+                (from pkg in allPackages.Where(each => !each.IsInstalled)
+                 let getsSatisfied = !(pkg.SatisfiedBy == null || pkg.SatisfiedBy == pkg)
+                 orderby pkg.Name
+                 select new {
+                     pkg.Name,
+                     Version = pkg.Version,
+                     Arch = pkg.Architecture,
+                     Type = getsSatisfied ? "(superceded)" : requestedPackages.Contains(pkg) ? "Requested" : "Dependency",
+                     Location =
+                         getsSatisfied
+                             ? "Satisfied by {0}".format(pkg.SatisfiedBy.CanonicalName)
+                             : !string.IsNullOrEmpty(pkg.LocalPackagePath)
+                                 ? pkg.LocalPackagePath : (pkg.RemoteLocations.IsNullOrEmpty() ? "<unknown>" : pkg.RemoteLocations.FirstOrDefault())
+                     // Satisfied_By = getsSatisfied ? "" : pkg.SatisfiedBy.CanonicalName ,
+                     // Satisfied_By = pkg.SatisfiedBy == null ? pkg.CanonicalName : pkg.SatisfiedBy.CanonicalName ,
+                     // Status = pkg.IsInstalled ? "Installed" : "will install",
+                 }).OrderBy(each => each.Type).ToTable().ConsoleOut();
             }
         }
 

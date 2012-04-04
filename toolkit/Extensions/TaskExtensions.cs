@@ -8,7 +8,7 @@
 
     public static class TaskExtensions {
         /// <summary>
-        ///   Checks the antecedent task for two conditions: IsCancelled : throws an OperationCompletedBeforeResultException IsFaulted : throws the first non-aggregate inner exception from the faulted task Warning: This function will Wait() for the antecendent task to complete.
+        ///   Checks the antecedent task for two conditions: IsCanceled : throws an OperationCompletedBeforeResultException IsFaulted : throws the first non-aggregate inner exception from the faulted task Warning: This function will Wait() for the antecendent task to complete.
         /// </summary>
         /// <param name="antecedent"> The task to examine results for </param>
         public static void RethrowWhenFaulted(this Task antecedent) {
@@ -23,7 +23,7 @@
 
 
         /// <summary>
-        ///   Checks the collection of antecedent tasks for two conditions: if any are cancelled, throws an OperationCompletedBeforeResultException if any are faulted, throws an AggregateException containing all the exceptions from the tasks Warning: This function will Wait() for the all the antecendent tasks to complete.
+        ///   Checks the collection of antecedent tasks for two conditions: if any are canceled, throws an OperationCompletedBeforeResultException if any are faulted, throws an AggregateException containing all the exceptions from the tasks Warning: This function will Wait() for the all the antecendent tasks to complete.
         /// </summary>
         /// <param name="antecedents"> </param>
         public static void RethrowWhenFaulted(this Task[] antecedents) {
@@ -78,7 +78,7 @@
             return antecedent.ContinueWith(a => childFunction(a.Exception.Unwrap()), TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.AttachedToParent);
         }
 
-        public static Task<TResult> ContinueOnCancelled<TResult, TAntecedentResult>(this Task<TAntecedentResult> antecedent, Func<TResult> childFunction) {
+        public static Task<TResult> ContinueOnCanceled<TResult, TAntecedentResult>(this Task<TAntecedentResult> antecedent, Func<TResult> childFunction) {
             return antecedent.ContinueWith(a => childFunction(), TaskContinuationOptions.OnlyOnCanceled | TaskContinuationOptions.AttachedToParent);
         }
 
@@ -100,7 +100,7 @@
         public static Task<TResult> ContinueOnFail<TResult, TAntecedentResult>(this Task<TAntecedentResult> antecedent, Func<Exception, Task<TResult>> childTaskFunction) {
             return antecedent.ContinueWith(a => childTaskFunction(a.Exception.Unwrap()), TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.AttachedToParent).Unwrap();
         }
-        public static Task<TResult> ContinueOnCancelled<TResult, TAntecedentResult>(this Task<TAntecedentResult> antecedent, Func<Task<TResult>> childTaskFunction) {
+        public static Task<TResult> ContinueOnCanceled<TResult, TAntecedentResult>(this Task<TAntecedentResult> antecedent, Func<Task<TResult>> childTaskFunction) {
             return antecedent.ContinueWith(a => childTaskFunction(), TaskContinuationOptions.OnlyOnCanceled | TaskContinuationOptions.AttachedToParent).Unwrap();
         }
         public static Task<TResult> ContinueAlways<TResult, TAntecedentResult>(this Task<TAntecedentResult> antecedent, Func<Task<TAntecedentResult>, Task<TResult>> childTaskFunction) {
@@ -121,7 +121,7 @@
         public static Task<TResult> ContinueOnFail<TResult>(this Task antecedent, Func<Exception,TResult> childFunction) {
             return antecedent.ContinueWith(a => childFunction(a.Exception.Unwrap()), TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.AttachedToParent);
         }
-        public static Task<TResult> ContinueOnCancelled<TResult>(this Task antecedent, Func<TResult> childFunction) {
+        public static Task<TResult> ContinueOnCanceled<TResult>(this Task antecedent, Func<TResult> childFunction) {
             return antecedent.ContinueWith( a => childFunction() , TaskContinuationOptions.OnlyOnCanceled | TaskContinuationOptions.AttachedToParent);
         }
         public static Task<TResult> ContinueAlways<TResult>(this Task antecedent, Func<Task,TResult> childFunction) {
@@ -141,7 +141,7 @@
         public static Task<TResult> ContinueOnFail<TResult>(this Task antecedent, Func<Exception,Task<TResult>> childTaskFunction) {
             return antecedent.ContinueWith(a => childTaskFunction(a.Exception.Unwrap()), TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.AttachedToParent).Unwrap();
         }
-        public static Task<TResult> ContinueOnCancelled<TResult>(this Task antecedent, Func<Task<TResult>> childTaskFunction) {
+        public static Task<TResult> ContinueOnCanceled<TResult>(this Task antecedent, Func<Task<TResult>> childTaskFunction) {
             return antecedent.ContinueWith(a => childTaskFunction() , TaskContinuationOptions.OnlyOnCanceled | TaskContinuationOptions.AttachedToParent).Unwrap();
         }
         public static Task<TResult> ContinueAlways<TResult>(this Task antecedent, Func<Task,Task<TResult>> childTaskFunction) {
@@ -161,7 +161,7 @@
         public static Task ContinueOnFail<TAntecedentResult>(this Task<TAntecedentResult> antecedent, Action<Exception> childAction) {
             return antecedent.ContinueWith(a => childAction(a.Exception.Unwrap()), TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.AttachedToParent);
         }
-        public static Task ContinueOnCancelled<TAntecedentResult>(this Task<TAntecedentResult> antecedent, Action childAction) {
+        public static Task ContinueOnCanceled<TAntecedentResult>(this Task<TAntecedentResult> antecedent, Action childAction) {
             return antecedent.ContinueWith(a => childAction(), TaskContinuationOptions.OnlyOnCanceled | TaskContinuationOptions.AttachedToParent);
         }
         public static Task ContinueAlways<TAntecedentResult>(this Task<TAntecedentResult> antecedent, Action<Task<TAntecedentResult>> childAction) {
@@ -181,7 +181,7 @@
         public static Task ContinueOnFail<TAntecedentResult>(this Task<TAntecedentResult> antecedent, Func<Exception, Task> childActionTask) {
             return antecedent.ContinueWith(a => childActionTask(a.Exception.Unwrap()), TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.AttachedToParent).Unwrap();
         }
-        public static Task ContinueOnCancelled<TAntecedentResult>(this Task<TAntecedentResult> antecedent, Func<Task> childActionTask) {
+        public static Task ContinueOnCanceled<TAntecedentResult>(this Task<TAntecedentResult> antecedent, Func<Task> childActionTask) {
             return antecedent.ContinueWith(a => childActionTask(), TaskContinuationOptions.OnlyOnCanceled| TaskContinuationOptions.AttachedToParent).Unwrap();
         }
         public static Task ContinueAlways<TAntecedentResult>(this Task<TAntecedentResult> antecedent, Func<Task<TAntecedentResult>, Task> childActionTask) {
@@ -198,9 +198,9 @@
             return antecedent.ContinueWith(a => childAction(), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.AttachedToParent);
         }
         public static Task ContinueOnFail(this Task antecedent, Action<Exception> childAction) {
-            return antecedent.ContinueWith(a => {childAction( a.Exception.Unwrap());}, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.AttachedToParent);
+            return antecedent.ContinueWith(a => childAction( a.Exception.Unwrap()), TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.AttachedToParent);
         }
-        public static Task ContinueOnCancelled(this Task antecedent, Action childAction) {
+        public static Task ContinueOnCanceled(this Task antecedent, Action childAction) {
             return antecedent.ContinueWith(a => childAction(), TaskContinuationOptions.OnlyOnCanceled | TaskContinuationOptions.AttachedToParent);
         }
         public static Task ContinueAlways(this Task antecedent, Action<Task> childAction) {
@@ -219,7 +219,7 @@
         public static Task ContinueOnFail(this Task antecedent, Func<Exception,Task> childActionTask) {
             return antecedent.ContinueWith(a => childActionTask(a.Exception.Unwrap()), TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.AttachedToParent).Unwrap();
         }
-        public static Task ContinueOnCancelled(this Task antecedent, Func<Task> childActionTask) {
+        public static Task ContinueOnCanceled(this Task antecedent, Func<Task> childActionTask) {
             return antecedent.ContinueWith(a => childActionTask(), TaskContinuationOptions.OnlyOnCanceled | TaskContinuationOptions.AttachedToParent).Unwrap();
         }
         public static Task ContinueAlways(this Task antecedent, Func<Task,Task> childActionTask) {
@@ -270,7 +270,7 @@
             var antes = antecedents.ToArrayEvenIfNull();
 
             if (antes.IsNullOrEmpty()) {
-                return default(TResult).AsCancelledTask();
+                return default(TResult).AsCanceledTask();
             }
 
             var tcs = new TaskCompletionSource<TResult>();
@@ -295,12 +295,12 @@
             return tcs.Task;
         }
 
-        public static Task<TResult> ContinueOnCancelled<TResult, TAntecedentResults>(this IEnumerable<Task<TAntecedentResults>> antecedents, Func<TResult> childFunction) {
+        public static Task<TResult> ContinueOnCanceled<TResult, TAntecedentResults>(this IEnumerable<Task<TAntecedentResults>> antecedents, Func<TResult> childFunction) {
             // if the collection is empty, there will be no cancellations.
             var antes = antecedents.ToArrayEvenIfNull();
 
             if (antes.IsNullOrEmpty()) {
-                return default(TResult).AsCancelledTask();
+                return default(TResult).AsCanceledTask();
             }
 
             var tcs = new TaskCompletionSource<TResult>();
@@ -376,7 +376,7 @@
 
             // if the collection is empty, there will be no fails.
             if (antes.IsNullOrEmpty()) {
-                return default(TResult).AsCancelledTask();
+                return default(TResult).AsCanceledTask();
             }
 
             var tcs = new TaskCompletionSource<Task<TResult>>();
@@ -401,12 +401,12 @@
             return tcs.Task.Unwrap();
         }
 
-        public static Task<TResult> ContinueOnCancelled<TResult, TAntecedentResults>(this IEnumerable<Task<TAntecedentResults>> antecedents, Func<Task<TResult>> childFunction) {
+        public static Task<TResult> ContinueOnCanceled<TResult, TAntecedentResults>(this IEnumerable<Task<TAntecedentResults>> antecedents, Func<Task<TResult>> childFunction) {
             // if the collection is empty, there will be no cancellations.
             var antes = antecedents.ToArrayEvenIfNull();
 
             if (antes.IsNullOrEmpty()) {
-                return default(TResult).AsCancelledTask();
+                return default(TResult).AsCanceledTask();
             }
 
             var tcs = new TaskCompletionSource<Task<TResult>>();
@@ -483,7 +483,7 @@
 
             // if the collection is empty, there will be no fails.
             if (antes.IsNullOrEmpty()) {
-                return default(TResult).AsCancelledTask();
+                return default(TResult).AsCanceledTask();
             }
 
             var tcs = new TaskCompletionSource<TResult>();
@@ -508,12 +508,12 @@
             return tcs.Task;
         }
 
-        public static Task<TResult> ContinueOnCancelled<TResult>(this IEnumerable<Task> antecedents, Func<TResult> childFunction) {
+        public static Task<TResult> ContinueOnCanceled<TResult>(this IEnumerable<Task> antecedents, Func<TResult> childFunction) {
             var antes = antecedents.ToArrayEvenIfNull();
 
             // if the collection is empty, there will be no cancellations.
             if (antes.IsNullOrEmpty()) {
-                return default(TResult).AsCancelledTask();
+                return default(TResult).AsCanceledTask();
             }
 
             var tcs = new TaskCompletionSource<TResult>();
@@ -588,7 +588,7 @@
 
             // if the collection is empty, there will be no fails.
             if (antes.IsNullOrEmpty()) {
-                return default(TResult).AsCancelledTask();
+                return default(TResult).AsCanceledTask();
             }
 
             var tcs = new TaskCompletionSource<Task<TResult>>();
@@ -613,12 +613,12 @@
             return tcs.Task.Unwrap();
         }
 
-        public static Task<TResult> ContinueOnCancelled<TResult>(this IEnumerable<Task> antecedents, Func<Task<TResult>> childTaskFunction) {
+        public static Task<TResult> ContinueOnCanceled<TResult>(this IEnumerable<Task> antecedents, Func<Task<TResult>> childTaskFunction) {
             var antes = antecedents.ToArrayEvenIfNull();
 
             // if the collection is empty, there will be no cancellations.
             if (antes.IsNullOrEmpty()) {
-                return default(TResult).AsCancelledTask();
+                return default(TResult).AsCanceledTask();
             }
 
             var tcs = new TaskCompletionSource<Task<TResult>>();
@@ -694,7 +694,7 @@
 
             // if the collection is empty, there will be no fails.
             if (antes.IsNullOrEmpty()) {
-                return "".AsCancelledTask();
+                return "".AsCanceledTask();
             }
 
             var tcs = new TaskCompletionSource<object>();
@@ -720,12 +720,12 @@
             return tcs.Task;
         }
 
-        public static Task ContinueOnCancelled<TAntecedentResults>(this IEnumerable<Task<TAntecedentResults>> antecedents, Action childAction) {
+        public static Task ContinueOnCanceled<TAntecedentResults>(this IEnumerable<Task<TAntecedentResults>> antecedents, Action childAction) {
             var antes = antecedents.ToArrayEvenIfNull();
 
             // if the collection is empty, there will be no cancellations.
             if (antes.IsNullOrEmpty()) {
-                return "".AsCancelledTask();
+                return "".AsCanceledTask();
             }
 
             var tcs = new TaskCompletionSource<object>();
@@ -800,7 +800,7 @@
 
             // if the collection is empty, there will be no fails.
             if (antes.IsNullOrEmpty()) {
-                return "".AsCancelledTask();
+                return "".AsCanceledTask();
             }
 
             var tcs = new TaskCompletionSource<Task>();
@@ -825,12 +825,12 @@
             return tcs.Task.Unwrap();
         }
 
-        public static Task ContinueOnCancelled<TAntecedentResults>(this IEnumerable<Task<TAntecedentResults>> antecedents, Func<Task> childAction) {
+        public static Task ContinueOnCanceled<TAntecedentResults>(this IEnumerable<Task<TAntecedentResults>> antecedents, Func<Task> childAction) {
             var antes = antecedents.ToArrayEvenIfNull();
 
             // if the collection is empty, there will be no cancellations.
             if (antes.IsNullOrEmpty()) {
-                return "".AsCancelledTask();
+                return "".AsCanceledTask();
             }
 
             var tcs = new TaskCompletionSource<Task>();
@@ -906,7 +906,7 @@
 
             // if the collection is empty, there will be no fails.
             if (antes.IsNullOrEmpty()) {
-                return "".AsCancelledTask();
+                return "".AsCanceledTask();
             }
 
             var tcs = new TaskCompletionSource<object>();
@@ -932,12 +932,12 @@
             return tcs.Task;
         }
 
-        public static Task ContinueOnCancelled(this IEnumerable<Task> antecedents, Action childAction) {
+        public static Task ContinueOnCanceled(this IEnumerable<Task> antecedents, Action childAction) {
             var antes = antecedents.ToArrayEvenIfNull();
 
             // if the collection is empty, there will be no cancellations.
             if (antes.IsNullOrEmpty()) {
-                return "".AsCancelledTask();
+                return "".AsCanceledTask();
             }
 
             var tcs = new TaskCompletionSource<object>();
@@ -1011,7 +1011,7 @@
 
             // if the collection is empty, there will be no fails.
             if (antes.IsNullOrEmpty()) {
-                return "".AsCancelledTask();
+                return "".AsCanceledTask();
             }
 
             var tcs = new TaskCompletionSource<Task>();
@@ -1036,12 +1036,12 @@
             return tcs.Task.Unwrap();
         }
 
-        public static Task ContinueOnCancelled(this IEnumerable<Task> antecedents, Func<Task> childAction) {
+        public static Task ContinueOnCanceled(this IEnumerable<Task> antecedents, Func<Task> childAction) {
             var antes = antecedents.ToArrayEvenIfNull();
 
             // if the collection is empty, there will be no cancellations.
             if (antes.IsNullOrEmpty()) {
-                return "".AsCancelledTask();
+                return "".AsCanceledTask();
             }
 
             var tcs = new TaskCompletionSource<Task>();
