@@ -50,55 +50,69 @@ namespace CoApp.Toolkit.Engine {
                     // since we can't do anything with a remote item directly, 
                     // we have to issue a request to the client to get it for us
 
-                    // first let's create a delegate to run when the file gets resolved.
-                    var completion = new Task<RecognitionInfo>((rrfState) => {
-                        var state = rrfState as RequestRemoteFileState;
-                        if (state == null || string.IsNullOrEmpty(state.LocalLocation)) {
-                            // didn't fill in the local location? -- this happens when the client can't download.
-                            // PackageManagerMessages.Invoke.FileNotRecognized() ?
-                            return new RecognitionInfo {
-                                FullPath = location.AbsoluteUri,
-                                FullUrl = location,
-                                IsURL = true,
-                                IsInvalid = true,
-                            };
-                        }
-                        var newLocation = new Uri(state.LocalLocation);
-                        if (newLocation.IsFile) {
-                            var continuedResult = Recognize(state.LocalLocation).Result;
-
-                            // create the result object 
-                            var result = new RecognitionInfo {
-                                FullUrl = location,
-                            };
-
-                            // if( continuedResult.IsPackageFeed && forceRescan ) {
-                                // this ensures that feed files aren't kept around needlessly.
-                                //state.LocalLocation.MarkFileTemporary(); 
-                            //}
-
-                            result.CopyDetailsFrom(continuedResult);
-                            result.IsURL = true;
-
-                            return Cache(item, result);
-                        }
-                        // so, the callback comes, but it's not a file. 
-                        // 
-                        return new RecognitionInfo {
-                            FullPath = location.AbsoluteUri,
-                            IsInvalid = true,
-                        };
-                    }, new RequestRemoteFileState {
-                        OriginalUrl = location.AbsoluteUri
-                    }, TaskCreationOptions.AttachedToParent);
-
+                    
                     // since we're expecting that the canonicalname will be used as a filename 
                     // in the .cache directory, we need to generate a safe filename based on the 
                     // data in the URL
                     var safeCanonicalName = location.GetLeftPart(UriPartial.Path).MakeSafeFileName();
 
-                    // store the task until the client tells us that it has the file.
-                    SessionCache<Task<RecognitionInfo>>.Value[safeCanonicalName] = completion;
+                    // BEFORE
+                    // Check to see if there is a request for this file already in progress. 
+                    // attach a continuation to that if it is, instead of adding a new task
+                    Task<RecognitionInfo> completion;
+                    lock (SessionCache<Task<RecognitionInfo>>.Value) {
+                        completion = SessionCache<Task<RecognitionInfo>>.Value[safeCanonicalName];
+                        if (completion != null) {
+                            return completion.ContinueAlways(antecedent => {
+                                return antecedent.Result;
+                            });
+                        }
+
+                        // otherwise, let's create a delegate to run when the file gets resolved.
+                        completion = new Task<RecognitionInfo>((rrfState) => {
+                            var state = rrfState as RequestRemoteFileState;
+                            if (state == null || string.IsNullOrEmpty(state.LocalLocation)) {
+                                // didn't fill in the local location? -- this happens when the client can't download.
+                                // PackageManagerMessages.Invoke.FileNotRecognized() ?
+                                return new RecognitionInfo {
+                                    FullPath = location.AbsoluteUri,
+                                    FullUrl = location,
+                                    IsURL = true,
+                                    IsInvalid = true,
+                                };
+                            }
+                            var newLocation = new Uri(state.LocalLocation);
+                            if (newLocation.IsFile) {
+                                var continuedResult = Recognize(state.LocalLocation).Result;
+
+                                // create the result object 
+                                var result = new RecognitionInfo {
+                                    FullUrl = location,
+                                };
+
+                                // if( continuedResult.IsPackageFeed && forceRescan ) {
+                                // this ensures that feed files aren't kept around needlessly.
+                                //state.LocalLocation.MarkFileTemporary(); 
+                                //}
+
+                                result.CopyDetailsFrom(continuedResult);
+                                result.IsURL = true;
+
+                                return Cache(item, result);
+                            }
+                            // so, the callback comes, but it's not a file. 
+                            // 
+                            return new RecognitionInfo {
+                                FullPath = location.AbsoluteUri,
+                                IsInvalid = true,
+                            };
+                        }, new RequestRemoteFileState {
+                            OriginalUrl = location.AbsoluteUri
+                        }, TaskCreationOptions.AttachedToParent);
+
+                        // store the task until the client tells us that it has the file.
+                        SessionCache<Task<RecognitionInfo>>.Value[safeCanonicalName] = completion;
+                    }
 
                     // GS01: Should we make a deeper path in the cache directory?
                     // perhaps that would let us use a cached version of the file we're looking for.

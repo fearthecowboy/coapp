@@ -17,6 +17,8 @@ namespace CoApp.Toolkit.Engine.Client {
     using System.Linq;
     using System.Net;
     using System.Reflection;
+    using System.Security.AccessControl;
+    using System.Security.Principal;
     using System.Threading;
     using System.Threading.Tasks;
     using System.Windows;
@@ -101,30 +103,16 @@ namespace CoApp.Toolkit.Engine.Client {
         public event PropertyChangedEventHandler Finished;
         
         private InstallChoice _choice = InstallChoice.InstallSpecificVersion;
-
-        
         public InstallChoice Choice {
             get { return _choice; }
             set { 
                 _choice = value;
                 // PackageIcon = GetPackageBitmap(SelectedPackage.Icon);
-                OnPropertyChanged("SelectedPackage");
                 OnPropertyChanged();
+                OnPropertyChanged("Choice");
             }
         }
-        /*
-        public InstSelection _selection;
-
-        public InstSelection Selection {
-            get {
-                
-            }
-            set {
-                
-            }
-        } 
-        */
-
+      
         public IEnumerable<RemoveCommand> RemoveChoices {
             get {
                 if (HasPackage) {
@@ -171,19 +159,20 @@ namespace CoApp.Toolkit.Engine.Client {
         public IEnumerable<InstSelection> InstallChoices {
             get {
                 _choice = InstallChoice._Unknown;
+
                 if (HasPackage) {
                     // When there isn't anything at all installed already
                     if (PackageSet.InstalledNewest == null) {
                         if (PackageSet.AvailableNewer != null) {
-                            _choice = InstallChoice.AutoInstallLatest;
                             yield return new InstSelection(InstallChoice.AutoInstallLatest, "Install the latest version of this package ({0})", PackageSet.AvailableNewer.Version);
+                            _choice = InstallChoice.AutoInstallLatest;
                         }
 
                         if (PackageSet.AvailableNewerCompatible != null && PackageSet.AvailableNewerCompatible != PackageSet.AvailableNewer) {
-                            if( _choice == InstallChoice._Unknown ) {
+                            yield return new InstSelection(InstallChoice.AutoInstallLatestCompatible, "Install the latest compatible version of this package ({0})", PackageSet.AvailableNewerCompatible.Version);
+                            if (_choice == InstallChoice._Unknown) {
                                 _choice = InstallChoice.AutoInstallLatest;
                             }
-                            yield return new InstSelection(InstallChoice.AutoInstallLatestCompatible, "Install the latest compatible version of this package ({0})", PackageSet.AvailableNewerCompatible.Version);
                         }
 
                         if (_choice == InstallChoice._Unknown) {
@@ -193,9 +182,9 @@ namespace CoApp.Toolkit.Engine.Client {
                         yield return new InstSelection(InstallChoice.InstallSpecificVersion, "Install this version of package ({0})", PackageSet.Package.Version);
                     } else {
                         if (PackageSet.Package == PackageSet.InstalledNewest) {
-                            _choice = InstallChoice.ThisVersionAlreadyInstalled;
 
                             yield return new InstSelection(InstallChoice.ThisVersionAlreadyInstalled, "This version is currently installed ({0})", PackageSet.Package.Version);
+                            _choice = InstallChoice.ThisVersionAlreadyInstalled;
 
                             if (PackageSet.AvailableNewerCompatible != null && PackageSet.AvailableNewer == null) {
                                 yield return new InstSelection(InstallChoice.UpdateToLatestVersion, "Update to the latest compatible version ({0})", PackageSet.AvailableNewerCompatible.Version);
@@ -211,8 +200,8 @@ namespace CoApp.Toolkit.Engine.Client {
 
                         } else if (PackageSet.InstalledNewest.Version > PackageSet.Package.Version) {
                             // a newer version is already installed    
-                            _choice = InstallChoice.NewerVersionAlreadyInstalled;
                             yield return new InstSelection(InstallChoice.NewerVersionAlreadyInstalled, "A newer version is currently installed ({0})", PackageSet.InstalledNewest.Version);
+                            _choice = InstallChoice.NewerVersionAlreadyInstalled;
 
                             if (PackageSet.AvailableNewer != null) {
                                 yield return new InstSelection(InstallChoice.UpgradeToLatestVersion2, "Upgrade to the latest version ({0})", PackageSet.AvailableNewer.Version);
@@ -229,8 +218,8 @@ namespace CoApp.Toolkit.Engine.Client {
                             }
                         } else {
                             // an older version is installed
-                            _choice = InstallChoice.OlderVersionAlreadyInstalled;
                             yield return new InstSelection(InstallChoice.OlderVersionAlreadyInstalled, "A older version is currently installed ({0})", PackageSet.InstalledNewest.Version);
+                            _choice = InstallChoice.OlderVersionAlreadyInstalled;
 
                             if (PackageSet.AvailableNewer != null) {
                                 yield return new InstSelection(InstallChoice.UpgradeToLatestVersion2, "Upgrade to the latest version of this package ({0})", PackageSet.AvailableNewer.Version);
@@ -244,6 +233,7 @@ namespace CoApp.Toolkit.Engine.Client {
                         }
                     }
                 }
+                OnPropertyChanged("Choice");
             }
         }
 
@@ -254,14 +244,13 @@ namespace CoApp.Toolkit.Engine.Client {
             }
 
             set {
-                if( _packageSet != value ) {
-                    _packageSet = value;
-                    OnPropertyChanged();
-                    OnPropertyChanged("InstallChoices");
-                    OnPropertyChanged("RemoveChoices");
-                    if (Ready != null) {
-                        Ready(this, new PropertyChangedEventArgs("InstallChoice"));
-                    }
+                _packageSet = value;
+                OnPropertyChanged();
+                OnPropertyChanged("InstallChoices");
+                OnPropertyChanged("RemoveChoices");
+                OnPropertyChanged("Choice");
+                if (Ready != null) {
+                    Ready(this, new PropertyChangedEventArgs("Choice"));
                 }
             }
         }
@@ -354,6 +343,11 @@ namespace CoApp.Toolkit.Engine.Client {
                 if( !IsWorking ) {
                     OnFinished();
                 }
+                Task.Factory.StartNew(() => {
+                    // worst case scenario, die quickly.
+                    Thread.Sleep(1500);
+                    ExitQuick();
+                });
             }
         }
 
@@ -383,14 +377,37 @@ namespace CoApp.Toolkit.Engine.Client {
             }
         }
         private EasyPackageManager _easyPackageManager = new EasyPackageManager();
+        private EventWaitHandle _ping;
 
-        public Installer(string filename)   {
-            // we'll take it from here...
+        internal bool Ping { get {
+            return _ping.WaitOne(0);
+        } 
+        set {
+            if( value ) {
+                _ping.Set();
+            } else {
+                _ping.Reset();
+            }
+        }}
+
+        private InstallerMainWindow window;
+        public Installer(string filename) {
             try {
-                //Debugger.Break();
                 MsiFilename = filename;
-                InstallTask = LoadPackageDetails();
-                PackageManager.Instance.Connect();
+                Task.Factory.StartNew(() => {
+                    // was coapp just installed by the bootstrapper? 
+                    if (((AppDomain.CurrentDomain.GetData("COAPP_INSTALLED") as string) ?? "false").IsTrue()) {
+                        // we'd better make sure that the most recent version of the service is running.
+                        EngineServiceManager.InstallAndStartService();
+                    }
+                    InstallTask = LoadPackageDetails();
+                });
+                
+                
+                bool wasCreated;
+                var ewhSec = new EventWaitHandleSecurity();
+                ewhSec.AddAccessRule(new EventWaitHandleAccessRule(new SecurityIdentifier(WellKnownSidType.WorldSid, null), EventWaitHandleRights.FullControl, AccessControlType.Allow));
+                _ping = new EventWaitHandle(false, EventResetMode.ManualReset, "BootstrapperPing", out wasCreated, ewhSec);
 
                 // if we got this far, CoApp must be running. 
                 try {
@@ -398,17 +415,19 @@ namespace CoApp.Toolkit.Engine.Client {
                 }
                 catch { }
 
-                var window = new InstallerMainWindow(this);
+                window = new InstallerMainWindow(this);
                 window.ShowDialog();
 
                 if (Application.Current != null) {
                     Application.Current.Shutdown(0);
                 }
+                ExitQuick();
             } catch (Exception e) {
-                MessageBox.Show(e.StackTrace, e.Message);
+                DoError(InstallerFailureState.FailedToGetPackageDetails, e);
+
             }
         }
-        
+
         private void DoError(InstallerFailureState state, Exception error) {
             MessageBox.Show(error.StackTrace, error.Message);
             switch( state ) {
@@ -418,6 +437,18 @@ namespace CoApp.Toolkit.Engine.Client {
                 default:
                     break;
             }
+            ExitQuick();
+        }
+
+        internal void ExitQuick() {
+            try {
+                if (Application.Current != null) {
+                    Application.Current.Shutdown(0);
+                }
+            }
+            catch {
+            }
+            Environment.Exit(0);
         }
 
         private Task LoadPackageDetails() {
@@ -433,17 +464,21 @@ namespace CoApp.Toolkit.Engine.Client {
                         return;
                     }
 
-                    PackageSet = new PackageSet {Package = antecedent2.Result};
+                    // PackageSet = new PackageSet {Package = antecedent2.Result};
                     // PackageIcon = GetPackageBitmap(SelectedPackage.Icon);
 
                     // now get additonal package information...
-                    _easyPackageManager.GetPackageSet(PackageSet.Package.CanonicalName).ContinueWith(
+                    _easyPackageManager.GetPackageSet(antecedent2.Result.CanonicalName).ContinueWith(
                         antecedent3 => {
                             if (antecedent3.IsFaulted) {
                                 DoError(InstallerFailureState.FailedToGetPackageDetails, antecedent3.Exception.Unwrap());
                                 return;
                             }
                             PackageSet = antecedent3.Result;
+                            Task.Factory.StartNew(() => {
+                                Thread.Sleep(100);
+                                window.Dispatcher.Invoke((Action)(window.FixFont));
+                            });
                         });
                 });
             });
@@ -505,12 +540,6 @@ namespace CoApp.Toolkit.Engine.Client {
             var img = new BitmapImage();
             img.Freeze();
             return img;
-        }
-
-
-        private void Error(Exception e) {
-            System.Windows.MessageBox.Show("Exception: " + e.Message + "\nInner:" + e.InnerException + "\nStackTrace: " + e.StackTrace);
-            throw e;
         }
 
         private void CancellationRequestedDuringInstall(string obj) {

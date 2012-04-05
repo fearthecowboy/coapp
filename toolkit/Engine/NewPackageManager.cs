@@ -637,7 +637,6 @@ namespace CoApp.Toolkit.Engine {
                     return;
                 }
 
-
                 var canFilterSession = PackageManagerSession.Invoke.CheckForPermission(PermissionPolicy.EditSessionFeeds);
                 var canFilterSystem = PackageManagerSession.Invoke.CheckForPermission(PermissionPolicy.EditSystemFeeds);
 
@@ -685,8 +684,6 @@ namespace CoApp.Toolkit.Engine {
                 else {
                     PackageManagerMessages.Invoke.NoFeedsFound();
                 }
-
-
             }, TaskCreationOptions.AttachedToParent);
             return t;
         }
@@ -1074,8 +1071,12 @@ namespace CoApp.Toolkit.Engine {
                         state.LocalLocation = null;
                     }
 
+                    continuationTask.Continue(() => Updated());
+
                     // the task can run, 
-                    continuationTask.Start();
+                    if (continuationTask.Status == TaskStatus.Created) {
+                        continuationTask.Start();
+                    }
                     return;
                 }
             }, TaskCreationOptions.AttachedToParent);
@@ -1123,8 +1124,11 @@ namespace CoApp.Toolkit.Engine {
                         if (state != null) {
                             state.LocalLocation = localLocation;
                         }
-                        
-                        continuationTask.Start();
+
+                        if (continuationTask.Status == TaskStatus.Created) {
+                            continuationTask.Start();
+                        }
+
                         return;
                     }
                 }
@@ -1190,7 +1194,6 @@ namespace CoApp.Toolkit.Engine {
             }, TaskCreationOptions.AttachedToParent);
             return t;
         }
-
 
         internal void Updated() {
             foreach (var mre in manualResetEvents) {
@@ -1276,21 +1279,28 @@ namespace CoApp.Toolkit.Engine {
         /// <param name="publicKeyToken"></param>
         /// <returns></returns>
         internal IEnumerable<Package> SearchForPackages(string name, string version, string arch, string publicKeyToken, string location = null) {
-            var feeds = string.IsNullOrEmpty(location) ? Feeds : Feeds.Where(each => each.IsLocationMatch(location));
-            if (location != null || ((!string.IsNullOrEmpty(version)) && version.IndexOf("*") == -1) ) {
-                // asking a specific feed, or they are not asking for more than one version of a given package.
-                // or asking for a specific version.
-                return feeds.SelectMany(each => each.FindPackages(name, version, arch, publicKeyToken)).Distinct().ToArray();
-            }
+            try {
+                var feeds = string.IsNullOrEmpty(location) ? Feeds : Feeds.Where(each => each.IsLocationMatch(location));
+                if (location != null || ((!string.IsNullOrEmpty(version)) && version.IndexOf("*") == -1)) {
+                    // asking a specific feed, or they are not asking for more than one version of a given package.
+                    // or asking for a specific version.
+                    return feeds.SelectMany(each => each.FindPackages(name, version, arch, publicKeyToken)).Distinct().ToArray();
+                }
 
-            var feedLocations = Feeds.Select(each => each.Location);
-            var packages = feeds.SelectMany(each => each.FindPackages(name, version, arch, publicKeyToken)).Distinct().ToArray();
-            
-            var otherFeeds = packages.SelectMany(each => each.InternalPackageData.FeedLocations).Distinct().Where(each => !feedLocations.Contains(each));
-            // given a list of other feeds that we're not using, we can search each of those feeds for newer versions of the packages that we already have.
-            var tf = TransientFeeds(otherFeeds);
-            var result = packages.Union(packages.SelectMany(p => tf.SelectMany(each => each.FindPackages(p.Name, version, p.Architecture, p.PublicKeyToken)))).Distinct().ToArray();
-            return result;
+                var feedLocations = Feeds.Select(each => each.Location);
+                var packages = feeds.SelectMany(each => each.FindPackages(name, version, arch, publicKeyToken)).Distinct().ToArray();
+
+                var otherFeeds = packages.SelectMany(each => each.InternalPackageData.FeedLocations).Distinct().Where(each => !feedLocations.Contains(each));
+                // given a list of other feeds that we're not using, we can search each of those feeds for newer versions of the packages that we already have.
+                var tf = TransientFeeds(otherFeeds);
+                return packages.Union(packages.SelectMany(p => tf.SelectMany(each => each.FindPackages(p.Name, version, p.Architecture, p.PublicKeyToken)))).Distinct().ToArray();
+            }
+            catch (InvalidOperationException ex) {
+                // this can happen if the collection changes during the operation (and can actually happen in the middle of .ToArray() 
+                // since, locking the hell out of the collections isn't worth the effort, we'll just try again on this type of exception
+                // and pray the collection won't keep changing :)
+                return SearchForPackages(name, version, arch, publicKeyToken, location);
+            }
         }
 
         /// <summary>

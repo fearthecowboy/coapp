@@ -864,8 +864,6 @@ namespace CoApp.CLI {
                 }, TaskContinuationOptions.AttachedToParent);
         }
 
-        
-
         private void UpdatePackages(IEnumerable<Package> packages) {
             ProcessPackages( packages, IsUpdate:true);
         }

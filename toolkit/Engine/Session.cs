@@ -321,16 +321,27 @@ namespace CoApp.Toolkit.Engine {
         private void DrainQueue() {
             while (true) {
                 // if we're done processing messages, make sure nobody thinks we still are before quitting
+                bool anymessages;
                 lock (this) {
-                    if ( _responsePipe == null || IsCanceled || !_outputQueue.Any() ) {
+                    lock(_outputQueue) {
+                        anymessages = _outputQueue.Any();
+                    }
+
+                    if ( _responsePipe == null || IsCanceled || !anymessages ) {
                         _queueProcessingTask = null;
                         return;
                     }
                 }
 
                 try {
+                    string msg;
+                    
+                    lock (_outputQueue) {
+                        msg = _outputQueue.Peek();
+                    }
+
                     // write it out 
-                    _responsePipe.WriteLineAsync(_outputQueue.Peek()).Wait();
+                    _responsePipe.WriteLineAsync(msg).Wait();
 
                     // if the wait() didn't throw, pop the item off the queue
                     lock (_outputQueue) {
@@ -449,14 +460,10 @@ namespace CoApp.Toolkit.Engine {
                     continue;
                 }
 
-                
-
                 try {
                     if (IsCanceled) {
                         return;
                     }
-                    
-
 
                     // if there is currently a task reading the from the stream, let's skip it this time.
                     if (_bufferReady.WaitOne() && Connected) {
@@ -478,36 +485,43 @@ namespace CoApp.Toolkit.Engine {
                                     SendUnexpectedFailure(new CoAppException("Message size exceeds maximum size allowed."));
                                     return;
                                 }
-                                if (antecedent.Result > 0) {
-                                    string rqid = null;
-                                    Task dispatchTask = null;
+                                string rqid = null;
+                                Task dispatchTask = null;
 
-                                    try {
-                                        var rawMessage = Encoding.UTF8.GetString(serverInput, 0, antecedent.Result);
-                                        var requestMessage = new UrlEncodedMessage(rawMessage);
-                                        rqid = requestMessage["rqid"].ToString();
+                                try {
+                                    var rawMessage = Encoding.UTF8.GetString(serverInput, 0, antecedent.Result);
+                                    var requestMessage = new UrlEncodedMessage(rawMessage);
+                                    rqid = requestMessage["rqid"].ToString();
 
-                                        // create a request cache.
-                                        new RequestCacheMessages().Register();
-                                        dispatchTask = Dispatch(requestMessage);
-                                    }
-                                    finally {
-                                        // whatever, after this point let the messages flow!
-                                        _bufferReady.Set();
+                                    if( string.IsNullOrEmpty(requestMessage)) {
+                                        return;
                                     }
 
-                                    if (!string.IsNullOrEmpty(rqid)) {
-                                            if (dispatchTask == null) {
-                                                // we're done, send the result and wait for the queue to drain.
-                                                WriteAsync(new UrlEncodedMessage("task-complete"), rqid);
-                                            } else {
-                                                // when the task is done, send the result then wait for the queue to drain.
-                                                dispatchTask.ContinueAlways((antecedentTask) => WriteAsync(new UrlEncodedMessage("task-complete"), rqid)).Wait();
-                                            }
-                                        }
-                                        WriteErrorsOnException(dispatchTask);
-                                    
+                                    // create a request cache.
+                                    new RequestCacheMessages().Register();
+                                    dispatchTask = Dispatch(requestMessage);
                                 }
+                                finally {
+                                    // whatever, after this point let the messages flow!
+                                    _bufferReady.Set();
+                                }
+
+                                if (!string.IsNullOrEmpty(rqid)) {
+                                    if (dispatchTask == null) {
+                                        // we're done, send the result and wait for the queue to drain.
+                                        WriteAsync(new UrlEncodedMessage("task-complete"), rqid);
+                                    } else {
+                                        // when the task is done, send the result then wait for the queue to drain.
+                                        dispatchTask.ContinueAlways((antecedentTask) => {
+                                            WriteAsync(new UrlEncodedMessage("task-complete"), rqid);
+                                            // NewPackageManager.Instance.Updated();
+                                        }).Wait();
+                                    }
+                                }
+
+                                WriteErrorsOnException(dispatchTask);
+                                    
+                                
                             }).AutoManage();
 
                             WriteErrorsOnException(readTask);

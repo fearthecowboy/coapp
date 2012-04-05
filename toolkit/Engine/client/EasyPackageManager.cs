@@ -13,6 +13,7 @@
 namespace CoApp.Toolkit.Engine.Client {
     using System;
     using System.Collections.Generic;
+    using System.IO;
     using System.Linq;
     using System.Threading.Tasks;
     using Exceptions;
@@ -112,6 +113,8 @@ namespace CoApp.Toolkit.Engine.Client {
             internal Action<string, string, int> DownloadProgress;
             internal Action<string, string> DownloadCompleted;
 
+            internal static Dictionary <string, Task> _currentDownloads = new Dictionary<string, Task>();
+
             public RemoteCallResponse() {
                 PermissionRequired = permission => {
                     throw new RequiresPermissionException(permission);
@@ -162,21 +165,104 @@ namespace CoApp.Toolkit.Engine.Client {
                     throw new PackageBlockedException(canonicalname);
                 };
 
-                RequireRemoteFile =
-                    (canonicalName, remoteLocations, localFolder, force) => {
-                        Downloader.GetRemoteFile(canonicalName, remoteLocations, localFolder, force, new RemoteFileMessages {
-                            Progress = (itemUri, percent) => {
-                                if (DownloadProgress != null) {
-                                    DownloadProgress(itemUri.AbsoluteUri, localFolder, percent);
-                                }
-                            },
-                            Completed = itemUri => {
-                                if (DownloadCompleted != null) {
-                                    DownloadCompleted(itemUri.AbsoluteUri, localFolder);
-                                }
+                RequireRemoteFile = (canonicalName, remoteLocations, targetFolder, force) => {
+                    var targetFilename = Path.Combine(targetFolder, canonicalName);
+                    lock (_currentDownloads) {
+
+                        if (_currentDownloads.ContainsKey(targetFilename)) {
+                            try {
+                                _currentDownloads[targetFilename].Wait();
+                                // wait for this guy to respond (which should give us what we need)
+                            } catch{
                             }
-                        }, this);
-                    };
+                            return;
+                        }
+
+                        // gotta download the file...
+                        var task = Task.Factory.StartNew(() => {
+                            foreach (var location in remoteLocations) {
+                                try {
+
+                                    // a filesystem location (remote or otherwise)
+                                    var uri = new Uri(location);
+                                    if (uri.IsFile) {
+                                        // try to copy the file local.
+                                        var remoteFile = uri.AbsoluteUri.CanonicalizePath();
+
+                                        // if this fails, we'll just move down the line.
+                                        File.Copy(remoteFile, targetFilename);
+                                        PackageManager.Instance.RecognizeFile(canonicalName, targetFilename, uri.AbsoluteUri, this);
+                                        return;
+                                    }
+
+                                    // A web location
+                                    Task progressTask = null;
+                                    var success = false;
+                                    var rf = new RemoteFile(uri, targetFilename,
+                                        completed : (itemUri) => {
+                                            PackageManager.Instance.RecognizeFile(canonicalName, targetFilename, uri.AbsoluteUri, this);
+                                            if (DownloadCompleted != null) {
+                                                // remove it from the list of current downloads
+                                                _currentDownloads.Remove(targetFilename);
+
+                                                // give the user notification
+                                                DownloadCompleted(itemUri.AbsoluteUri, targetFilename);
+                                                success = true;
+                                            }
+                                        },
+
+                                        failed : (itemUri) => {
+                                            // Logger.Message("FAILED DOWNLOAD FILE : {0}", uri);
+                                            success = false;
+                                        },
+
+                                        progress : (itemUri, percent) => {
+                                            if (progressTask == null) {
+                                                // report progress to the engine
+                                                progressTask = PackageManager.Instance.DownloadProgress(canonicalName, percent);
+                                                progressTask.Continue(() => {
+                                                    progressTask = null;
+                                                });
+                                            }
+
+                                            // report progress to the user
+                                            if (DownloadProgress != null) {
+                                                DownloadProgress(itemUri.AbsoluteUri, targetFolder, percent);
+                                            }
+                                        });
+
+                                    rf.Get();
+
+                                    if (success && File.Exists(targetFilename)) {
+                                        return;
+                                    }
+
+                                } catch (Exception e) {
+                                    // bogus, dude.
+                                    // try the next one.
+                                    Logger.Error(e);
+                                }
+                                // loop around and try again?
+                            }
+
+                            // was there a file there from before?
+                            if (File.Exists(targetFilename)) {
+                                if (DownloadProgress != null) {
+                                    DownloadCompleted(canonicalName, targetFilename);
+                                }
+                                PackageManager.Instance.RecognizeFile(canonicalName, targetFilename, remoteLocations.FirstOrDefault(), this);
+                            }
+
+                            // remove it from the list of current downloads
+                            _currentDownloads.Remove(targetFilename);
+                            
+                            // if we got here, that means we couldn't get the file. too bad, so sad.
+                            PackageManager.Instance.UnableToAcquire(canonicalName, new PackageManagerMessages());
+                        }, TaskCreationOptions.AttachedToParent);
+
+                        _currentDownloads.Add(targetFilename, task);
+                    }
+                };
 
                 Register();
             }

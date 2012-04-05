@@ -72,7 +72,7 @@ Commands:
     do-upgrade          thaw              marks a package as 'do-not-upgrade'
 
     enable-telemetry                      enables anonymous feedback
-    disaable-telemetry                    disables anonymous feedback
+    disable-telemetry                     disables anonymous feedback
 
     list-policies       policies    -p    lists the security policies
     add-to-policy                         adds a user/group to a policy

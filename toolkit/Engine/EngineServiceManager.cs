@@ -110,11 +110,14 @@ namespace CoApp.Toolkit.Engine {
         }
 
         public static void TryToStopService() {
-            if (IsServiceInstalled) {
-                if (Status != ServiceControllerStatus.Stopped && CanStop) {
-                    _controller.Value.Stop();
+            try {
+                if (IsServiceInstalled) {
+                    if (Status != ServiceControllerStatus.Stopped && CanStop) {
+                        _controller.Value.Stop();
+                    }
                 }
-                return;
+            } catch {
+                // keep movin'
             }
 
             // kill any service processes that are currently running.
@@ -371,6 +374,7 @@ namespace CoApp.Toolkit.Engine {
             EnsureServiceIsResponding();
         }
 
+
         private static void KillServiceProcesses() {
             foreach (var proc in Process.GetProcessesByName("coapp.service").Where(each => each.Id != Process.GetCurrentProcess().Id).ToArray()) {
                 try {
@@ -441,10 +445,12 @@ namespace CoApp.Toolkit.Engine {
             }
         }
 
-        private static void InstallAndStartService() {
+        public static void InstallAndStartService() {
             // we're going to try and install the service
             // make sure no other service processes are trying to run right now.
-            KillServiceProcesses();
+            if (AreAnyServiceExesRunning) {
+                TryToStopService();
+            }
 
             // basically, we just need to find *any* coapp.service.exe and tell it to --auto-install
             // and it will do a better search than we could do anyway.

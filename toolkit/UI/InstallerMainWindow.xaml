@@ -1,5 +1,5 @@
 ﻿<Window x:Class="CoApp.Toolkit.UI.InstallerMainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Installer" Width="700" Height="400" x:Name="InstallerWindow" Background="Transparent" AllowsTransparency="True" WindowStyle="None" 
-        ResizeMode="NoResize" Topmost="True" WindowStartupLocation="CenterScreen" Loaded="OnLoaded" >
+        ResizeMode="NoResize" Topmost="True" WindowStartupLocation="CenterScreen" Loaded="OnLoaded" Icon="/CoApp.Client;component/resources/images/logo.png" ShowInTaskbar="False">
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -62,22 +62,29 @@
                             <Path Fill="Black" Data="{StaticResource PathClose}" Margin="0,0,0,0" Stretch="Fill" Width="9" Height="9" />
                         </Button>
                     </Grid>
-                    <Grid Margin="20,-15,0,5">
+                    <Grid Margin="20,-15,20,5">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="80" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="1">
-                            <TextBlock Name="ProductName" Height="50" Margin="0,0,0,5" Text="(product) (ver)" FontSize="35" Foreground="Black"/>
+                        <StackPanel Grid.Column="1" Width="535">
+                            <Canvas Height="50">
+                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly" MaxWidth="535">
+                            <TextBlock Name="ProductName" Height="50" Margin="0,0,0,5" Text="(product) (ver)" FontSize="35" Foreground="Black" TextTrimming="WordEllipsis" />
+                            </Viewbox>
+                            </Canvas>
                             <TextBlock Name="ProductVersion" Height="20" Margin="0,-10,0,5" Text="(ver)" FontSize="9" Foreground="#FF606060" />
                             <TextBlock Name="OrganizationName" Height="30" Margin="0,-15,0,5" Text="(org)" FontSize="18" Foreground="#FF606060" />
                         </StackPanel>
-                        <Image Grid.Column="0" Width="64" Height="64" HorizontalAlignment="Center" Name="PackageIcon" Stretch="Uniform" VerticalAlignment="Center" />
+                        <Image Grid.Column="0" Margin="0,-13,0,0" Width="64" Height="64" HorizontalAlignment="Center" Name="PackageIcon" Stretch="Uniform" VerticalAlignment="Center" Source="/CoApp.Client;component/resources/images/logo.png" />
                     </Grid>
                 </StackPanel>
-                <TextBlock DockPanel.Dock="Top" Name="DescriptionText" Height="150" Margin="20,10,20,0" FontSize="16" TextWrapping="Wrap" TextAlignment="Justify" Foreground="Black"> 
-          (text)
-                </TextBlock>
+                <Viewbox  DockPanel.Dock="Top" Margin="20,10,20,0"  Height="150" Width="620" StretchDirection="DownOnly" Stretch="Uniform" TextOptions.TextFormattingMode="Ideal" >
+                    <TextBlock Width="620" Height="150"> 
+                    <TextBlock Name="DescriptionText"  Width="620" FontSize="17" TextWrapping="Wrap" TextAlignment="Justify" Foreground="Black" SourceUpdated="DescriptionText_SourceUpdated"> 
+txt
+                </TextBlock></TextBlock>
+                </Viewbox>
 
                 <Grid>
                     <Grid.RowDefinitions>

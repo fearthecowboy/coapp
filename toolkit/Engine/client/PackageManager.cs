@@ -213,6 +213,8 @@ namespace CoApp.Toolkit.Engine.Client {
                                 
                                 // lazy log the response (since we're at the end of this task)
                                 Logger.Message("Response:{0}".format(responseMessage.ToSmallerString()));
+                            } else {
+                                _isBufferReady.Set();
                             }
                         }).AutoManage();
 
