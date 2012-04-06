@@ -476,7 +476,7 @@ namespace CoApp.Toolkit.Engine.Client {
                             }
                             PackageSet = antecedent3.Result;
                             Task.Factory.StartNew(() => {
-                                Thread.Sleep(100);
+                                Thread.Sleep(140);
                                 window.Dispatcher.Invoke((Action)(window.FixFont));
                             });
                         });

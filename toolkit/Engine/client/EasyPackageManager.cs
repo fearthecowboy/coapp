@@ -53,6 +53,11 @@ namespace CoApp.Toolkit.Engine.Client {
         public int IntervalInMinutes { get; set; }
     }
 
+    public class Publisher {
+        public string Name { get; set; }
+        public string PublicKeyToken { get; set; }
+    }
+
     public class PackageSet {
         public Package Package;
 
@@ -144,7 +149,7 @@ namespace CoApp.Toolkit.Engine.Client {
                 };
 
                 UnknownPackage = s => {
-                    throw new  UnknownPackageException(s);
+                    throw new UnknownPackageException(s);
                 };
 
                 FailedPackageRemoval = (canonicalname, reason) => {
@@ -170,11 +175,16 @@ namespace CoApp.Toolkit.Engine.Client {
                     lock (_currentDownloads) {
 
                         if (_currentDownloads.ContainsKey(targetFilename)) {
-                            try {
-                                _currentDownloads[targetFilename].Wait();
                                 // wait for this guy to respond (which should give us what we need)
-                            } catch{
-                            }
+                                _currentDownloads[targetFilename].Continue(() => {
+                                    if (File.Exists(targetFilename)) {
+                                        if (DownloadProgress != null) {
+                                            DownloadCompleted(canonicalName, targetFilename);
+                                        }
+                                        PackageManager.Instance.RecognizeFile(canonicalName, targetFilename, remoteLocations.FirstOrDefault(), this);
+                                    }
+                                    return;
+                                });
                             return;
                         }
 
@@ -1364,6 +1374,23 @@ namespace CoApp.Toolkit.Engine.Client {
             }
         }
 
+        public Task RecognizeFile(string filename) {
+            return null;
+        }
+
+        public Task<IEnumerable<Publisher>> TrustedPublishers {
+            get {
+                return null;
+            }
+        }
+
+        public Task<Publisher> AddTrustedPublisher(string publisherName, string publicKeyToken) {
+            return null;
+        }
+
+        public Task RemoveTrustedPublisher(string publisherName, string publicKeyToken) {
+            return null;
+        }
         // GS01: TrustedPublishers Coming Soon.
     }
 }

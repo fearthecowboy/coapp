@@ -247,7 +247,9 @@ namespace CoApp.Toolkit.Engine {
         public static bool Available { get {
             lock (typeof(EngineServiceManager)) {
                 try {
-                    return EventWaitHandle.OpenExisting("Global\\CoAppAvailable", EventWaitHandleRights.Synchronize).WaitOne(0);
+                    using( var ewh = EventWaitHandle.OpenExisting("Global\\CoAppAvailable", EventWaitHandleRights.Synchronize)) {
+                        return ewh.WaitOne(0);
+                    }
                 }catch {}
                 return false;
             }
@@ -257,7 +259,9 @@ namespace CoApp.Toolkit.Engine {
             get {
                 lock (typeof(EngineServiceManager)) {
                     try {
-                        return EventWaitHandle.OpenExisting("Global\\CoAppStartingUp", EventWaitHandleRights.Synchronize).WaitOne(0);
+                        using (var ewh = EventWaitHandle.OpenExisting("Global\\CoAppStartingUp", EventWaitHandleRights.Synchronize)) {
+                            return ewh.WaitOne(0);
+                        }
                     }
                     catch { }
                     return false;
@@ -269,7 +273,9 @@ namespace CoApp.Toolkit.Engine {
             get {
                 lock (typeof(EngineServiceManager)) {
                     try {
-                        return EventWaitHandle.OpenExisting("Global\\CoAppShuttingDown", EventWaitHandleRights.Synchronize).WaitOne(0);
+                        using (var ewh = EventWaitHandle.OpenExisting("Global\\CoAppShuttingDown", EventWaitHandleRights.Synchronize)) {
+                            return ewh.WaitOne(0);
+                        }
                     }
                     catch { }
                     return false;
@@ -281,7 +287,9 @@ namespace CoApp.Toolkit.Engine {
             get {
                 lock (typeof(EngineServiceManager)) {
                     try {
-                        return EventWaitHandle.OpenExisting("Global\\CoAppShutdownRequested", EventWaitHandleRights.Synchronize).WaitOne(0);
+                        using (var ewh = EventWaitHandle.OpenExisting("Global\\CoAppShutdownRequested", EventWaitHandleRights.Synchronize)) {
+                            return ewh.WaitOne(0);
+                        }
                     }
                     catch { }
                     return false;

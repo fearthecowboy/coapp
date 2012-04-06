@@ -66,8 +66,6 @@ namespace CoApp.Toolkit.Engine {
 
             get { return _available; }
             set {
-               
-
                 _available = value;
                 _availableEvent.Reset();
 

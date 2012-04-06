@@ -278,13 +278,16 @@ namespace CoApp.CLI {
                     case "list":
                     case "list-package":
                     case "list-packages":
+                        if( !parameters.Any() || parameters[0] == "*" ) {
+                            _latest = true;
+                        }
+
                         task = preCommandTasks.Continue(() => _easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, false, _installed, _active, null, _blocked, _latest, _location )
                             .Continue(packages => {
                                 if (packages.IsNullOrEmpty()) {
                                     PrintNoPackagesFound(parameters);
                                     return;
                                 } 
-
                                 PrintPackages(packages);
                             }));
                         break;
@@ -326,6 +329,7 @@ namespace CoApp.CLI {
                     case "upgrade":
                     case "upgrade-package":
                     case "upgrade-packages":
+                        task = preCommandTasks.Continue(() => _easyPackageManager.GetUpgradablePackages(parameters)).Continue(pkgs => PrintPackages(pkgs));
                         break;
 
                     case "-u":
@@ -334,7 +338,7 @@ namespace CoApp.CLI {
                     case "update-packages":
                         Console.WriteLine("UPDATE CURRENTLY DISABLED. CHECK BACK SOON");
 
-                        // preCommandTasks.Continue(() => _easyPackageManager.GetUpdatablePackages(parameters)).Continue(pkgs => PrintPackages(pkgs));
+                        task = preCommandTasks.Continue(() => _easyPackageManager.GetUpdatablePackages(parameters)).Continue(pkgs => PrintPackages(pkgs));
                         // task = preCommandTasks.Continue(() => _easyPackageManager.GetUpdatablePackages(parameters)).Continue( packages => Update(packages) );
                         break;
 
@@ -532,7 +536,6 @@ namespace CoApp.CLI {
                         throw new ConsoleException(Resources.UnknownCommand, command);
                 }
 
-                // Thread.Sleep(2000);
                 task.ContinueOnCanceled(() => {
                     // the task was cancelled, and presumably dealt with.
                     Fail("Operation Canceled.");
@@ -543,23 +546,17 @@ namespace CoApp.CLI {
                     if( !(exception is OperationCanceledException)) {
                         Fail("Error (???): {0}\r\n\r\n{1}", exception.Message, exception.StackTrace);
                     }
-
                     // it's all been handled then.
                 });
-
-               
 
                 task.Continue(() => {
                     Console.WriteLine("Done.");
                 }).Wait();
-
-
             }
             catch (ConsoleException failure) {
                 Fail("{0}\r\n\r\n    {1}", failure.Message, Resources.ForCommandLineHelp);
                 CancellationTokenSource.Cancel();
             }
-            
             return 0;
         }
 
@@ -664,8 +661,6 @@ namespace CoApp.CLI {
                 }
             });
         }
-
-
 
         private Task Require(IEnumerable<string> parameters, IEnumerable<Package> packages) {
             if (!packages.Any()) {
@@ -891,6 +886,8 @@ namespace CoApp.CLI {
                     return;
                 }
 
+               
+
                 // we have a collection of packages that the user has requested.
                 // first, lets auto-filter out ones that we can obviously see are not what they wanted.
                 var findConflictTask = _easyPackageManager.FilterConflictsForInstall(packages, _x86, _x64, _cpuany);
@@ -902,6 +899,13 @@ namespace CoApp.CLI {
                 });
 
                 findConflictTask.Continue(filteredPackages => {
+
+                    if (!filteredPackages.Any(each => !each.IsInstalled)) {
+                        Console.WriteLine("The following packages are already installed:\r\n");
+                        PrintPackages(filteredPackages);
+                        return;
+                    }
+
                     // lets get the package install plan.
                     var getPackagePlanTask = _easyPackageManager.IdentifyPackageAndDependenciesToInstall(filteredPackages, _autoUpgrade);
 
@@ -1005,7 +1009,6 @@ namespace CoApp.CLI {
             });
         }
 
-
         private void PrintPotentialUpgradeInformation(Package unsatisfiedPackage, IEnumerable<Package> satifactionOptions) {
             Console.WriteLine("The requested package '{0}' has an versions that supercede it:", unsatisfiedPackage.CanonicalName);
             foreach (var p in satifactionOptions) {
@@ -1020,7 +1023,6 @@ namespace CoApp.CLI {
             foreach (var p in parameters) {
                 Console.WriteLine("   {0}", p);
             }
-            return;
         }
 
         private void PrintPackageInstallPlan(IEnumerable<Package> allPackages, IEnumerable<Package> requestedPackages) {
@@ -1038,7 +1040,7 @@ namespace CoApp.CLI {
                          getsSatisfied
                              ? "Satisfied by {0}".format(pkg.SatisfiedBy.CanonicalName)
                              : !string.IsNullOrEmpty(pkg.LocalPackagePath)
-                                 ? pkg.LocalPackagePath : (pkg.RemoteLocations.IsNullOrEmpty() ? "<unknown>" : pkg.RemoteLocations.FirstOrDefault())
+                                 ? pkg.LocalPackagePath : (pkg.RemoteLocations.IsNullOrEmpty() ? (pkg.IsInstalled? "(installed)" : "") : pkg.RemoteLocations.FirstOrDefault())
                      // Satisfied_By = getsSatisfied ? "" : pkg.SatisfiedBy.CanonicalName ,
                      // Satisfied_By = pkg.SatisfiedBy == null ? pkg.CanonicalName : pkg.SatisfiedBy.CanonicalName ,
                      // Status = pkg.IsInstalled ? "Installed" : "will install",
@@ -1058,7 +1060,7 @@ namespace CoApp.CLI {
                          getsSatisfied
                              ? "Satisfied by {0}".format(pkg.SatisfiedBy.CanonicalName)
                              : !string.IsNullOrEmpty(pkg.LocalPackagePath)
-                                 ? pkg.LocalPackagePath : (pkg.RemoteLocations.IsNullOrEmpty() ? "<unknown>" : pkg.RemoteLocations.FirstOrDefault())
+                                 ? pkg.LocalPackagePath : (pkg.RemoteLocations.IsNullOrEmpty() ?(pkg.IsInstalled? "(installed)" : "") : pkg.RemoteLocations.FirstOrDefault())
                      // Satisfied_By = getsSatisfied ? "" : pkg.SatisfiedBy.CanonicalName ,
                      // Satisfied_By = pkg.SatisfiedBy == null ? pkg.CanonicalName : pkg.SatisfiedBy.CanonicalName ,
                      // Status = pkg.IsInstalled ? "Installed" : "will install",

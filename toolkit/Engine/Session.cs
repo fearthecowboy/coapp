@@ -194,7 +194,7 @@ namespace CoApp.Toolkit.Engine {
                 // drop all our local session data.
                 _sessionCache.Clear();
                 _sessionCache = null;
-
+                
                 // close and clean up the pipes. 
                 Disconnect();
 
@@ -940,7 +940,8 @@ namespace CoApp.Toolkit.Engine {
 
         private void SendSessionStarted(string sessionId) {
             WriteAsync(new UrlEncodedMessage("session-started") {
-                {"session-id", sessionId}
+                {"session-id", sessionId},
+                {"protocol-version", "1.1"}
             });
         }
 

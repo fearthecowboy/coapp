@@ -69,7 +69,6 @@
                     }
                 }
             };
-            
 
             Installer.Ready += (src, evnt) => Invoke(() => {
                if (!(Opacity > 0)) {

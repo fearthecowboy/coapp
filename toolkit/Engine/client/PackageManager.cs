@@ -164,7 +164,7 @@ namespace CoApp.Toolkit.Engine.Client {
                         StartSession(clientName, sessionId);
 
                         Task.Factory.StartNew(ProcessMessages,TaskCreationOptions.None).AutoManage();
-                        _isBufferReady.WaitOne();
+                        //_isBufferReady.WaitOne();
                     }, TaskCreationOptions.AttachedToParent);
                 }
             }
@@ -201,11 +201,11 @@ namespace CoApp.Toolkit.Engine.Client {
                                     var queue = ManualEventQueue.GetQueue(rqid.GetValueOrDefault());
                                     if (queue != null) {
                                         queue.Enqueue(responseMessage);
-                                    }
-                                } catch {
-                                    //  Console.WriteLine("Unable to queue the response to the right request event queue!");
-                                    // Console.WriteLine("    Response:{0}", responseMessage.Command);
-                                    // not able to queue up the response to the right task?
+                                    } 
+                                    //else {
+                                       // GS01 : Need to put in protocol version detection.  
+                                    //}
+                                } catch  {
                                 }
 
                                 // it's ok to let the next readTask use the buffer, we've got the data out & queued.

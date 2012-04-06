@@ -55,8 +55,7 @@ namespace CoApp.Toolkit.PackageFormatHandlers {
                 lock (typeof (MSIBase)) {
                     try {
                         using (var database = new Database(localPackagePath, DatabaseOpenMode.ReadOnly)) {
-                            using (
-                                var view = database.OpenView("SELECT Value FROM Property WHERE Property='CoAppPackageFeed' OR Property='CoAppCompositionData'")) {
+                            using (var view = database.OpenView("SELECT Value FROM Property WHERE Property='CoAppPackageFeed' OR Property='CoAppCompositionData'")) {
                                 view.Execute();
                                 return view.Count() == 2;
                             }

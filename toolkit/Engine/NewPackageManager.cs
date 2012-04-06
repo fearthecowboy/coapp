@@ -177,10 +177,14 @@ namespace CoApp.Toolkit.Engine {
                 var results = SearchForPackages(name, version, arch, publicKeyToken, location);
                 // filter results of list based on secondary filters
 
+                // if we are upgrading or installing, we need to find packages that are already installed.
+                installed = installed ?? (upgrades == true || updates == true);
+
                 results = from package in results
                     where
                         (installed == null || package.IsInstalled == installed) && (active == null || package.IsActive == active) &&
-                            (required == null || package.IsRequired == required) && (blocked == null || package.IsBlocked == blocked)
+                            (required == null || package.IsRequired == required) && (blocked == null || package.IsBlocked == blocked) 
+                            
 
                     select package;
 

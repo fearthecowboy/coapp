@@ -34,7 +34,7 @@
         <Border Style="{StaticResource ContentBorderStyle}">
             <DockPanel HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="0,0,0,0" Width="Auto">
 
-                <StackPanel DockPanel.Dock="Top" Name="Header" Style="{StaticResource HeaderBackground}" Background="#FFe7eee7" Height="90" MouseLeftButtonDown="HeaderMouseLeftButtonDown">
+                <StackPanel DockPanel.Dock="Top" Name="Header" Style="{StaticResource HeaderBackground}" Background="#FFe0f2e0" Height="90" MouseLeftButtonDown="HeaderMouseLeftButtonDown">
                     <Grid Name="headerControls">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />

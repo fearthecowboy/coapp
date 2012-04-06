@@ -46,6 +46,16 @@ namespace CoApp.Toolkit.Engine.Feeds {
         }
 
 
+        private int _lastCount;
+        internal override bool Stale {
+            get {
+                return base.Stale || (_path.DirectoryEnumerateFilesSmarter(_filter, false ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly).Count() != _lastCount);
+            }
+            set {
+                base.Stale = value;
+            }
+        }
+
         /// <summary>
         /// Scans the directory for all packages that match the wildcard.
         /// 
@@ -63,13 +73,16 @@ namespace CoApp.Toolkit.Engine.Feeds {
 
                     // GS01: BUG: recursive now should use ** in pattern match.
                     var files = _path.DirectoryEnumerateFilesSmarter(
-                        _filter, false ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly /*, NewPackageManager.Instance.BlockedScanLocations*/);
-                    files = from file in files
+                        _filter, false ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly /*, NewPackageManager.Instance.BlockedScanLocations*/).ToArray();
+
+                    _lastCount = files.Count();
+                    
+                    var pkgFiles = from file in files
                         where Recognizer.Recognize(file).Result.IsPackageFile
                         // Since we know this to be local, it'm ok with blocking on the result.
                         select file;
 
-                    foreach (var pkg in files.Select(Package.GetPackageFromFilename).Where(pkg => pkg != null)) {
+                    foreach (var pkg in pkgFiles.Select(Package.GetPackageFromFilename).Where(pkg => pkg != null)) {
                         pkg.InternalPackageData.FeedLocation = Location;
 
                         if (!_packageList.Contains(pkg)) {
