@@ -10,11 +10,16 @@ namespace CoApp.Toolkit.Exceptions {
     public class CoAppException : Exception {
         internal bool Logged;
         internal bool IsError;
-        internal string strace;
+        internal string stacktrace;
 
+        public bool IsCanceled { get; set; }
+
+        public void Cancel() {
+            IsCanceled = true;
+        }
 
         private void Log() {
-            strace = new StackTrace(2, true).ToString();
+            stacktrace = new StackTrace(2, true).ToString();
 
             if (IsError) {
                 Logging.Logger.Error(this);

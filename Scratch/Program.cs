@@ -14,12 +14,15 @@ namespace Scratch {
         
         [STAThread]
         static void Main(string[] args) {
-#if FALSE
             Thread.Sleep(3000);
             var appDomain = AppDomain.CreateDomain("tmp" + DateTime.Now.Ticks);
-            appDomain.CreateInstanceFromAndUnwrap(Path.Combine(Environment.CurrentDirectory, "CoApp.Client.dll"), "CoApp.Toolkit.Engine.Client.Installer", false, BindingFlags.Default, null, args, null, null);
-#endif 
-            
+
+             appDomain.CreateInstanceFromAndUnwrap(Path.Combine(Environment.CurrentDirectory, "CoApp.Client.dll"), "CoApp.Toolkit.Engine.Client.Installer", false, BindingFlags.Default, null, args, null, null);
+
+            //appDomain.CreateInstanceAndUnwrap("CoApp.Client, Version=1.2.0.94, Culture=neutral, PublicKeyToken=1e373a58e25250cb",
+              //     "CoApp.Toolkit.Engine.Client.Installer", false, BindingFlags.Default, null, new[] { args[0] }, null, null);
+#if FALSE
+
             var t = Task.Factory.StartNew(
                 () => {
                     Console.WriteLine("Task 1");
@@ -44,7 +47,7 @@ namespace Scratch {
                     // this is called when the antecedent task throws an exception
                 });
 
-            var oncan = s.OnCancelled(
+            var oncan = s.OnCanceled(
                 () => {
                     // this is called when the antecedent task is cancelled either by token, or by not being called.
                 });
@@ -73,6 +76,7 @@ namespace Scratch {
                 Console.WriteLine("{0}\r\n{1}",e.Message, e.StackTrace);
             }
             
+#endif
         }
     }
 }

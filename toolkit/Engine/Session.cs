@@ -159,8 +159,8 @@ namespace CoApp.Toolkit.Engine {
                     session._responsePipe = responsePipe;
                     Logger.Message("Rejoining existing session...");
                     session.SendSessionStarted(sessionId);
-                    session.SendQueuedMessages();
                     session.Connected = true;
+                    session.SendQueuedMessages();
                     return;
                 }
             } else {
@@ -194,7 +194,7 @@ namespace CoApp.Toolkit.Engine {
                 // drop all our local session data.
                 _sessionCache.Clear();
                 _sessionCache = null;
-
+                
                 // close and clean up the pipes. 
                 Disconnect();
 
@@ -203,6 +203,8 @@ namespace CoApp.Toolkit.Engine {
         }
 
         private void Disconnect() {
+            _bufferReady.Set();
+
             lock (this) {
                 if (!Connected) {
                     return;
@@ -267,7 +269,7 @@ namespace CoApp.Toolkit.Engine {
                 InstallingPackageProgress = SendInstallingPackage,
                 NoFeedsFound = SendNoFeedsFound,
                 NoPackagesFound = SendNoPackagesFound,
-                OperationCancelled = SendCancellationRequested,
+                OperationCanceled = SendCancellationRequested,
                 PackageBlocked = SendPackageIsBlocked,
                 PackageDetails = SendPackageDetails,
                 PackageHasPotentialUpgrades = SendPackageHasPotentialUpgrades,
@@ -297,46 +299,62 @@ namespace CoApp.Toolkit.Engine {
             _task.ContinueWith((antecedent) => End());
         }
 
-        private bool IsCancelled {
+        private bool IsCanceled {
             get { return _cancellationTokenSource.Token.IsCancellationRequested; }
         }
 
-        private readonly Queue<UrlEncodedMessage> _outputQueue = new Queue<UrlEncodedMessage>();
+        private readonly Queue<string> _outputQueue = new Queue<string>();
+        private Task _queueProcessingTask;
 
-        private void QueueResponseMessage(UrlEncodedMessage response) {
-            if( IsCancelled ) {
-                return;
-            }
+        private Task SendQueuedMessages() {
+            lock( this ) {
+                // if another thread is processing this queue, let it.
+                if (_queueProcessingTask != null) {
+                    return _queueProcessingTask;
+                }
 
-            Logger.Message("adding message to queue: {0}".format(response));
-            Disconnect();
-
-            lock (_outputQueue) {
-                _outputQueue.Enqueue(response);
+                // unlike most other places, this task isn't attached to the parent
+                return (_queueProcessingTask = Task.Factory.StartNew(DrainQueue));
             }
         }
 
-        private void SendQueuedMessages() {
-            while (_outputQueue.Any() && _responsePipe != null) {
-               
-                if (IsCancelled) {
-                    return;
+        private void DrainQueue() {
+            while (true) {
+                // if we're done processing messages, make sure nobody thinks we still are before quitting
+                bool anymessages;
+                lock (this) {
+                    lock(_outputQueue) {
+                        anymessages = _outputQueue.Any();
+                    }
+
+                    if ( _responsePipe == null || IsCanceled || !anymessages ) {
+                        _queueProcessingTask = null;
+                        return;
+                    }
                 }
 
                 try {
-                    _responsePipe.WriteLineAsync(_outputQueue.Peek().ToString()).ContinueWith(antecedent => {
-                        lock (_outputQueue) {
-                            _outputQueue.Dequeue();
-                        }
-                    }, TaskContinuationOptions.NotOnFaulted).Wait();
+                    string msg;
+                    
+                    lock (_outputQueue) {
+                        msg = _outputQueue.Peek();
+                    }
+
+                    // write it out 
+                    _responsePipe.WriteLineAsync(msg).Wait();
+
+                    // if the wait() didn't throw, pop the item off the queue
+                    lock (_outputQueue) {
+                        _outputQueue.Dequeue();
+                    }
                 }
                 catch /* (Exception e) */ {
-                    // hmm. disconnected again.
+                    // hmm. if the wait() threw, we're disconnected.
                     Disconnect();
-                    return;
                 }
             }
         }
+       
 
         /// <summary>
         ///   Writes the message to the stream asyncly.
@@ -345,35 +363,32 @@ namespace CoApp.Toolkit.Engine {
         /// <returns></returns>
         /// <remarks>
         /// </remarks>
-        public void WriteAsync(UrlEncodedMessage message) {
-            if (IsCancelled) {
+        public void WriteAsync(UrlEncodedMessage message, string rqid = null) {
+            // bail if we're cancelling this request
+            if (IsCanceled) {
                 return;
             }
 
-            if (Connected) {
-                try {
-                    try {
-                        // if there is a RequestId in this session, let's grab it.
-                        message.Add("rqid", PackageManagerMessages.Invoke.RequestId);
-                    }
-                    catch {
-                        // no worries if we can't get that.
-                    }
-                    _responsePipe.WriteLineAsync(message.ToString()).ContinueWith(antecedent => QueueResponseMessage(message),
-                        TaskContinuationOptions.OnlyOnFaulted);
-                }
-                catch /* (Exception e) */ {
-                    // queue the message
-                    QueueResponseMessage(message);
-                }
+            // first, attach a request id to the message
+            try {
+                message.Add("rqid", rqid ?? PackageManagerMessages.Invoke.RequestId);
             }
-            else {
-                QueueResponseMessage(message);
+            catch {
+                // no worries if we can't get that.
+            }
+
+            // next toss the message the queue 
+            lock (_outputQueue) {
+                _outputQueue.Enqueue(message.ToString());
+            }
+
+            if (Connected) {
+                SendQueuedMessages();
             }
         }
 
         private Dictionary<Type, object> _sessionCache = new Dictionary<Type, object>();
-
+        ManualResetEvent _bufferReady = new ManualResetEvent(true);
         /// <summary>
         ///   Processes the mesages.
         /// </summary>
@@ -421,12 +436,14 @@ namespace CoApp.Toolkit.Engine {
 
             Task<int> readTask = null;
             SendSessionStarted(_sessionId);
+            
+            var serverInput = new byte[EngineService.BufferSize];
 
             while (EngineService.IsRunning) {
                 if (!Connected) {
                     readTask = null;
 
-                    if (IsCancelled) {
+                    if (IsCanceled) {
                         return;
                     }
 
@@ -434,7 +451,7 @@ namespace CoApp.Toolkit.Engine {
                     _resetEvent.WaitOne(_maxDisconenctedWait);
                     _waitingForClientResponse = true; // debug, always drop session on timeout.
 
-                    if (IsCancelled || (_waitingForClientResponse && !Connected)) {
+                    if (IsCanceled || (_waitingForClientResponse && !Connected)) {
                         // we're disconnected, we've waited for the duration, 
                         // we're assuming the client isn't coming back.
                         // End(); // get out of the function ... 
@@ -444,13 +461,14 @@ namespace CoApp.Toolkit.Engine {
                 }
 
                 try {
-                    if (IsCancelled) {
+                    if (IsCanceled) {
                         return;
                     }
 
                     // if there is currently a task reading the from the stream, let's skip it this time.
-                    if ((readTask == null || readTask.IsCompleted) && Connected) {
-                        var serverInput = new byte[EngineService.BufferSize];
+                    if (_bufferReady.WaitOne() && Connected) {
+                        _bufferReady.Reset();
+
                         try {
                             // when the readasync command can finally complete, then we know that
                             // it's ok to ask it to read again.
@@ -461,53 +479,49 @@ namespace CoApp.Toolkit.Engine {
                                     Disconnect();
                                     return;
                                 }
+
                                 if (antecedent.Result >= EngineService.BufferSize) {
+                                    _bufferReady.Set();
                                     SendUnexpectedFailure(new CoAppException("Message size exceeds maximum size allowed."));
                                     return;
                                 }
+                                string rqid = null;
+                                Task dispatchTask = null;
 
-                                var rawMessage = Encoding.UTF8.GetString(serverInput, 0, antecedent.Result);
+                                try {
+                                    var rawMessage = Encoding.UTF8.GetString(serverInput, 0, antecedent.Result);
+                                    var requestMessage = new UrlEncodedMessage(rawMessage);
+                                    rqid = requestMessage["rqid"].ToString();
 
-                                if (string.IsNullOrEmpty(rawMessage)) {
-                                    return;
+                                    if( string.IsNullOrEmpty(requestMessage)) {
+                                        return;
+                                    }
+
+                                    // create a request cache.
+                                    new RequestCacheMessages().Register();
+                                    dispatchTask = Dispatch(requestMessage);
                                 }
-                                var requestMessage = new UrlEncodedMessage(rawMessage);
-                                var rqid = requestMessage["rqid"].ToString();
-
-                                // create a request cache.
-                                new RequestCacheMessages().Register();
-
-                                var dispatchTask = Dispatch(requestMessage);
+                                finally {
+                                    // whatever, after this point let the messages flow!
+                                    _bufferReady.Set();
+                                }
 
                                 if (!string.IsNullOrEmpty(rqid)) {
-                                    if (dispatchTask == null) { // completed synchronously.
-                                        WriteAsync(new UrlEncodedMessage("task-complete") {{ "rqid", rqid } });
+                                    if (dispatchTask == null) {
+                                        // we're done, send the result and wait for the queue to drain.
+                                        WriteAsync(new UrlEncodedMessage("task-complete"), rqid);
                                     } else {
-                                        dispatchTask.ContinueWith(dispatchAntecedent => {
-                                            try {
-                                                // had to force this to ensure that async writes are at least in the pipe 
-                                                // before waiting on the pipe drain.
-                                                // without this, it is possible that the async writes are still 'getting to the pipe' 
-                                                // and not actually in the pipe, **even though the async write is complete**
-                                                Thread.Sleep(50);
-                                                if (_responsePipe != null) {
-                                                    _responsePipe.WaitForPipeDrain();
-                                                    WriteAsync(new UrlEncodedMessage("task-complete") {
-                                                        {
-                                                            "rqid", rqid
-                                                            }
-                                                    });
-                                                }
-                                            } catch (Exception e) {
-                                                Logger.Error(e);
-                                                // supress any exceptions.
-                                            }
-                                        });
+                                        // when the task is done, send the result then wait for the queue to drain.
+                                        dispatchTask.ContinueAlways((antecedentTask) => {
+                                            WriteAsync(new UrlEncodedMessage("task-complete"), rqid);
+                                            // NewPackageManager.Instance.Updated();
+                                        }).Wait();
                                     }
                                 }
 
                                 WriteErrorsOnException(dispatchTask);
-                                // readTask = null;
+                                    
+                                
                             }).AutoManage();
 
                             WriteErrorsOnException(readTask);
@@ -524,7 +538,7 @@ namespace CoApp.Toolkit.Engine {
                         readTask.Wait((int) _synchronousClientHeartbeat.TotalMilliseconds, _cancellationTokenSource.Token);
                     }
 
-                    if (IsCancelled) {
+                    if (IsCanceled) {
                         return;
                     }
 
@@ -533,7 +547,7 @@ namespace CoApp.Toolkit.Engine {
                     }
                 }
                 catch (AggregateException ae) {
-                    if (IsCancelled) {
+                    if (IsCanceled) {
                         // ok, I'll assume you know what you're doing.
                         return;
                     }
@@ -548,7 +562,7 @@ namespace CoApp.Toolkit.Engine {
                 }
 
                 catch (Exception e) {
-                    if (IsCancelled) {
+                    if (IsCanceled) {
                         // ok, I'll assume you know what you're doing.
                         return;
                     }
@@ -560,7 +574,7 @@ namespace CoApp.Toolkit.Engine {
         }
 
         private void WriteErrorsOnException(Task task) {
-            if (IsCancelled) {
+            if (IsCanceled) {
                 return;
             }
 
@@ -568,7 +582,7 @@ namespace CoApp.Toolkit.Engine {
                 task.ContinueWith(antecedent => {
                     if (antecedent.Exception != null) {
                         foreach (var failure in antecedent.Exception.Flatten().InnerExceptions.Where(failure => failure.GetType() != typeof(AggregateException))) {
-                            if (IsCancelled) {
+                            if (IsCanceled) {
                                 return;
                             }
 
@@ -592,7 +606,7 @@ namespace CoApp.Toolkit.Engine {
         /// </remarks>
         private Task Dispatch(UrlEncodedMessage requestMessage) {
             Logger.Message("Request:{0}".format(requestMessage.ToSmallerString()));
-            if (IsCancelled) {
+            if (IsCanceled) {
                 SendCancellationRequested("Service is shutting down");
                 return null;
             }
@@ -926,7 +940,8 @@ namespace CoApp.Toolkit.Engine {
 
         private void SendSessionStarted(string sessionId) {
             WriteAsync(new UrlEncodedMessage("session-started") {
-                {"session-id", sessionId}
+                {"session-id", sessionId},
+                {"protocol-version", "1.1"}
             });
         }
 
@@ -1153,7 +1168,7 @@ namespace CoApp.Toolkit.Engine {
         }
 
         private void SendCancellationRequested(string message) {
-            WriteAsync(new UrlEncodedMessage("operation-cancelled") {
+            WriteAsync(new UrlEncodedMessage("operation-canceled") {
                 {"message", message}
             });
         }

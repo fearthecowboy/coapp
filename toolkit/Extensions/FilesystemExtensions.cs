@@ -632,7 +632,7 @@ namespace CoApp.Toolkit.Extensions {
                                     var srcNormal = NormalizePath(src);
                                     if( Directory.Exists(srcNormal)) {
                                         if (string.IsNullOrEmpty(dest)) {
-                                            Directory.Delete(srcNormal);
+                                            Directory.Delete(srcNormal,true);
                                             if (Directory.Exists(srcNormal)) {
                                                 // didn't delete? put it back in the list.
                                                 skipped.Add(src+"\0");

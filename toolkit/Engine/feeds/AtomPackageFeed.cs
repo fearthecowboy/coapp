@@ -14,8 +14,10 @@ namespace CoApp.Toolkit.Engine.Feeds {
     using System.IO;
     using System.Linq;
     using System.ServiceModel.Syndication;
+    using System.Threading;
     using System.Threading.Tasks;
     using Extensions;
+    using Logging;
     using Model;
     using Model.Atom;
     using Tasks;
@@ -70,7 +72,11 @@ namespace CoApp.Toolkit.Engine.Feeds {
         /// From a remote URI location
         /// </summary>
         /// <param name="location">The URL of the remote package feed..</param>
-        internal AtomPackageFeed(Uri location) : this(location.AbsoluteUri) {
+        internal AtomPackageFeed(Uri location, string localFile = null) : this(location.AbsoluteUri) {
+            if (localFile.FileIsLocalAndExists()) {
+                _localLocation = localFile;
+                Stale = false; // we just got the file, it's not stale. 
+            }
         }
 
         internal static PackageDetails ReadPackageDetails(Uri remoteLocation, string localLocation, Package package) {

@@ -168,9 +168,9 @@ namespace CoApp.Toolkit.Logging {
                 if (!exception.Logged) {
                     exception.Logged = true;
                     if(exception.InnerException != null ) {
-                        WriteEntry("{0}/{1} - {2}".format(exception.GetType(), exception.InnerException.GetType(), exception.Message), EventLogEntryType.Warning, 0, 0, exception.strace.ToByteArray());    
+                        WriteEntry("{0}/{1} - {2}".format(exception.GetType(), exception.InnerException.GetType(), exception.Message), EventLogEntryType.Warning, 0, 0, exception.stacktrace.ToByteArray());    
                     } else {
-                        WriteEntry("{0} - {1}".format(exception.GetType(), exception.Message), EventLogEntryType.Warning, 0, 0, exception.strace.ToByteArray());    
+                        WriteEntry("{0} - {1}".format(exception.GetType(), exception.Message), EventLogEntryType.Warning, 0, 0, exception.stacktrace.ToByteArray());    
                     }
                 }
             }
@@ -203,9 +203,9 @@ namespace CoApp.Toolkit.Logging {
                 if (!exception.Logged) {
                     exception.Logged = true;
                     if (exception.InnerException != null) {
-                        WriteEntry("{0}/{1} - {2}".format(exception.GetType(), exception.InnerException.GetType(), exception.Message), EventLogEntryType.Error, 0, 0, exception.strace.ToByteArray());
+                        WriteEntry("{0}/{1} - {2}".format(exception.GetType(), exception.InnerException.GetType(), exception.Message), EventLogEntryType.Error, 0, 0, exception.stacktrace.ToByteArray());
                     } else {
-                        WriteEntry("{0} - {1}".format(exception.GetType(), exception.Message), EventLogEntryType.Error, 0, 0, exception.strace.ToByteArray());
+                        WriteEntry("{0} - {1}".format(exception.GetType(), exception.Message), EventLogEntryType.Error, 0, 0, exception.stacktrace.ToByteArray());
                     }
                 }
             }

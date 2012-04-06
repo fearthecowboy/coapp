@@ -381,7 +381,6 @@ namespace CoApp.Toolkit.Extensions {
         /// <returns><c>true</c> if the specified text is true; otherwise, <c>false</c>.</returns>
         /// <remarks></remarks>
         public static bool IsTrue(this string text) {
-            
             return text != null && text.Equals("true", StringComparison.CurrentCultureIgnoreCase);
         }
 

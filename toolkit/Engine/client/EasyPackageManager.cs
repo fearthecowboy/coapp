@@ -13,6 +13,7 @@
 namespace CoApp.Toolkit.Engine.Client {
     using System;
     using System.Collections.Generic;
+    using System.IO;
     using System.Linq;
     using System.Threading.Tasks;
     using Exceptions;
@@ -21,6 +22,7 @@ namespace CoApp.Toolkit.Engine.Client {
     using Tasks;
     using Toolkit.Exceptions;
     using Win32;
+    using OperationCanceledException = System.OperationCanceledException;
 
     public class Feed {
         public string Location { get; internal set; }
@@ -49,6 +51,11 @@ namespace CoApp.Toolkit.Engine.Client {
         public int Minutes { get; set; }
         public DayOfWeek? DayOfWeek { get; set; }
         public int IntervalInMinutes { get; set; }
+    }
+
+    public class Publisher {
+        public string Name { get; set; }
+        public string PublicKeyToken { get; set; }
     }
 
     public class PackageSet {
@@ -104,19 +111,22 @@ namespace CoApp.Toolkit.Engine.Client {
         internal class RemoteCallResponse : PackageManagerMessages {
             internal bool EngineRestarting;
             internal bool NoPackages;
+            // internal Exception Exception;
 
-            internal string OperationCancelledReason;
+            internal string OperationCanceledReason;
 
             internal Action<string, string, int> DownloadProgress;
             internal Action<string, string> DownloadCompleted;
+
+            internal static Dictionary <string, Task> _currentDownloads = new Dictionary<string, Task>();
 
             public RemoteCallResponse() {
                 PermissionRequired = permission => {
                     throw new RequiresPermissionException(permission);
                 };
 
-                OperationCancelled = reason => {
-                    OperationCancelledReason = reason;
+                OperationCanceled = reason => {
+                    OperationCanceledReason = reason;
                 };
 
                 UnexpectedFailure = exception => {
@@ -127,8 +137,11 @@ namespace CoApp.Toolkit.Engine.Client {
                     NoPackages = true;
                 };
 
-                Error = (s, s1, arg3) => {
-                    throw new CoAppException("Message Argument Exception [{0}/{1}/{2}]".format(s, s1, arg3));
+                Error = (message, parameter, reason) => {
+                    if( message == "add-feed" ) {
+                        throw new CoAppException(reason);
+                    }
+                    throw new CoAppException("Message Argument Exception [{0}/{1}/{2}]".format(message, parameter, reason));
                 };
 
                 PackageSatisfiedBy = (original, satisfiedBy) => {
@@ -144,7 +157,7 @@ namespace CoApp.Toolkit.Engine.Client {
                 };
 
                 FailedPackageInstall = (canonicalname, filename, reason) => {
-                    throw new FailedPackageRemoveException(canonicalname, reason);
+                    throw new CoAppException("Package Failed Install {0} => {1}".format(canonicalname, reason));
                 };
 
                 Restarting = () => {
@@ -157,21 +170,109 @@ namespace CoApp.Toolkit.Engine.Client {
                     throw new PackageBlockedException(canonicalname);
                 };
 
-                RequireRemoteFile =
-                    (canonicalName, remoteLocations, localFolder, force) => {
-                        Downloader.GetRemoteFile(canonicalName, remoteLocations, localFolder, force, new RemoteFileMessages {
-                            Progress = (itemUri, percent) => {
-                                if (DownloadProgress != null) {
-                                    DownloadProgress(itemUri.AbsoluteUri, localFolder, percent);
+                RequireRemoteFile = (canonicalName, remoteLocations, targetFolder, force) => {
+                    var targetFilename = Path.Combine(targetFolder, canonicalName);
+                    lock (_currentDownloads) {
+
+                        if (_currentDownloads.ContainsKey(targetFilename)) {
+                                // wait for this guy to respond (which should give us what we need)
+                                _currentDownloads[targetFilename].Continue(() => {
+                                    if (File.Exists(targetFilename)) {
+                                        if (DownloadProgress != null) {
+                                            DownloadCompleted(canonicalName, targetFilename);
+                                        }
+                                        PackageManager.Instance.RecognizeFile(canonicalName, targetFilename, remoteLocations.FirstOrDefault(), this);
+                                    }
+                                    return;
+                                });
+                            return;
+                        }
+
+                        // gotta download the file...
+                        var task = Task.Factory.StartNew(() => {
+                            foreach (var location in remoteLocations) {
+                                try {
+
+                                    // a filesystem location (remote or otherwise)
+                                    var uri = new Uri(location);
+                                    if (uri.IsFile) {
+                                        // try to copy the file local.
+                                        var remoteFile = uri.AbsoluteUri.CanonicalizePath();
+
+                                        // if this fails, we'll just move down the line.
+                                        File.Copy(remoteFile, targetFilename);
+                                        PackageManager.Instance.RecognizeFile(canonicalName, targetFilename, uri.AbsoluteUri, this);
+                                        return;
+                                    }
+
+                                    // A web location
+                                    Task progressTask = null;
+                                    var success = false;
+                                    var rf = new RemoteFile(uri, targetFilename,
+                                        completed : (itemUri) => {
+                                            PackageManager.Instance.RecognizeFile(canonicalName, targetFilename, uri.AbsoluteUri, this);
+                                            if (DownloadCompleted != null) {
+                                                // remove it from the list of current downloads
+                                                _currentDownloads.Remove(targetFilename);
+
+                                                // give the user notification
+                                                DownloadCompleted(itemUri.AbsoluteUri, targetFilename);
+                                                success = true;
+                                            }
+                                        },
+
+                                        failed : (itemUri) => {
+                                            // Logger.Message("FAILED DOWNLOAD FILE : {0}", uri);
+                                            success = false;
+                                        },
+
+                                        progress : (itemUri, percent) => {
+                                            if (progressTask == null) {
+                                                // report progress to the engine
+                                                progressTask = PackageManager.Instance.DownloadProgress(canonicalName, percent);
+                                                progressTask.Continue(() => {
+                                                    progressTask = null;
+                                                });
+                                            }
+
+                                            // report progress to the user
+                                            if (DownloadProgress != null) {
+                                                DownloadProgress(itemUri.AbsoluteUri, targetFolder, percent);
+                                            }
+                                        });
+
+                                    rf.Get();
+
+                                    if (success && File.Exists(targetFilename)) {
+                                        return;
+                                    }
+
+                                } catch (Exception e) {
+                                    // bogus, dude.
+                                    // try the next one.
+                                    Logger.Error(e);
                                 }
-                            },
-                            Completed = itemUri => {
-                                if (DownloadCompleted != null) {
-                                    DownloadCompleted(itemUri.AbsoluteUri, localFolder);
-                                }
+                                // loop around and try again?
                             }
-                        }, this);
-                    };
+
+                            // was there a file there from before?
+                            if (File.Exists(targetFilename)) {
+                                if (DownloadProgress != null) {
+                                    DownloadCompleted(canonicalName, targetFilename);
+                                }
+                                PackageManager.Instance.RecognizeFile(canonicalName, targetFilename, remoteLocations.FirstOrDefault(), this);
+                            }
+
+                            // remove it from the list of current downloads
+                            _currentDownloads.Remove(targetFilename);
+                            
+                            // if we got here, that means we couldn't get the file. too bad, so sad.
+                            PackageManager.Instance.UnableToAcquire(canonicalName, new PackageManagerMessages());
+                        }, TaskCreationOptions.AttachedToParent);
+
+                        _currentDownloads.Add(targetFilename, task);
+                    }
+                };
 
                 Register();
             }
@@ -182,11 +283,11 @@ namespace CoApp.Toolkit.Engine.Client {
                     return;
                 }
 
-                if (!string.IsNullOrEmpty(OperationCancelledReason)) {
-                    throw new OperationCanceledException(OperationCancelledReason);
+                if (!string.IsNullOrEmpty(OperationCanceledReason)) {
+                    throw new OperationCanceledException(OperationCanceledReason);
                 }
 
-                antecedent.ThrowOnFaultOrCancel();
+                antecedent.RethrowWhenFaulted();
             }
         }
 
@@ -203,7 +304,7 @@ namespace CoApp.Toolkit.Engine.Client {
         /// <summary>
         ///   Returns a collection of packages that are filtered to the platform switches passed on the command line.
         /// </summary>
-        /// <param name="packages"> The collection to filter packages for </param>
+            /// <param name="packages"> The collection to filter packages for </param>
         /// <param name="x86"> Accept x86 packages? </param>
         /// <param name="x64"> Accept x64 packages? </param>
         /// <param name="cpuany"> Accept CPUANY packages? </param>
@@ -223,68 +324,70 @@ namespace CoApp.Toolkit.Engine.Client {
         /// <param name="x64"> </param>
         /// <param name="cpuany"> </param>
         /// <returns> A filtered collection of packages to install </returns>
-        public IEnumerable<Package> FilterConflictsForInstall(IEnumerable<Package> packages, bool? x86 = null, bool? x64 = null, bool? cpuany = null) {
-            var isFiltering = (true == x64) || (true == x86) || (true == cpuany);
+        public Task<IEnumerable<Package>> FilterConflictsForInstall(IEnumerable<Package> packages, bool? x86 = null, bool? x64 = null, bool? cpuany = null) {
+            return Task.Factory.StartNew(() => {
+                var isFiltering = (true == x64) || (true == x86) || (true == cpuany);
 
-            var pkgs = FilterPackagesForPlatforms(packages, x86, x64, cpuany).Distinct().ToArray();
+                var pkgs = FilterPackagesForPlatforms(packages, x86, x64, cpuany).Distinct().ToArray();
 
-            // get an collection for each package of all the other packages that it matches.
-            var packageFamilies = pkgs.Select(package => pkgs.Where(each => each.Name == package.Name && each.PublicKeyToken == package.PublicKeyToken && (!isFiltering || each.Architecture == package.Architecture)).ToArray()).ToArray();
+                // get an collection for each package of all the other packages that it matches.
+                var packageFamilies = pkgs.Select(package => pkgs.Where(each => each.Name == package.Name && each.PublicKeyToken == package.PublicKeyToken && (!isFiltering || each.Architecture == package.Architecture)).ToArray()).ToArray();
 
-            // get the packages that could be conflicting.
-            var conflictedFamilies = packageFamilies.Where(eachFamily => eachFamily.Count() > 1);
+                // get the packages that could be conflicting.
+                var conflictedFamilies = packageFamilies.Where(eachFamily => eachFamily.Count() > 1);
 
-            if (conflictedFamilies.Any()) {
-                var nonConflictedPackages = packageFamilies.Where(eachFamily => eachFamily.Count() == 1).Select(eachFamily => eachFamily.FirstOrDefault());
+                if (conflictedFamilies.Any()) {
+                    var nonConflictedPackages = packageFamilies.Where(eachFamily => eachFamily.Count() == 1).Select(eachFamily => eachFamily.FirstOrDefault());
 
-                if (!isFiltering) {
-                    var actualConflicts = new List<Package[]>();
-                    foreach (var conflictedPackages in conflictedFamilies) {
-                        // we're really only interested in one platform for a given package here (since the user didn't specify any preference directly)
+                    if (!isFiltering) {
+                        var actualConflicts = new List<Package[]>();
+                        foreach (var conflictedPackages in conflictedFamilies) {
+                            // we're really only interested in one platform for a given package here (since the user didn't specify any preference directly)
 
-                        if (Environment.Is64BitOperatingSystem) {
-                            // if there is a single x64 package, take that.
-                            var x64Pkgs = conflictedPackages.Where(each => each.Architecture == Architecture.x64).ToArray();
-                            if (x64Pkgs.Count() == 1) {
-                                nonConflictedPackages = nonConflictedPackages.Union(x64Pkgs);
+                            if (Environment.Is64BitOperatingSystem) {
+                                // if there is a single x64 package, take that.
+                                var x64Pkgs = conflictedPackages.Where(each => each.Architecture == Architecture.x64).ToArray();
+                                if (x64Pkgs.Count() == 1) {
+                                    nonConflictedPackages = nonConflictedPackages.Union(x64Pkgs);
+                                    continue;
+                                }
+
+                                if (x64Pkgs.Count() > 1) {
+                                    // we've got more than one package of a single platform. just add it to the conflicts and move along.
+                                    actualConflicts.Add(conflictedPackages);
+                                    continue;
+                                }
+                            }
+
+                            // if there are no x64 packages, see if there is a single x86 package, take that.
+                            var x86Pkgs = conflictedPackages.Where(each => each.Architecture == Architecture.x86).ToArray();
+                            if (x86Pkgs.Length == 1) {
+                                nonConflictedPackages = nonConflictedPackages.Union(x86Pkgs);
                                 continue;
                             }
 
-                            if (x64Pkgs.Count() > 1) {
-                                // we've got more than one package of a single platform. just add it to the conflicts and move along.
-                                actualConflicts.Add(conflictedPackages);
-                                continue;
-                            }
-                        }
+                            // if we got here, that means no x64  and no x86 packages, and we should just have a plurality of cpuany packages.
+                            // we've got more than one package of a single platform, or that means no x64  and no x86 packages, 
+                            // and we just have a plurality of cpuany packages.
 
-                        // if there are no x64 packages, see if there is a single x86 package, take that.
-                        var x86Pkgs = conflictedPackages.Where(each => each.Architecture == Architecture.x86).ToArray();
-                        if (x86Pkgs.Length == 1) {
-                            nonConflictedPackages = nonConflictedPackages.Union(x86Pkgs);
+                            // Either way just add it to the conflicts and move along.
+                            actualConflicts.Add(conflictedPackages);
                             continue;
                         }
+                        if (actualConflicts.Any()) {
+                            throw new ConflictedPackagesException(actualConflicts);
+                        }
 
-                        // if we got here, that means no x64  and no x86 packages, and we should just have a plurality of cpuany packages.
-                        // we've got more than one package of a single platform, or that means no x64  and no x86 packages, 
-                        // and we just have a plurality of cpuany packages.
-
-                        // Either way just add it to the conflicts and move along.
-                        actualConflicts.Add(conflictedPackages);
-                        continue;
+                        // hmm, we resolved our conflicts automagically.
+                        return nonConflictedPackages;
                     }
-                    if (actualConflicts.Any()) {
-                        throw new ConflictedPackagesException(actualConflicts);
-                    }
-
-                    // hmm, we resolved our conflicts automagically.
-                    return nonConflictedPackages;
+                    // architectures are not factored in here. 
+                    // we must have multiple packages of a given architecture.
+                    throw new ConflictedPackagesException(conflictedFamilies);
                 }
-                // architectures are not factored in here. 
-                // we must have multiple packages of a given architecture.
-                throw new ConflictedPackagesException(conflictedFamilies);
-            }
 
-            return pkgs;
+                return pkgs;
+            }, TaskCreationOptions.AttachedToParent);
         }
 
         /// <summary>
@@ -293,11 +396,13 @@ namespace CoApp.Toolkit.Engine.Client {
         /// <param name="packages"> </param>
         /// <returns> </returns>
         public Task<IEnumerable<Package>> IdentifyPackageAndDependenciesToInstall(IEnumerable<Package> packages, bool? autoUpgrade = null, bool? download = null) {
-            var pTasks = packages.Select(
-                package => Install(package.CanonicalName, autoUpgrade, pretend: true, download: download).ContinueWith(
-                    antecedent => antecedent.Result, TaskContinuationOptions.AttachedToParent));
+            var pTasks = packages.Select(package => Install(package.CanonicalName, autoUpgrade, pretend: true, download: download)).ToArray();
 
-            return pTasks.Continue(allResults => allResults.SelectMany(each => each).Distinct());
+            return pTasks.ContinueAlways(antecedentTasks => {
+                antecedentTasks.RethrowWhenFaulted();
+
+                return antecedentTasks.SelectMany(each => each.Result).Distinct();
+            });
         }
 
         public Task Elevate() {
@@ -314,32 +419,29 @@ namespace CoApp.Toolkit.Engine.Client {
                 }
             };
 
-            return PackageManager.Instance.VerifyFileSignature(filename, handler).ContinueWith(antecedent => {
+            return PackageManager.Instance.VerifyFileSignature(filename, handler).ContinueAlways(antecedent => {
                 if (handler.EngineRestarting) {
                     return VerifyFileSignature(filename).Result;
                 }
                 handler.ThrowWhenFaulted(antecedent);
                 return result;
-            }, TaskContinuationOptions.AttachedToParent);
+            });
         }
 
         public Task<Package> GetLatestInstalledVersion(string canonicalName) {
-            return GetInstalledPackages(canonicalName).ContinueWith(antecedent => {
-                antecedent.ThrowOnFaultOrCancel();
+            return GetInstalledPackages(canonicalName).ContinueAlways(antecedent => {
+                antecedent.RethrowWhenFaulted();
                 return antecedent.Result.OrderByDescending(each => each.Version).FirstOrDefault();
-            }, TaskContinuationOptions.AttachedToParent);
+            });
         }
 
         public Task<PackageSet> GetPackageSet(string canonicalName) {
             var result = new PackageSet();
 
-            return GetPackage(canonicalName).ContinueWith(antecedent => {
+            return GetPackage(canonicalName).Continue(package => {
                 var tasks = new List<Task>();
-
-                antecedent.ThrowOnFaultOrCancel();
-
                 // the given package.
-                result.Package = antecedent.Result;
+                result.Package = package;
 
                 // get all the related packages
                 var allPackages = GetAllVersionsOfPackage(canonicalName).Result.OrderByDescending(each => each.Version);
@@ -424,7 +526,7 @@ namespace CoApp.Toolkit.Engine.Client {
                 Task.WaitAll(tasks.ToArray());
 
                 return result;
-            }, TaskContinuationOptions.AttachedToParent);
+            });
         }
 
         private Package NewestCompatablePackageIn(Package aPackage, IEnumerable<Package> packages) {
@@ -441,7 +543,7 @@ namespace CoApp.Toolkit.Engine.Client {
 
         public Task<Package> GetLatestInstalledCompatableVersion(string canonicalName) {
             return GetPackage(canonicalName).ContinueWith(antecedent => {
-                antecedent.ThrowOnFaultOrCancel();
+                antecedent.RethrowWhenFaulted();
                 if (antecedent.Result == null) {
                     throw new UnknownPackageException(canonicalName);
                 }
@@ -453,42 +555,42 @@ namespace CoApp.Toolkit.Engine.Client {
 
         public Task<Package> GetActiveVersion(string packageName) {
             return GetPackages(packageName, null, null, null, null, true).ContinueWith(antecedent => {
-                antecedent.ThrowOnFaultOrCancel();
+                antecedent.RethrowWhenFaulted();
                 return antecedent.Result.FirstOrDefault();
             }, TaskContinuationOptions.AttachedToParent);
         }
 
         public Task<bool> IsPackageBlocked(string packageName) {
             return GetPackages(packageName, null, null, null, null, null, null, true).ContinueWith(antecedent => {
-                antecedent.ThrowOnFaultOrCancel();
+                antecedent.RethrowWhenFaulted();
                 return antecedent.Result.Any();
             }, TaskContinuationOptions.AttachedToParent);
         }
 
         public Task<bool> IsPackageMarkedRequested(string canonicalName) {
             return GetPackage(canonicalName).ContinueWith(antecedent => {
-                antecedent.ThrowOnFaultOrCancel();
+                antecedent.RethrowWhenFaulted();
                 return antecedent.Result.IsClientRequired;
             }, TaskContinuationOptions.AttachedToParent);
         }
 
         public Task<bool> IsPackageMarkedDoNotUpgrade(string canonicalName) {
             return GetPackage(canonicalName).ContinueWith(antecedent => {
-                antecedent.ThrowOnFaultOrCancel();
+                antecedent.RethrowWhenFaulted();
                 return antecedent.Result.DoNotUpgrade;
             }, TaskContinuationOptions.AttachedToParent);
         }
 
         public Task<bool> IsPackageMarkedDoNotUpdate(string canonicalName) {
             return GetPackage(canonicalName).ContinueWith(antecedent => {
-                antecedent.ThrowOnFaultOrCancel();
+                antecedent.RethrowWhenFaulted();
                 return antecedent.Result.DoNotUpdate;
             }, TaskContinuationOptions.AttachedToParent);
         }
 
         public Task<bool> IsPackageActive(string canonicalName) {
             return GetPackage(canonicalName).ContinueWith(antecedent => {
-                antecedent.ThrowOnFaultOrCancel();
+                antecedent.RethrowWhenFaulted();
                 return antecedent.Result.IsActive;
             }, TaskContinuationOptions.AttachedToParent);
         }
@@ -584,7 +686,7 @@ namespace CoApp.Toolkit.Engine.Client {
 
         public Task<Package> GetPackageFromFile(string filename) {
             return GetPackages(filename).ContinueWith(antecedent => {
-                antecedent.ThrowOnFaultOrCancel();
+                antecedent.RethrowWhenFaulted();
                 var pkg = antecedent.Result.FirstOrDefault();
                 if (pkg == null) {
                     throw new UnknownPackageException("filename: {0}".format(filename));
@@ -649,6 +751,8 @@ namespace CoApp.Toolkit.Engine.Client {
             var completedThisPackage = false;
 
             var result = new List<Package>();
+            Package upgradablePackage = null;
+            IEnumerable<Package> potentialUpgrades = null;
 
             var handler = new RemoteCallResponse {
                 PackageInformation = (package) => result.Add(package),
@@ -667,6 +771,11 @@ namespace CoApp.Toolkit.Engine.Client {
                     }
                 },
 
+                PackageHasPotentialUpgrades = (package, supercedents) => {
+                    upgradablePackage = package;
+                    potentialUpgrades = supercedents;
+                },
+
                 InstalledPackage = packageInstalled,
                 DownloadProgress = _downloadProgress,
                 DownloadCompleted = _downloadCompleted,
@@ -679,6 +788,9 @@ namespace CoApp.Toolkit.Engine.Client {
                             return Install(canonicalName, autoUpgrade, isUpdate, isUpgrade, pretend, download, installProgress, packageInstalled).Result;
                         }
                     } else {
+                        if (potentialUpgrades != null) {
+                            throw new PackageHasPotentialUpgradesException(upgradablePackage, potentialUpgrades);
+                        }
                         handler.ThrowWhenFaulted(antecedent);
                     }
                     return result.Distinct();
@@ -709,6 +821,40 @@ namespace CoApp.Toolkit.Engine.Client {
 
         public Task<IEnumerable<Package>> WhatWouldBeInstalled(string canonicalName, bool? autoUpgrade = null) {
             return Install(canonicalName, autoUpgrade, false, false, false, false);
+        }
+
+        public Task<int> RemovePackages(IEnumerable<string> canonicalNames, bool forceRemoval, Action<string, int> packageRemovalProgress = null, Action<string> packageRemoveCompleted = null) {
+            var packagesToRemove = canonicalNames.ToList();
+            
+            return Task.Factory.StartNew(() => {
+                int[] total = {0};
+                int packageCount;
+
+                // this will keep looping around as long as the last pass removed a package
+                // it was way easier to do this than to figure out what the order of removal is. :P
+                while ((packageCount = packagesToRemove.Count) > 0) {
+                    var packageFailures = new List<Exception>();
+
+                    foreach (var cn in packagesToRemove.ToArray()) {
+                        var canonicalName = cn;
+                        try {
+                            // remove the package and wait for completion.
+                            RemovePackage(canonicalName, forceRemoval, packageRemovalProgress, packageRemoveCompleted).Wait();
+
+                            packagesToRemove.Remove(canonicalName);
+                            total[0] = total[0] + 1;
+                        } catch( Exception exception) {
+                            packageFailures.Add(exception);
+                        }
+                    }
+
+                    if (packagesToRemove.Any() && packageCount == packagesToRemove.Count) {
+                        // it didn't remove any on that pass. we're boned.
+                        throw new AggregateException(packageFailures);
+                    }
+                }
+                return total[0];
+            }, TaskCreationOptions.AttachedToParent);
         }
 
         public Task RemovePackage(string canonicalName, bool forceRemoval, Action<string, int> packageRemovalProgress = null, Action<string> packageRemoveCompleted = null) {
@@ -764,7 +910,7 @@ namespace CoApp.Toolkit.Engine.Client {
             get {
                 return SetLogging().ContinueWith(
                     antecedent => {
-                        antecedent.ThrowOnFaultOrCancel();
+                        antecedent.RethrowWhenFaulted();
                         return antecedent.Result.Messages;
                     }, TaskContinuationOptions.AttachedToParent);
             }
@@ -784,7 +930,7 @@ namespace CoApp.Toolkit.Engine.Client {
             get {
                 return SetLogging().ContinueWith(
                     antecedent => {
-                        antecedent.ThrowOnFaultOrCancel();
+                        antecedent.RethrowWhenFaulted();
                         return antecedent.Result.Warnings;
                     }, TaskContinuationOptions.AttachedToParent);
             }
@@ -804,37 +950,38 @@ namespace CoApp.Toolkit.Engine.Client {
             get {
                 return SetLogging().ContinueWith(
                     antecedent => {
-                        antecedent.ThrowOnFaultOrCancel();
+                        antecedent.RethrowWhenFaulted();
                         return antecedent.Result.Errors;
                     }, TaskContinuationOptions.AttachedToParent);
             }
         }
 
-        public Task RemoveSystemFeed(string feedLocation) {
+        public Task<string> RemoveSystemFeed(string feedLocation) {
             var handler = new RemoteCallResponse();
 
             return PackageManager.Instance.RemoveFeed(feedLocation, false, handler).ContinueWith(antecedent => {
                 if (handler.EngineRestarting) {
-                    RemoveSystemFeed(feedLocation);
-                    return;
+                    return RemoveSystemFeed(feedLocation).Result;
                 }
                 handler.ThrowWhenFaulted(antecedent);
+                return feedLocation;
             }, TaskContinuationOptions.AttachedToParent);
         }
 
-        public Task RemoveSessionFeed(string feedLocation) {
+        public Task<string> RemoveSessionFeed(string feedLocation) {
             var handler = new RemoteCallResponse();
 
             return PackageManager.Instance.RemoveFeed(feedLocation, true, handler).ContinueWith(antecedent => {
                 if (handler.EngineRestarting) {
-                    RemoveSessionFeed(feedLocation);
-                    return;
+                    return RemoveSessionFeed(feedLocation).Result;
+                    
                 }
                 handler.ThrowWhenFaulted(antecedent);
+                return feedLocation;
             }, TaskContinuationOptions.AttachedToParent);
         }
 
-        public Task AddSystemFeed(string feedLocation) {
+        public Task<string> AddSystemFeed(string feedLocation) {
             var handler = new RemoteCallResponse {
                 FeedAdded = location => {
                     // do something when a feed is added? Do we really care?
@@ -843,15 +990,15 @@ namespace CoApp.Toolkit.Engine.Client {
 
             return PackageManager.Instance.AddFeed(feedLocation, false, handler).ContinueWith(antecedent => {
                 if (handler.EngineRestarting) {
-                    AddSystemFeed(feedLocation);
-                    return;
+                    return AddSystemFeed(feedLocation).Result;
                 }
 
                 handler.ThrowWhenFaulted(antecedent);
+                return feedLocation;
             }, TaskContinuationOptions.AttachedToParent);
         }
 
-        public Task AddSessionFeed(string feedLocation) {
+        public Task<string> AddSessionFeed(string feedLocation) {
             var handler = new RemoteCallResponse {
                 FeedAdded = location => {
                     // do something when a feed is added? Do we really care?
@@ -860,10 +1007,11 @@ namespace CoApp.Toolkit.Engine.Client {
 
             return PackageManager.Instance.AddFeed(feedLocation, true, handler).ContinueWith(antecedent => {
                 if (handler.EngineRestarting) {
-                    AddSessionFeed(feedLocation);
-                    return;
+                    return AddSessionFeed(feedLocation).Result;
+                    
                 }
                 handler.ThrowWhenFaulted(antecedent);
+                return feedLocation;
             }, TaskContinuationOptions.AttachedToParent);
         }
 
@@ -914,10 +1062,10 @@ namespace CoApp.Toolkit.Engine.Client {
 
         public Task SetAllFeedsStale() {
             return Feeds.ContinueWith(antecedent => {
-                antecedent.ThrowOnFaultOrCancel();
+                antecedent.RethrowWhenFaulted();
 
                 foreach (var feed in antecedent.Result) {
-                    SetFeedStale(feed.Location).ThrowOnFaultOrCancel();
+                    SetFeedStale(feed.Location).RethrowWhenFaulted();
                 }
             }, TaskContinuationOptions.AttachedToParent);
         }
@@ -971,7 +1119,7 @@ namespace CoApp.Toolkit.Engine.Client {
 
             return GetPackage(canonicalName).ContinueWith(
                 antecedent => {
-                    antecedent.ThrowOnFaultOrCancel();
+                    antecedent.RethrowWhenFaulted();
                     return GetPackageDetails(antecedent.Result).Result;
                 }, TaskContinuationOptions.AttachedToParent);
         }
@@ -979,7 +1127,7 @@ namespace CoApp.Toolkit.Engine.Client {
         public Task<Package> GetPackageDetails(Package package) {
             if (package.IsPackageDetailsStale) {
                 return GetPackage(package.CanonicalName).ContinueWith(antecedent => {
-                    antecedent.ThrowOnFaultOrCancel();
+                    antecedent.RethrowWhenFaulted();
                     return RefreshPackageDetails(package.CanonicalName).Result;
                 }, TaskContinuationOptions.AttachedToParent);
             }
@@ -1111,6 +1259,10 @@ namespace CoApp.Toolkit.Engine.Client {
                 // take care of error conditions...
                 handler.ThrowWhenFaulted(antecedent);
 
+                if( result == null ) {
+                    throw new CoAppException("Policy '{0}' does not exist".format(policyName));
+                }
+
                 return result;
             }, TaskContinuationOptions.AttachedToParent);
         }
@@ -1154,7 +1306,7 @@ namespace CoApp.Toolkit.Engine.Client {
                     AddScheduledTask(taskName, executable, commandline, hour, minutes, dayOfWeek, intervalInMinutes);
                     return;
                 }
-                antecedent.ThrowOnFaultOrCancel();
+                antecedent.RethrowWhenFaulted();
             }, TaskContinuationOptions.AttachedToParent);
         }
 
@@ -1166,7 +1318,7 @@ namespace CoApp.Toolkit.Engine.Client {
                     RemoveScheduledTask(taskName);
                     return;
                 }
-                antecedent.ThrowOnFaultOrCancel();
+                antecedent.RethrowWhenFaulted();
             }, TaskContinuationOptions.AttachedToParent);
         }
 
@@ -1191,7 +1343,7 @@ namespace CoApp.Toolkit.Engine.Client {
                 if (handler.EngineRestarting) {
                     return GetScheduledTask(taskName).Result;
                 }
-                antecedent.ThrowOnFaultOrCancel();
+                antecedent.RethrowWhenFaulted();
                 return result;
             }, TaskContinuationOptions.AttachedToParent);
         }
@@ -1216,12 +1368,29 @@ namespace CoApp.Toolkit.Engine.Client {
                     if (handler.EngineRestarting) {
                         return ScheduledTasks.Result;
                     }
-                    antecedent.ThrowOnFaultOrCancel();
+                    antecedent.RethrowWhenFaulted();
                     return result;
                 }, TaskContinuationOptions.AttachedToParent);
             }
         }
 
+        public Task RecognizeFile(string filename) {
+            return null;
+        }
+
+        public Task<IEnumerable<Publisher>> TrustedPublishers {
+            get {
+                return null;
+            }
+        }
+
+        public Task<Publisher> AddTrustedPublisher(string publisherName, string publicKeyToken) {
+            return null;
+        }
+
+        public Task RemoveTrustedPublisher(string publisherName, string publicKeyToken) {
+            return null;
+        }
         // GS01: TrustedPublishers Coming Soon.
     }
 }

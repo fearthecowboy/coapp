@@ -171,7 +171,7 @@ namespace CoApp.Toolkit.Engine.Feeds {
                         }
                         
                         if (info.IsAtom) {
-                            result = new AtomPackageFeed(info.FullUrl);
+                            result = new AtomPackageFeed(info.FullUrl, info.FullPath);
                         }
                         
                     }
