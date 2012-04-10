@@ -353,6 +353,7 @@ namespace CoApp.CLI {
                         break;
 
                     case "-D":
+                    case "-R":
                     case "delete":
                     case "delete-feed":
                     case "delete-feeds":
@@ -642,11 +643,12 @@ namespace CoApp.CLI {
         private Task DeleteFeed(IEnumerable<string> feeds) {
             var systemFeeds = _easyPackageManager.Feeds.Result.Select(each => each.Location).ToArray();
             
-            foreach( var notFeed in feeds.Where(each => !systemFeeds.Contains(each))) {
+            foreach( var notFeed in feeds.Where(each => !systemFeeds.ContainsIgnoreCase(each))) {
                 Console.WriteLine("Skipping '{0}' -- is not registered as a system feed.", notFeed);
             }
 
-            var tasks = feeds.Where(each => systemFeeds.Contains(each)).Select(each => _easyPackageManager.RemoveSystemFeed(each));
+            //var tasks = feeds.Where(each => systemFeeds.ContainsIgnoreCase(each)).Select(each => _easyPackageManager.RemoveSystemFeed(each));
+            var tasks = systemFeeds.Where(each => feeds.ContainsIgnoreCase(each)).Select(each => _easyPackageManager.RemoveSystemFeed(each));
             return tasks.ContinueAlways(antecedents => {
                 foreach (var ex in antecedents.Where(each => each.IsFaulted).Select(each => each.Exception.Unwrap())) {
                     var coappEx = ex as CoAppException;
@@ -920,9 +922,17 @@ namespace CoApp.CLI {
                             return;
                         }
 
+                        // handle coapp exceptions as cleanly as possible.
+                        var ce = exception as CoAppException;
+                        if( ce != null ) {
+                            Fail(ce.Message);
+                            ce.Cancel();
+                            return;
+                        }
+
                         // else soemthing else went wrong...
                         Console.WriteLine("Something else failed!");
-                        Console.WriteLine("{0} == {1}", exception.Message, exception.StackTrace);
+                        Console.WriteLine("({0}){1} == {2}", exception.GetType(),exception.Message, exception.StackTrace);
                     });
 
                     // if we get a good plan back

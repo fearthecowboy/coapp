@@ -173,7 +173,7 @@ namespace CoApp.Toolkit.Engine {
             return null; // only happens if the canonicalName isn't a canonicalName.
         }
 #endif 
-
+            
         internal static Package GetPackageFromFilename(string filename) {
             filename = filename.CanonicalizePathIfLocalAndExists();
 

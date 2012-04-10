@@ -53,6 +53,17 @@ package {
     ";
 }
 
+upload {
+    default: false;
+    uses : install;
+    build-command: @"
+    for /F %%G in ('dir /s /b /o-n  coapp.toolkit*.msi') do ( 
+        curl -T %%G http://coapp.org/upload/
+        goto :eof
+    )
+    ";
+}
+
 install {
     default: false;
     set : cfg = "Release";

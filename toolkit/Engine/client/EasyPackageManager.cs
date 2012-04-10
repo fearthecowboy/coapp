@@ -192,7 +192,6 @@ namespace CoApp.Toolkit.Engine.Client {
                         var task = Task.Factory.StartNew(() => {
                             foreach (var location in remoteLocations) {
                                 try {
-
                                     // a filesystem location (remote or otherwise)
                                     var uri = new Uri(location);
                                     if (uri.IsFile) {
