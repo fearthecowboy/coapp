@@ -43,6 +43,8 @@ namespace CoApp.Toolkit.Engine {
 #endif
         private static TimeSpan _synchronousClientHeartbeat = new TimeSpan(0, 0, 0, 0, 650);
 
+        protected static DateTime LastActivity { get; set; }
+
         /// <summary>
         /// </summary>
         private static readonly List<Session> _activeSessions = new List<Session>();
@@ -184,6 +186,18 @@ namespace CoApp.Toolkit.Engine {
                 // remove this session.
                 lock (_activeSessions) {
                     _activeSessions.Remove(this);
+                }
+
+                if( !HasActiveSessions ) {
+                    Task.Factory.StartNew(() => {
+                        Thread.Sleep(11 * 60 * 1000); // 11 minutes
+                        if (!HasActiveSessions && DateTime.Now.Subtract(LastActivity) > new TimeSpan(0, 10, 0)) {
+                            // no active sessions
+                            // more than 30 minutes since last one.
+                            // nighty-night!
+                            EngineServiceManager.TryToStopService();
+                        }
+                    });
                 }
 
                 Logger.Message("Ending Client: [{0}]-[{1}]".format(_clientId, _sessionId));
@@ -480,6 +494,8 @@ namespace CoApp.Toolkit.Engine {
                                     return;
                                 }
 
+                                LastActivity = DateTime.Now;
+
                                 if (antecedent.Result >= EngineService.BufferSize) {
                                     _bufferReady.Set();
                                     SendUnexpectedFailure(new CoAppException("Message size exceeds maximum size allowed."));
@@ -572,6 +588,8 @@ namespace CoApp.Toolkit.Engine {
                 }
             }
         }
+
+        
 
         private void WriteErrorsOnException(Task task) {
             if (IsCanceled) {
