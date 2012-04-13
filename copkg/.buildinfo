@@ -8,6 +8,7 @@
 }
 
 release { 
+    default: true;
     // builds the binaries in "Release" mode but does not sign them.
     set : cfg = "Release";
     uses : {

@@ -260,6 +260,16 @@ namespace CoApp.Toolkit.Engine {
                     var v = Package.GetCurrentPackageVersion("coapp.toolkit", "1e373a58e25250cb");
                     Signals.EngineStartupStatus = 95;
                     Logger.Warning("CoApp Version : " + v);
+
+                    /*
+                     * what can we do if the right version isn't here?
+                     * 
+                    FourPartVersion thisVersion = Assembly.GetExecutingAssembly().Version();
+                    if( thisVersion > v ) {
+                        
+                    }
+                     * */
+
                     // Completes startup. 
 
                     Signals.EngineStartupStatus = 100;

@@ -807,9 +807,7 @@ namespace CoApp.Toolkit.Engine {
                                     ShellLink.CreateShortcut(newLink, existingLocation);
                                     break;
                             }
-                        }
-
-                        if (existingLocation.DirectoryExistsAndIsAccessible()) {
+                        } else if (existingLocation.DirectoryExistsAndIsAccessible()) {
                             // source is a folder
                             switch (linkType) {
                                 case LinkType.Symlink:
@@ -825,8 +823,9 @@ namespace CoApp.Toolkit.Engine {
                                     break;
                             }
                         }
-
-                        PackageManagerMessages.Invoke.Error("symlink", "existing-location", "can not make symlink for location '{0}'".format(existingLocation));
+                        else {
+                            PackageManagerMessages.Invoke.Error("symlink", "existing-location", "can not make symlink for location '{0}'".format(existingLocation));
+                        }
                     } catch (Exception exception) {
                             PackageManagerMessages.Invoke.Error("symlink", "", "Failed to create symlink -- error: {0}".format(exception.Message));    
                     }

@@ -339,6 +339,12 @@ namespace CoApp.Toolkit.Engine {
 
         internal static void EnsureCanonicalFoldersArePresent() {
             var root = PackageManagerSettings.CoAppRootDirectory;
+            // try to make a convenience symlink:  %SYSTEMDRIVE%:\apps
+            var appsdir = "{0}:\\apps".format(root[0]);
+            if (!Directory.Exists(appsdir) && !File.Exists(appsdir)) {
+                Symlink.MakeDirectoryLink("{0}:\\apps".format(root[0]), root);
+            }
+
             foreach (var path in CanonicalFolders.Select(folder => Path.Combine(root, folder)).Where(path => !Directory.Exists(path))) {
                 Directory.CreateDirectory(path);
             }
