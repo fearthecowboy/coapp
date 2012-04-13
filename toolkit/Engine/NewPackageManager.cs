@@ -16,6 +16,7 @@ namespace CoApp.Toolkit.Engine {
     using System.Diagnostics;
     using System.IO;
     using System.Linq;
+    using System.Security.Cryptography;
     using System.Text.RegularExpressions;
     using System.Threading;
     using System.Threading.Tasks;
@@ -177,8 +178,13 @@ namespace CoApp.Toolkit.Engine {
                 var results = SearchForPackages(name, version, arch, publicKeyToken, location);
                 // filter results of list based on secondary filters
 
+                
                 // if we are upgrading or installing, we need to find packages that are already installed.
-                installed = installed ?? (upgrades == true || updates == true);
+                var i = (upgrades == true || updates == true);
+                if( i ) {
+                    installed = installed ?? i;
+                }
+                
 
                 results = from package in results
                     where
@@ -1067,9 +1073,10 @@ namespace CoApp.Toolkit.Engine {
 
                 var continuationTask = SessionCache<Task<Recognizer.RecognitionInfo>>.Value[canonicalName];
                 SessionCache<Task<Recognizer.RecognitionInfo>>.Value.Clear(canonicalName);
-                Updated(); // notify threads that we're not going to be able to get that file.
+                Updated(); // do an updated regardless.
 
                 if (continuationTask != null) {
+                    // notify threads that we're not going to be able to get that file.
                     var state = continuationTask.AsyncState as RequestRemoteFileState;
                     if (state != null) {
                         state.LocalLocation = null;
@@ -1080,8 +1087,7 @@ namespace CoApp.Toolkit.Engine {
                     // the task can run, 
                     if (continuationTask.Status == TaskStatus.Created) {
                         continuationTask.Start();
-                    }
-                    return;
+                    } 
                 }
             }, TaskCreationOptions.AttachedToParent);
             return t;
@@ -1364,7 +1370,11 @@ namespace CoApp.Toolkit.Engine {
             var packageData = package.PackageSessionData;
 
             if (!package.PackageSessionData.IsPotentiallyInstallable) {
-                yield break;
+                if (hypothetical) {
+                    yield break;
+                } else {
+                    throw new OperationCompletedBeforeResultException();
+                }
             }
 
             if (!packageData.DoNotSupercede) {
@@ -1474,12 +1484,15 @@ namespace CoApp.Toolkit.Engine {
                     children = GenerateInstallGraph(d);
                 }
                 catch {
+                    Logger.Message("Generating install graph for child dependency failed [{0}]",d.CanonicalName);
                     childrenFailed = true;
                     continue;
                 }
 
-                foreach (var child in children)
-                    yield return child;
+                if (!childrenFailed) {
+                    foreach (var child in children)
+                        yield return child;
+                }
             }
 
             if(childrenFailed) {

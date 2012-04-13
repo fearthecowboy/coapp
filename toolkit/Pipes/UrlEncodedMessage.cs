@@ -264,7 +264,7 @@ namespace CoApp.Toolkit.Pipes {
         /// <remarks></remarks>
         public IEnumerable<KeyValuePair<string,string>> GetKeyValuePairs(string collectionName) {
             var rx = new Regex(@"^{0}\[(.*)\]$".format(Regex.Escape(collectionName)));
-            return from k in Data.Keys let match = rx.Match(k) where match.Success select new KeyValuePair<string,string> (match.Groups[1].Captures[0].Value, Data[k]);
+            return from k in Data.Keys let match = rx.Match(k) where match.Success select new KeyValuePair<string,string> (match.Groups[1].Captures[0].Value.UrlDecode(), Data[k]);
         }
 
         public static implicit operator string(UrlEncodedMessage value) {

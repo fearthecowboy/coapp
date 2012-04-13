@@ -20,11 +20,14 @@
 namespace CoApp.Toolkit.Extensions {
     using System;
     using System.Collections.Generic;
+    using System.ComponentModel;
     using System.Diagnostics;
     using System.IO;
     using System.Linq;
     using System.Reflection;
+    using System.Runtime.InteropServices;
     using System.Text.RegularExpressions;
+    using Win32;
 
     /// <summary>
     /// Storage Class for complex options from the command line.
@@ -113,6 +116,32 @@ namespace CoApp.Toolkit.Extensions {
             return null;
         }
 
+        public static IEnumerable<string> SplitArgs(string unsplitArgumentLine) {
+            int numberOfArgs;
+
+            var ptrToSplitArgs = Kernel32.CommandLineToArgvW(unsplitArgumentLine, out numberOfArgs);
+
+            // CommandLineToArgvW returns NULL upon failure.
+            if (ptrToSplitArgs == IntPtr.Zero)
+                throw new ArgumentException("Unable to split argument.", new Win32Exception());
+
+            // Make sure the memory ptrToSplitArgs to is freed, even upon failure.
+            try {
+                var splitArgs = new string[numberOfArgs];
+
+                // ptrToSplitArgs is an array of pointers to null terminated Unicode strings.
+                // Copy each of these strings into our split argument array.
+                for (var i = 0; i < numberOfArgs; i++)
+                    splitArgs[i] = Marshal.PtrToStringUni(Marshal.ReadIntPtr(ptrToSplitArgs, i * IntPtr.Size));
+
+                return splitArgs;
+            }
+            finally {
+                // Free memory obtained by CommandLineToArgW.
+                Kernel32.LocalFree(ptrToSplitArgs);
+            }
+        }
+
         /// <summary>
         /// Switcheses the specified args.
         /// </summary>
@@ -123,15 +152,27 @@ namespace CoApp.Toolkit.Extensions {
             if(switches != null) {
                 return switches;
             }
+            var assemblypath = Assembly.GetEntryAssembly().Location;
 
             switches = new Dictionary<string, IEnumerable<string>>();
 
+            var v = Environment.GetEnvironmentVariable("_" + Path.GetFileNameWithoutExtension(assemblypath) + "_");
+            if (!string.IsNullOrEmpty(v)) {
+                var extraSwitches = SplitArgs(v).Where( each => each.StartsWith("--") );
+                if (!args.IsNullOrEmpty()) {
+                    args = args.Union(extraSwitches);
+                }
+            }
+
             // load a <exe>.properties file in the same location as the executing assembly.
-            var assemblypath = Assembly.GetEntryAssembly().Location;
+            
             var propertiespath = "{0}\\{1}.properties".format(Path.GetDirectoryName(assemblypath), Path.GetFileNameWithoutExtension(assemblypath));
             if(File.Exists(propertiespath)) {
                 propertiespath.LoadConfiguration();
             }
+
+            
+            
 
             var argEnumerator = args.GetEnumerator();
             //while(firstarg < args.Length && args[firstarg].StartsWith("--")) {
@@ -143,12 +184,14 @@ namespace CoApp.Toolkit.Extensions {
                 if((pos = arg.IndexOf("=")) > -1) {
                     param = argEnumerator.Current.Substring(pos + 3);
                     arg = arg.Substring(0, pos);
+                    /*
                     if(string.IsNullOrEmpty(param) || string.IsNullOrEmpty(arg)) {
                         "Invalid Option :{0}".Print(argEnumerator.Current.Substring(2).ToLower());
                         switches.Clear();
                         switches.Add("help", new List<string>());
                         return switches;
-                    }
+                    } */
+
                 }
                 if(arg.Equals("load-config")) {
                     // loads the config file, and then continues parsing this line.
@@ -334,6 +377,14 @@ namespace CoApp.Toolkit.Extensions {
         /// <returns></returns>
         /// <remarks></remarks>
         public static IEnumerable<string> Parameters(this IEnumerable<string> args) {
+            var v = Environment.GetEnvironmentVariable("_" + Path.GetFileNameWithoutExtension(Assembly.GetEntryAssembly().Location) + "_");
+            if (!string.IsNullOrEmpty(v)) {
+                var extraSwitches = SplitArgs(v).Where(each => !each.StartsWith("--"));
+                if (!args.IsNullOrEmpty()) {
+                    args = args.Union(extraSwitches);
+                }
+            }
+
             return parameters ?? (parameters = from argument in args
                                                where !(argument.StartsWith("--"))
                                                select argument);

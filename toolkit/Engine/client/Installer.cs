@@ -571,11 +571,17 @@ namespace CoApp.Toolkit.Engine.Client {
         public void Install() {
             if( !IsWorking) {
                 IsWorking = true;
-                _easyPackageManager.InstallPackage(
-                    SelectedPackage.CanonicalName, autoUpgrade: false, installProgress: (canonicalName, progress, overallProgress) => { Progress = overallProgress; }).ContinueWith((antecedent) => {
-                        OnFinished();    
-                    }, TaskContinuationOptions.AttachedToParent);
+
+                var instTask = _easyPackageManager.InstallPackage(SelectedPackage.CanonicalName, autoUpgrade: false, installProgress: (canonicalName, progress, overallProgress) => { Progress = overallProgress; });
                 
+                instTask.Continue(() => {
+                    OnFinished();    
+                });
+
+                instTask.ContinueOnFail((exception) => {
+                    DoError( InstallerFailureState.FailedToGetPackageFromFile, exception);
+                });
+
             }
         }
 

@@ -34,6 +34,23 @@ namespace CoApp.Toolkit.Extensions {
         /// a "logo" of an assembly
         /// </summary>
         private static string logo;
+
+ public static string Logo(this Assembly assembly) {
+            if(logo == null) {
+                var assemblycomments = assembly.Comments();
+                assemblycomments = string.IsNullOrEmpty(assemblycomments) ? string.Empty : "\r\n" + assemblycomments;
+
+                logo =
+                    @"{0} {1} Version {2} for {3}
+{4}. All rights reserved{5}
+-------------------------------------------------------------------------------".format(assembly.Company(), assembly.Title(), assembly.Version(), IntPtr.Size == 8? "x64":"x86", assembly.Copyright().Replace("©", "(c)"), assemblycomments);
+            }
+            return logo;
+        }
+
+        public static void SetLogo(this Assembly assembly, string logoText) {
+            logo = logoText;
+        }
 #endif
         /// <summary>
         /// Geths the assembly for a given object.
@@ -75,7 +92,16 @@ namespace CoApp.Toolkit.Extensions {
             return string.Empty;
         }
 
-#if !COAPP_ENGINE_CORE
+        public static string Version(this Assembly assembly) {
+            try {
+                var vi = FileVersionInfo.GetVersionInfo(assembly.Location);
+
+                return "{0}.{1}.{2}.{3}".format(vi.FileMajorPart, vi.FileMinorPart, vi.FileBuildPart, vi.FilePrivatePart);
+            }
+            catch {
+            }
+            return string.Empty;
+        }
 
         public static string ExtractFileResourceToPath(this Assembly assembly, string name, string filePath) {
             var s = assembly.GetManifestResourceStream(name);
@@ -127,16 +153,7 @@ namespace CoApp.Toolkit.Extensions {
             return  string.Empty;
         }
 
-        public static string Version(this Assembly assembly) {
-            try {
-                var vi = FileVersionInfo.GetVersionInfo(assembly.Location);
-
-                return "{0}.{1}.{2}.{3}".format(vi.FileMajorPart, vi.FileMinorPart, vi.FileBuildPart, vi.FilePrivatePart);
-            }
-            catch {
-            }
-            return  string.Empty;
-        }
+       
 
         public static string Comments(this Assembly assembly) {
             try {
@@ -147,22 +164,7 @@ namespace CoApp.Toolkit.Extensions {
             return  string.Empty;
         }
 
-        public static string Logo(this Assembly assembly) {
-            if(logo == null) {
-                var assemblycomments = assembly.Comments();
-                assemblycomments = string.IsNullOrEmpty(assemblycomments) ? string.Empty : "\r\n" + assemblycomments;
+       
 
-                logo =
-                    @"{0} {1} Version {2} for {3}
-{4}. All rights reserved{5}
--------------------------------------------------------------------------------".format(assembly.Company(), assembly.Title(), assembly.Version(), IntPtr.Size == 8? "x64":"x86", assembly.Copyright().Replace("©", "(c)"), assemblycomments);
-            }
-            return logo;
-        }
-
-        public static void SetLogo(this Assembly assembly, string logoText) {
-            logo = logoText;
-        }
-#endif
     }
 }
