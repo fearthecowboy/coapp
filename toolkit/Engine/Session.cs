@@ -190,12 +190,13 @@ namespace CoApp.Toolkit.Engine {
 
                 if( !HasActiveSessions ) {
                     Task.Factory.StartNew(() => {
-                        Thread.Sleep(11 * 60 * 1000); // 11 minutes
-                        if (!HasActiveSessions && DateTime.Now.Subtract(LastActivity) > new TimeSpan(0, 10, 0)) {
+                        Thread.Sleep(61 * 60 * 1000); // 11 minutes
+                        if (!HasActiveSessions && DateTime.Now.Subtract(LastActivity) > new TimeSpan(0, 60, 0)) {
                             // no active sessions
-                            // more than 30 minutes since last one.
+                            // more than 60 minutes since last one.
                             // nighty-night!
                             EngineServiceManager.TryToStopService();
+                            Logger.Message("Service getting sleepy. Going nighty-night");
                         }
                     });
                 }
