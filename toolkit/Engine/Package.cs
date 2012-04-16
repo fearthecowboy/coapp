@@ -60,15 +60,19 @@ namespace CoApp.Toolkit.Engine {
         /// if _packageDetails is null, it tries to get the data from the cache (probably by use of a delegate)
         /// </summary>
         internal PackageDetails PackageDetails { 
-            get { return _packageDetails ?? (_packageDetails = Cache<PackageDetails>.Value[CanonicalName] ); }
+            get { return _packageDetails ?? (_packageDetails = Cache<PackageDetails>.Value[ProductCode.ToString()] ); }
         }
 
         internal InternalPackageData InternalPackageData {
             get { return _internalPackageData ?? (_internalPackageData = new InternalPackageData(this)); }
         }
 
-        internal PackageSessionData PackageSessionData { get { return SessionCache<PackageSessionData>.Value[CanonicalName] ?? (SessionCache<PackageSessionData>.Value[CanonicalName] = new PackageSessionData(this)); } }
-        internal PackageRequestData PackageRequestData { get { return RequestCache<PackageRequestData>.Value[CanonicalName] ?? (RequestCache<PackageRequestData>.Value[CanonicalName] = new PackageRequestData(this)); } }
+        internal PackageSessionData PackageSessionData { get { return SessionCache<PackageSessionData>.Value[ProductCode.ToString()] ?? (SessionCache<PackageSessionData>.Value[ProductCode.ToString()] = new PackageSessionData(this)); } }
+        internal PackageRequestData PackageRequestData { get { return RequestCache<PackageRequestData>.Value[ProductCode.ToString()] ?? (RequestCache<PackageRequestData>.Value[ProductCode.ToString()] = new PackageRequestData(this)); } }
+
+        public bool IsInvalid {
+            get { return string.IsNullOrEmpty(_canonicalName) && (Version == 0);  }
+        }
 
         public bool IsInstalled {
             get {
@@ -229,9 +233,10 @@ namespace CoApp.Toolkit.Engine {
                 }
             }
 
-            // if we did find a package and its product code was empty, we can fill that in now if we have it.
-            if (productCode !=null && pkg.ProductCode == null) {
-                pkg.ProductCode = productCode;
+            if( pkg.ProductCode == null ) {
+                // if we did find a package and its product code was empty, we can fill that in now if we have it. 
+                // or, conversely, we'll generate it from the canonicalname.
+                pkg.ProductCode = productCode ?? pkg.CanonicalName.CreateGuid();
             }
 
             return pkg;

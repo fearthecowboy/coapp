@@ -276,7 +276,7 @@ namespace CoApp.Toolkit.Engine.Model.Atom {
                 }
 
                 // store the place to get the cosmetic package details later 
-                Cache<PackageDetails>.Value.Insert(package.CanonicalName, (unusedCanonicalFileName) => GetPackageDetails(package, Model));
+                Cache<PackageDetails>.Value.Insert(package.ProductCode.ToString(), (unusedCanonicalFileName) => GetPackageDetails(package, Model));
 
                 return package;
             }

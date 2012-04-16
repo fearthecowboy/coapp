@@ -54,6 +54,9 @@ namespace CoApp.Toolkit.Tasks {
 
         public virtual T this[string index] {
             get {
+                if (index == null) {
+                    return default(T);
+                }
                 return _cache.ContainsKey(index) ? _cache[index] : GetAndRememberDelegateValue(index);
             }
             set {
@@ -158,6 +161,9 @@ namespace CoApp.Toolkit.Tasks {
 
         public override T this[string index] {
             get {
+                if( index == null ) {
+                    return default(T);
+                }
                 // check current cache.
                 return _cache.ContainsKey(index) ? _cache[index] : GetAndRememberDelegateValue(index) ??  Cache<T>.Value[index];
             }
@@ -190,6 +196,10 @@ namespace CoApp.Toolkit.Tasks {
 
         public override T this[string index] {
             get {
+                if (index == null) {
+                    return default(T);
+                }
+
                 // check current cache.
                 return _cache.ContainsKey(index) ? _cache[index] : GetAndRememberDelegateValue(index) ?? Cache<T>.Value[index];
             }
