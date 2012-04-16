@@ -587,7 +587,7 @@ namespace CoApp.Toolkit.Engine {
             var appsdir = ResolveVariables("${apps}\\");
             
             foreach (var rule in rules.Where(r => r.Action == CompositionAction.FileCopy)) {
-                var destination = ResolveVariablesAndEnsurePathParentage(packagedir,  rule.Destination);
+                var destination = ResolveVariablesAndEnsurePathParentage(appsdir, rule.Destination);
                 var source = ResolveVariablesAndEnsurePathParentage(packagedir, rule.Source);
                 
                 // file copy operations may only manipulate files in the package directory.
@@ -605,12 +605,20 @@ namespace CoApp.Toolkit.Engine {
                     Logger.Error("ERROR: Illegal file copy rule. Source file does not exist [{0}] => [{1}]", source, destination);
                     continue;
                 }
-
-                File.Copy(source, destination);
+                try {
+                    var destParent = Path.GetDirectoryName(destination);
+                    if (!Directory.Exists(destParent)) {
+                        Directory.CreateDirectory(destParent);
+                    }
+                    File.Copy(source, destination, true);
+                }
+                catch (Exception e) {
+                    Logger.Error(e);
+                }
             }
 
             foreach (var rule in rules.Where(r => r.Action == CompositionAction.FileRewrite)) {
-                var destination = ResolveVariablesAndEnsurePathParentage(packagedir, rule.Destination);
+                var destination = ResolveVariablesAndEnsurePathParentage(appsdir, rule.Destination);
                 var source = ResolveVariablesAndEnsurePathParentage(packagedir, rule.Source);
 
                 // file copy operations may only manipulate files in the package directory.
