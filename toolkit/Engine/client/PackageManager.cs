@@ -130,8 +130,7 @@ namespace CoApp.Toolkit.Engine.Client {
         private int autoConnectionCount;
 
         public Task Connect(string clientName, string sessionId = null) {
-            
-            if (IsConnected && _isBufferReady.WaitOne(0) ) {
+            if (IsConnected) {
                 return "Completed".AsResultTask();
             }
 
@@ -162,9 +161,7 @@ namespace CoApp.Toolkit.Engine.Client {
                         }
 
                         StartSession(clientName, sessionId);
-
                         Task.Factory.StartNew(ProcessMessages,TaskCreationOptions.None).AutoManage();
-                        //_isBufferReady.WaitOne();
                     }, TaskCreationOptions.AttachedToParent);
                 }
             }
@@ -233,6 +230,8 @@ namespace CoApp.Toolkit.Engine.Client {
 
         public void Disconnect() {
             lock (this) {
+                ConnectingTask = null;
+
                 try {
                     if (_pipe != null) {
                         // ensure all queues are stopped and cleared out.
@@ -253,7 +252,6 @@ namespace CoApp.Toolkit.Engine.Client {
         public Task<IEnumerable<Package>> GetPackages(IEnumerable<string> parameters, ulong? minVersion = null, ulong? maxVersion = null,
             bool? dependencies = null, bool? installed = null, bool? active = null, bool? required = null, bool? blocked = null, bool? latest = null,
             string location = null, bool? forceScan = null, bool? updates = null, bool? upgrades = null, bool? trimable = null,  PackageManagerMessages messages = null) {
-            Connect(); 
 
             if (parameters.IsNullOrEmpty()) {
                 return GetPackages(string.Empty, minVersion, maxVersion, dependencies, installed, active, required, blocked, latest, location, forceScan,updates , upgrades , trimable, messages);
@@ -275,8 +273,6 @@ namespace CoApp.Toolkit.Engine.Client {
 
         // V1.1 API
         public Task<IEnumerable<Package>> GetPackages(string parameter, ulong? minVersion = null, ulong? maxVersion = null, bool? dependencies = null, bool? installed = null, bool? active = null, bool? required = null, bool? blocked = null, bool? latest = null, string location = null, bool? forceScan = null, bool? updates = null, bool? upgrades = null, bool? trimable = null, PackageManagerMessages messages = null) {
-            Connect();
-
             var packages = new List<Package>();
             if (parameter.IsNullOrEmpty()) {
                 return FindPackages( /* canonicalName:*/
@@ -448,7 +444,6 @@ namespace CoApp.Toolkit.Engine.Client {
         }
 
         public Task InstallPackage(string canonicalName, bool? autoUpgrade, bool? force , bool? download , bool? pretend , bool? isUpdating, bool? isUpgrading, PackageManagerMessages messages = null) {
-
             return Connect().ContinueWith((antecedent) => {
                 var msgs = new PackageManagerMessages {
                     InstalledPackage = (pkgCanonicalName) => {

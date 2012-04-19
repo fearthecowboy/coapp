@@ -26,17 +26,14 @@ namespace CoApp.Toolkit.Extensions {
     using System.Security.Cryptography;
     using System.Text;
     using System.Text.RegularExpressions;
-#if ! COAPP_ENGINE_CORE
     using Logging;
-    using Properties;
-#endif
     using Exceptions;
-    using Logging;
     using Microsoft.Win32;
-    using Tasks;
     using Win32;
-    using RegistryView = Configuration.RegistryView;
 
+#if COAPP_ENGINE_CORE
+    using Tasks;
+#endif 
 
     public class PushDirectory : IDisposable {
         private readonly string _originalDirectory;
@@ -146,8 +143,104 @@ namespace CoApp.Toolkit.Extensions {
                 f.TryHardToDelete();
             }
 
+            RemoveInvalidSymlinks();
+
             // and try to clean up as we leave the process too.
             TryToHandlePendingRenames(true);
+        }
+
+        public static void RemoveInvalidSymlinks(string directory = null, int maxdepth = 3) {
+            directory = directory ?? KnownFolders.GetFolderPath(KnownFolder.CommonApplicationData);
+            try {
+                foreach (var file in Directory.GetFiles(directory)) {
+                    try {
+                        if (Symlink.IsInvalidLink(file) == true) {
+                            Symlink.DeleteSymlink(file);
+                        }
+                    } catch {
+                        // skip what can not be done.        
+                    }
+                }
+            } catch {
+                // skip what can not be done.
+            }
+
+            try {
+                foreach (var folder in Directory.GetDirectories(directory)) {
+                    try {
+                        if (Symlink.IsInvalidLink(folder) == true) {
+                            Symlink.DeleteSymlink(folder);
+                            continue;
+                        }
+                    } catch {
+                        // skip what can not be done.
+                    }
+                    if( maxdepth > 0 ) {
+                        RemoveInvalidSymlinks(folder, maxdepth-1);
+                    }
+                }
+            }
+            catch {
+                // skip what can not be done.
+            }
+        }
+
+        public static bool? IsFolderEmpty( string foldername ) {
+            foldername = foldername.GetFullPath();
+            if( Directory.Exists(foldername)) {
+                return !Directory.GetFileSystemEntries(foldername).Any();
+            }
+            return null;
+        }
+
+        public static bool RemoveEssentiallyEmptyFolders(string folderName) {
+            folderName = folderName.GetFullPath();
+
+            try {
+                if (Symlink.IsInvalidLink(folderName) == true) {
+                    Symlink.DeleteSymlink(folderName);
+                }
+            } catch {
+                // just keep truckin'
+            }
+
+            // skip symlinked folders that contain anything, they're not our responsibility.
+            if( Symlink.IsSymlink( folderName ) && (IsFolderEmpty(folderName) == false) ) {
+                return false;
+            }
+            var failed = false; 
+
+            try {
+                if (Directory.Exists(folderName)) {
+                    // remove em if they are empty
+                    failed = Directory.GetDirectories(folderName).Aggregate(failed, (current, folder) => current | (!RemoveEssentiallyEmptyFolders(folder)));
+                    
+                    // any left over?
+                    if( failed || IsFolderEmpty(folderName) == false ) {
+                        return false;
+                    }
+
+                    // try to remove 
+                    Directory.Delete(folderName);
+
+                    // if it's gone, we're good!
+                    return !Directory.Exists(folderName);
+                }
+            } catch {
+                // don't do what can't be done.
+                return false;
+            }
+
+            return true;
+        }
+
+        public static void RemoveDeadLnks(string folder) {
+            var lnkFiles = DirectoryEnumerateFilesSmarter(folder, "**.lnk", SearchOption.AllDirectories).ToArray();
+            foreach (var lnk in lnkFiles.Where(lnk => (Shell.ShellLink.IsInvalidShortcut(lnk) == true))) {
+                TryHardToDelete(lnk);
+                var parentFolder = Path.GetDirectoryName(lnk);
+                RemoveEssentiallyEmptyFolders(parentFolder);
+            }
         }
 
         public static string MarkFileTemporary(this string filename) {
@@ -486,7 +579,7 @@ namespace CoApp.Toolkit.Extensions {
                 return FindFilesSmarterComplex(pathPrefix);
             }
             if (_invalidDoubleWcRx.IsMatch(pathMask)) {
-                throw new ArgumentException(Resources.Invalid_WildcardPath.format(pathMask));
+                throw new ArgumentException("The wildcard path {0} is invalid.".format(pathMask));
             }
 
 
@@ -722,7 +815,7 @@ namespace CoApp.Toolkit.Extensions {
                     Kernel32.MoveFileEx(File.Exists(tmpFilename) ? tmpFilename : location, null, MoveFileFlags.MOVEFILE_DELAY_UNTIL_REBOOT);
                 } catch (Exception e) {
                     // really. Hmmm. 
-                    Logger.Error(e);
+                    // Logger.Error(e);
                 }
 
                 if (File.Exists(location)) {

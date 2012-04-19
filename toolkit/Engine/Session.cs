@@ -415,9 +415,17 @@ namespace CoApp.Toolkit.Engine {
 
             _packageManagerSession = new PackageManagerSession {
                 CheckForPermission = (policy) => {
-                    var result = false;
-                    _serverPipe.RunAsClient(() => { result = policy.HasPermission; });
-                    return result;
+                    try {
+                        var result = false;
+                        _serverPipe.RunAsClient(() => {result = policy.HasPermission;});
+                        return result;
+                    } catch {
+                        // may have been disconnected?
+                        if( !_serverPipe.IsConnected ) {
+                            Disconnect();
+                        }
+                    }
+                    return false;
                 },
                 CancellationRequested = () => _cancellationTokenSource.Token.IsCancellationRequested,
                 GetCanonicalizedPath = (path) => {

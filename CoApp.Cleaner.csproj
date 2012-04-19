@@ -21,7 +21,7 @@
     <Optimize>false</Optimize>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <OutputPath>$(SolutionDir)\output\any\debug\bin\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;COAPP_CLEANER</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
@@ -30,7 +30,7 @@
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>$(SolutionDir)\output\any\release\bin\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
+    <DefineConstants>TRACE;COAPP_CLEANER</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
@@ -44,9 +44,276 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Security" />
     <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Toolkit\Compression\CRC32.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Compression\Deflate.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Compression\DeflateStream.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Compression\GZipStream.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Compression\Inflate.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Compression\InfTree.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Compression\Iso8859Dash1Encoding.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Compression\ParallelDeflateOutputStream.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Compression\Tree.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Compression\Zlib.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Compression\ZlibBaseStream.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Compression\ZlibCodec.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Compression\ZlibConstants.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Compression\ZlibStream.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Configuration\RegistryView.cs" />
+    <Compile Include="Toolkit\Console\AsyncConsoleProgram.cs" />
+    <Compile Include="Toolkit\Console\ConsoleApi.cs" />
+    <Compile Include="Toolkit\Crypto\CryptoConvert.cs" />
+    <Compile Include="Toolkit\Crypto\StrongName.cs" />
+    <Compile Include="Toolkit\Exceptions\CoAppException.cs" />
+    <Compile Include="Toolkit\Exceptions\ConsoleException.cs" />
+    <Compile Include="Toolkit\Crypto\PfxStoreLoader.cs" />
+    <Compile Include="Toolkit\Crypto\Verifier.cs" />
+    <Compile Include="Toolkit\Exceptions\ConflictingFileOrFolderException.cs" />
+    <Compile Include="Toolkit\Exceptions\FailedPackageRemoveException.cs" />
+    <Compile Include="Toolkit\Exceptions\PathIsNotFileUriException.cs" />
+    <Compile Include="Toolkit\Exceptions\PathIsNotSymlinkException.cs" />
+    <Compile Include="Toolkit\Extensions\AssemblyExtensions.cs" />
+    <Compile Include="Toolkit\Extensions\CollectionExtensions.cs" />
+    <Compile Include="Toolkit\Extensions\CommandLineExtensions.cs" />
+    <Compile Include="Toolkit\Extensions\Comparer.cs" />
+    <Compile Include="Toolkit\Extensions\ConsoleExtensions.cs" />
+    <Compile Include="Toolkit\Extensions\CookieExtensions.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Extensions\DebugExtensions.cs" />
+    <Compile Include="Toolkit\Extensions\EnumExtensions.cs" />
+    <Compile Include="Toolkit\Extensions\ExceptionExtensions.cs" />
+    <Compile Include="Toolkit\Extensions\FilesystemExtensions.cs" />
+    <Compile Include="Toolkit\Extensions\LinqExtensions.cs" />
+    <Compile Include="Toolkit\Extensions\ObjectExtensions.cs" />
+    <Compile Include="Toolkit\Extensions\PropertySheetExtensions.cs" />
+    <Compile Include="Toolkit\Extensions\TaskExtensions.cs" />
+    <Compile Include="Toolkit\Extensions\WebRequestExtensions.cs" />
+    <Compile Include="Toolkit\Extensions\X509Certificate2Extensions.cs" />
+    <Compile Include="Toolkit\Extensions\X509StoreExtensions.cs" />
+    <Compile Include="Toolkit\Extensions\SortedObservableCollection.cs" />
+    <Compile Include="Toolkit\Extensions\StringExtensions.cs" />
+    <Compile Include="Toolkit\Extensions\WebExtensions.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Extensions\XmlExtensions.cs" />
+    <Compile Include="Toolkit\Logging\Logger.cs" />
+    <Compile Include="Toolkit\Pipes\AsyncPipeExtensions.cs" />
+    <Compile Include="Toolkit\Pipes\UrlEncodedMessage.cs" />
+    <Compile Include="Toolkit\Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Toolkit\TaskService\Action.cs" />
+    <Compile Include="Toolkit\TaskService\ActionCollection.cs" />
+    <Compile Include="Toolkit\TaskService\CultureSwitcher.cs" />
+    <Compile Include="Toolkit\TaskService\EnumGlobalizer.cs" />
+    <Compile Include="Toolkit\TaskService\Impersonation.cs" />
+    <Compile Include="Toolkit\TaskService\NamedValueCollection.cs" />
+    <Compile Include="Toolkit\TaskService\NotV1SupportedException.cs" />
+    <Compile Include="Toolkit\TaskService\Task.cs" />
+    <Compile Include="Toolkit\TaskService\TaskCollection.cs" />
+    <Compile Include="Toolkit\TaskService\TaskFolder.cs" />
+    <Compile Include="Toolkit\TaskService\TaskFolderCollection.cs" />
+    <Compile Include="Toolkit\TaskService\TaskHandlerInterfaces.cs" />
+    <Compile Include="Toolkit\TaskService\TaskService.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Toolkit\TaskService\Trigger.cs" />
+    <Compile Include="Toolkit\TaskService\TriggerCollection.cs" />
+    <Compile Include="Toolkit\TaskService\V1\TaskSchedulerV1Interop.cs" />
+    <Compile Include="Toolkit\TaskService\V2\TaskSchedulerV2Interop.cs" />
+    <Compile Include="Toolkit\TaskService\Wildcard.cs" />
+    <Compile Include="Toolkit\Utility\MultifactorProgressTracker.cs" />
+    <Compile Include="Toolkit\Win32\Accel.cs" />
+    <Compile Include="Toolkit\Win32\AcceleratorVirtualKey.cs" />
+    <Compile Include="Toolkit\Win32\Architecture.cs" />
+    <Compile Include="Toolkit\Win32\BitmapCompression.cs" />
+    <Compile Include="Toolkit\Win32\BitmapFileHeader.cs" />
+    <Compile Include="Toolkit\Win32\BitmapInfo.cs" />
+    <Compile Include="Toolkit\Win32\BitmapInfoHeader.cs" />
+    <Compile Include="Toolkit\Win32\ButtonControlStyles.cs" />
+    <Compile Include="Toolkit\Win32\CryptUi.cs" />
+    <Compile Include="Toolkit\Win32\DialogExItemTemplate.cs" />
+    <Compile Include="Toolkit\Win32\DialogExTemplate.cs" />
+    <Compile Include="Toolkit\Win32\DialogItemClass.cs" />
+    <Compile Include="Toolkit\Win32\DialogItemTemplate.cs" />
+    <Compile Include="Toolkit\Win32\DialogStyles.cs" />
+    <Compile Include="Toolkit\Win32\Dialogtemplate.cs" />
+    <Compile Include="Toolkit\Win32\DIBColors.cs" />
+    <Compile Include="Toolkit\Win32\EditControlStyles.cs" />
+    <Compile Include="Toolkit\Win32\EnvironmentUtility.cs" />
+    <Compile Include="Toolkit\Win32\ExtendedDialogStyles.cs" />
+    <Compile Include="Toolkit\Win32\FileGrpIconDir.cs" />
+    <Compile Include="Toolkit\Win32\FileGrpIconDirEntry.cs" />
+    <Compile Include="Toolkit\Win32\FontDirEntry.cs" />
+    <Compile Include="Toolkit\Win32\Gdi32.cs" />
+    <Compile Include="Toolkit\Win32\GrpIconDir.cs" />
+    <Compile Include="Toolkit\Win32\GrpIconDirEntry.cs" />
+    <Compile Include="Toolkit\Win32\Iconinfo.cs" />
+    <Compile Include="Toolkit\Win32\ImageHlp.cs" />
+    <Compile Include="Toolkit\Win32\Kernel32Contants.cs" />
+    <Compile Include="Toolkit\Win32\ManifestType.cs" />
+    <Compile Include="Toolkit\Win32\MenuExItemTemplate.cs" />
+    <Compile Include="Toolkit\Win32\MenuExTemplate.cs" />
+    <Compile Include="Toolkit\Win32\MenuFlags.cs" />
+    <Compile Include="Toolkit\Win32\MenuItemTemplate.cs" />
+    <Compile Include="Toolkit\Win32\MenuResourceType.cs" />
+    <Compile Include="Toolkit\Win32\MenuTemplate.cs" />
+    <Compile Include="Toolkit\Win32\Mscoree.cs" />
+    <Compile Include="Toolkit\Win32\ResourceHeader.cs" />
+    <Compile Include="Toolkit\Win32\ResourceHeaderType.cs" />
+    <Compile Include="Toolkit\Win32\ResourceTypes.cs" />
+    <Compile Include="Toolkit\Win32\RgbQuad.cs" />
+    <Compile Include="Toolkit\Win32\StaticControlStyles.cs" />
+    <Compile Include="Toolkit\Shell\ColorTable.cs" />
+    <Compile Include="Toolkit\Shell\ConsoleProperties.cs" />
+    <Compile Include="Toolkit\Shell\Coordinate.cs" />
+    <Compile Include="Toolkit\Shell\ICommiter.cs" />
+    <Compile Include="Toolkit\Shell\IconLocation.cs" />
+    <Compile Include="Toolkit\Shell\Internal\COORD.cs" />
+    <Compile Include="Toolkit\Shell\Internal\DATABLOCK_HEADER.cs" />
+    <Compile Include="Toolkit\Shell\Internal\EXP_DARWIN_LINK.cs" />
+    <Compile Include="Toolkit\Shell\Internal\EXP_SPECIAL_FOLDER .cs" />
+    <Compile Include="Toolkit\Shell\Internal\EXP_SZ_ICON.cs" />
+    <Compile Include="Toolkit\Shell\Internal\EXP_SZ_LINK.cs" />
+    <Compile Include="Toolkit\Shell\Internal\IPersistFile.cs" />
+    <Compile Include="Toolkit\Shell\Internal\IShellLink.cs" />
+    <Compile Include="Toolkit\Shell\Internal\IShellLinkDataList.cs" />
+    <Compile Include="Toolkit\Shell\Internal\NT_CONSOLE_PROPS.cs" />
+    <Compile Include="Toolkit\Shell\Internal\NT_FE_CONSOLE_PROPS.cs" />
+    <Compile Include="Toolkit\Shell\Internal\ShellLinkCoClass.cs" />
+    <Compile Include="Toolkit\Shell\Internal\SLGP_FLAGS.cs" />
+    <Compile Include="Toolkit\Shell\Internal\SLR_FLAGS.cs" />
+    <Compile Include="Toolkit\Shell\Internal\STGM_FLAGS.cs" />
+    <Compile Include="Toolkit\Shell\Internal\WIN32_FIND_DATAW.cs" />
+    <Compile Include="Toolkit\Shell\ResolveFlags.cs" />
+    <Compile Include="Toolkit\Shell\ShellLink.cs" />
+    <Compile Include="Toolkit\Shell\ShellLinkFlags.cs" />
+    <Compile Include="Toolkit\Shell\ShowWindowCommand.cs" />
+    <Compile Include="Toolkit\Tasks\CoTask.cs" />
+    <Compile Include="Toolkit\Tasks\MessageHandlers.cs" />
+    <Compile Include="Toolkit\Exceptions\OperationCompletedBeforeResultException.cs" />
+    <Compile Include="Toolkit\Text\HttpUtility.cs" />
+    <Compile Include="Toolkit\Win32\AdminPrivilege.cs" />
+    <Compile Include="Toolkit\Win32\Advapi32.cs" />
+    <Compile Include="Toolkit\Win32\AllocationType.cs" />
+    <Compile Include="Toolkit\Win32\ByHandleFileInformation.cs" />
+    <Compile Include="Toolkit\Win32\ClipboardNotifier.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Win32\ConsoleEvents.cs" />
+    <Compile Include="Toolkit\Win32\ConsoleEventTypes.cs" />
+    <Compile Include="Toolkit\Win32\ConsoleFontInfo.cs" />
+    <Compile Include="Toolkit\Win32\ConsoleScreenBufferInfo.cs" />
+    <Compile Include="Toolkit\Win32\ControlCodes.cs" />
+    <Compile Include="Toolkit\Win32\Coord.cs" />
+    <Compile Include="Toolkit\Win32\CreateRemoteThreadFlags.cs" />
+    <Compile Include="Toolkit\Win32\FileType.cs" />
+    <Compile Include="Toolkit\Win32\FocusInputRecord.cs" />
+    <Compile Include="Toolkit\Win32\ImageCoffHeader.cs" />
+    <Compile Include="Toolkit\Win32\ImageCor20Header.cs" />
+    <Compile Include="Toolkit\Win32\ImageDataDirectory.cs" />
+    <Compile Include="Toolkit\Win32\ImageOptionalHeaderNt.cs" />
+    <Compile Include="Toolkit\Win32\ImageSectionHeader.cs" />
+    <Compile Include="Toolkit\Win32\IoReparseTag.cs" />
+    <Compile Include="Toolkit\Win32\ISymlink.cs" />
+    <Compile Include="Toolkit\Win32\Kernel32.cs" />
+    <Compile Include="Toolkit\Win32\KeyInputRecord.cs" />
+    <Compile Include="Toolkit\Win32\KeyModifiers.cs" />
+    <Compile Include="Toolkit\Win32\KnownFolders.cs" />
+    <Compile Include="Toolkit\Win32\LegacySymlink.cs" />
+    <Compile Include="Toolkit\Win32\MemoryProtection.cs" />
+    <Compile Include="Toolkit\Win32\MenuItemInfo.cs" />
+    <Compile Include="Toolkit\Win32\Miim.cs" />
+    <Compile Include="Toolkit\Win32\ModernSymlink.cs" />
+    <Compile Include="Toolkit\Win32\MoveFileFlags.cs" />
+    <Compile Include="Toolkit\Win32\MPR.cs" />
+    <Compile Include="Toolkit\Win32\NativeFileAccess.cs" />
+    <Compile Include="Toolkit\Win32\NativeFileAttributesAndFlags.cs" />
+    <Compile Include="Toolkit\Win32\NativeWindowWithEvent.cs" />
+    <Compile Include="Toolkit\Win32\HardLink.cs" />
+    <Compile Include="Toolkit\Win32\AlternateDataStreamInfo.cs" />
+    <Compile Include="Toolkit\Win32\FileStreamAttributes.cs" />
+    <Compile Include="Toolkit\Win32\FileStreamType.cs" />
+    <Compile Include="Toolkit\Win32\FileSystem.cs" />
+    <Compile Include="Toolkit\Win32\Ntdll.cs" />
+    <Compile Include="Toolkit\Win32\ProcessInformation.cs" />
+    <Compile Include="Toolkit\Win32\Rect.cs" />
+    <Compile Include="Toolkit\Win32\ReparseData.cs" />
+    <Compile Include="Toolkit\Win32\ReparsePointError.cs" />
+    <Compile Include="Toolkit\Win32\SecurityAttributes.cs" />
+    <Compile Include="Toolkit\Win32\SizeT.cs" />
+    <Compile Include="Toolkit\Win32\SmallRect.cs" />
+    <Compile Include="Toolkit\Win32\StandardHandle.cs" />
+    <Compile Include="Toolkit\Win32\Startupinfo.cs" />
+    <Compile Include="Toolkit\Win32\SystemInfo.cs" />
+    <Compile Include="Toolkit\Win32\VarHeader.cs" />
+    <Compile Include="Toolkit\Win32\VirtualKeys.cs" />
+    <Compile Include="Toolkit\Win32\VsFixedfileinfo.cs" />
+    <Compile Include="Toolkit\Win32\WinCrypt.cs" />
+    <Compile Include="Toolkit\Win32\WindowInfo.cs" />
+    <Compile Include="Toolkit\Win32\WindowStyles.cs" />
+    <Compile Include="Toolkit\Win32\WindowsVersionInfo.cs" />
+    <Compile Include="Toolkit\Win32\ReparsePoint.cs" />
+    <Compile Include="Toolkit\Win32\SafeHGlobalHandle.cs" />
+    <Compile Include="Toolkit\Win32\SafeNativeMethods.cs" />
+    <Compile Include="Toolkit\Win32\StreamName.cs" />
+    <Compile Include="Toolkit\Win32\Win32StreamId.cs" />
+    <Compile Include="Toolkit\Win32\Symlink.cs" />
+    <Compile Include="Toolkit\Win32\SafeTokenHandle.cs" />
+    <Compile Include="Toolkit\Win32\SecurityImpersonationLevel.cs" />
+    <Compile Include="Toolkit\Win32\SidAndAttributes.cs" />
+    <Compile Include="Toolkit\Win32\SystemHotkey.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Toolkit\Win32\TokenElevation.cs" />
+    <Compile Include="Toolkit\Win32\TokenElevationType.cs" />
+    <Compile Include="Toolkit\Win32\TokenInformationClass.cs" />
+    <Compile Include="Toolkit\Win32\TokenMandatoryLabel.cs" />
+    <Compile Include="Toolkit\Win32\User32.cs" />
+    <Compile Include="Toolkit\Win32\Win32Msgs.cs" />
+    <Compile Include="Toolkit\Win32\Winmm.cs" />
+    <Compile Include="Toolkit\Win32\WinTrust.cs" />
+    <Compile Include="Toolkit\Win32\Winver.cs" />
     <Compile Include="Cleaner\CleanerMain.cs" />
     <Compile Include="Cleaner\CleanerMainWindow.cs">
       <SubType>Form</SubType>
@@ -65,6 +332,13 @@
   <ItemGroup>
     <Content Include="$(SolutionDir)resources\icons\CoApp.ico" />
     <None Include="resources\background.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Toolkit\Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <SubType>Designer</SubType>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Cleaner\CleanerMainWindow.resx">

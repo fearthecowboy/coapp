@@ -73,6 +73,36 @@ namespace CoApp.Toolkit.Shell {
             return false;
         }
 
+        public static bool? IsInvalidShortcut( string shortcutPath) {
+            shortcutPath = shortcutPath.GetFullPath();
+
+            if (File.Exists(shortcutPath)) {
+                try {
+                    var target =  Load(shortcutPath).Path;
+                    if( string.IsNullOrEmpty(target)) {
+                        // not a file-system shortcut?
+                        return false;
+                    }
+                    try {
+                        var uri = new Uri(target);
+                        if( uri.IsHttpScheme()) {
+                            // web links are 'valid'
+                            return false;
+                        }
+                    } catch {
+                        
+                    }
+                    target = Environment.ExpandEnvironmentVariables(target).GetFullPath();
+
+                    return !(File.Exists(target) || Directory.Exists(target));
+                }
+                catch {
+                    // likely not actually a shortcut.
+                }
+            }
+            return null;
+        }
+
         public static bool PointsTo(string shortcutPath, string targetPath) {
             shortcutPath = shortcutPath.GetFullPath();
             targetPath = targetPath.GetFullPath();

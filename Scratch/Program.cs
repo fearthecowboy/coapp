@@ -14,10 +14,14 @@ namespace Scratch {
         
         [STAThread]
         static void Main(string[] args) {
+            /*
             Thread.Sleep(3000);
             var appDomain = AppDomain.CreateDomain("tmp" + DateTime.Now.Ticks);
 
              appDomain.CreateInstanceFromAndUnwrap(Path.Combine(Environment.CurrentDirectory, "CoApp.Client.dll"), "CoApp.Toolkit.Engine.Client.Installer", false, BindingFlags.Default, null, args, null, null);
+            */
+
+            FilesystemExtensions.RemoveTemporaryFiles();
 
             //appDomain.CreateInstanceAndUnwrap("CoApp.Client, Version=1.2.0.94, Culture=neutral, PublicKeyToken=1e373a58e25250cb",
               //     "CoApp.Toolkit.Engine.Client.Installer", false, BindingFlags.Default, null, new[] { args[0] }, null, null);

@@ -22,12 +22,14 @@ namespace CoApp.Toolkit.Engine.Client {
     using System.Threading;
     using System.Threading.Tasks;
     using System.Windows;
+    using System.Windows.Forms;
     using System.Windows.Input;
     using System.Windows.Media.Imaging;
     using Extensions;
     using Logging;
     using Toolkit.Exceptions;
     using UI;
+    using Application = System.Windows.Application;
     using MessageBox = System.Windows.Forms.MessageBox;
 
 
@@ -403,7 +405,6 @@ namespace CoApp.Toolkit.Engine.Client {
                     InstallTask = LoadPackageDetails();
                 });
                 
-                
                 bool wasCreated;
                 var ewhSec = new EventWaitHandleSecurity();
                 ewhSec.AddAccessRule(new EventWaitHandleAccessRule(new SecurityIdentifier(WellKnownSidType.WorldSid, null), EventWaitHandleRights.FullControl, AccessControlType.Allow));
@@ -429,7 +430,7 @@ namespace CoApp.Toolkit.Engine.Client {
         }
 
         private void DoError(InstallerFailureState state, Exception error) {
-            MessageBox.Show(error.StackTrace, error.Message);
+            MessageBox.Show(error.StackTrace, error.Message,MessageBoxButtons.OK,MessageBoxIcon.Exclamation,MessageBoxDefaultButton.Button1);
             switch( state ) {
                 case InstallerFailureState.FailedToGetPackageFromFile:
                     break;

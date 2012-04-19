@@ -60,6 +60,7 @@
             }
 
             Loaded += (src, evnt) => {
+                Topmost = false;
                 if (Opacity <= 0 && Installer.HasPackage ) {
                     Installer.Ping = true;
                     ShowInTaskbar = true;

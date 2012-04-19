@@ -16,7 +16,7 @@ namespace CoApp.Toolkit.Win32 {
     using Microsoft.Win32.SafeHandles;
 
     public static class Kernel32 {
-#if !COAPP_ENGINE_CORE
+#if !COAPP_ENGINE_CORE 
         public delegate bool ConsoleHandlerRoutine(ConsoleEvents eventId);
 #endif
 
@@ -98,7 +98,7 @@ namespace CoApp.Toolkit.Win32 {
         [DllImport("kernel32.dll")]
         public static extern bool AllocConsole();
 
-#if !COAPP_ENGINE_CORE
+#if !COAPP_ENGINE_CORE 
         [DllImport("kernel32.dll")]
         public static extern bool SetConsoleCtrlHandler(ConsoleHandlerRoutine routine, bool add);
 #endif
@@ -112,7 +112,7 @@ namespace CoApp.Toolkit.Win32 {
         [DllImport("kernel32.dll")]
         public static extern IntPtr GetConsoleWindow();
 
-#if !COAPP_ENGINE_CORE
+#if !COAPP_ENGINE_CORE 
         [DllImport("kernel32.dll")]
         public static extern SafeFileHandle GetStdHandle(StandardHandle nStandardHandle);
 #endif

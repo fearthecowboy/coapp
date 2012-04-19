@@ -12,7 +12,6 @@ namespace CoApp.Toolkit.Logging {
     using Exceptions;
     using Extensions;
     using Tasks;
-
     public static class Logger {
         private static EventLog _eventLog;
         private static readonly string Source;

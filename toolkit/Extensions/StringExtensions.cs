@@ -29,8 +29,12 @@ namespace CoApp.Toolkit.Extensions {
     using System.Security.Cryptography;
     using System.Text;
     using System.Text.RegularExpressions;
-    using Ionic.Zlib;
     using Text;
+
+#if!COAPP_ENGINE_CORE  
+    using Ionic.Zlib;
+#endif
+    //using Text;
 
     /// <summary>
     /// Extensions for strings. Whheeee
@@ -661,7 +665,7 @@ namespace CoApp.Toolkit.Extensions {
             return _majorMinorRegex.IsMatch(input);
         }
 
-
+#if!COAPP_ENGINE_CORE 
         /// <summary>
         /// Gzips the specified input.
         /// </summary>
@@ -732,7 +736,7 @@ namespace CoApp.Toolkit.Extensions {
             return bytes.ToArray().ToUtf8String();
         }
 
-
+#endif
         /// <summary>
         /// Determines whether the specified email is email.
         /// </summary>

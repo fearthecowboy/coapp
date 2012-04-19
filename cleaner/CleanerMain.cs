@@ -21,6 +21,7 @@ namespace CoApp.Cleaner {
     using System.Threading.Tasks;
     using System.Windows.Forms;
     using Microsoft.Win32;
+    using Toolkit.Extensions;
 
     class CleanerMain {
 
@@ -69,7 +70,6 @@ CoApp.Cleaner [options]
             if (window != null && PropertyChanged != null) {
                 window.Invoke(PropertyChanged);
             }
-            
         }
 
 
@@ -323,29 +323,35 @@ CoApp.Cleaner [options]
                             MsiInstallProduct(pkg.Path, @"REMOVE=ALL ALLUSERS=1 COAPP_INSTALLED=1 REBOOT=REALLYSUPPRESS");
                         }
                     }
-
-                    installedMSIs = GetInstalledCoAppMSIs().ToArray();
-                    if (!installedMSIs.Any()) {
-                        StatusText = "Status: Removing CoApp Folder.";
-                        OverallProgress = 75;
-                        OnPropertyChanged();
-
-                        // try to get rid of c:\apps 
-                        TryHardToDelete(String.Format("{0}\\apps", Environment.GetEnvironmentVariable("SystemDrive")));
-
-                        // no more packages installed-- remove the c:\apps directory
-                        var rootFolder = CoAppRootFolder.Value;
-                        TryHardToDelete(Path.Combine(rootFolder, ".cache"));
-                        TryHardToDelete(Path.Combine(rootFolder, "ReferenceAssemblies"));
-                        TryHardToDelete(Path.Combine(rootFolder, "x86"));
-                        TryHardToDelete(Path.Combine(rootFolder, "x64"));
-                        TryHardToDelete(Path.Combine(rootFolder, "bin"));
-                        TryHardToDelete(Path.Combine(rootFolder, "powershell"));
-                        TryHardToDelete(Path.Combine(rootFolder, "lib"));
-                        TryHardToDelete(Path.Combine(rootFolder, "include"));
-                        TryHardToDelete(Path.Combine(rootFolder, "etc"));
-                    }
                 }
+                // 
+                // installedMSIs = GetInstalledCoAppMSIs().ToArray();
+                // if (!installedMSIs.Any()) {
+                    StatusText = "Status: Removing CoApp Folder.";
+                    OverallProgress = 75;
+                    OnPropertyChanged();
+
+                    // try to get rid of c:\apps 
+                    FilesystemExtensions.TryHardToDelete(String.Format("{0}\\apps", Environment.GetEnvironmentVariable("SystemDrive")));
+
+                    // no more packages installed-- remove the c:\apps directory
+                    var rootFolder = CoAppRootFolder.Value;
+                    FilesystemExtensions.TryHardToDelete(Path.Combine(rootFolder, ".cache"));
+                    FilesystemExtensions.TryHardToDelete(Path.Combine(rootFolder, "ReferenceAssemblies"));
+                    FilesystemExtensions.TryHardToDelete(Path.Combine(rootFolder, "x86"));
+                    FilesystemExtensions.TryHardToDelete(Path.Combine(rootFolder, "x64"));
+                    FilesystemExtensions.TryHardToDelete(Path.Combine(rootFolder, "bin"));
+                    FilesystemExtensions.TryHardToDelete(Path.Combine(rootFolder, "powershell"));
+                    FilesystemExtensions.TryHardToDelete(Path.Combine(rootFolder, "lib"));
+                    FilesystemExtensions.TryHardToDelete(Path.Combine(rootFolder, "include"));
+                    FilesystemExtensions.TryHardToDelete(Path.Combine(rootFolder, "etc"));
+
+                    FilesystemExtensions.RemoveTemporaryFiles();
+
+                    FilesystemExtensions.RemoveDeadLnks(rootFolder);
+                    FilesystemExtensions.RemoveEssentiallyEmptyFolders(rootFolder);
+                // }
+
                 // clean out the CoApp registry keys
                 try {
                     StatusText = "Status: Removing CoApp Registry Settings.";
@@ -363,28 +369,27 @@ CoApp.Cleaner [options]
                 OverallProgress = 85;
                 OnPropertyChanged();
 
-
-                foreach (var f in Directory.EnumerateFiles(TempPath, "*.msi")) {
-                    TryHardToDelete(f);
+                foreach (var f in Directory.EnumerateFiles(FilesystemExtensions.TempPath, "*.msi")) {
+                    FilesystemExtensions.TryHardToDelete(f);
                 }
                 OverallProgress = 88;
                 OnPropertyChanged();
 
-                foreach (var f in Directory.EnumerateFiles(TempPath, "*.tmp")) {
-                    TryHardToDelete(f);
+                foreach (var f in Directory.EnumerateFiles(FilesystemExtensions.TempPath, "*.tmp")) {
+                    FilesystemExtensions.TryHardToDelete(f);
                 }
 
                 OverallProgress = 91;
                 OnPropertyChanged();
 
-                foreach (var f in Directory.EnumerateFiles(TempPath, "*.exe")) {
-                    TryHardToDelete(f);
+                foreach (var f in Directory.EnumerateFiles(FilesystemExtensions.TempPath, "*.exe")) {
+                    FilesystemExtensions.TryHardToDelete(f);
                 }
                 OverallProgress = 93;
                 OnPropertyChanged();
 
-                foreach (var f in Directory.EnumerateFiles(TempPath, "*.dll")) {
-                    TryHardToDelete(f);
+                foreach (var f in Directory.EnumerateFiles(FilesystemExtensions.TempPath, "*.dll")) {
+                    FilesystemExtensions.TryHardToDelete(f);
                 }
 
                 OverallProgress = 95;
@@ -392,7 +397,7 @@ CoApp.Cleaner [options]
 
 
                 MsiSetExternalUI(null, 0x400, IntPtr.Zero);
-                RemoveTemporaryFiles();
+                FilesystemExtensions.RemoveTemporaryFiles();
 
                 StatusText = "Status: Complete";
                 OverallProgress = 100;
@@ -429,133 +434,6 @@ CoApp.Cleaner [options]
             }
             return result;
         });
-
-        private static string _tempPath;
-        private static string TempPath {
-            get {
-                if (string.IsNullOrEmpty(_tempPath)) {
-                    _tempPath = Path.GetTempPath();
-                    if (!Directory.Exists(_tempPath)) {
-                        Directory.CreateDirectory(_tempPath);
-                    }
-                }
-                return _tempPath;
-            }
-        }
-
-        private static int _counter = Process.GetCurrentProcess().Id << 16;
-
-        public static int Counter { get { return ++_counter; } }
-        public static string CounterHex { get { return Counter.ToString("x8"); } }
-
-        private static List<string> _disposableFilenames = new List<string>();
-
-        internal enum MoveFileFlags {
-            MOVEFILE_REPLACE_EXISTING = 1,
-            MOVEFILE_COPY_ALLOWED = 2,
-            MOVEFILE_DELAY_UNTIL_REBOOT = 4,
-            MOVEFILE_WRITE_THROUGH = 8
-        }
-
-        [DllImportAttribute("kernel32.dll", EntryPoint = "MoveFileEx")]
-        internal static extern bool MoveFileEx(string lpExistingFileName, string lpNewFileName, MoveFileFlags dwFlags);
-
-
-        public static string MarkFileTemporary(string filename) {
-            _disposableFilenames.Add(filename);
-            return filename;
-        }
-
-        public static string GenerateTemporaryFilename(string filename) {
-
-            string ext = null;
-            string name = null;
-            string folder = null;
-
-            if (!string.IsNullOrEmpty(filename)) {
-                ext = Path.GetExtension(filename);
-                name = Path.GetFileNameWithoutExtension(filename);
-                folder = Path.GetDirectoryName(filename);
-            }
-
-            if (string.IsNullOrEmpty(ext)) {
-                ext = ".tmp";
-            }
-            if (string.IsNullOrEmpty(folder)) {
-                folder = TempPath;
-            }
-
-            name = Path.Combine(folder, "tmpFile." + CounterHex + (string.IsNullOrEmpty(name) ? ext : "." + name + ext));
-
-            if (File.Exists(name)) {
-                TryHardToDelete(name);
-            }
-
-            return MarkFileTemporary(name);
-        }
-
-        public static void RemoveTemporaryFiles() {
-            foreach (var f in _disposableFilenames.ToArray().Where(File.Exists)) {
-                TryHardToDelete(f);
-            }
-        }
-
-        public static void TryHardToDelete(string location) {
-            if (Directory.Exists(location)) {
-                try {
-                    Directory.Delete(location, true);
-                }
-                catch {
-                    // didn't take, eh?
-                }
-            }
-
-            if (File.Exists(location)) {
-                try {
-                    File.Delete(location);
-                }
-                catch {
-                    // didn't take, eh?
-                }
-            }
-
-            // if it is still there, move and mark it.
-            if (File.Exists(location) || Directory.Exists(location)) {
-                try {
-                    // move the file to the tmp file
-                    // and tell the OS to remove it next reboot.
-                    var tmpFilename = GenerateTemporaryFilename(location); // generates a unique filename but not a file!
-                    MoveFileEx(location, tmpFilename, MoveFileFlags.MOVEFILE_REPLACE_EXISTING);
-
-                    if (File.Exists(location) || Directory.Exists(location)) {
-                        // of course, if the tmpFile isn't on the same volume as the location, this doesn't work.
-                        // then, last ditch effort, let's rename it in the current directory
-                        // and then we can hide it and mark it for cleanup .
-                        tmpFilename = Path.Combine(Path.GetDirectoryName(location), "tmp." + CounterHex + "." + Path.GetFileName(location));
-                        MoveFileEx(location, tmpFilename, MoveFileFlags.MOVEFILE_REPLACE_EXISTING);
-                        if (File.Exists(tmpFilename) || Directory.Exists(location)) {
-                            // hide the file for convenience.
-                            File.SetAttributes(tmpFilename, File.GetAttributes(tmpFilename) | FileAttributes.Hidden);
-                        }
-                    }
-
-                    // Now we mark the locked file to be deleted upon next reboot (or until another coapp app gets there)
-                    MoveFileEx(File.Exists(tmpFilename) ? tmpFilename : location, null, MoveFileFlags.MOVEFILE_DELAY_UNTIL_REBOOT);
-                }
-                catch (Exception e) {
-                    // really. Hmmm. 
-                    // you can log this if you want.
-                }
-
-                if (File.Exists(location)) {
-                    // Unable to forcably remove file?
-                    // get angry!?
-                }
-            }
-            return;
-        }
-
-
 
         #region fail/help
 

@@ -10,6 +10,7 @@
 
 namespace CoApp.Toolkit.Win32 {
     using System;
+    using System.IO;
 
     /// <summary>
     ///   Wrapper class to abstract out which symlink implementation to use on a given platform
@@ -78,8 +79,44 @@ namespace CoApp.Toolkit.Win32 {
         /// <remarks>
         /// </remarks>
         public static bool IsSymlink(string linkPath) {
-            return _symlink.Value.IsSymlink(linkPath);
+            try {
+                return _symlink.Value.IsSymlink(linkPath);
+            }
+            catch {
+            }
+            return false;
         }
+
+        /// <summary>
+        ///   Wrapper Method: Determines whether the specified link path is symlink and that it points to an actual file or directory
+        /// </summary>
+        /// <param name = "linkPath">The link path.</param>
+        /// <returns><c>true</c> if the specified link path is symlink and the target exists; otherwise, <c>false</c>.</returns>
+        /// <remarks>
+        /// </remarks>
+        public static bool? IsValidLink(string linkPath) {
+            if( IsSymlink(linkPath) ) {
+                var actualPath = _symlink.Value.GetActualPath(linkPath);
+                return File.Exists(actualPath) || Directory.Exists(actualPath);
+            }
+            return null;
+        }
+
+        /// <summary>
+        ///   Wrapper Method: Determines whether the specified link path is a symlink and if it points to an invalid location.
+        /// </summary>
+        /// <param name = "linkPath">The link path.</param>
+        /// <returns><c>true</c> if the specified link path is symlink and the target exists; otherwise, <c>false</c>.</returns>
+        /// <remarks>
+        /// </remarks>
+        public static bool? IsInvalidLink(string linkPath) {
+            if (IsSymlink(linkPath)) {
+                var actualPath = _symlink.Value.GetActualPath(linkPath);
+                return !File.Exists(actualPath) && !Directory.Exists(actualPath);
+            }
+            return null;
+        }
+
 
         /// <summary>
         ///   Wrapper Method: Gets the actual path.
