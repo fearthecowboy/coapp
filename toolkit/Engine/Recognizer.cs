@@ -116,7 +116,7 @@ namespace CoApp.Toolkit.Engine {
 
                     // GS01: Should we make a deeper path in the cache directory?
                     // perhaps that would let us use a cached version of the file we're looking for.
-                    PackageManagerMessages.Invoke.RequireRemoteFile(safeCanonicalName, location.AbsoluteUri.SingleItemAsEnumerable(),
+                    PackageManagerMessages.Invoke.GetSession().RequireRemoteFile(safeCanonicalName, location.AbsoluteUri.SingleItemAsEnumerable(),
                         PackageManagerSettings.CoAppPackageCache, forceRescan);
 
                     // return the completion task, as whatever is waiting for this 

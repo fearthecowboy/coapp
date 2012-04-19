@@ -694,6 +694,24 @@ namespace CoApp.Toolkit.Engine.Client {
             }, TaskContinuationOptions.OnlyOnRanToCompletion).AutoManage();
         }
 
+        public Task SetFeed(string location, string state, PackageManagerMessages messages = null) {
+            return Connect().ContinueWith((antecedent) => {
+                if (messages != null) {
+                    messages.Register();
+                }
+                using (var eventQueue = new ManualEventQueue()) {
+                    WriteAsync(new UrlEncodedMessage("set-feed") {
+                        {"location", location},
+                        {"state", state},
+                        {"rqid", Task.CurrentId},
+                    });
+
+                    // will return when the final message comes thru.
+                    eventQueue.DispatchResponses();
+                }
+            }, TaskContinuationOptions.OnlyOnRanToCompletion).AutoManage();
+        }
+
         public Task SetLogging( bool? Messages, bool? Warnings, bool? Errors ) {
             return SetLogging(Messages, Warnings, Errors);
         }
@@ -908,7 +926,7 @@ namespace CoApp.Toolkit.Engine.Client {
                 case "found-feed":
                     PackageManagerMessages.Invoke.FeedDetails(responseMessage["location"], new DateTime( long.Parse(responseMessage["last-scanned"]) ), 
                         (bool?) responseMessage["session"] ?? false, (bool?) responseMessage["suppressed"] ?? false,
-                        (bool?) responseMessage["validated"] ?? false);
+                        (bool?) responseMessage["validated"] ?? false, responseMessage["state"] );
                     break;
 
                 case "found-package":

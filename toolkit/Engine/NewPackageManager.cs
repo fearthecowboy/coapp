@@ -131,7 +131,6 @@ namespace CoApp.Toolkit.Engine {
             }
         }
 
-
         public Task FindPackages( string canonicalName, string name, string version, string arch, string publicKeyToken,
             bool? dependencies, bool? installed, bool? active, bool? required, bool? blocked, bool? latest,
             int? index, int? maxResults, string location, bool? forceScan, bool? updates, bool? upgrades , bool? trimable , PackageManagerMessages messages) {
@@ -142,12 +141,12 @@ namespace CoApp.Toolkit.Engine {
                 }
 
                 if (CancellationRequested) {
-                    PackageManagerMessages.Invoke.OperationCanceled("find-package");
+                    PackageManagerMessages.Invoke.GetSession().OperationCanceled("find-package");
                     return;
                 }
 
                 if (!PackageManagerSession.Invoke.CheckForPermission(PermissionPolicy.EnumeratePackages)) {
-                    PackageManagerMessages.Invoke.PermissionRequired("EnumeratePackages");
+                    PackageManagerMessages.Invoke.GetSession().PermissionRequired("EnumeratePackages");
                     return;
                 }
 
@@ -158,7 +157,7 @@ namespace CoApp.Toolkit.Engine {
                     // if canonical name is passed, override name,version,pkt,arch with the parsed canonicalname.
                     var match = _canonicalNameParser.Match(canonicalName.ToLower());
                     if (!match.Success) {
-                        PackageManagerMessages.Invoke.Error("find-packages", "canonical-name",
+                        PackageManagerMessages.Invoke.GetSession().Error("find-packages", "canonical-name",
                             "Canonical name '{0}' does not appear to be a valid canonical name".format(canonicalName));
                         return;
                     }
@@ -277,18 +276,18 @@ namespace CoApp.Toolkit.Engine {
                 if (results.Any()) {
                     foreach (var package in results) {
                         if (CancellationRequested) {
-                            PackageManagerMessages.Invoke.OperationCanceled("find-packages");
+                            PackageManagerMessages.Invoke.GetSession().OperationCanceled("find-packages");
                             return;
                         }
 
                         var supercedents = (from p in SearchForPackages(package.Name, null, package.Architecture.ToString(), package.PublicKeyToken)
                             where p.InternalPackageData.PolicyMinimumVersion <= package.Version && p.InternalPackageData.PolicyMaximumVersion >= package.Version
                             select p).OrderByDescending(p => p.Version).ToArray();
-                        PackageManagerMessages.Invoke.PackageInformation(package, supercedents);
+                        PackageManagerMessages.Invoke.GetSession().PackageInformation(package, supercedents);
                     }
                 }
                 else {
-                    PackageManagerMessages.Invoke.NoPackagesFound();
+                    PackageManagerMessages.Invoke.GetSession().NoPackagesFound();
                 }
 
             }, TaskCreationOptions.AttachedToParent);
@@ -302,7 +301,7 @@ namespace CoApp.Toolkit.Engine {
                 }
 
                 if (CancellationRequested) {
-                    PackageManagerMessages.Invoke.OperationCanceled("get-package-details");
+                    PackageManagerMessages.Invoke.GetSession().OperationCanceled("get-package-details");
                     return;
                 }
 
@@ -311,7 +310,7 @@ namespace CoApp.Toolkit.Engine {
                     return;
                 }
 
-                PackageManagerMessages.Invoke.PackageDetails(package);
+                PackageManagerMessages.Invoke.GetSession().PackageDetails(package);
             }, TaskCreationOptions.AttachedToParent);
             return t;
         }
@@ -323,7 +322,7 @@ namespace CoApp.Toolkit.Engine {
                 }
 
                 if (CancellationRequested) {
-                    PackageManagerMessages.Invoke.OperationCanceled("install-package");
+                    PackageManagerMessages.Invoke.GetSession().OperationCanceled("install-package");
                     return;
                 }
 
@@ -343,12 +342,12 @@ namespace CoApp.Toolkit.Engine {
                         var package = GetSinglePackage(canonicalName, "install-package");
 
                         if (package == null) {
-                            PackageManagerMessages.Invoke.UnknownPackage(canonicalName);
+                            PackageManagerMessages.Invoke.GetSession().UnknownPackage(canonicalName);
                             return;
                         }
 
                         if (package.IsBlocked) {
-                            PackageManagerMessages.Invoke.PackageBlocked(canonicalName);
+                            PackageManagerMessages.Invoke.GetSession().PackageBlocked(canonicalName);
                             return;
                         }
 
@@ -361,13 +360,13 @@ namespace CoApp.Toolkit.Engine {
                         if (highestInstalledPackage.Any() && highestInstalledPackage.FirstOrDefault().Version < package.Version) {
 
                             if (!PackageManagerSession.Invoke.CheckForPermission(PermissionPolicy.UpdatePackage)) {
-                                PackageManagerMessages.Invoke.PermissionRequired("UpdatePackage");
+                                PackageManagerMessages.Invoke.GetSession().PermissionRequired("UpdatePackage");
                                 return;
                             }
                         }
                         else {
                             if (!PackageManagerSession.Invoke.CheckForPermission(PermissionPolicy.InstallPackage)) {
-                                PackageManagerMessages.Invoke.PermissionRequired("InstallPackage");
+                                PackageManagerMessages.Invoke.GetSession().PermissionRequired("InstallPackage");
                                 return;
                             }
                         }
@@ -376,13 +375,13 @@ namespace CoApp.Toolkit.Engine {
                         //      - check to see if there is a compatible package already installed that is marked do-not-update
                         //        fail if so.
                         if (isUpdating == true && installedCompatibleVersions.Any(each => each.DoNotUpdate ) ) {
-                            PackageManagerMessages.Invoke.PackageBlocked(canonicalName);                                
+                            PackageManagerMessages.Invoke.GetSession().PackageBlocked(canonicalName);                                
                         }
 
                         // if this is an upgrade, 
                         //      - check to see if this package has the do-not-upgrade flag.
                         if( isUpgrading == true &&  package.DoNotUpgrade  ) {
-                            PackageManagerMessages.Invoke.PackageBlocked(canonicalName);
+                            PackageManagerMessages.Invoke.GetSession().PackageBlocked(canonicalName);
                         }
 
 
@@ -398,7 +397,7 @@ namespace CoApp.Toolkit.Engine {
                             manualResetEvent.Reset();
 
                             if (CancellationRequested) {
-                                PackageManagerMessages.Invoke.OperationCanceled("install-package");
+                                PackageManagerMessages.Invoke.GetSession().OperationCanceled("install-package");
                                 return;
                             }
 
@@ -409,14 +408,14 @@ namespace CoApp.Toolkit.Engine {
                             catch (OperationCompletedBeforeResultException) {
                                 // we encountered an unresolvable condition in the install graph.
                                 // messages should have already been sent.
-                                PackageManagerMessages.Invoke.FailedPackageInstall(canonicalName, package.InternalPackageData.LocalLocation,
+                                PackageManagerMessages.Invoke.GetSession().FailedPackageInstall(canonicalName, package.InternalPackageData.LocalLocation,
                                     "One or more dependencies are unable to be resolved.");
                                 return;
                             }
 
                             // seems like a good time to check if we're supposed to bail...
                             if (CancellationRequested) {
-                                PackageManagerMessages.Invoke.OperationCanceled("install-package");
+                                PackageManagerMessages.Invoke.GetSession().OperationCanceled("install-package");
                                 return;
                             }
 
@@ -424,7 +423,7 @@ namespace CoApp.Toolkit.Engine {
                                 // we can just return a bunch of foundpackage messages, since we're not going to be 
                                 // actually installing anything, nor trying to download anything.
                                 foreach( var p in installGraph) {
-                                    PackageManagerMessages.Invoke.PackageInformation(package, Enumerable.Empty<Package>());
+                                    PackageManagerMessages.Invoke.GetSession().PackageInformation(package, Enumerable.Empty<Package>());
                                 }
                                 return;
                             }
@@ -453,7 +452,7 @@ namespace CoApp.Toolkit.Engine {
                             if (missingFiles.Any()) {
                                 // we've got some packages to install that don't have files.
                                 foreach (var p in missingFiles.Where(p => !p.PackageSessionData.HasRequestedDownload)) {
-                                    PackageManagerMessages.Invoke.RequireRemoteFile(p.CanonicalName,
+                                    PackageManagerMessages.Invoke.GetSession().RequireRemoteFile(p.CanonicalName,
                                         p.InternalPackageData.RemoteLocations, PackageManagerSettings.CoAppPackageCache, false);
 
                                     p.PackageSessionData.HasRequestedDownload = true;
@@ -464,7 +463,7 @@ namespace CoApp.Toolkit.Engine {
                                     // we can just return a bunch of found-package messages, since we're not going to be 
                                     // actually installing anything, and everything we needed is downloaded.
                                     foreach (var p in installGraph) {
-                                        PackageManagerMessages.Invoke.PackageInformation(p, Enumerable.Empty<Package>());
+                                        PackageManagerMessages.Invoke.GetSession().PackageInformation(p, Enumerable.Empty<Package>());
                                     }
                                     return;
                                 }
@@ -477,7 +476,7 @@ namespace CoApp.Toolkit.Engine {
                                     var pkg = p;
                                     // seems like a good time to check if we're supposed to bail...
                                     if (CancellationRequested) {
-                                        PackageManagerMessages.Invoke.OperationCanceled("install-package");
+                                        PackageManagerMessages.Invoke.GetSession().OperationCanceled("install-package");
                                         return;
                                     }
                                     var validLocation = pkg.PackageSessionData.LocalValidatedLocation;
@@ -486,7 +485,7 @@ namespace CoApp.Toolkit.Engine {
                                         if (!pkg.IsInstalled) {
                                             if (string.IsNullOrEmpty(validLocation)) {
                                                 // can't find a valid location
-                                                PackageManagerMessages.Invoke.FailedPackageInstall(pkg.CanonicalName, pkg.InternalPackageData.LocalLocation, "Can not find local valid package");
+                                                PackageManagerMessages.Invoke.GetSession().FailedPackageInstall(pkg.CanonicalName, pkg.InternalPackageData.LocalLocation, "Can not find local valid package");
                                                 pkg.PackageSessionData.PackageFailedInstall = true;
                                             }
                                             else {
@@ -499,19 +498,19 @@ namespace CoApp.Toolkit.Engine {
                                                         // something has changed where we need restart the service before we can continue.
                                                         // and the one place we don't wanna be when we issue a shutdown in in Install :) ...
                                                         EngineService.RestartService();
-                                                        PackageManagerMessages.Invoke.OperationCanceled("install-package");
+                                                        PackageManagerMessages.Invoke.GetSession().OperationCanceled("install-package");
                                                         return;
                                                     }
 
                                                     pkg.Install(percentage => {
                                                         overallProgress += ((percentage - lastProgress) *eachTaskIsWorth)/100;
                                                         lastProgress = percentage;
-                                                        PackageManagerMessages.Invoke.InstallingPackageProgress(pkg.CanonicalName, percentage, (int)(overallProgress*100));
+                                                        PackageManagerMessages.Invoke.GetSession().InstallingPackageProgress(pkg.CanonicalName, percentage, (int)(overallProgress * 100));
                                                     });
                                                 }
                                                 overallProgress += ((100 - lastProgress)*eachTaskIsWorth)/100;
-                                                PackageManagerMessages.Invoke.InstallingPackageProgress(pkg.CanonicalName, 100,(int)(overallProgress*100));
-                                                PackageManagerMessages.Invoke.InstalledPackage(pkg.CanonicalName);
+                                                PackageManagerMessages.Invoke.GetSession().InstallingPackageProgress(pkg.CanonicalName, 100, (int)(overallProgress * 100));
+                                                PackageManagerMessages.Invoke.GetSession().InstalledPackage(pkg.CanonicalName);
                                                 Signals.InstalledPackage(pkg.CanonicalName);
                                             }
                                         }
@@ -520,7 +519,7 @@ namespace CoApp.Toolkit.Engine {
                                         Logger.Error("FAILED INSTALL");
                                         Logger.Error(e);
 
-                                        PackageManagerMessages.Invoke.FailedPackageInstall(pkg.CanonicalName, validLocation, "Package failed to install.");
+                                        PackageManagerMessages.Invoke.GetSession().FailedPackageInstall(pkg.CanonicalName, validLocation, "Package failed to install.");
                                         pkg.PackageSessionData.PackageFailedInstall = true;
 
                                         if (!pkg.PackageSessionData.AllowedToSupercede) {
@@ -552,7 +551,7 @@ namespace CoApp.Toolkit.Engine {
                                     if (EngineService.DoesTheServiceNeedARestart) {
                                         // something has changed where we need restart the service before we can continue.
                                         // and the one place we don't wanna be when we issue a shutdown in in Install :) ...
-                                        PackageManagerMessages.Invoke.Restarting();
+                                        PackageManagerMessages.Invoke.GetSession().Restarting();
                                         EngineService.RestartService();
                                         return;
                                     }
@@ -567,7 +566,7 @@ namespace CoApp.Toolkit.Engine {
                             // to see if the client has cancelled the operation.
                             while (!manualResetEvent.WaitOne(500)) {
                                 if (CancellationRequested) {
-                                    PackageManagerMessages.Invoke.OperationCanceled("install-package");
+                                    PackageManagerMessages.Invoke.GetSession().OperationCanceled("install-package");
                                     return;
                                 }
 
@@ -643,7 +642,7 @@ namespace CoApp.Toolkit.Engine {
                 }
 
                 if (CancellationRequested) {
-                    PackageManagerMessages.Invoke.OperationCanceled("list-feeds");
+                    PackageManagerMessages.Invoke.GetSession().OperationCanceled("list-feeds");
                     return;
                 }
 
@@ -688,11 +687,15 @@ namespace CoApp.Toolkit.Engine {
 
                 if (results.Any()) {
                     foreach (var f in results) {
-                        PackageManagerMessages.Invoke.FeedDetails(f.feed, f.LastScanned, f.session, f.suppressed, f.validated);
+                        var state = PackageManagerSettings.PerPackageSettings[f.feed, "state"].StringValue;
+                        if( string.IsNullOrEmpty(state)) {
+                            state = "active";
+                        }
+                        PackageManagerMessages.Invoke.GetSession().FeedDetails(f.feed, f.LastScanned, f.session, f.suppressed, f.validated, state);
                     }
                 }
                 else {
-                    PackageManagerMessages.Invoke.NoFeedsFound();
+                    PackageManagerMessages.Invoke.GetSession().NoFeedsFound();
                 }
             }, TaskCreationOptions.AttachedToParent);
             return t;
@@ -705,7 +708,7 @@ namespace CoApp.Toolkit.Engine {
                 }
 
                 if (CancellationRequested) {
-                    PackageManagerMessages.Invoke.OperationCanceled("remove-feed");
+                    PackageManagerMessages.Invoke.GetSession().OperationCanceled("remove-feed");
                     return;
                 }
 
@@ -715,22 +718,22 @@ namespace CoApp.Toolkit.Engine {
                 if (session ?? false) {
                     // session feed specfied
                     if (!PackageManagerSession.Invoke.CheckForPermission(PermissionPolicy.EditSessionFeeds)) {
-                        PackageManagerMessages.Invoke.PermissionRequired("EditSessionFeeds");
+                        PackageManagerMessages.Invoke.GetSession().PermissionRequired("EditSessionFeeds");
                         return;
                     }
 
                     RemoveSessionFeed(location);
-                    PackageManagerMessages.Invoke.FeedRemoved(location);
+                    PackageManagerMessages.Invoke.GetSession().FeedRemoved(location);
                 }
                 else {
                     // system feed specified
                     if (!PackageManagerSession.Invoke.CheckForPermission(PermissionPolicy.EditSystemFeeds)) {
-                        PackageManagerMessages.Invoke.PermissionRequired("EditSystemFeeds");
+                        PackageManagerMessages.Invoke.GetSession().PermissionRequired("EditSystemFeeds");
                         return;
                     }
 
                     RemoveSystemFeed(location);
-                    PackageManagerMessages.Invoke.FeedRemoved(location);
+                    PackageManagerMessages.Invoke.GetSession().FeedRemoved(location);
                 }
             }, TaskCreationOptions.AttachedToParent);
             return t;
@@ -743,7 +746,7 @@ namespace CoApp.Toolkit.Engine {
                 }
 
                 if (CancellationRequested) {
-                    PackageManagerMessages.Invoke.OperationCanceled("add-feed");
+                    PackageManagerMessages.Invoke.GetSession().OperationCanceled("add-feed");
                     return;
                 }
 
@@ -751,18 +754,18 @@ namespace CoApp.Toolkit.Engine {
                     // new feed is a session feed
                     // session feed specfied
                     if (!PackageManagerSession.Invoke.CheckForPermission(PermissionPolicy.EditSessionFeeds)) {
-                        PackageManagerMessages.Invoke.PermissionRequired("EditSessionFeeds");
+                        PackageManagerMessages.Invoke.GetSession().PermissionRequired("EditSessionFeeds");
                         return;
                     }
 
                     // check if it is already a system feed
                     if (SystemFeedLocations.Contains(location)) {
-                        PackageManagerMessages.Invoke.Warning("add-feed", "location", "location '{0}' is already a system feed".format(location));
+                        PackageManagerMessages.Invoke.GetSession().Warning("add-feed", "location", "location '{0}' is already a system feed".format(location));
                         return;
                     }
 
                     if (SessionFeedLocations.Contains(location)) {
-                        PackageManagerMessages.Invoke.Warning("add-feed", "location", "location '{0}' is already a session feed".format(location));
+                        PackageManagerMessages.Invoke.GetSession().Warning("add-feed", "location", "location '{0}' is already a session feed".format(location));
                         return;
                     }
 
@@ -772,14 +775,14 @@ namespace CoApp.Toolkit.Engine {
                         if (foundFeed != null) {
 
                             AddSessionFeed(location);
-                            PackageManagerMessages.Invoke.FeedAdded(location);
+                            PackageManagerMessages.Invoke.GetSession().FeedAdded(location);
 
                             if (foundFeed != SessionPackageFeed.Instance || foundFeed != InstalledPackageFeed.Instance ) {
                                 SessionCache<PackageFeed>.Value[location] = foundFeed;    
                             }
                         }
                         else {
-                            PackageManagerMessages.Invoke.Error("add-feed", "location",
+                            PackageManagerMessages.Invoke.GetSession().Error("add-feed", "location",
                                 "failed to recognize location '{0}' as a valid package feed".format(location));
                             Logger.Error("Feed {0} was unable to load.", location);
                         }
@@ -789,12 +792,12 @@ namespace CoApp.Toolkit.Engine {
                 else {
                     // new feed is a system feed
                     if (!PackageManagerSession.Invoke.CheckForPermission(PermissionPolicy.EditSystemFeeds)) {
-                        PackageManagerMessages.Invoke.PermissionRequired("EditSystemFeeds");
+                        PackageManagerMessages.Invoke.GetSession().PermissionRequired("EditSystemFeeds");
                         return;
                     }
 
                     if (SystemFeedLocations.Contains(location)) {
-                        PackageManagerMessages.Invoke.Warning("add-feed", "location", "location '{0}' is already a system feed".format(location));
+                        PackageManagerMessages.Invoke.GetSession().Warning("add-feed", "location", "location '{0}' is already a system feed".format(location));
                         return;
                     }
 
@@ -804,14 +807,14 @@ namespace CoApp.Toolkit.Engine {
                         if (foundFeed != null) {
 
                             AddSystemFeed(location);
-                            PackageManagerMessages.Invoke.FeedAdded(location);
+                            PackageManagerMessages.Invoke.GetSession().FeedAdded(location);
 
                             if (foundFeed != SessionPackageFeed.Instance || foundFeed != InstalledPackageFeed.Instance) {
                                 Cache<PackageFeed>.Value[location] = foundFeed;
                             }
                         }
                         else {
-                            PackageManagerMessages.Invoke.Error("add-feed", "location", "failed to recognize location '{0}' as a valid package feed".format(location));
+                            PackageManagerMessages.Invoke.GetSession().Error("add-feed", "location", "failed to recognize location '{0}' as a valid package feed".format(location));
                             Logger.Error("Feed {0} was unable to load.", location);
                         }
                     }, TaskContinuationOptions.AttachedToParent);
@@ -828,28 +831,28 @@ namespace CoApp.Toolkit.Engine {
                 }
 
                 if (CancellationRequested) {
-                    PackageManagerMessages.Invoke.OperationCanceled("verify-signature");
+                    PackageManagerMessages.Invoke.GetSession().OperationCanceled("verify-signature");
                     return;
                 }
 
                 if (string.IsNullOrEmpty(filename)) {
-                    PackageManagerMessages.Invoke.Error("verify-signature", "filename", "parameter 'filename' is required to verify a file");
+                    PackageManagerMessages.Invoke.GetSession().Error("verify-signature", "filename", "parameter 'filename' is required to verify a file");
                     return;
                 }
 
                 var location = PackageManagerSession.Invoke.GetCanonicalizedPath(filename);
 
                 if (!File.Exists(location)) {
-                    PackageManagerMessages.Invoke.FileNotFound(location);
+                    PackageManagerMessages.Invoke.GetSession().FileNotFound(location);
                     return;
                 }
 
                 var r = Verifier.HasValidSignature(location);
                 if (r) {
-                    PackageManagerMessages.Invoke.SignatureValidation(location, r, Verifier.GetPublisherInformation(location)["PublisherName"]);
+                    PackageManagerMessages.Invoke.GetSession().SignatureValidation(location, r, Verifier.GetPublisherInformation(location)["PublisherName"]);
                 }
                 else {
-                    PackageManagerMessages.Invoke.SignatureValidation(location, false, null);
+                    PackageManagerMessages.Invoke.GetSession().SignatureValidation(location, false, null);
                 }
 
             }, TaskCreationOptions.AttachedToParent);
@@ -863,31 +866,31 @@ namespace CoApp.Toolkit.Engine {
                 }
 
                 if (CancellationRequested) {
-                    PackageManagerMessages.Invoke.OperationCanceled("set-package");
+                    PackageManagerMessages.Invoke.GetSession().OperationCanceled("set-package");
                     return;
                 }
 
                 var package = GetSinglePackage(canonicalName, "set-package");
 
                 if (package == null) {
-                    PackageManagerMessages.Invoke.UnknownPackage(canonicalName);
+                    PackageManagerMessages.Invoke.GetSession().UnknownPackage(canonicalName);
                     return;
                 }
 
                 if (!package.IsInstalled) {
-                    PackageManagerMessages.Invoke.Error("set-package", "canonical-name", "package '{0}' is not installed.".format(canonicalName));
+                    PackageManagerMessages.Invoke.GetSession().Error("set-package", "canonical-name", "package '{0}' is not installed.".format(canonicalName));
                     return;
                 }
 
                 // seems like a good time to check if we're supposed to bail...
                 if (CancellationRequested) {
-                    PackageManagerMessages.Invoke.OperationCanceled("set-package");
+                    PackageManagerMessages.Invoke.GetSession().OperationCanceled("set-package");
                     return;
                 }
 
                 if (true == active) {
                     if (!PackageManagerSession.Invoke.CheckForPermission(PermissionPolicy.ChangeActivePackage)) {
-                        PackageManagerMessages.Invoke.PermissionRequired("ChangeActivePackage");
+                        PackageManagerMessages.Invoke.GetSession().PermissionRequired("ChangeActivePackage");
                     }
                     else {
                         package.SetPackageCurrent();
@@ -896,7 +899,7 @@ namespace CoApp.Toolkit.Engine {
 
                 if (false == active) {
                     if (!PackageManagerSession.Invoke.CheckForPermission(PermissionPolicy.ChangeActivePackage)) {
-                        PackageManagerMessages.Invoke.PermissionRequired("ChangeActivePackage");
+                        PackageManagerMessages.Invoke.GetSession().PermissionRequired("ChangeActivePackage");
                     }
                     else {
                         SearchForInstalledPackages(package.Name, null, package.Architecture.ToString(), package.PublicKeyToken).HighestPackages().FirstOrDefault().
@@ -906,7 +909,7 @@ namespace CoApp.Toolkit.Engine {
 
                 if (true == required) {
                     if (!PackageManagerSession.Invoke.CheckForPermission(PermissionPolicy.ChangeRequiredState)) {
-                        PackageManagerMessages.Invoke.PermissionRequired("ChangeRequiredState");
+                        PackageManagerMessages.Invoke.GetSession().PermissionRequired("ChangeRequiredState");
                     }
                     else {
                         package.IsRequired = true;
@@ -915,7 +918,7 @@ namespace CoApp.Toolkit.Engine {
 
                 if (false == required) {
                     if (!PackageManagerSession.Invoke.CheckForPermission(PermissionPolicy.ChangeRequiredState)) {
-                        PackageManagerMessages.Invoke.PermissionRequired("ChangeRequiredState");
+                        PackageManagerMessages.Invoke.GetSession().PermissionRequired("ChangeRequiredState");
                     }
                     else {
                         package.IsRequired = false;
@@ -924,7 +927,7 @@ namespace CoApp.Toolkit.Engine {
 
                 if (true == blocked) {
                     if (!PackageManagerSession.Invoke.CheckForPermission(PermissionPolicy.ChangeBlockedState)) {
-                        PackageManagerMessages.Invoke.PermissionRequired("ChangeBlockedState");
+                        PackageManagerMessages.Invoke.GetSession().PermissionRequired("ChangeBlockedState");
                     }
                     else {
                         package.IsBlocked = true;
@@ -933,7 +936,7 @@ namespace CoApp.Toolkit.Engine {
 
                 if (false == blocked) {
                     if (!PackageManagerSession.Invoke.CheckForPermission(PermissionPolicy.ChangeBlockedState)) {
-                        PackageManagerMessages.Invoke.PermissionRequired("ChangeBlockedState");
+                        PackageManagerMessages.Invoke.GetSession().PermissionRequired("ChangeBlockedState");
                     }
                     else {
                         package.IsBlocked = false;
@@ -942,14 +945,14 @@ namespace CoApp.Toolkit.Engine {
 
                 if( true == doNotUpdate) {
                     if (!PackageManagerSession.Invoke.CheckForPermission(PermissionPolicy.InstallPackage)) {
-                        PackageManagerMessages.Invoke.PermissionRequired("InstallPackage");
+                        PackageManagerMessages.Invoke.GetSession().PermissionRequired("InstallPackage");
                     } else {
                         package.DoNotUpdate = true;
                     }
                 }
                 if (false == doNotUpdate) {
                     if (!PackageManagerSession.Invoke.CheckForPermission(PermissionPolicy.InstallPackage)) {
-                        PackageManagerMessages.Invoke.PermissionRequired("InstallPackage");
+                        PackageManagerMessages.Invoke.GetSession().PermissionRequired("InstallPackage");
                     } else {
                         package.DoNotUpdate = false;
                     }
@@ -957,20 +960,20 @@ namespace CoApp.Toolkit.Engine {
 
                 if (true == doNotUpgrade) {
                     if (!PackageManagerSession.Invoke.CheckForPermission(PermissionPolicy.InstallPackage)) {
-                        PackageManagerMessages.Invoke.PermissionRequired("InstallPackage");
+                        PackageManagerMessages.Invoke.GetSession().PermissionRequired("InstallPackage");
                     } else {
                         package.DoNotUpgrade = true;
                     }
                 }
                 if (false == doNotUpgrade) {
                     if (!PackageManagerSession.Invoke.CheckForPermission(PermissionPolicy.InstallPackage)) {
-                        PackageManagerMessages.Invoke.PermissionRequired("InstallPackage");
+                        PackageManagerMessages.Invoke.GetSession().PermissionRequired("InstallPackage");
                     } else {
                         package.DoNotUpgrade = false;
                     }
                 }
 
-                PackageManagerMessages.Invoke.PackageInformation(package, Enumerable.Empty<Package>());
+                PackageManagerMessages.Invoke.GetSession().PackageInformation(package, Enumerable.Empty<Package>());
 
             }, TaskCreationOptions.AttachedToParent);
             return t;
@@ -983,40 +986,40 @@ namespace CoApp.Toolkit.Engine {
                 }
 
                 if (CancellationRequested) {
-                    PackageManagerMessages.Invoke.OperationCanceled("remove-package");
+                    PackageManagerMessages.Invoke.GetSession().OperationCanceled("remove-package");
                     return;
                 }
 
 
                 if (!PackageManagerSession.Invoke.CheckForPermission(PermissionPolicy.RemovePackage)) {
-                    PackageManagerMessages.Invoke.PermissionRequired("RemovePackage");
+                    PackageManagerMessages.Invoke.GetSession().PermissionRequired("RemovePackage");
                     return;
                 }
 
                 var package = GetSinglePackage(canonicalName, "remove-package");
                 if (package == null) {
-                    PackageManagerMessages.Invoke.UnknownPackage(canonicalName);
+                    PackageManagerMessages.Invoke.GetSession().UnknownPackage(canonicalName);
                     return;
                 }
 
                 if (package.Name.Equals( "coapp.toolkit", StringComparison.CurrentCultureIgnoreCase ) && package.PublicKeyToken.Equals("1e373a58e25250cb") && package.IsActive ) {
-                    PackageManagerMessages.Invoke.Error("remove-package", "canonical-name", "Active CoApp Engine may not be removed");
+                    PackageManagerMessages.Invoke.GetSession().Error("remove-package", "canonical-name", "Active CoApp Engine may not be removed");
                     return;
                 }
 
                 if (!package.IsInstalled) {
-                    PackageManagerMessages.Invoke.Error("remove-package", "canonical-name", "package '{0}' is not installed.".format(canonicalName));
+                    PackageManagerMessages.Invoke.GetSession().Error("remove-package", "canonical-name", "package '{0}' is not installed.".format(canonicalName));
                     return;
                 }
 
                 if (package.IsBlocked) {
-                    PackageManagerMessages.Invoke.PackageBlocked(canonicalName);
+                    PackageManagerMessages.Invoke.GetSession().PackageBlocked(canonicalName);
                     return;
                 }
                 if (true != force) {
                     UpdateIsRequestedFlags();
                     if (package.PackageSessionData.IsDependency) {
-                        PackageManagerMessages.Invoke.FailedPackageRemoval(canonicalName,
+                        PackageManagerMessages.Invoke.GetSession().FailedPackageRemoval(canonicalName,
                             "Package '{0}' is a required dependency of another package.".format(canonicalName));
                         return;
                     }
@@ -1024,20 +1027,20 @@ namespace CoApp.Toolkit.Engine {
                 }
                 // seems like a good time to check if we're supposed to bail...
                 if (CancellationRequested) {
-                    PackageManagerMessages.Invoke.OperationCanceled("remove-package");
+                    PackageManagerMessages.Invoke.GetSession().OperationCanceled("remove-package");
                     return;
                 }
 
                 try {
-                    package.Remove((percentage) => PackageManagerMessages.Invoke.RemovingPackageProgress(package.CanonicalName, percentage));
+                    package.Remove((percentage) => PackageManagerMessages.Invoke.GetSession().RemovingPackageProgress(package.CanonicalName, percentage));
 
-                    PackageManagerMessages.Invoke.RemovingPackageProgress(canonicalName, 100);
-                    PackageManagerMessages.Invoke.RemovedPackage(canonicalName);
+                    PackageManagerMessages.Invoke.GetSession().RemovingPackageProgress(canonicalName, 100);
+                    PackageManagerMessages.Invoke.GetSession().RemovedPackage(canonicalName);
                     
                     Signals.RemovedPackage(canonicalName);
                 }
                 catch (OperationCompletedBeforeResultException e) {
-                    PackageManagerMessages.Invoke.FailedPackageRemoval(canonicalName, e.Message);
+                    PackageManagerMessages.Invoke.GetSession().FailedPackageRemoval(canonicalName, e.Message);
                     return;
                 }
 
@@ -1052,13 +1055,13 @@ namespace CoApp.Toolkit.Engine {
                 }
 
                 if (CancellationRequested) {
-                    PackageManagerMessages.Invoke.OperationCanceled("unable-to-acquire");
+                    PackageManagerMessages.Invoke.GetSession().OperationCanceled("unable-to-acquire");
                     return;
                 }
 
 
                 if (canonicalName.IsNullOrEmpty()) {
-                    PackageManagerMessages.Invoke.Error("unable-to-acquire", "canonical-name", "canonical-name is required.");
+                    PackageManagerMessages.Invoke.GetSession().Error("unable-to-acquire", "canonical-name", "canonical-name is required.");
                     return;
                 }
 
@@ -1099,12 +1102,12 @@ namespace CoApp.Toolkit.Engine {
                     messages.Register();
                 }
                 if (string.IsNullOrEmpty(localLocation)) {
-                    PackageManagerMessages.Invoke.Error("recognize-file", "local-location", "parameter 'local-location' is required to recognize a file");
+                    PackageManagerMessages.Invoke.GetSession().Error("recognize-file", "local-location", "parameter 'local-location' is required to recognize a file");
                     return;
                 }
 
                 if (CancellationRequested) {
-                    PackageManagerMessages.Invoke.OperationCanceled("recognize-file");
+                    PackageManagerMessages.Invoke.GetSession().OperationCanceled("recognize-file");
                     return;
                 }
 
@@ -1113,13 +1116,13 @@ namespace CoApp.Toolkit.Engine {
                 if (location.StartsWith(@"\\")) {
                     // a local unc path was passed. This isn't allowed--we need a file on a local volume that
                     // the user has access to.
-                    PackageManagerMessages.Invoke.Error("recognize-file", "local-location",
+                    PackageManagerMessages.Invoke.GetSession().Error("recognize-file", "local-location",
                         "local-location '{0}' appears to be a file on a remote server('{1}') . Recognized files must be local".format(localLocation, location));
                     return;
                 }
 
                 if (!File.Exists(location)) {
-                    PackageManagerMessages.Invoke.FileNotFound(location);
+                    PackageManagerMessages.Invoke.GetSession().FileNotFound(location);
                     return;
                 }
 
@@ -1146,7 +1149,7 @@ namespace CoApp.Toolkit.Engine {
                 // otherwise, we'll call the recognizer 
                 Recognizer.Recognize(location).ContinueWith(antecedent => {
                     if (antecedent.IsFaulted) {
-                        PackageManagerMessages.Invoke.FileNotRecognized(location, "Unexpected error recognizing file.");
+                        PackageManagerMessages.Invoke.GetSession().FileNotRecognized(location, "Unexpected error recognizing file.");
                         return;
                     }
 
@@ -1158,23 +1161,56 @@ namespace CoApp.Toolkit.Engine {
 
                             SessionPackageFeed.Instance.Add(package);
 
-                            PackageManagerMessages.Invoke.PackageInformation(package, Enumerable.Empty<Package>());
-                            PackageManagerMessages.Invoke.Recognized(localLocation);
+                            PackageManagerMessages.Invoke.GetSession().PackageInformation(package, Enumerable.Empty<Package>());
+                            PackageManagerMessages.Invoke.GetSession().Recognized(localLocation);
                         }
                         return;
                     }
 
                     if (antecedent.Result.IsPackageFeed) {
-                        PackageManagerMessages.Invoke.FeedAdded(location);
-                        PackageManagerMessages.Invoke.Recognized(location);
+                        PackageManagerMessages.Invoke.GetSession().FeedAdded(location);
+                        PackageManagerMessages.Invoke.GetSession().Recognized(location);
                     }
 
                     // if this isn't a package file, then there is something odd going on here.
                     // we don't accept non-package files willy-nilly. 
-                    PackageManagerMessages.Invoke.FileNotRecognized(location, "File isn't a package, and doesn't appear to have been requested. ");
+                    PackageManagerMessages.Invoke.GetSession().FileNotRecognized(location, "File isn't a package, and doesn't appear to have been requested. ");
                     return;
                 }, TaskContinuationOptions.AttachedToParent);
 
+            }, TaskCreationOptions.AttachedToParent);
+            return t;
+        }
+
+        public Task SetFeedFlags(string location, string activePassiveIgnored, PackageManagerMessages messages) {
+            var t = Task.Factory.StartNew(() => {
+                if (messages != null) {
+                    messages.Register();
+                }
+
+                if (CancellationRequested) {
+                    PackageManagerMessages.Invoke.GetSession().OperationCanceled("set-feed");
+                    return;
+                }
+
+                if (!PackageManagerSession.Invoke.CheckForPermission(PermissionPolicy.EditSystemFeeds)) {
+                    PackageManagerMessages.Invoke.GetSession().PermissionRequired("EditSystemFeeds");
+                    return;
+                }
+
+                activePassiveIgnored = activePassiveIgnored ?? string.Empty;
+
+                switch( activePassiveIgnored.ToLower() ) {
+                    case "active":
+                        PackageManagerSettings.PerPackageSettings[location, "state"].StringValue = "active";
+                        break;
+                    case "passive":
+                        PackageManagerSettings.PerPackageSettings[location, "state"].StringValue = "passive";
+                        break;
+                    case "ignored":
+                        PackageManagerSettings.PerPackageSettings[location, "state"].StringValue = "ignored";
+                        break;
+                }
             }, TaskCreationOptions.AttachedToParent);
             return t;
         }
@@ -1186,10 +1222,9 @@ namespace CoApp.Toolkit.Engine {
                 }
 
                 if (CancellationRequested) {
-                    PackageManagerMessages.Invoke.OperationCanceled("suppress-feed");
+                    PackageManagerMessages.Invoke.GetSession().OperationCanceled("suppress-feed");
                     return;
                 }
-
 
                 var suppressedFeeds = SessionCache<List<string>>.Value["suppressed-feeds"] ?? new List<string>();
 
@@ -1200,7 +1235,7 @@ namespace CoApp.Toolkit.Engine {
                     }
                 }
 
-                PackageManagerMessages.Invoke.FeedSuppressed(location);
+                PackageManagerMessages.Invoke.GetSession().FeedSuppressed(location);
             }, TaskCreationOptions.AttachedToParent);
             return t;
         }
@@ -1215,7 +1250,7 @@ namespace CoApp.Toolkit.Engine {
             // name != null?
             if( string.IsNullOrEmpty(canonicalName)) {
                 if (messageName != null && !suppressErrors) {
-                    PackageManagerMessages.Invoke.Error(messageName, "canonical-name",
+                    PackageManagerMessages.Invoke.GetSession().Error(messageName, "canonical-name",
                         "Canonical name '{0}' does not appear to be a valid canonical name".format(canonicalName));
                 }
                 return null;
@@ -1226,7 +1261,7 @@ namespace CoApp.Toolkit.Engine {
             if( !match.Success ) {
 
                 if (messageName != null && !suppressErrors) {
-                    PackageManagerMessages.Invoke.Error(messageName, "canonical-name",
+                    PackageManagerMessages.Invoke.GetSession().Error(messageName, "canonical-name",
                         "Canonical name '{0}' does not appear to be a valid canonical name".format(canonicalName));
                 }
                 return null;
@@ -1237,14 +1272,14 @@ namespace CoApp.Toolkit.Engine {
 
             if( !pkg.Any()) {
                 if (messageName != null && !suppressErrors) {
-                    PackageManagerMessages.Invoke.UnknownPackage(canonicalName);
+                    PackageManagerMessages.Invoke.GetSession().UnknownPackage(canonicalName);
                 }
                 return null;
             }
 
             if( pkg.Count() > 1 ) {
                 if (messageName != null && !suppressErrors) {
-                    PackageManagerMessages.Invoke.Error(messageName, "canonical-name",
+                    PackageManagerMessages.Invoke.GetSession().Error(messageName, "canonical-name",
                         "Canonical name '{0}' matches more than one package.".format(canonicalName));
                 }
                 return null; 
@@ -1257,8 +1292,6 @@ namespace CoApp.Toolkit.Engine {
             get { return SessionCache<List<string>>.Value["suppressed-feeds"] ?? new List<string>(); }
         }
 
-        
-       
         internal IEnumerable<PackageFeed> Feeds { get {
             try {
                 // ensure that the system feeds actually get loaded.
@@ -1360,7 +1393,7 @@ namespace CoApp.Toolkit.Engine {
         private IEnumerable<Package> GenerateInstallGraph(Package package, bool hypothetical = false) {
             if (package.IsInstalled) {
                 if (!package.PackageRequestData.NotifiedClientThisSupercedes) {
-                    PackageManagerMessages.Invoke.PackageSatisfiedBy(package, package);
+                    PackageManagerMessages.Invoke.GetSession().PackageSatisfiedBy(package, package);
                     package.PackageRequestData.NotifiedClientThisSupercedes = true;
                 }
 
@@ -1395,7 +1428,7 @@ namespace CoApp.Toolkit.Engine {
                 var installedSupercedent = installedSupercedents.FirstOrDefault();
                 if (installedSupercedent != null ) {
                     if (!installedSupercedent.PackageRequestData.NotifiedClientThisSupercedes) {
-                        PackageManagerMessages.Invoke.PackageSatisfiedBy(package, installedSupercedent);
+                        PackageManagerMessages.Invoke.GetSession().PackageSatisfiedBy(package, installedSupercedent);
                         installedSupercedent.PackageRequestData.NotifiedClientThisSupercedes = true;
                     }
                     yield break; // a supercedent package is already installed.
@@ -1434,7 +1467,7 @@ namespace CoApp.Toolkit.Engine {
 
                             // we should tell the client that we're making a substitution.
                             if (!supercedent.PackageRequestData.NotifiedClientThisSupercedes) {
-                                PackageManagerMessages.Invoke.PackageSatisfiedBy(package, supercedent);
+                                PackageManagerMessages.Invoke.GetSession().PackageSatisfiedBy(package, supercedent);
                                 supercedent.PackageRequestData.NotifiedClientThisSupercedes = true;
                             }
 
@@ -1457,7 +1490,7 @@ namespace CoApp.Toolkit.Engine {
                         // the user hasn't specifically asked us to supercede, yet we know of 
                         // potential supercedents. Let's force the user to make a decision.
                         // throw new PackageHasPotentialUpgradesException(packageToSatisfy, supercedents);
-                        PackageManagerMessages.Invoke.PackageHasPotentialUpgrades(package, supercedents);
+                        PackageManagerMessages.Invoke.GetSession().PackageHasPotentialUpgrades(package, supercedents);
                         throw new OperationCompletedBeforeResultException();
                     }
                 }
@@ -1465,14 +1498,14 @@ namespace CoApp.Toolkit.Engine {
 
             if (packageData.CouldNotDownload) {
                 if (!hypothetical) {
-                    PackageManagerMessages.Invoke.UnableToDownloadPackage(package);
+                    PackageManagerMessages.Invoke.GetSession().UnableToDownloadPackage(package);
                 }
                 throw new OperationCompletedBeforeResultException();
             }
 
             if (packageData.PackageFailedInstall) {
                 if (!hypothetical) {
-                    PackageManagerMessages.Invoke.UnableToInstallPackage(package);
+                    PackageManagerMessages.Invoke.GetSession().UnableToInstallPackage(package);
                 }
                 throw new OperationCompletedBeforeResultException();
             }

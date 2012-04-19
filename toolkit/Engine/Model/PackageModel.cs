@@ -92,7 +92,7 @@ namespace CoApp.Toolkit.Engine.Model {
         public List<Role> Roles { get; set; }
 
         [XmlArray(IsNullable = false)]
-        public List<Guid> Dependencies { get; set; }
+        public List<string> PackageDependencies { get; set; }
 
         [XmlArray(IsNullable = false)]
         public List<Feature> Features { get; set; } // must be a canonically recognized feature.

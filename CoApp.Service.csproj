@@ -240,6 +240,7 @@
     </Compile>
     <Compile Include="toolkit\Engine\Exceptions\UnableToStartServiceException.cs" />
     <Compile Include="toolkit\Engine\Feeds\AtomPackageFeed.cs" />
+    <Compile Include="toolkit\Engine\IPackageManager.cs" />
     <Compile Include="toolkit\Engine\LinkType.cs" />
     <Compile Include="toolkit\Engine\Model\Atom\AtomFeed.cs" />
     <Compile Include="toolkit\Engine\Model\Atom\AtomItem.cs" />

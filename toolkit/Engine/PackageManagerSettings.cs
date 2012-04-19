@@ -50,6 +50,12 @@ namespace CoApp.Toolkit.Engine {
         public static RegistryView PerPackageSettings = CoAppSettings[@".packageInformation"];
 
         /// <summary>
+        /// registry view for feed-specific information.
+        /// </summary>
+        public static RegistryView PerFeedSettings = CoAppSettings[@".feedInformation"];
+
+
+        /// <summary>
         /// Gets the default for the CoApp root folder.
         /// </summary>
         /// <remarks></remarks>

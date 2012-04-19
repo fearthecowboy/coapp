@@ -29,6 +29,7 @@ namespace CoApp.Toolkit.Engine.Client {
         public DateTime LastScanned { get; internal set; }
         public bool IsSession { get; internal set; }
         public bool IsSuppressed { get; internal set; }
+        public FeedState FeedState { get; internal set; }
     }
 
     public class Policy {
@@ -56,6 +57,14 @@ namespace CoApp.Toolkit.Engine.Client {
     public class Publisher {
         public string Name { get; set; }
         public string PublicKeyToken { get; set; }
+    }
+
+
+
+    public enum FeedState {
+        active,
+        passive, 
+        ignored
     }
 
     public class PackageSet {
@@ -1026,11 +1035,23 @@ namespace CoApp.Toolkit.Engine.Client {
             }, TaskContinuationOptions.AttachedToParent);
         }
 
+        public Task SetFeed(string feedLocation, FeedState state) {
+            var handler = new RemoteCallResponse();
+
+            return PackageManager.Instance.SetFeed(feedLocation, state.ToString(), handler).ContinueWith(antecedent => {
+                if (handler.EngineRestarting) {
+                    SetFeed(feedLocation,state);
+                    return;
+                }
+                handler.ThrowWhenFaulted(antecedent);
+            }, TaskContinuationOptions.AttachedToParent);
+        }
+
         public Task<IEnumerable<Feed>> Feeds {
             get {
                 var result = new List<Feed>();
                 var handler = new RemoteCallResponse {
-                    FeedDetails = (location, lastScanned, isSession, isSuppressed, isValidated) => result.Add(new Feed {Location = location, LastScanned = lastScanned, IsSession = isSession, IsSuppressed = isSuppressed})
+                    FeedDetails = (location, lastScanned, isSession, isSuppressed, isValidated, state) => result.Add(new Feed {Location = location, LastScanned = lastScanned, IsSession = isSession, IsSuppressed = isSuppressed, FeedState = state.ParseEnum(FeedState.active) })
                 };
 
                 return PackageManager.Instance.ListFeeds(messages: handler).ContinueWith(antecedent => {

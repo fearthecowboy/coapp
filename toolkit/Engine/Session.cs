@@ -116,7 +116,7 @@ namespace CoApp.Toolkit.Engine {
 
         public static void NotifyClientsOfRestart() {
             foreach (var s in _activeSessions.ToArray()) {
-                s.SendRestarting();
+                s.Restarting();
                 // cancel everyone.
                 s._cancellationTokenSource.Cancel();
             }
@@ -271,36 +271,38 @@ namespace CoApp.Toolkit.Engine {
 
             // default handlers work for all messages now.
             _messages = new PackageManagerMessages {
-                Error = SendMessageArgumentError,
-                FailedPackageInstall = SendFailedPackageInstall,
-                FailedPackageRemoval = SendFailedRemovePackage,
-                FeedAdded = SendFeedAdded,
-                FeedDetails = SendFoundFeed,
-                FeedRemoved = SendFeedRemoved,
-                FeedSuppressed = SendFeedSuppressed,
-                FileNotFound = SendFileNotFound,
-                FileNotRecognized = SendUnableToRecognizeFile,
-                InstalledPackage = SendInstalledPackage,
-                InstallingPackageProgress = SendInstallingPackage,
-                NoFeedsFound = SendNoFeedsFound,
-                NoPackagesFound = SendNoPackagesFound,
-                OperationCanceled = SendCancellationRequested,
-                PackageBlocked = SendPackageIsBlocked,
-                PackageDetails = SendPackageDetails,
-                PackageHasPotentialUpgrades = SendPackageHasPotentialUpgrades,
-                PackageInformation = SendFoundPackage,
-                PackageSatisfiedBy = SendPackageSatifiedBy,
-                PermissionRequired = SendOperationRequiresPermission,
-                RemovedPackage = SendRemovedPackage,
-                RemovingPackageProgress = SendRemovingPackage,
-                RequireRemoteFile = SendRequireRemoteFile,
-                SignatureValidation = SendSignatureValidation,
-                UnexpectedFailure = SendUnexpectedFailure,
-                UnknownPackage = SendUnknownPackage,
-                Warning = SendMessageWarning,
-                ScheduledTaskInfo = SendScheduledTaskInfo,
-                CurrentTelemetryOption = SendTelemetrySetting,
-                Restarting = SendRestarting,
+/*
+                Error = Error,
+                FailedPackageInstall = FailedPackageInstall,
+                FailedPackageRemoval = FailedPackageRemoval,
+                FeedAdded = FeedAdded,
+                FeedDetails = FeedDetails,
+                FeedRemoved = FeedRemoved,
+                FeedSuppressed = FeedSuppressed,
+                FileNotFound = FileNotFound,
+                FileNotRecognized = FileNotFound,
+                InstalledPackage = InstalledPackage,
+                InstallingPackageProgress = InstallingPackageProgress,
+                NoFeedsFound = NoFeedsFound,
+                NoPackagesFound = NoPackagesFound,
+                OperationCanceled = OperationCanceled,
+                PackageBlocked = PackageBlocked,
+                PackageDetails = PackageBlocked,
+                PackageHasPotentialUpgrades = PackageHasPotentialUpgrades,
+                PackageInformation = PackageInformation,
+                PackageSatisfiedBy = PackageSatisfiedBy,
+                PermissionRequired = PermissionRequired,
+                RemovedPackage = RemovedPackage,
+                RemovingPackageProgress = RemovingPackageProgress,
+                RequireRemoteFile = RequireRemoteFile,
+                SignatureValidation = SignatureValidation,
+                UnexpectedFailure = UnexpectedFailure,
+                UnknownPackage = UnknownPackage,
+                Warning = Warning,
+                ScheduledTaskInfo = ScheduledTaskInfo,
+                CurrentTelemetryOption = CurrentTelemetryOption,
+                Restarting = Restarting,
+ */
             };
         
 
@@ -507,7 +509,7 @@ namespace CoApp.Toolkit.Engine {
 
                                 if (antecedent.Result >= EngineService.BufferSize) {
                                     _bufferReady.Set();
-                                    SendUnexpectedFailure(new CoAppException("Message size exceeds maximum size allowed."));
+                                    UnexpectedFailure(new CoAppException("Message size exceeds maximum size allowed."));
                                     return;
                                 }
                                 string rqid = null;
@@ -634,9 +636,15 @@ namespace CoApp.Toolkit.Engine {
         private Task Dispatch(UrlEncodedMessage requestMessage) {
             Logger.Message("Request:{0}".format(requestMessage.ToSmallerString()));
             if (IsCanceled) {
-                SendCancellationRequested("Service is shutting down");
+                OperationCanceled("Service is shutting down");
                 return null;
             }
+            
+            var messages=new PackageManagerMessages {
+                RequestId = requestMessage["rqid"],
+                Response = new AutoProxy(this),
+                GetSession = () => this
+            }.Extend(_messages);
 
             switch (requestMessage.Command) {
                 case "find-packages":
@@ -644,106 +652,73 @@ namespace CoApp.Toolkit.Engine {
                     return NewPackageManager.Instance.FindPackages(requestMessage["canonical-name"], requestMessage["name"], requestMessage["version"],
                         requestMessage["arch"], requestMessage["public-key-token"], requestMessage["dependencies"], requestMessage["installed"],
                         requestMessage["active"], requestMessage["required"], requestMessage["blocked"], requestMessage["latest"], requestMessage["index"],
-                        requestMessage["max-results"], requestMessage["location"], requestMessage["force-scan"], requestMessage["updates"], requestMessage["upgrades"], requestMessage["trimable"], new PackageManagerMessages {
-                            RequestId = requestMessage["rqid"],
-                        }.Extend(_messages));
+                        requestMessage["max-results"], requestMessage["location"], requestMessage["force-scan"], requestMessage["updates"], requestMessage["upgrades"], requestMessage["trimable"], messages);
 
                 case "get-package-details":
-                    return NewPackageManager.Instance.GetPackageDetails(requestMessage["canonical-name"].ToString(), new PackageManagerMessages {
-                            RequestId = requestMessage["rqid"],
-                        }.Extend(_messages));
+                    return NewPackageManager.Instance.GetPackageDetails(requestMessage["canonical-name"].ToString(), messages);
 
                 case "install-package":
                     return NewPackageManager.Instance.InstallPackage(requestMessage["canonical-name"], requestMessage["auto-upgrade"], requestMessage["force"],
-                        requestMessage["download"], requestMessage["pretend"], requestMessage["is-update"], requestMessage["is-upgrade"], new PackageManagerMessages {
-                            RequestId = requestMessage["rqid"],
-                        }.Extend(_messages));
+                        requestMessage["download"], requestMessage["pretend"], requestMessage["is-update"], requestMessage["is-upgrade"], messages);
 
                 case "download-progress":
-                    return NewPackageManager.Instance.DownloadProgress(requestMessage["canonical-name"], requestMessage["progress"], new PackageManagerMessages {
-                        RequestId = requestMessage["rqid"],
-                    }.Extend(_messages));
+                    return NewPackageManager.Instance.DownloadProgress(requestMessage["canonical-name"], requestMessage["progress"], messages);
 
                 case "recognize-file":
                     return NewPackageManager.Instance.RecognizeFile(requestMessage["canonical-name"], requestMessage["local-location"],
-                        requestMessage["remote-location"], new PackageManagerMessages {
-                            RequestId = requestMessage["rqid"],
-                        }.Extend(_messages));
+                        requestMessage["remote-location"], messages);
 
                 case "unable-to-acquire":
-                    return NewPackageManager.Instance.UnableToAcquire(requestMessage["canonical-name"], new PackageManagerMessages {
-                            RequestId = requestMessage["rqid"],
-                        }.Extend(_messages));
+                    return NewPackageManager.Instance.UnableToAcquire(requestMessage["canonical-name"], messages);
 
                 case "remove-package":
-                    return NewPackageManager.Instance.RemovePackage(requestMessage["canonical-name"], requestMessage["force"], new PackageManagerMessages {
-                            RequestId = requestMessage["rqid"],
-                        }.Extend(_messages));
+                    return NewPackageManager.Instance.RemovePackage(requestMessage["canonical-name"], requestMessage["force"], messages);
 
                 case "set-package":
                     return NewPackageManager.Instance.SetPackage(requestMessage["canonical-name"], requestMessage["active"], requestMessage["required"],
-                        requestMessage["blocked"], requestMessage["do-not-update"], requestMessage["do-not-upgrade"], new PackageManagerMessages {
-                            RequestId = requestMessage["rqid"],
-                        }.Extend(_messages));
+                        requestMessage["blocked"], requestMessage["do-not-update"], requestMessage["do-not-upgrade"], messages);
 
                 case "verify-file-signature":
-                    return NewPackageManager.Instance.VerifyFileSignature(requestMessage["filename"], new PackageManagerMessages {
-                            RequestId = requestMessage["rqid"],
-                        }.Extend(_messages));
+                    return NewPackageManager.Instance.VerifyFileSignature(requestMessage["filename"], messages);
 
                 case "add-feed":
-                    return NewPackageManager.Instance.AddFeed(requestMessage["location"], requestMessage["session"], new PackageManagerMessages {
-                            RequestId = requestMessage["rqid"],
-                        }.Extend(_messages));
+                    return NewPackageManager.Instance.AddFeed(requestMessage["location"], requestMessage["session"], messages);
 
                 case "remove-feed":
-                    return NewPackageManager.Instance.RemoveFeed(requestMessage["location"], requestMessage["session"], new PackageManagerMessages {
-                            RequestId = requestMessage["rqid"],
-                        }.Extend(_messages));
+                    return NewPackageManager.Instance.RemoveFeed(requestMessage["location"], requestMessage["session"], messages);
 
                 case "find-feeds":
-                    return NewPackageManager.Instance.ListFeeds(requestMessage["index"], requestMessage["max-results"], new PackageManagerMessages {
-                            RequestId = requestMessage["rqid"],
-                        }.Extend(_messages));
+                    return NewPackageManager.Instance.ListFeeds(requestMessage["index"], requestMessage["max-results"], messages);
 
                 case "suppress-feed":
-                    return NewPackageManager.Instance.SuppressFeed(requestMessage["location"], new PackageManagerMessages {
-                            RequestId = requestMessage["rqid"],
-                        }.Extend(_messages));
+                    return NewPackageManager.Instance.SuppressFeed(requestMessage["location"], messages);
 
-                case "get-policy":
+                case "set-feed":
+                    return NewPackageManager.Instance.SetFeedFlags(requestMessage["location"], requestMessage["active-passive-ignored"], messages);
+
+                case "get-policy": {
+                    var policyName = requestMessage["name"].ToString();
+
                     return Task.Factory.StartNew(() => {
-                        new PackageManagerMessages {
-                            RequestId = requestMessage["rqid"],
-                        }.Extend(_messages).Register();
+                        messages.Register();
 
-                        var policyName = requestMessage["name"].ToString();
                         var policies = PermissionPolicy.AllPolicies.Where(each => each.Name.IsWildcardMatch(policyName));
                         if (policies.IsNullOrEmpty()) {
-                            SendMessageArgumentError("get-policy", "name", "policy '{0}' not found".format(policyName));
+                            Error("get-policy", "name", "policy '{0}' not found".format(policyName));
                             return;
                         } else {
                             foreach (var policy in policies) {
-                                var msg = new UrlEncodedMessage("policy") {
-                                    {"name", policy.Name},
-                                    {"description", policy.Description},
-                                };
-                                // msg.AddCollection("sids",policy.Sids);
-                                msg.AddCollection("accounts", policy.Accounts);
-
-                                WriteAsync(msg);
+                                SendPolicy(policy);
                             }
                         }
                     });
-
+                }
                 case "add-to-policy":
                     return Task.Factory.StartNew(() => {
-                        new PackageManagerMessages {
-                            RequestId = requestMessage["rqid"],
-                        }.Extend(_messages).Register();
+                        messages.Register();
 
                         if (!_packageManagerSession.CheckForPermission(PermissionPolicy.ModifyPolicy)) {
-                            PackageManagerMessages.Invoke.PermissionRequired("ModifyPolicy");
+                            PackageManagerMessages.Invoke.GetSession().PermissionRequired("ModifyPolicy");
                             return;
                         }
 
@@ -751,71 +726,67 @@ namespace CoApp.Toolkit.Engine {
                         var policyName = requestMessage["name"].ToString();
                         var policy = PermissionPolicy.AllPolicies.Where(each => each.Name.Equals(policyName, StringComparison.CurrentCultureIgnoreCase)).FirstOrDefault();
                         if (policy == null) {
-                            SendMessageArgumentError("add-to-policy", "name", "policy '{0}' not found".format(policyName));
+                            Error("add-to-policy", "name", "policy '{0}' not found".format(policyName));
                             return;
                         }
 
                         try {
                             policy.Add(requestMessage["account"]);
                         } catch {
-                            SendMessageArgumentError("add-to-policy", "account", "policy '{0}' could not add account '{1}'".format(policyName, requestMessage["account"]));
+                            Error("add-to-policy", "account", "policy '{0}' could not add account '{1}'".format(policyName, requestMessage["account"]));
                         }
 
                     });
 
                 case "remove-from-policy":
                     return Task.Factory.StartNew(() => {
-                        new PackageManagerMessages {
-                            RequestId = requestMessage["rqid"],
-                        }.Extend(_messages).Register();
+                        messages.Register();
 
                         if (!_packageManagerSession.CheckForPermission(PermissionPolicy.ModifyPolicy)) {
-                            PackageManagerMessages.Invoke.PermissionRequired("ModifyPolicy");
+                            PackageManagerMessages.Invoke.GetSession().PermissionRequired("ModifyPolicy");
                             return;
                         }
 
                         var policyName = requestMessage["name"].ToString();
                         var policy = PermissionPolicy.AllPolicies.Where(each => each.Name.Equals(policyName, StringComparison.CurrentCultureIgnoreCase)).FirstOrDefault();
                         if (policy == null) {
-                            SendMessageArgumentError("remove-from-policy", "name", "policy '{0}' not found".format(policyName));
+                            Error("remove-from-policy", "name", "policy '{0}' not found".format(policyName));
                             return;
                         }
 
                         try {
                             policy.Remove(requestMessage["account"]);
                         } catch {
-                            SendMessageArgumentError("remove-from-policy", "account", "policy '{0}' could not remove account '{1}'".format(policyName, requestMessage["account"]));
+                            Error("remove-from-policy", "account", "policy '{0}' could not remove account '{1}'".format(policyName, requestMessage["account"]));
                         }
                     });
 
                 case "symlink" :
-                    new PackageManagerMessages {
-                        RequestId = requestMessage["rqid"],
-                    }.Extend(_messages).Register();
+                    messages.Register();
 
                     if (!_packageManagerSession.CheckForPermission(PermissionPolicy.Symlink)) {
-                        PackageManagerMessages.Invoke.PermissionRequired("Symlink");
+                        PackageManagerMessages.Invoke.GetSession().PermissionRequired("Symlink");
                         return null;
                     }
 
                     var existingLocation = requestMessage["existing-location"].ToString();
 
                     if (string.IsNullOrEmpty(existingLocation)) {
-                        PackageManagerMessages.Invoke.Error("symlink", "existing-location", "location is null/empty. ");
+                        PackageManagerMessages.Invoke.GetSession().Error("symlink", "existing-location", "location is null/empty. ");
                         return null; 
                     }
 
                     var newLink = requestMessage["new-link"].ToString();
 
                     if (string.IsNullOrEmpty(newLink)) {
-                        PackageManagerMessages.Invoke.Error("symlink", "new-link", "new-link is null/empty.");
+                        PackageManagerMessages.Invoke.GetSession().Error("symlink", "new-link", "new-link is null/empty.");
                         return null;
                     }
 
                     
                     LinkType linkType;
                     if(! Enum.TryParse(requestMessage["link-type"].ToString(), true, out linkType) ) {
-                        PackageManagerMessages.Invoke.Error("symlink", "link-type", "link-type is invalid.");
+                        PackageManagerMessages.Invoke.GetSession().Error("symlink", "link-type", "link-type is invalid.");
                         return null;
                     }
                     try {
@@ -851,19 +822,17 @@ namespace CoApp.Toolkit.Engine {
                             }
                         }
                         else {
-                            PackageManagerMessages.Invoke.Error("symlink", "existing-location", "can not make symlink for location '{0}'".format(existingLocation));
+                            PackageManagerMessages.Invoke.GetSession().Error("symlink", "existing-location", "can not make symlink for location '{0}'".format(existingLocation));
                         }
                     } catch (Exception exception) {
-                            PackageManagerMessages.Invoke.Error("symlink", "", "Failed to create symlink -- error: {0}".format(exception.Message));    
+                            PackageManagerMessages.Invoke.GetSession().Error("symlink", "", "Failed to create symlink -- error: {0}".format(exception.Message));    
                     }
                     return null;
 
                 case "set-feed-stale" :
                     var feed = requestMessage["feed-name"];
-                    
-                    new PackageManagerMessages {
-                        RequestId = requestMessage["rqid"],
-                    }.Extend(_messages).Register();
+
+                    messages.Register();
 
                     return PackageFeed.GetPackageFeedFromLocation(feed).ContinueWith(
                         antecedent => {
@@ -881,9 +850,7 @@ namespace CoApp.Toolkit.Engine {
                     return null; // "Unable to Stop Service".AsResultTask();
 
                 case "set-logging" :
-                    new PackageManagerMessages {
-                        RequestId = requestMessage["rqid"],
-                    }.Extend(_messages).Register();
+                    messages.Register();
 
                     try {
                         var b = (bool?)requestMessage["messages"];
@@ -909,45 +876,33 @@ namespace CoApp.Toolkit.Engine {
                     return null; //"set-logging".AsResultTask();
 
                 case "schedule-task":
-                    new PackageManagerMessages {
-                        RequestId = requestMessage["rqid"],
-                    }.Extend(_messages).Register();
+                    messages.Register();
 
                     return null;
                     
                 case "remove-schedule-task":
-                    new PackageManagerMessages {
-                        RequestId = requestMessage["rqid"],
-                    }.Extend(_messages).Register();
+                    messages.Register();
 
                     return null;
                     
                 case "get-schedule-tasks":
-                    new PackageManagerMessages {
-                        RequestId = requestMessage["rqid"],
-                    }.Extend(_messages).Register();
+                    messages.Register();
 
                     return null;
                     
 
                 case "add-trusted-publisher":
-                    new PackageManagerMessages {
-                        RequestId = requestMessage["rqid"],
-                    }.Extend(_messages).Register();
+                    messages.Register();
 
                     return null;
                     
                 case "remove-trusted-publisher":
-                    new PackageManagerMessages {
-                        RequestId = requestMessage["rqid"],
-                    }.Extend(_messages).Register();
+                    messages.Register();
 
                     return null;
                     
                 case "get-trusted-publishers":
-                    new PackageManagerMessages {
-                        RequestId = requestMessage["rqid"],
-                    }.Extend(_messages).Register();
+                    messages.Register();
 
                     return null;
                     
@@ -962,20 +917,32 @@ namespace CoApp.Toolkit.Engine {
             }
         }
 
+
         #region Response Messages
 
-        private void SendSessionStarted(string sessionId) {
+        internal void SendPolicy(PermissionPolicy policy) {
+            var msg = new UrlEncodedMessage("policy") {
+                {"name", policy.Name},
+                {"description", policy.Description},
+            };
+            // msg.AddCollection("sids",policy.Sids);
+            msg.AddCollection("accounts", policy.Accounts);
+
+            WriteAsync(msg);
+        }
+
+        internal void SendSessionStarted(string sessionId) {
             WriteAsync(new UrlEncodedMessage("session-started") {
                 {"session-id", sessionId},
                 {"protocol-version", "1.1"}
             });
         }
 
-        private void SendNoPackagesFound() {
+        internal void NoPackagesFound() {
             WriteAsync(new UrlEncodedMessage("no-packages-found"));
         }
 
-        private void SendFoundPackage(Package package, IEnumerable<Package> supercedentPackages) {
+        internal void PackageInformation(Package package, IEnumerable<Package> supercedentPackages) {
             var msg = new UrlEncodedMessage("found-package") {
                 {"canonical-name", package.CanonicalName},
                 {"local-location", package.InternalPackageData.LocalLocation},
@@ -1001,7 +968,7 @@ namespace CoApp.Toolkit.Engine {
             WriteAsync(msg);
         }
 
-        private void SendPackageDetails(Package package) {
+        internal void PackageDetails(Package package) {
             var msg = new UrlEncodedMessage("package-details") {
                 {"canonical-name", package.CanonicalName},
                 {"description", package.PackageDetails.Description},
@@ -1035,17 +1002,18 @@ namespace CoApp.Toolkit.Engine {
             WriteAsync(msg);
         }
 
-        private void SendFoundFeed(string location, DateTime lastScanned, bool session, bool suppressed, bool validated) {
+        internal void FeedDetails(string location, DateTime lastScanned, bool session, bool suppressed, bool validated, string state) {
             WriteAsync(new UrlEncodedMessage("found-feed") {
                 {"location", location},
                 {"last-scanned", lastScanned.Ticks.ToString()},
                 {"session", session},
                 {"suppressed", suppressed},
                 {"validated", validated},
+                {"state", state}
             });
         }
 
-        private void SendInstallingPackage(string canonicalName, int percentComplete, int overallProgress) {
+        internal void InstallingPackageProgress(string canonicalName, int percentComplete, int overallProgress) {
             WriteAsync(new UrlEncodedMessage("installing-package") {
                 {"canonical-name", canonicalName},
                 {"percent-complete", percentComplete.ToString()},
@@ -1053,26 +1021,26 @@ namespace CoApp.Toolkit.Engine {
             });
         }
 
-        private void SendRemovingPackage(string canonicalName, int percentComplete) {
+        internal void RemovingPackageProgress(string canonicalName, int percentComplete) {
             WriteAsync(new UrlEncodedMessage("removing-package") {
                 {"canonical-name", canonicalName},
                 {"percent-complete", percentComplete.ToString()},
             });
         }
 
-        private void SendInstalledPackage(string canonicalName) {
+        internal void InstalledPackage(string canonicalName) {
             WriteAsync(new UrlEncodedMessage("installed-package") {
                 {"canonical-name", canonicalName},
             });
         }
 
-        private void SendRemovedPackage(string canonicalName) {
+        internal void RemovedPackage(string canonicalName) {
             WriteAsync(new UrlEncodedMessage("removed-package") {
                 {"canonical-name", canonicalName},
             });
         }
 
-        private void SendFailedPackageInstall(string canonicalName, string filename, string reason) {
+        internal void FailedPackageInstall(string canonicalName, string filename, string reason) {
             WriteAsync(new UrlEncodedMessage("failed-package-install") {
                 {"canonical-name", canonicalName},
                 {"filename", filename},
@@ -1080,14 +1048,14 @@ namespace CoApp.Toolkit.Engine {
             });
         }
 
-        private void SendFailedRemovePackage(string canonicalName, string reason) {
+        internal void FailedPackageRemoval(string canonicalName, string reason) {
             WriteAsync(new UrlEncodedMessage("failed-package-remove") {
                 {"canonical-name", canonicalName},
                 {"reason", reason},
             });
         }
 
-        private void SendRequireRemoteFile(string canonicalName, IEnumerable<string> remoteLocations, string destination, bool force) {
+        internal void RequireRemoteFile(string canonicalName, IEnumerable<string> remoteLocations, string destination, bool force) {
             var msg = new UrlEncodedMessage("require-remote-file") {
                 {"canonical-name", canonicalName},
                 {"destination", destination},
@@ -1098,7 +1066,7 @@ namespace CoApp.Toolkit.Engine {
             WriteAsync(msg);
         }
 
-        private void SendSignatureValidation(string filename, bool isValid, string certificateSubjectName) {
+        internal void SignatureValidation(string filename, bool isValid, string certificateSubjectName) {
             WriteAsync(new UrlEncodedMessage("signature-validation") {
                 {"filename", filename},
                 {"is-valid", isValid.ToString()},
@@ -1106,14 +1074,14 @@ namespace CoApp.Toolkit.Engine {
             });
         }
 
-        private void SendOperationRequiresPermission(string policyRequired) {
+        internal void PermissionRequired(string policyRequired) {
             WriteAsync(new UrlEncodedMessage("operation-requires-permission") {
                 {"current-user-name", _userId},
                 {"policy-required", policyRequired},
             });
         }
 
-        private void SendMessageArgumentError(string messageName, string argumentName, string problem) {
+        internal void Error(string messageName, string argumentName, string problem) {
             WriteAsync(new UrlEncodedMessage("message-argument-error") {
                 {"message", messageName},
                 {"parameter", argumentName},
@@ -1121,7 +1089,7 @@ namespace CoApp.Toolkit.Engine {
             });
         }
 
-        private void SendMessageWarning(string messageName, string argumentName, string problem) {
+        internal void Warning(string messageName, string argumentName, string problem) {
             WriteAsync(new UrlEncodedMessage("message-warning") {
                 {"message", messageName},
                 {"parameter", argumentName},
@@ -1129,51 +1097,51 @@ namespace CoApp.Toolkit.Engine {
             });
         }
 
-        private void SendPackageSatifiedBy( Package requested, Package satisfiedBy  ) {
+        internal void PackageSatisfiedBy( Package requested, Package satisfiedBy  ) {
             WriteAsync(new UrlEncodedMessage("package-satisfied-by") {
                 {"canonical-name", requested.CanonicalName},
                 {"satisfied-by", satisfiedBy.CanonicalName},
             });
         }
 
-        private void SendFeedAdded(string location) {
+        internal void FeedAdded(string location) {
             WriteAsync(new UrlEncodedMessage("feed-added") {
                 {"location", location},
             });
         }
 
-        private void SendFeedRemoved(string location) {
+        internal void FeedRemoved(string location) {
             WriteAsync(new UrlEncodedMessage("feed-removed") {
                 {"location", location},
             });
         }
 
-        private void SendFileNotFound(string filename) {
+        internal void FileNotFound(string filename) {
             WriteAsync(new UrlEncodedMessage("file-not-found") {
                 {"filename", filename},
             });
         }
 
-        private void SendUnknownPackage(string canonicalName) {
+        internal void UnknownPackage(string canonicalName) {
             WriteAsync(new UrlEncodedMessage("unknown-package") {
                 {"canonical-name", canonicalName},
             });
         }
 
-        private void SendPackageIsBlocked(string canonicalName) {
+        internal void PackageBlocked(string canonicalName) {
             WriteAsync(new UrlEncodedMessage("package-is-blocked") {
                 {"canonical-name", canonicalName},
             });
         }
 
-        private void SendUnableToRecognizeFile(string filename, string reason) {
+        internal void FileNotRecognized(string filename, string reason) {
             WriteAsync(new UrlEncodedMessage("unable-to-recognize-file") {
                 {"filename", filename},
                 {"reason", reason},
             });
         }
 
-        private void SendUnexpectedFailure(Exception failure) {
+        internal void UnexpectedFailure(Exception failure) {
             if (failure != null) {
                 WriteAsync(new UrlEncodedMessage("unexpected-failure") {
                     {"type", failure.GetType().ToString()},
@@ -1183,23 +1151,23 @@ namespace CoApp.Toolkit.Engine {
             }
         }
 
-        private void SendFeedSuppressed(string location) {
+        internal void FeedSuppressed(string location) {
             WriteAsync(new UrlEncodedMessage("feed-suppressed") {
                 {"location", location},
             });
         }
 
-        private void SendKeepAlive() {
+        internal void SendKeepAlive() {
             WriteAsync(new UrlEncodedMessage("keep-alive"));
         }
 
-        private void SendCancellationRequested(string message) {
+        internal void OperationCanceled(string message) {
             WriteAsync(new UrlEncodedMessage("operation-canceled") {
                 {"message", message}
             });
         }
 
-        private void SendPackageHasPotentialUpgrades(Package package, IEnumerable<Package> supercedents) {
+        internal void PackageHasPotentialUpgrades(Package package, IEnumerable<Package> supercedents) {
             var msg = new UrlEncodedMessage("package-has-potential-upgrades") {
                 {"canonical-name", package.CanonicalName},
             };
@@ -1208,7 +1176,7 @@ namespace CoApp.Toolkit.Engine {
             WriteAsync(msg);
         }
 
-        private void SendScheduledTaskInfo(string taskName, string executable, string commandline, int hour, int minutes, DayOfWeek? dayOfWeek, int intervalInMinutes) {
+        internal void ScheduledTaskInfo(string taskName, string executable, string commandline, int hour, int minutes, DayOfWeek? dayOfWeek, int intervalInMinutes) {
             WriteAsync(new UrlEncodedMessage("scheduled-task-info") {
                 {"name", taskName},
                 {"executable", executable},
@@ -1220,22 +1188,40 @@ namespace CoApp.Toolkit.Engine {
             });
         }
 
-        private void SendTelemetrySetting(bool optIntoTelemetryTracking) {
+        internal void CurrentTelemetryOption(bool optIntoTelemetryTracking) {
             WriteAsync(new UrlEncodedMessage("telemetry") {
                 {"opt-in", optIntoTelemetryTracking},
             });
         }
 
-        private void SendNoFeedsFound() {
+        internal void NoFeedsFound() {
             WriteAsync(new UrlEncodedMessage("no-feeds-found"));
         }
 
-        private void SendRestarting() {
+        internal void Restarting() {
             WriteAsync(new UrlEncodedMessage("restarting"));
         }
 
-        private void SendShuttingDown() {
+        internal void SendShuttingDown() {
             WriteAsync(new UrlEncodedMessage("shutting-down"));
+        }
+
+        internal void UnableToDownloadPackage(Package package) {
+            WriteAsync(new UrlEncodedMessage("unable-to-download-package") {
+                {"canonical-name", package.CanonicalName},
+            });
+        }
+
+        internal void UnableToInstallPackage(Package package) {
+            WriteAsync(new UrlEncodedMessage("unable-to-install-package") {
+                {"canonical-name", package.CanonicalName},
+            });
+        }
+
+        internal void Recognized(string location) {
+            WriteAsync(new UrlEncodedMessage("recognized") {
+                {"location", location},
+            });
         }
 
         #endregion

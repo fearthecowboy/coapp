@@ -220,7 +220,7 @@ namespace CoApp.Toolkit.Engine.Model.Atom {
             Model.BindingPolicyMaxVersion = package.InternalPackageData.PolicyMaximumVersion;
 
             Model.Roles = new List<Role>(package.InternalPackageData.Roles);
-            Model.Dependencies = package.InternalPackageData.Dependencies.Where(each => each.ProductCode.HasValue).Select(each => each.ProductCode.Value).ToList();
+            Model.PackageDependencies = package.InternalPackageData.Dependencies.Where(each => each.CanonicalName != null).Select(each => each.CanonicalName).ToList();
             if (!package.InternalPackageData.Features.IsNullOrEmpty()) {
                 Model.Features = new List<Feature>(package.InternalPackageData.Features);
             }
@@ -256,7 +256,7 @@ namespace CoApp.Toolkit.Engine.Model.Atom {
                     package.InternalPackageData.Roles.AddRange(Model.Roles);
                 }
                 if (package.InternalPackageData.Dependencies.IsNullOrEmpty()) {
-                    package.InternalPackageData.Dependencies.AddRange(Model.Dependencies.Select(each => Package.GetPackageFromProductCode(each)));
+                    package.InternalPackageData.Dependencies.AddRange(Model.PackageDependencies.Select(each => Package.GetPackageFromCanonicalName(each)));
                 }
                 if (package.InternalPackageData.Features.IsNullOrEmpty() && !Model.Features.IsNullOrEmpty()) {
                     package.InternalPackageData.Features.AddRange( Model.Features );

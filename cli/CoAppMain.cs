@@ -82,8 +82,6 @@ namespace CoApp.CLI {
             return new CoAppMain().Startup(args);
         }
 
-        private readonly PackageManager _pm = PackageManager.Instance;
-
         private readonly List<Task> preCommandTasks = new List<Task>();
 
         private static List<string>  activeDownloads = new List<string>();
@@ -378,6 +376,31 @@ namespace CoApp.CLI {
                          * */
                         break;
 
+                    case "set-feed-active":
+                    case "feed-active":
+                    case "activate-feed":
+                        task = preCommandTasks.Continue(() => MatchFeeds(parameters)).Continue(feeds => {
+                            feeds.Select(each => _easyPackageManager.SetFeed(each, FeedState.active)).ToArray();
+                        });
+                        
+                        break;
+                    case "set-feed-passive":
+                    case "feed-passive":
+                    case "passivate-feed":
+                        task = preCommandTasks.Continue(() => MatchFeeds(parameters)).Continue(feeds => {
+                            feeds.Select(each => _easyPackageManager.SetFeed(each, FeedState.passive)).ToArray();
+                        });
+                        break;
+                    case "set-feed-ignored":
+                    case "set-feed-ignore":
+                    case "feed-ignored":
+                    case "feed-ignore":
+                    case "disable-feed":
+                        task = preCommandTasks.Continue(() => MatchFeeds(parameters)).Continue(feeds => {
+                            feeds.Select(each => _easyPackageManager.SetFeed(each, FeedState.ignored)).ToArray();
+                        });
+                        break;
+
                     case "-a":
                     case "activate":
                     case "activate-package":
@@ -637,6 +660,18 @@ namespace CoApp.CLI {
                     Console.WriteLine("Adding Feed: {0}", f);
                 }
 
+            });
+        }
+
+        private Task<IEnumerable<string>>  MatchFeeds(IEnumerable<string> feeds) {
+            return _easyPackageManager.Feeds.Continue(systemFeeds => {
+                var locations = systemFeeds.Select(each => each.Location).ToArray();
+
+                foreach (var notFeed in feeds.Where(each => !locations.ContainsIgnoreCase(each))) {
+                    Console.WriteLine("Skipping '{0}' -- is not registered as a system feed.", notFeed);
+                }
+
+                return locations.Where(each => feeds.ContainsIgnoreCase(each));
             });
         }
 

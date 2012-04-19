@@ -158,31 +158,21 @@ namespace CoApp.Toolkit.Engine {
             return null; // only happens if the productCode isn't a guid.
         }
 
-#if FALSE
-        
-
         internal static  Package GetPackageFromCanonicalName(string canonicalName) {
             lock (_packages) {
                 var packageName = PackageName.Parse(canonicalName);
                 if (packageName.IsFullMatch) {
-                    var pkg = _packages.Where(package => package.CanonicalName == canonicalName).FirstOrDefault();
-                    if (pkg == null) {
-                        // where the only thing we know is canonical Name.
-                        pkg = new Package(packageName.Name, packageName.Arch, packageName.Version.VersionStringToUInt64(), packageName.PublicKeyToken, null);
-                        _packages.Add(pkg);
-                    }
-                    return pkg;
+                    return GetPackage(packageName.Name, packageName.Version, packageName.Arch, packageName.PublicKeyToken,null);
                 }
             }
             return null; // only happens if the canonicalName isn't a canonicalName.
         }
-#endif 
-            
+
         internal static Package GetPackageFromFilename(string filename) {
             filename = filename.CanonicalizePathIfLocalAndExists();
 
             if (!File.Exists(filename)) {
-                PackageManagerMessages.Invoke.FileNotFound(filename);
+                PackageManagerMessages.Invoke.GetSession().FileNotFound(filename);
                 return null;
             }
 
@@ -320,7 +310,7 @@ namespace CoApp.Toolkit.Engine {
             }
             catch (Exception e) {
                 Logger.Error(e);
-                PackageManagerMessages.Invoke.FailedPackageRemoval(CanonicalName, "GS01: I'm not sure of the reason... ");
+                PackageManagerMessages.Invoke.GetSession().FailedPackageRemoval(CanonicalName, "GS01: I'm not sure of the reason... ");
                 throw new OperationCompletedBeforeResultException();
             }
             finally {
@@ -1180,14 +1170,14 @@ namespace CoApp.Toolkit.Engine {
                 }
 
                 if (Verifier.HasValidSignature(location)) {
-                    PackageManagerMessages.Invoke.SignatureValidation(location, true, Verifier.GetPublisherName(location));
+                    PackageManagerMessages.Invoke.GetSession().SignatureValidation(location, true, Verifier.GetPublisherName(location));
                     return _localValidatedLocation = location;
                 }
-                PackageManagerMessages.Invoke.SignatureValidation(location, false, null);
+                PackageManagerMessages.Invoke.GetSession().SignatureValidation(location, false, null);
 
                 var result = _package.InternalPackageData.LocalLocations.Any(Verifier.HasValidSignature) ? location : null;
 
-                PackageManagerMessages.Invoke.SignatureValidation(result, !string.IsNullOrEmpty(result), string.IsNullOrEmpty(result) ? null : Verifier.GetPublisherName(result));
+                PackageManagerMessages.Invoke.GetSession().SignatureValidation(result, !string.IsNullOrEmpty(result), string.IsNullOrEmpty(result) ? null : Verifier.GetPublisherName(result));
 
                 // GS01: if all the locations end up invalid, and we're trying to remove a package 
 

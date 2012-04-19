@@ -11,17 +11,54 @@
 namespace CoApp.Toolkit.Engine {
     using System;
     using System.Collections.Generic;
+    using System.Dynamic;
     using Tasks;
 
 #if COAPP_ENGINE_CLIENT 
     using Client;
 #endif 
 
+    public interface IPackageManagerResponse {
+        
+    }
+
+    public class AutoProxy<T> : DynamicObject {
+        private T _instance;
+        AutoProxy( T targetObject ) {
+            _instance = targetObject;
+        }
+
+        public override bool TryConvert(ConvertBinder binder, out object result) {
+            Type bindingType = binder.Type;
+            if (bindingType.IsInstanceOfType(typeof(T))) {
+                result = this;
+                return true;
+            }
+            result = null;
+            return false;
+        }
+
+        public override bool TryInvoke(InvokeBinder binder, object[] args, out object result) {
+            //return base.TryInvoke(binder, args, out result);
+            result = null;
+            return false;
+        }
+
+        public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result) {
+            result = null;
+            return false;
+        }
+    }
+
     public class PackageManagerMessages : MessageHandlers<PackageManagerMessages> {
 
 
-#if COAPP_ENGINE_CORE 
-        public Action<Package, IEnumerable<Package>> PackageInformation;
+#if COAPP_ENGINE_CORE
+        public Func<Session> GetSession;
+
+        public IPackageManagerResponse Response;
+
+//        public Action<Package, IEnumerable<Package>> PackageInformation;
 #else
         public Action<Package> PackageInformation;
         /// <summary>
@@ -30,13 +67,14 @@ namespace CoApp.Toolkit.Engine {
         public Action<string,string, IEnumerable<string>> PolicyInformation;
 
         public Action<bool, bool, bool> LoggingSettings;
-#endif
-        public Action<Package> PackageDetails;
+
+
+         public Action<Package> PackageDetails;
         public Action NoPackagesFound;
         /// <summary>
         /// location, lastScanned, isSession, isSuppressed, isValidated
         /// </summary>
-        public Action<string, DateTime, bool, bool, bool> FeedDetails;
+        public Action<string, DateTime, bool, bool, bool, string> FeedDetails;
        
         /// <summary>
         /// canonicalName, current package progress, overallProgress of all packages
@@ -142,6 +180,8 @@ namespace CoApp.Toolkit.Engine {
         public Action Restarting;
 
         public Action<string, string, string, int, int, DayOfWeek?, int> ScheduledTaskInfo;
+
+#endif
 
         public string RequestId;
     }
