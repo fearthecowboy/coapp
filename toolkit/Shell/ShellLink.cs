@@ -85,7 +85,7 @@ namespace CoApp.Toolkit.Shell {
                     }
                     try {
                         var uri = new Uri(target);
-                        if( uri.IsHttpScheme()) {
+                        if( uri.Scheme == Uri.UriSchemeHttp || (uri.Scheme == Uri.UriSchemeHttps)) {
                             // web links are 'valid'
                             return false;
                         }

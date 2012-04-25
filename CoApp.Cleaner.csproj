@@ -230,7 +230,6 @@
     <Compile Include="Toolkit\Shell\ShellLinkFlags.cs" />
     <Compile Include="Toolkit\Shell\ShowWindowCommand.cs" />
     <Compile Include="Toolkit\Tasks\CoTask.cs" />
-    <Compile Include="Toolkit\Tasks\MessageHandlers.cs" />
     <Compile Include="Toolkit\Exceptions\OperationCompletedBeforeResultException.cs" />
     <Compile Include="Toolkit\Text\HttpUtility.cs" />
     <Compile Include="Toolkit\Win32\AdminPrivilege.cs" />

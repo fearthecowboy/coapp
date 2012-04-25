@@ -14,11 +14,8 @@ namespace CoApp.Toolkit.Engine {
     using System.Collections.ObjectModel;
     using System.Linq;
     using System.Threading.Tasks;
-    using Exceptions;
     using Extensions;
     using Feeds;
-    using Tasks;
-
 
     /// <summary>
     /// Extension methods to make queries on package sets easier.
@@ -36,16 +33,15 @@ namespace CoApp.Toolkit.Engine {
         /// NOTE: This is probably gettin' refactored PFQ
         /// </remarks>
         internal static Task AddFeedLocation(this ObservableCollection<PackageFeed> feedCollection, string feedLocation) {
-            
-            if ((from feed in feedCollection
-                 where feed.Location.Equals(feedLocation, StringComparison.CurrentCultureIgnoreCase)
-                 select feed).Count() == 0) {
+            if (!(from feed in feedCollection
+                where feed.Location.Equals(feedLocation, StringComparison.CurrentCultureIgnoreCase)
+                select feed).Any()) {
                 return PackageFeed.GetPackageFeedFromLocation(feedLocation).ContinueWith(antecedent => {
                     if (antecedent.Result != null) {
                         if (
-                            (from feed in feedCollection
+                            !(from feed in feedCollection
                                 where feed.Location.Equals(feedLocation, StringComparison.CurrentCultureIgnoreCase)
-                                select feed).Count() == 0) {
+                                select feed).Any()) {
                             feedCollection.Add(antecedent.Result);
                         }
                     }
@@ -83,15 +79,16 @@ namespace CoApp.Toolkit.Engine {
         /// <param name="packageSet">The package set.</param>
         /// <returns>the filtered colleciton of packages</returns>
         /// <remarks></remarks>
-        internal static IEnumerable<Package> HighestPackages(this IEnumerable<Package> packageSet ) {
-            if (packageSet.Count() > 1) {
-                var names = (from p in packageSet group p by new { p.Name, p.Architecture });
-                return names.Select(each => (from package in packageSet
+        internal static Package[] HighestPackages(this IEnumerable<Package> packageSet ) {
+            var all = packageSet.ToArray();
+            if (all.Length > 1) {
+                var names = (from p in all group p by new { p.Name, p.Architecture }).ToArray();
+                return names.Select(each => (from package in all 
                                              from uniq in names
                                              where package.Name == each.Key.Name && package.Architecture == each.Key.Architecture
-                                             select package).OrderByDescending(p => p.Version).FirstOrDefault());
+                                             select package).OrderByDescending(p => p.Version).FirstOrDefault()).ToArray();
             }
-            return packageSet;
+            return all;
         }
 
         /* Beta1 

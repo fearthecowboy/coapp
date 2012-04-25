@@ -9,8 +9,10 @@
 //-----------------------------------------------------------------------
 
 namespace CoApp.Toolkit.Engine.Exceptions {
-    using System;
     using Toolkit.Exceptions;
+#if COAPP_ENGINE_CLIENT
+    using Client;
+#endif
 
     internal class PackageInstallFailedException : CoAppException {
         internal Package FailedPackage;

@@ -1,6 +1,8 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright company="CoApp Project">
-//     Copyright (c) 2011 Garrett Serack . All rights reserved.
+//     Copyright (c) 2010-2012 Garrett Serack and CoApp Contributors. 
+//     Contributors can be discovered using the 'git log' command.
+//     All rights reserved.
 // </copyright>
 // <license>
 //     The software is licensed under the Apache 2.0 License (the "License")
@@ -12,7 +14,6 @@ namespace CoApp.Toolkit.Engine.Client {
     using System;
     using System.Collections.Generic;
     using System.ComponentModel;
-    using System.Diagnostics;
     using System.IO;
     using System.Linq;
     using System.Net;
@@ -23,11 +24,10 @@ namespace CoApp.Toolkit.Engine.Client {
     using System.Threading.Tasks;
     using System.Windows;
     using System.Windows.Forms;
-    using System.Windows.Input;
     using System.Windows.Media.Imaging;
     using Extensions;
     using Logging;
-    using Toolkit.Exceptions;
+    using Tasks;
     using UI;
     using Application = System.Windows.Application;
     using MessageBox = System.Windows.Forms.MessageBox;
@@ -572,8 +572,11 @@ namespace CoApp.Toolkit.Engine.Client {
         public void Install() {
             if( !IsWorking) {
                 IsWorking = true;
+                CurrentTask.Events += new PackageInstallProgress((name, progress, overallProgress) => {
+                    Progress = overallProgress;
+                });
 
-                var instTask = _easyPackageManager.InstallPackage(SelectedPackage.CanonicalName, autoUpgrade: false, installProgress: (canonicalName, progress, overallProgress) => { Progress = overallProgress; });
+                var instTask = _easyPackageManager.InstallPackage(SelectedPackage.CanonicalName, autoUpgrade: false);
                 
                 instTask.Continue(() => {
                     OnFinished();    
@@ -603,8 +606,8 @@ namespace CoApp.Toolkit.Engine.Client {
                         for (var index = 0; index < taskCount; index++) {
                             var taskNumber = index;
                             var v = canonicalVersions[index];
-
-                            PackageManager.Instance.RemovePackage(
+                            /*
+                            PackageManager.RemoteService.RemovePackage(
                                 v, messages: new PackageManagerMessages {
                                     RemovingPackageProgress = (canonicalName, progress) => {
                                         Progress = (progress / taskCount) + taskNumber * 100 / taskCount;
@@ -614,6 +617,7 @@ namespace CoApp.Toolkit.Engine.Client {
                                     },
                                     OperationCanceled = CancellationRequestedDuringRemove,
                                 }).Wait();
+                             * */
                         }
                     }
                     }).ContinueWith(antecedent => {OnFinished();}, TaskContinuationOptions.AttachedToParent);

@@ -184,6 +184,13 @@ namespace CoApp.Toolkit.Tasks {
             CoTask.CurrentTask.AddMessageHandler(this);
         }
 
+        public void Unregister() {
+            if (CoTask.CurrentTask == null && this as T != null) {
+                Default = this as T;
+            }
+            CoTask.CurrentTask.RemoveMessageHandler(this);
+        }
+
         public T Extend(MessageHandlers inheritFrom = null) {
             SetMissingDelegates(true, inheritFrom);
             return this as T;

@@ -1,14 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright company="CoApp Project">
-//     Copyright (c) 2011 Garrett Serack . All rights reserved.
+//     Copyright (c) 2010-2012 Garrett Serack and CoApp Contributors. 
+//     Contributors can be discovered using the 'git log' command.
+//     All rights reserved.
 // </copyright>
 // <license>
 //     The software is licensed under the Apache 2.0 License (the "License")
 //     You may not use the software except in compliance with the License. 
 // </license>
 //-----------------------------------------------------------------------
-
-using CoApp.Toolkit.Win32;
 
 namespace CoApp.Toolkit.Engine.Model {
     using System;
@@ -19,12 +19,13 @@ namespace CoApp.Toolkit.Engine.Model {
     using System.Xml.Serialization;
     using Atom;
     using Extensions;
+    using Win32;
 
     [XmlRoot(ElementName = "Package", Namespace = "http://coapp.org/atom-package-feed-1.0")]
     public class PackageModel {
         // Elements marked with XmlIgnore won't persist in the package feed as themselves
         // they get persisted as elements in the Atom Format (so that we have a suitable Atom feed to look at)
-        
+
         public PackageModel() {
             XmlSerializer = new XmlSerializer(GetType());
             PackageDetails = new PackageDetails();
@@ -39,18 +40,26 @@ namespace CoApp.Toolkit.Engine.Model {
         // Workaround to get around stupid .NET limitation of not being able to let a class/struct serialize as an attribute. #FAIL
         [XmlAttribute("Architecture")]
         public string ArchitectureSurrogate {
-            get { return Architecture.ToString(); }
-            set { Architecture = Architecture.Parse(value); }
+            get {
+                return Architecture.ToString();
+            }
+            set {
+                Architecture = Architecture.Parse(value);
+            }
         }
 
         [XmlIgnore]
         public FourPartVersion Version { get; set; }
-        
+
         // Workaround to get around stupid .NET limitation of not being able to let a class/struct serialize as an attribute. #FAIL
         [XmlAttribute("Version")]
         public string VersionSurrogate {
-            get{return Version.ToString();}
-            set{ Version = FourPartVersion.Parse(value);}
+            get {
+                return Version.ToString();
+            }
+            set {
+                Version = FourPartVersion.Parse(value);
+            }
         }
 
         [XmlAttribute]
@@ -71,15 +80,23 @@ namespace CoApp.Toolkit.Engine.Model {
         // Workaround to get around stupid .NET serialization of structs being a PITA.
         [XmlElement("BindingPolicyMinVersion", IsNullable = false)]
         public string BindingPolicyMinVersionSurrogate {
-            get { return BindingPolicyMinVersion.ToString(); }
-            set { BindingPolicyMinVersion = FourPartVersion.Parse(value); }
+            get {
+                return BindingPolicyMinVersion.ToString();
+            }
+            set {
+                BindingPolicyMinVersion = FourPartVersion.Parse(value);
+            }
         }
 
         // Workaround to get around stupid .NET serialization of structs being a PITA.
         [XmlElement("BindingPolicyMaxVersion", IsNullable = false)]
         public string BindingPolicyMaxVersionSurrogate {
-            get { return BindingPolicyMaxVersion.ToString(); }
-            set { BindingPolicyMaxVersion = FourPartVersion.Parse(value); }
+            get {
+                return BindingPolicyMaxVersion.ToString();
+            }
+            set {
+                BindingPolicyMaxVersion = FourPartVersion.Parse(value);
+            }
         }
 
         [XmlAttribute]
@@ -95,25 +112,35 @@ namespace CoApp.Toolkit.Engine.Model {
         public List<string> PackageDependencies { get; set; }
 
         [XmlArray(IsNullable = false)]
-        public List<Feature> Features { get; set; } // must be a canonically recognized feature.
+        public List<Feature> Features { get; set; }
+
+        // must be a canonically recognized feature.
 
         [XmlArray(IsNullable = false)]
         public List<Feature> RequiredFeatures { get; set; }
 
         [XmlArray(IsNullable = false)]
         public List<string> PackageFeeds {
-            get { return Feeds.IsNullOrEmpty() ? new List<string>() : Feeds.Select(each => each.AbsoluteUri).ToList(); }
-            set { Feeds = new List<Uri>(value.Select(each => each.ToUri())); }
+            get {
+                return Feeds.IsNullOrEmpty() ? new List<string>() : Feeds.Select(each => each.AbsoluteUri).ToList();
+            }
+            set {
+                Feeds = new List<Uri>(value.Select(each => each.ToUri()));
+            }
         }
 
         [XmlElement(IsNullable = false, ElementName = "Details")]
         public PackageDetails PackageDetails { get; set; }
 
         /// <summary>
-        /// Guid representing the package.
+        ///   Guid representing the package.
         /// </summary>
         [XmlIgnore]
-        public Guid ProductCode { get { return CanonicalName.CreateGuid(); } }
+        public Guid ProductCode {
+            get {
+                return CanonicalName.CreateGuid();
+            }
+        }
 
         [XmlIgnore]
         public string CanonicalName {
@@ -124,7 +151,9 @@ namespace CoApp.Toolkit.Engine.Model {
 
         [XmlIgnore]
         public string CosmeticName {
-            get { return "{0}-{1}-{2}".format(Name, Version.ToString(), Architecture); }
+            get {
+                return "{0}-{1}-{2}".format(Name, Version.ToString(), Architecture);
+            }
         }
 
         [XmlIgnore]
@@ -149,7 +178,6 @@ namespace CoApp.Toolkit.Engine.Model {
 
     [XmlRoot(ElementName = "Details", Namespace = "http://coapp.org/atom-package-feed-1.0")]
     public class PackageDetails {
-
         // Elements marked with XmlIgnore won't persist in the package feed as themselves
         // they get persisted as elements in the Atom Format (so that we have a suitable Atom feed to look at)
         public PackageDetails() {
@@ -165,8 +193,12 @@ namespace CoApp.Toolkit.Engine.Model {
 
         [XmlArray(IsNullable = false)]
         public List<string> IconLocations {
-            get { return Icons.IsNullOrEmpty() ? new List<string>() : Icons.Select(each => each.AbsoluteUri).ToList(); }
-            set { Icons = new List<Uri>(value.Select(each => each.ToUri())); }
+            get {
+                return Icons.IsNullOrEmpty() ? new List<string>() : Icons.Select(each => each.AbsoluteUri).ToList();
+            }
+            set {
+                Icons = new List<Uri>(value.Select(each => each.ToUri()));
+            }
         }
 
         [XmlIgnore]
@@ -179,7 +211,7 @@ namespace CoApp.Toolkit.Engine.Model {
         public bool IsNsfw { get; set; }
 
         /// <summary>
-        /// -100 = DEATHLY_UNSTABLE ... 0 == release ... +100 = CERTIFIED_NEVER_GONNA_GIVE_YOU_UP.
+        ///   -100 = DEATHLY_UNSTABLE ... 0 == release ... +100 = CERTIFIED_NEVER_GONNA_GIVE_YOU_UP.
         /// </summary>
         [XmlElement(IsNullable = false)]
         public sbyte Stability { get; set; }
@@ -208,11 +240,11 @@ namespace CoApp.Toolkit.Engine.Model {
         [XmlIgnore]
         public string Description { get; set; }
 
-#if COAPP_ENGINE_CORE 
+#if COAPP_ENGINE_CORE
         internal string GetAtomItemText(Package package) {
             var item = new AtomItem(package);
-            using(var sw = new StringWriter() ) {
-                using(var xw = XmlWriter.Create(sw) ) {
+            using (var sw = new StringWriter()) {
+                using (var xw = XmlWriter.Create(sw)) {
                     item.SaveAsAtom10(xw);
                 }
                 return sw.ToString();

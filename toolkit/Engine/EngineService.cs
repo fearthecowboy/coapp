@@ -337,7 +337,7 @@ namespace CoApp.Toolkit.Engine {
                                 var requestMessage = new UrlEncodedMessage(rawMessage);
 
                                 // first command must be "startsession"
-                                if (!requestMessage.Command.Equals("start-session", StringComparison.CurrentCultureIgnoreCase)) {
+                                if (!requestMessage.Command.Equals("StartSession", StringComparison.CurrentCultureIgnoreCase)) {
                                     return;
                                 }
 
@@ -354,16 +354,16 @@ namespace CoApp.Toolkit.Engine {
 
                                 // check for the required parameters. 
                                 // close the session if they are not here.
-                                if (string.IsNullOrEmpty(requestMessage["id"]) || string.IsNullOrEmpty(requestMessage.Data["client"])) {
+                                if (string.IsNullOrEmpty(requestMessage.GetValueAsString("id")) || string.IsNullOrEmpty(requestMessage.Data["client"])) {
                                     return;
                                 }
-                                var isAsync = (bool?) requestMessage["async"];
+                                var isAsync = requestMessage.GetValueAsNullable("async", typeof(bool)) as bool?;
 
                                 if (isAsync.HasValue && isAsync.Value == false) {
-                                    StartResponsePipeAndProcessMesages(requestMessage.Data["client"], requestMessage["id"], serverPipe);
+                                    StartResponsePipeAndProcessMesages(requestMessage.GetValueAsString("client"), requestMessage.GetValueAsString("id"), serverPipe);
                                 }
                                 else {
-                                    Session.Start(requestMessage.Data["client"], requestMessage["id"], serverPipe, serverPipe);
+                                    Session.Start(requestMessage.GetValueAsString("client"), requestMessage.GetValueAsString("id"), serverPipe, serverPipe);
                                 }
                             }).Wait();
                         }

@@ -22,291 +22,96 @@ namespace CoApp.Toolkit.Engine.Client {
     using Tasks;
     using Toolkit.Exceptions;
     using Win32;
-    using OperationCanceledException = System.OperationCanceledException;
-
-    public class Feed {
-        public string Location { get; internal set; }
-        public DateTime LastScanned { get; internal set; }
-        public bool IsSession { get; internal set; }
-        public bool IsSuppressed { get; internal set; }
-        public FeedState FeedState { get; internal set; }
-    }
-
-    public class Policy {
-        public string Name { get; internal set; }
-        public string Description { get; internal set; }
-        public IEnumerable<string> Members { get; internal set; }
-    }
-
-    public class LoggingSettings {
-        public bool Messages { get; internal set; }
-        public bool Warnings { get; internal set; }
-        public bool Errors { get; internal set; }
-    }
-
-    public class ScheduledTask {
-        public string Name { get; set; }
-        public string Executable { get; set; }
-        public string CommandLine { get; set; }
-        public int Hour { get; set; }
-        public int Minutes { get; set; }
-        public DayOfWeek? DayOfWeek { get; set; }
-        public int IntervalInMinutes { get; set; }
-    }
-
-    public class Publisher {
-        public string Name { get; set; }
-        public string PublicKeyToken { get; set; }
-    }
-
-
-
-    public enum FeedState {
-        active,
-        passive, 
-        ignored
-    }
-
-    public class PackageSet {
-        public Package Package;
-
-        /// <summary>
-        ///   The newest version of this package that is installed and newer than the given package and is binary compatible.
-        /// </summary>
-        public Package InstalledNewerCompatable;
-
-        /// <summary>
-        ///   The newest version of this package that is installed, and newer than the given package
-        /// </summary>
-        public Package InstalledNewer;
-
-        /// <summary>
-        ///   The newest package that is currently installed, that the given package is a compatible update for.
-        /// </summary>
-        public Package InstalledOlderCompatable;
-
-        /// <summary>
-        ///   The newest package that is currently installed, that the give package is an upgrade for.
-        /// </summary>
-        public Package InstalledOlder;
-
-        /// <summary>
-        ///   The latest version of the package that is available that is newer than the current package.
-        /// </summary>
-        public Package AvailableNewer;
-
-        /// <summary>
-        ///   The latest version of the package that is available and is binary compatable with the given package
-        /// </summary>
-        public Package AvailableNewerCompatible;
-
-        /// <summary>
-        ///   The latest version that is installed.
-        /// </summary>
-        public Package InstalledNewest;
-
-        /// <summary>
-        ///   All Installed versions of this package
-        /// </summary>
-        public IEnumerable<Package> InstalledPackages;
-
-        /// <summary>
-        ///   All the trimable packages for this package
-        /// </summary>
-        public IEnumerable<Package> Trimable;
-    }
 
     public class EasyPackageManager {
-        internal class RemoteCallResponse : PackageManagerMessages {
-            internal bool EngineRestarting;
-            internal bool NoPackages;
-            // internal Exception Exception;
 
-            internal string OperationCanceledReason;
+        private static readonly IPackageManager PM = PackageManager.RemoteService;
 
-            internal Action<string, string, int> DownloadProgress;
-            internal Action<string, string> DownloadCompleted;
+        #region FlexibleGetPackages
+        public Task<IEnumerable<Package>> GetPackagesEx(IEnumerable<string> parameters, ulong? minVersion = null, ulong? maxVersion = null,
+                    bool? dependencies = null, bool? installed = null, bool? active = null, bool? required = null, bool? blocked = null, bool? latest = null,
+                    string location = null, bool? forceScan = null, bool? updates = null, bool? upgrades = null, bool? trimable = null) {
 
-            internal static Dictionary <string, Task> _currentDownloads = new Dictionary<string, Task>();
-
-            public RemoteCallResponse() {
-                PermissionRequired = permission => {
-                    throw new RequiresPermissionException(permission);
-                };
-
-                OperationCanceled = reason => {
-                    OperationCanceledReason = reason;
-                };
-
-                UnexpectedFailure = exception => {
-                    throw exception;
-                };
-
-                NoPackagesFound = () => {
-                    NoPackages = true;
-                };
-
-                Error = (message, parameter, reason) => {
-                    if( message == "add-feed" ) {
-                        throw new CoAppException(reason);
-                    }
-                    throw new CoAppException("Message Argument Exception [{0}/{1}/{2}]".format(message, parameter, reason));
-                };
-
-                PackageSatisfiedBy = (original, satisfiedBy) => {
-                    original.SatisfiedBy = satisfiedBy;
-                };
-
-                UnknownPackage = s => {
-                    throw new UnknownPackageException(s);
-                };
-
-                FailedPackageRemoval = (canonicalname, reason) => {
-                    throw new FailedPackageRemoveException(canonicalname, reason);
-                };
-
-                FailedPackageInstall = (canonicalname, filename, reason) => {
-                    throw new CoAppException("Package Failed Install {0} => {1}".format(canonicalname, reason));
-                };
-
-                Restarting = () => {
-                    EngineRestarting = true;
-                    // throw an exception here to quickly short circuit the rest of this call
-                    throw new Exception("restarting");
-                };
-
-                PackageBlocked = canonicalname => {
-                    throw new PackageBlockedException(canonicalname);
-                };
-
-                RequireRemoteFile = (canonicalName, remoteLocations, targetFolder, force) => {
-                    var targetFilename = Path.Combine(targetFolder, canonicalName);
-                    lock (_currentDownloads) {
-
-                        if (_currentDownloads.ContainsKey(targetFilename)) {
-                                // wait for this guy to respond (which should give us what we need)
-                                _currentDownloads[targetFilename].Continue(() => {
-                                    if (File.Exists(targetFilename)) {
-                                        if (DownloadProgress != null) {
-                                            DownloadCompleted(canonicalName, targetFilename);
-                                        }
-                                        PackageManager.Instance.RecognizeFile(canonicalName, targetFilename, remoteLocations.FirstOrDefault(), this);
-                                    }
-                                    return;
-                                });
-                            return;
-                        }
-
-                        // gotta download the file...
-                        var task = Task.Factory.StartNew(() => {
-                            foreach (var location in remoteLocations) {
-                                try {
-                                    // a filesystem location (remote or otherwise)
-                                    var uri = new Uri(location);
-                                    if (uri.IsFile) {
-                                        // try to copy the file local.
-                                        var remoteFile = uri.AbsoluteUri.CanonicalizePath();
-
-                                        // if this fails, we'll just move down the line.
-                                        File.Copy(remoteFile, targetFilename);
-                                        PackageManager.Instance.RecognizeFile(canonicalName, targetFilename, uri.AbsoluteUri, this);
-                                        return;
-                                    }
-
-                                    // A web location
-                                    Task progressTask = null;
-                                    var success = false;
-                                    var rf = new RemoteFile(uri, targetFilename,
-                                        completed : (itemUri) => {
-                                            PackageManager.Instance.RecognizeFile(canonicalName, targetFilename, uri.AbsoluteUri, this);
-                                            if (DownloadCompleted != null) {
-                                                // remove it from the list of current downloads
-                                                _currentDownloads.Remove(targetFilename);
-
-                                                // give the user notification
-                                                DownloadCompleted(itemUri.AbsoluteUri, targetFilename);
-                                                success = true;
-                                            }
-                                        },
-
-                                        failed : (itemUri) => {
-                                            // Logger.Message("FAILED DOWNLOAD FILE : {0}", uri);
-                                            success = false;
-                                        },
-
-                                        progress : (itemUri, percent) => {
-                                            if (progressTask == null) {
-                                                // report progress to the engine
-                                                progressTask = PackageManager.Instance.DownloadProgress(canonicalName, percent);
-                                                progressTask.Continue(() => {
-                                                    progressTask = null;
-                                                });
-                                            }
-
-                                            // report progress to the user
-                                            if (DownloadProgress != null) {
-                                                DownloadProgress(itemUri.AbsoluteUri, targetFolder, percent);
-                                            }
-                                        });
-
-                                    rf.Get();
-
-                                    if (success && File.Exists(targetFilename)) {
-                                        return;
-                                    }
-
-                                } catch (Exception e) {
-                                    // bogus, dude.
-                                    // try the next one.
-                                    Logger.Error(e);
-                                }
-                                // loop around and try again?
-                            }
-
-                            // was there a file there from before?
-                            if (File.Exists(targetFilename)) {
-                                if (DownloadProgress != null) {
-                                    DownloadCompleted(canonicalName, targetFilename);
-                                }
-                                PackageManager.Instance.RecognizeFile(canonicalName, targetFilename, remoteLocations.FirstOrDefault(), this);
-                            }
-
-                            // remove it from the list of current downloads
-                            _currentDownloads.Remove(targetFilename);
-                            
-                            // if we got here, that means we couldn't get the file. too bad, so sad.
-                            PackageManager.Instance.UnableToAcquire(canonicalName, new PackageManagerMessages());
-                        }, TaskCreationOptions.AttachedToParent);
-
-                        _currentDownloads.Add(targetFilename, task);
-                    }
-                };
-
-                Register();
+            if (parameters.IsNullOrEmpty()) {
+                return GetPackagesEx(string.Empty, minVersion, maxVersion, dependencies, installed, active, required, blocked, latest, location, forceScan, updates, upgrades, trimable);
             }
 
-            public void ThrowWhenFaulted(Task antecedent) {
-                // do not get all fussy when the engine is restarting.
-                if (EngineRestarting) {
-                    return;
-                }
+            // spawn the tasks off in parallel
+            var tasks = parameters.Select(each => GetPackagesEx(each, minVersion, maxVersion, dependencies, installed, active, required, blocked, latest, location, forceScan, updates, upgrades, trimable)).ToArray();
 
-                if (!string.IsNullOrEmpty(OperationCanceledReason)) {
-                    throw new OperationCanceledException(OperationCanceledReason);
-                }
-
-                antecedent.RethrowWhenFaulted();
-            }
+            // return a task that is the sum of all the tasks.
+            return tasks.Continue(packages => packages.SelectMany(each => each).Distinct());
         }
 
-        private readonly Action<string, string, int> _downloadProgress;
-        private readonly Action<string, string> _downloadCompleted;
 
-        public EasyPackageManager(Action<string, string, int> downloadProgress = null, Action<string, string> downloadCompleted = null) {
-            _downloadProgress = downloadProgress ?? ((s, s2, i) => {
-            });
-            _downloadCompleted = downloadCompleted ?? ((s, i) => {
-            });
+        public Task<IEnumerable<Package>> GetPackagesEx(string parameter, ulong? minVersion = null, ulong? maxVersion = null, bool? dependencies = null, bool? installed = null, bool? active = null, bool? required = null, bool? blocked = null, bool? latest = null, string location = null, bool? forceScan = null, bool? updates = null, bool? upgrades = null, bool? trimable = null) {
+            if (parameter.IsNullOrEmpty()) {
+                return (PM.FindPackages(null, null, null, null, null, dependencies, installed, active, required, blocked, latest, null, null, location, forceScan, updates, upgrades, trimable) as Task<CallResponse>).Continue(response => response.Packages);
+            }
+
+            if (File.Exists(parameter)) {
+                var localPath = parameter.EnsureFileIsLocal();
+                var originalDirectory = Path.GetDirectoryName(parameter.GetFullPath());
+                // add the directory it came from as a session package feed
+
+                if (!string.IsNullOrEmpty(localPath)) {
+                    return (PM.RecognizeFile(null, localPath, null) as Task<CallResponse>).Continue(response => {
+                        // a Package!
+                        if (response.Packages.Any()) {
+                            var innerTask = PM.AddFeed(originalDirectory, true) as Task<CallResponse>;
+                            return response.Packages;
+                        }
+
+                        // a feed!
+                        if (response.Feeds.Any()) {
+                            return InternalGetPackages(null, minVersion, maxVersion, dependencies, installed, active, required, blocked, latest, response.Feeds.First().Location, forceScan, updates, upgrades, trimable).Result;
+                        }
+
+                        // nothing I could discern.
+                        return Enumerable.Empty<Package>();
+                    });
+                }
+                // if we don't get back a local path for the file... this is pretty odd. DUnno what we should really do here yet.
+                return Enumerable.Empty<Package>().AsResultTask();
+            }
+
+            if (Directory.Exists(parameter) || parameter.IndexOf('\\') > -1 || parameter.IndexOf('/') > -1 ||
+                (parameter.IndexOf('*') > -1 && parameter.ToLower().EndsWith(".msi"))) {
+                // specified a folder, or some kind of path that looks like a feed.
+                // add it as a feed, and then get the contents of that feed.
+                return (PM.AddFeed(parameter, true) as Task<CallResponse>).Continue(response => {
+                    // a feed!
+                    if (response.Feeds.Any()) {
+                        return InternalGetPackages(null, minVersion, maxVersion, dependencies, installed, active, required, blocked, latest, response.Feeds.First().Location, forceScan, updates, upgrades, trimable).Result;
+                    }
+
+                    parameter = parameter.GetFullPath();
+                    return (PM.AddFeed(parameter, true) as Task<CallResponse>).Continue(response2 => {
+                        if (response.Feeds.Any()) {
+                            return InternalGetPackages(null, minVersion, maxVersion, dependencies, installed, active, required, blocked, latest, response2.Feeds.First().Location, forceScan, updates, upgrades, trimable).Result;
+                        }
+                        return Enumerable.Empty<Package>();
+                    }).Result;
+                });
+            }
+
+            // can only be a canonical name match, proceed with that.            
+            return InternalGetPackages(PackageName.Parse(parameter), minVersion, maxVersion, dependencies, installed, active, required, blocked, latest, location, forceScan, updates, upgrades, trimable);
+        }
+
+        private Task<IEnumerable<Package>> InternalGetPackages(PackageName packageName, FourPartVersion? minVersion, FourPartVersion? maxVersion, bool? dependencies, bool? installed, bool? active, bool? required, bool? blocked, bool? latest, string location, bool? forceScan, bool? updates, bool? upgrades, bool? trimable) {
+            var task = PM.FindPackages(packageName != null && packageName.IsFullMatch ? packageName.CanonicalName : null, packageName == null ? null : packageName.Name,
+                packageName == null ? null : packageName.Version, packageName == null ? null : packageName.Arch,
+                packageName == null ? null : packageName.PublicKeyToken, dependencies, installed, active, required, blocked, latest, null, null, location,
+                forceScan, updates, upgrades, trimable) as Task<CallResponse>;
+
+            return task.Continue(response => response.Packages.Where(package => (!minVersion.HasValue || package.Version >= minVersion) && (!maxVersion.HasValue || package.Version <= maxVersion)));
+                
+        }
+        #endregion 
+
+        public EasyPackageManager() {
+
         }
 
         /// <summary>
@@ -408,7 +213,6 @@ namespace CoApp.Toolkit.Engine.Client {
 
             return pTasks.ContinueAlways(antecedentTasks => {
                 antecedentTasks.RethrowWhenFaulted();
-
                 return antecedentTasks.SelectMany(each => each.Result).Distinct();
             });
         }
@@ -420,27 +224,12 @@ namespace CoApp.Toolkit.Engine.Client {
         }
 
         public Task<bool> VerifyFileSignature(string filename) {
-            var result = false;
-            var handler = new RemoteCallResponse {
-                SignatureValidation = (file, isValid, subject) => {
-                    result = isValid;
-                }
-            };
-
-            return PackageManager.Instance.VerifyFileSignature(filename, handler).ContinueAlways(antecedent => {
-                if (handler.EngineRestarting) {
-                    return VerifyFileSignature(filename).Result;
-                }
-                handler.ThrowWhenFaulted(antecedent);
-                return result;
-            });
+            // make the remote call via the interface.
+            return (PM.VerifyFileSignature(filename) as Task<CallResponse>).Continue(response => response.IsSignatureValid);
         }
 
         public Task<Package> GetLatestInstalledVersion(string canonicalName) {
-            return GetInstalledPackages(canonicalName).ContinueAlways(antecedent => {
-                antecedent.RethrowWhenFaulted();
-                return antecedent.Result.OrderByDescending(each => each.Version).FirstOrDefault();
-            });
+            return GetInstalledPackages(canonicalName).Continue(packages => packages.OrderByDescending(each => each.Version).FirstOrDefault());
         }
 
         public Task<PackageSet> GetPackageSet(string canonicalName) {
@@ -545,62 +334,38 @@ namespace CoApp.Toolkit.Engine.Client {
             while ((pk = pkgs.FirstOrDefault(p => p.MinPolicy <= result.Version && p.MaxPolicy >= result.Version && result.Version < p.Version)) != null) {
                 result = pk;
             }
-
             return result;
         }
 
         public Task<Package> GetLatestInstalledCompatableVersion(string canonicalName) {
-            return GetPackage(canonicalName).ContinueWith(antecedent => {
-                antecedent.RethrowWhenFaulted();
-                if (antecedent.Result == null) {
-                    throw new UnknownPackageException(canonicalName);
-                }
-
-                var result = NewestCompatablePackageIn(antecedent.Result, GetInstalledPackages(canonicalName).Result);
-                return !result.IsInstalled ? null : result;
-            }, TaskContinuationOptions.AttachedToParent);
+            return GetPackage(canonicalName).Continue(package => {
+                var result = NewestCompatablePackageIn(package, GetInstalledPackages(canonicalName).Result);
+                return result.IsInstalled ? result : null;
+            });
         }
 
         public Task<Package> GetActiveVersion(string packageName) {
-            return GetPackages(packageName, null, null, null, null, true).ContinueWith(antecedent => {
-                antecedent.RethrowWhenFaulted();
-                return antecedent.Result.FirstOrDefault();
-            }, TaskContinuationOptions.AttachedToParent);
+            return GetPackages(packageName, null, null, null, null, true).Continue(packages=> packages.FirstOrDefault());
         }
 
         public Task<bool> IsPackageBlocked(string packageName) {
-            return GetPackages(packageName, null, null, null, null, null, null, true).ContinueWith(antecedent => {
-                antecedent.RethrowWhenFaulted();
-                return antecedent.Result.Any();
-            }, TaskContinuationOptions.AttachedToParent);
+            return GetPackages(packageName, null, null, null, null, null, null, true).Continue(packages=> packages.Any());
         }
 
         public Task<bool> IsPackageMarkedRequested(string canonicalName) {
-            return GetPackage(canonicalName).ContinueWith(antecedent => {
-                antecedent.RethrowWhenFaulted();
-                return antecedent.Result.IsClientRequired;
-            }, TaskContinuationOptions.AttachedToParent);
+            return GetPackage(canonicalName).Continue(package=> package.IsClientRequired);
         }
 
         public Task<bool> IsPackageMarkedDoNotUpgrade(string canonicalName) {
-            return GetPackage(canonicalName).ContinueWith(antecedent => {
-                antecedent.RethrowWhenFaulted();
-                return antecedent.Result.DoNotUpgrade;
-            }, TaskContinuationOptions.AttachedToParent);
+            return GetPackage(canonicalName).Continue(package => package.DoNotUpgrade);
         }
 
         public Task<bool> IsPackageMarkedDoNotUpdate(string canonicalName) {
-            return GetPackage(canonicalName).ContinueWith(antecedent => {
-                antecedent.RethrowWhenFaulted();
-                return antecedent.Result.DoNotUpdate;
-            }, TaskContinuationOptions.AttachedToParent);
+            return GetPackage(canonicalName).Continue(package => package.DoNotUpdate);
         }
 
         public Task<bool> IsPackageActive(string canonicalName) {
-            return GetPackage(canonicalName).ContinueWith(antecedent => {
-                antecedent.RethrowWhenFaulted();
-                return antecedent.Result.IsActive;
-            }, TaskContinuationOptions.AttachedToParent);
+            return GetPackage(canonicalName).Continue(package => package.IsActive);
         }
 
         public Task BlockPackage(string packageName) {
@@ -644,15 +409,7 @@ namespace CoApp.Toolkit.Engine.Client {
             if (failed != null) {
                 return failed;
             }
-            var handler = new RemoteCallResponse();
-
-            return PackageManager.Instance.SetPackage(canonicalName, active, requested, blocked, doNotUpdate, doNotUpgrade).ContinueWith(antecedent => {
-                if (handler.EngineRestarting) {
-                    SetPackageFlags(canonicalName, active, requested, blocked, doNotUpdate, doNotUpgrade).Wait();
-                    return;
-                }
-                handler.ThrowWhenFaulted(antecedent);
-            }, TaskContinuationOptions.AttachedToParent);
+            return PM.SetPackage(canonicalName, active, requested, blocked, doNotUpdate, doNotUpgrade);
         }
 
         public Task<IEnumerable<Package>> GetUpdatablePackages(string packageName) {
@@ -693,14 +450,13 @@ namespace CoApp.Toolkit.Engine.Client {
         }
 
         public Task<Package> GetPackageFromFile(string filename) {
-            return GetPackages(filename).ContinueWith(antecedent => {
-                antecedent.RethrowWhenFaulted();
-                var pkg = antecedent.Result.FirstOrDefault();
+            return GetPackages(filename).Continue(packages => {
+                var pkg = packages.FirstOrDefault();
                 if (pkg == null) {
                     throw new UnknownPackageException("filename: {0}".format(filename));
                 }
                 return pkg;
-            }, TaskContinuationOptions.AttachedToParent);
+            });
         }
 
         public Task<IEnumerable<Package>> GetPackages(string packageName, FourPartVersion? minVersion = null, FourPartVersion? maxVersion = null, bool? dependencies = null, bool? installed = null,
@@ -711,31 +467,7 @@ namespace CoApp.Toolkit.Engine.Client {
         public Task<IEnumerable<Package>> GetPackages(IEnumerable<string> packageNames, FourPartVersion? minVersion = null, FourPartVersion? maxVersion = null, bool? dependencies = null,
             bool? installed = null, bool? active = null, bool? requested = null, bool? blocked = null, bool? latest = null, string locationFeed = null, bool? updates = null, bool? upgrades = null,
             bool? trimable = null) {
-
-            var handler = new RemoteCallResponse {
-                DownloadProgress = _downloadProgress,
-                DownloadCompleted = _downloadCompleted,
-            };
-
-            if (packageNames.IsNullOrEmpty()) {
-                packageNames = "*".SingleItemAsEnumerable();
-            }
-
-            return
-                PackageManager.Instance.GetPackages(packageNames, minVersion, maxVersion, dependencies, installed, active, requested, blocked, latest, locationFeed, false, updates, upgrades, trimable,
-                    handler).ContinueWith(antecedent => {
-                        if (handler.EngineRestarting) {
-                            return GetPackages(packageNames, minVersion, maxVersion, dependencies, installed, active, requested, blocked, latest, locationFeed, updates, upgrades, trimable).Result;
-                        }
-                        handler.ThrowWhenFaulted(antecedent);
-
-                        if (!Environment.Is64BitOperatingSystem) {
-                            // remove x64 packages from the result set if you're not on an x64 system.
-                            return antecedent.Result.Where(each => each.Architecture != Architecture.x64);
-                        }
-
-                        return antecedent.Result;
-                    }, TaskContinuationOptions.AttachedToParent);
+            return GetPackagesEx(packageNames, minVersion, maxVersion, dependencies, installed, active, requested, blocked, latest, locationFeed, false, updates, upgrades, trimable);
         }
 
         private Task<TReturnType> ValidateCanonicalName<TReturnType>(string canonicalName) {
@@ -747,80 +479,38 @@ namespace CoApp.Toolkit.Engine.Client {
             return null;
         }
 
-        private Task<IEnumerable<Package>> Install(string canonicalName, bool? autoUpgrade = null, bool? isUpdate = null, bool? isUpgrade = null, bool? pretend = null, bool? download = null,
-            Action<string, int, int> installProgress = null,
-            Action<string> packageInstalled = null) {
+        private Task<IEnumerable<Package>> Install(string canonicalName, bool? autoUpgrade = null, bool? isUpdate = null, bool? isUpgrade = null, bool? pretend = null, bool? download = null ) {
             var failed = ValidateCanonicalName<IEnumerable<Package>>(canonicalName);
             if (failed != null) {
                 return failed;
             }
 
-
             var completedThisPackage = false;
+           
+            CurrentTask.Events += new PackageInstallProgress((name, progress, overallProgress) => {
+                if (overallProgress == 100) {
+                    completedThisPackage = true;
+                }
+            });
 
-            var result = new List<Package>();
-            Package upgradablePackage = null;
-            IEnumerable<Package> potentialUpgrades = null;
-
-            var handler = new RemoteCallResponse {
-                PackageInformation = (package) => result.Add(package),
-
-                PackageSatisfiedBy = (pkg, satisfiedBy) => {
-                    pkg.SatisfiedBy = satisfiedBy;
-                    result.Add(pkg);
-                },
-
-                InstallingPackageProgress = (packageName, progress, overall) => {
-                    if (overall == 100) {
-                        completedThisPackage = true;
-                    }
-                    if (installProgress != null) {
-                        installProgress(packageName, progress, overall);
-                    }
-                },
-
-                PackageHasPotentialUpgrades = (package, supercedents) => {
-                    upgradablePackage = package;
-                    potentialUpgrades = supercedents;
-                },
-
-                InstalledPackage = packageInstalled,
-                DownloadProgress = _downloadProgress,
-                DownloadCompleted = _downloadCompleted,
-            };
-
-            return PackageManager.Instance.InstallPackage(canonicalName, autoUpgrade, false, download, pretend, isUpdate, isUpgrade, handler).ContinueWith(
-                antecedent => {
-                    if (handler.EngineRestarting) {
-                        if (!completedThisPackage) {
-                            return Install(canonicalName, autoUpgrade, isUpdate, isUpgrade, pretend, download, installProgress, packageInstalled).Result;
-                        }
-                    } else {
-                        if (potentialUpgrades != null) {
-                            throw new PackageHasPotentialUpgradesException(upgradablePackage, potentialUpgrades);
-                        }
-                        handler.ThrowWhenFaulted(antecedent);
-                    }
-                    return result.Distinct();
-                }, TaskContinuationOptions.AttachedToParent);
+            return (PM.InstallPackage(canonicalName, autoUpgrade, false, download, pretend, isUpdate, isUpgrade) as Task<CallResponse>).Continue(response => {
+                if (response.PotentialUpgrades != null) {
+                    throw new PackageHasPotentialUpgradesException(response.UpgradablePackage, response.PotentialUpgrades);
+                }
+                return response.Packages;
+            });
         }
 
-        public Task InstallPackage(string canonicalName, bool? autoUpgrade = null,
-            Action<string, int, int> installProgress = null,
-            Action<string> packageInstalled = null) {
-            return Install(canonicalName, autoUpgrade, false, false, false, null, installProgress, packageInstalled);
+        public Task InstallPackage(string canonicalName, bool? autoUpgrade = null) {
+            return Install(canonicalName, autoUpgrade, false, false, false, null);
         }
 
-        public Task UpgradeExistingPackage(string canonicalName, bool? autoUpgrade = null,
-            Action<string, int, int> installProgress = null,
-            Action<string> packageInstalled = null) {
-            return Install(canonicalName, autoUpgrade, false, true, false, null, installProgress, packageInstalled);
+        public Task UpgradeExistingPackage(string canonicalName, bool? autoUpgrade = null) {
+            return Install(canonicalName, autoUpgrade, false, true, false, null);
         }
 
-        public Task UpdateExistingPackage(string canonicalName, bool? autoUpgrade = null,
-            Action<string, int, int> installProgress = null,
-            Action<string> packageInstalled = null) {
-            return Install(canonicalName, autoUpgrade, true, false, false, null, installProgress, packageInstalled);
+        public Task UpdateExistingPackage(string canonicalName, bool? autoUpgrade = null) {
+            return Install(canonicalName, autoUpgrade, true, false, false, null);
         }
 
         public Task<IEnumerable<Package>> EnsurePackagesAndDependenciesAreLocal(string canonicalName, bool? autoUpgrade = null) {
@@ -831,7 +521,7 @@ namespace CoApp.Toolkit.Engine.Client {
             return Install(canonicalName, autoUpgrade, false, false, false, false);
         }
 
-        public Task<int> RemovePackages(IEnumerable<string> canonicalNames, bool forceRemoval, Action<string, int> packageRemovalProgress = null, Action<string> packageRemoveCompleted = null) {
+        public Task<int> RemovePackages(IEnumerable<string> canonicalNames, bool forceRemoval) {
             var packagesToRemove = canonicalNames.ToList();
             
             return Task.Factory.StartNew(() => {
@@ -847,7 +537,7 @@ namespace CoApp.Toolkit.Engine.Client {
                         var canonicalName = cn;
                         try {
                             // remove the package and wait for completion.
-                            RemovePackage(canonicalName, forceRemoval, packageRemovalProgress, packageRemoveCompleted).Wait();
+                            RemovePackage(canonicalName, forceRemoval).Wait();
 
                             packagesToRemove.Remove(canonicalName);
                             total[0] = total[0] + 1;
@@ -865,43 +555,17 @@ namespace CoApp.Toolkit.Engine.Client {
             }, TaskCreationOptions.AttachedToParent);
         }
 
-        public Task RemovePackage(string canonicalName, bool forceRemoval, Action<string, int> packageRemovalProgress = null, Action<string> packageRemoveCompleted = null) {
+        public Task RemovePackage(string canonicalName, bool forceRemoval) {
             var failed = ValidateCanonicalName<int>(canonicalName);
             if (failed != null) {
                 return failed;
             }
 
-            var handler = new RemoteCallResponse {
-                RemovingPackageProgress = packageRemovalProgress,
-                RemovedPackage = packageRemoveCompleted,
-            };
-
-            return PackageManager.Instance.RemovePackage(canonicalName, forceRemoval, handler).ContinueWith(
-                antecedent => {
-                    if (handler.EngineRestarting) {
-                        RemovePackage(canonicalName, forceRemoval).Wait();
-                        return;
-                    }
-                    handler.ThrowWhenFaulted(antecedent);
-                }, TaskContinuationOptions.AttachedToParent);
+            return PM.RemovePackage(canonicalName, forceRemoval);
         }
 
         private Task<LoggingSettings> SetLogging(bool? messages = null, bool? warnings = null, bool? errors = null) {
-            LoggingSettings result = null;
-
-            var handler = new RemoteCallResponse {
-                LoggingSettings = (m, w, e) => {
-                    result = new LoggingSettings {Messages = m, Warnings = w, Errors = e};
-                }
-            };
-
-            return PackageManager.Instance.SetLogging(messages, warnings, errors, handler).ContinueWith(antecedent => {
-                if (handler.EngineRestarting) {
-                    return SetLogging(messages, warnings, errors).Result;
-                }
-                handler.ThrowWhenFaulted(antecedent);
-                return result;
-            }, TaskContinuationOptions.AttachedToParent);
+            return (PM.SetLogging(messages, warnings, errors) as Task<CallResponse>).Continue(response => response.LoggingSettingsResult);
         }
 
         public Task EnableMessageLogging() {
@@ -916,11 +580,7 @@ namespace CoApp.Toolkit.Engine.Client {
 
         public Task<bool> IsMessageLogging {
             get {
-                return SetLogging().ContinueWith(
-                    antecedent => {
-                        antecedent.RethrowWhenFaulted();
-                        return antecedent.Result.Messages;
-                    }, TaskContinuationOptions.AttachedToParent);
+                return SetLogging().Continue(results => results.Messages);
             }
         }
 
@@ -936,11 +596,7 @@ namespace CoApp.Toolkit.Engine.Client {
 
         public Task<bool> IsWarningLogging {
             get {
-                return SetLogging().ContinueWith(
-                    antecedent => {
-                        antecedent.RethrowWhenFaulted();
-                        return antecedent.Result.Warnings;
-                    }, TaskContinuationOptions.AttachedToParent);
+                return SetLogging().Continue(results => results.Warnings);
             }
         }
 
@@ -956,138 +612,50 @@ namespace CoApp.Toolkit.Engine.Client {
 
         public Task<bool> IsErrorLogging {
             get {
-                return SetLogging().ContinueWith(
-                    antecedent => {
-                        antecedent.RethrowWhenFaulted();
-                        return antecedent.Result.Errors;
-                    }, TaskContinuationOptions.AttachedToParent);
+                return SetLogging().Continue(results => results.Errors);
             }
         }
 
         public Task<string> RemoveSystemFeed(string feedLocation) {
-            var handler = new RemoteCallResponse();
-
-            return PackageManager.Instance.RemoveFeed(feedLocation, false, handler).ContinueWith(antecedent => {
-                if (handler.EngineRestarting) {
-                    return RemoveSystemFeed(feedLocation).Result;
-                }
-                handler.ThrowWhenFaulted(antecedent);
-                return feedLocation;
-            }, TaskContinuationOptions.AttachedToParent);
+            return (PM.RemoveFeed(feedLocation, false) as Task<CallResponse>).Continue(response => feedLocation);
         }
 
         public Task<string> RemoveSessionFeed(string feedLocation) {
-            var handler = new RemoteCallResponse();
-
-            return PackageManager.Instance.RemoveFeed(feedLocation, true, handler).ContinueWith(antecedent => {
-                if (handler.EngineRestarting) {
-                    return RemoveSessionFeed(feedLocation).Result;
-                    
-                }
-                handler.ThrowWhenFaulted(antecedent);
-                return feedLocation;
-            }, TaskContinuationOptions.AttachedToParent);
+            return (PM.RemoveFeed(feedLocation, true) as Task<CallResponse>).Continue(response => feedLocation);
         }
 
         public Task<string> AddSystemFeed(string feedLocation) {
-            var handler = new RemoteCallResponse {
-                FeedAdded = location => {
-                    // do something when a feed is added? Do we really care?
-                }
-            };
-
-            return PackageManager.Instance.AddFeed(feedLocation, false, handler).ContinueWith(antecedent => {
-                if (handler.EngineRestarting) {
-                    return AddSystemFeed(feedLocation).Result;
-                }
-
-                handler.ThrowWhenFaulted(antecedent);
-                return feedLocation;
-            }, TaskContinuationOptions.AttachedToParent);
+            return (PM.AddFeed(feedLocation, false)as Task<CallResponse>).Continue(response => response.Feeds.Select( each => each.Location ).FirstOrDefault());
         }
 
         public Task<string> AddSessionFeed(string feedLocation) {
-            var handler = new RemoteCallResponse {
-                FeedAdded = location => {
-                    // do something when a feed is added? Do we really care?
-                }
-            };
-
-            return PackageManager.Instance.AddFeed(feedLocation, true, handler).ContinueWith(antecedent => {
-                if (handler.EngineRestarting) {
-                    return AddSessionFeed(feedLocation).Result;
-                    
-                }
-                handler.ThrowWhenFaulted(antecedent);
-                return feedLocation;
-            }, TaskContinuationOptions.AttachedToParent);
+            return (PM.AddFeed(feedLocation, true) as Task<CallResponse>).Continue(response => response.Feeds.Select(each => each.Location).FirstOrDefault());
         }
 
         public Task SuppressFeed(string feedLocation) {
-            var handler = new RemoteCallResponse();
-
-            return PackageManager.Instance.SuppressFeed(feedLocation, handler).ContinueWith(antecedent => {
-                if (handler.EngineRestarting) {
-                    SuppressFeed(feedLocation);
-                    return;
-                }
-                handler.ThrowWhenFaulted(antecedent);
-            }, TaskContinuationOptions.AttachedToParent);
+            return (PM.SuppressFeed(feedLocation) );
         }
 
         public Task SetFeed(string feedLocation, FeedState state) {
-            var handler = new RemoteCallResponse();
-
-            return PackageManager.Instance.SetFeed(feedLocation, state.ToString(), handler).ContinueWith(antecedent => {
-                if (handler.EngineRestarting) {
-                    SetFeed(feedLocation,state);
-                    return;
-                }
-                handler.ThrowWhenFaulted(antecedent);
-            }, TaskContinuationOptions.AttachedToParent);
+            return PM.SetFeedFlags(feedLocation, state.ToString());
         }
 
         public Task<IEnumerable<Feed>> Feeds {
             get {
-                var result = new List<Feed>();
-                var handler = new RemoteCallResponse {
-                    FeedDetails = (location, lastScanned, isSession, isSuppressed, isValidated, state) => result.Add(new Feed {Location = location, LastScanned = lastScanned, IsSession = isSession, IsSuppressed = isSuppressed, FeedState = state.ParseEnum(FeedState.active) })
-                };
-
-                return PackageManager.Instance.ListFeeds(messages: handler).ContinueWith(antecedent => {
-                    if (handler.EngineRestarting) {
-                        // if we got a restarting message in the middle of this, try the request again from the beginning.
-                        return Feeds.Result;
-                    }
-
-                    handler.ThrowWhenFaulted(antecedent);
-
-                    return (IEnumerable<Feed>)result;
-                }, TaskContinuationOptions.AttachedToParent);
+                return (PM.ListFeeds() as Task<CallResponse>).Continue(response => response.Feeds);
             }
         }
 
         public Task SetFeedStale(string feedLocation) {
-            var handler = new RemoteCallResponse();
-
-            return PackageManager.Instance.SetFeedStale(feedLocation, handler).ContinueWith(antecedent => {
-                if (handler.EngineRestarting) {
-                    SetFeedStale(feedLocation).Wait();
-                    return;
-                }
-
-                handler.ThrowWhenFaulted(antecedent);
-            }, TaskContinuationOptions.AttachedToParent);
+            return PM.SetFeedStale(feedLocation);
         }
 
         public Task SetAllFeedsStale() {
-            return Feeds.ContinueWith(antecedent => {
-                antecedent.RethrowWhenFaulted();
-
-                foreach (var feed in antecedent.Result) {
+            return Feeds.Continue(feeds => {
+                foreach (var feed in feeds) {
                     SetFeedStale(feed.Location).RethrowWhenFaulted();
                 }
-            }, TaskContinuationOptions.AttachedToParent);
+            });
         }
 
         public Task<Package> RefreshPackageDetails(string canonicalName) {
@@ -1096,17 +664,7 @@ namespace CoApp.Toolkit.Engine.Client {
                 return failed;
             }
 
-            var handler = new RemoteCallResponse();
-
-            return PackageManager.Instance.GetPackageDetails(canonicalName, handler).ContinueWith(antecedent => {
-                if (handler.EngineRestarting) {
-                    return RefreshPackageDetails(canonicalName).Result;
-                }
-
-                handler.ThrowWhenFaulted(antecedent);
-
-                return Package.GetPackage(canonicalName);
-            }, TaskContinuationOptions.AttachedToParent);
+            return (PM.GetPackageDetails(canonicalName) as Task<CallResponse>).Continue(response => Package.GetPackage(canonicalName));
         }
 
         public Task<Package> GetPackage(string canonicalName) {
@@ -1116,18 +674,11 @@ namespace CoApp.Toolkit.Engine.Client {
             }
 
             var pkg = Package.GetPackage(canonicalName);
-            if (pkg.IsPackageInfoStale) {
-                // no data retrieved yet at all.
-                var handler = new RemoteCallResponse();
 
-                PackageManager.Instance.FindPackages(canonicalName, messages: handler).ContinueWith(antecedent => {
-                    if (handler.EngineRestarting) {
-                        return GetPackage(canonicalName).Result;
-                    }
-                    handler.ThrowWhenFaulted(antecedent);
-                    return Package.GetPackage(canonicalName);
-                }, TaskContinuationOptions.AttachedToParent);
+            if (pkg.IsPackageInfoStale) {
+                return (PM.FindPackages(canonicalName) as Task<CallResponse>).Continue(response => Package.GetPackage(canonicalName));
             }
+
             return pkg.AsResultTask();
         }
 
@@ -1137,174 +688,52 @@ namespace CoApp.Toolkit.Engine.Client {
                 return failed;
             }
 
-            return GetPackage(canonicalName).ContinueWith(
-                antecedent => {
-                    antecedent.RethrowWhenFaulted();
-                    return GetPackageDetails(antecedent.Result).Result;
-                }, TaskContinuationOptions.AttachedToParent);
+            return GetPackage(canonicalName).Continue(package => GetPackageDetails(package.CanonicalName).Result);
         }
 
         public Task<Package> GetPackageDetails(Package package) {
             if (package.IsPackageDetailsStale) {
-                return GetPackage(package.CanonicalName).ContinueWith(antecedent => {
-                    antecedent.RethrowWhenFaulted();
-                    return RefreshPackageDetails(package.CanonicalName).Result;
-                }, TaskContinuationOptions.AttachedToParent);
+                return GetPackage(package.CanonicalName).Continue(pkg=> RefreshPackageDetails(pkg.CanonicalName).Result);
             }
 
             return package.Roles.IsNullOrEmpty() ? RefreshPackageDetails(package.CanonicalName) : package.AsResultTask();
         }
 
         public Task<bool> GetTelemetry() {
-            var telemetryResult = false;
-
-            var handler = new RemoteCallResponse {
-                CurrentTelemetryOption = result => {
-                    telemetryResult = result;
-                }
-            };
-
-            return PackageManager.Instance.GetTelemetry(handler).ContinueWith(antecedent => {
-                if (handler.EngineRestarting) {
-                    return GetTelemetry().Result;
-                }
-
-                // take care of error conditions...
-                handler.ThrowWhenFaulted(antecedent);
-
-                return telemetryResult;
-            }, TaskContinuationOptions.AttachedToParent);
+            return (PM.GetTelemetry() as Task<CallResponse>).Continue(response => response.OptedIn);
         }
 
         public Task SetTelemetry(bool optInToTelemetry) {
-            var handler = new RemoteCallResponse();
-
-            return PackageManager.Instance.SetTelemetry(optInToTelemetry, handler).ContinueWith(antecedent => {
-                if (handler.EngineRestarting) {
-                    SetTelemetry(optInToTelemetry).Wait();
-                    return;
-                }
-
-                // take care of error conditions...
-                handler.ThrowWhenFaulted(antecedent);
-            }, TaskContinuationOptions.AttachedToParent);
+            return PM.SetTelemetry(optInToTelemetry);
         }
 
         public Task CreateSymlink(string existingLocation, string newLink) {
-            var handler = new RemoteCallResponse();
-
-            return PackageManager.Instance.CreateSymlink(existingLocation, newLink, LinkType.Symlink, handler).ContinueWith(
-                antecedent => {
-                    if (handler.EngineRestarting) {
-                        CreateSymlink(existingLocation, newLink).Wait();
-                        return;
-                    }
-
-                    // take care of error conditions...
-                    handler.ThrowWhenFaulted(antecedent);
-                }, TaskContinuationOptions.AttachedToParent);
+            return PM.CreateSymlink(existingLocation, newLink, LinkType.Symlink);
         }
 
         public Task CreateHardlink(string existingLocation, string newLink) {
-            var handler = new RemoteCallResponse();
-
-            return PackageManager.Instance.CreateSymlink(existingLocation, newLink, LinkType.Hardlink, handler).ContinueWith(
-                antecedent => {
-                    if (handler.EngineRestarting) {
-                        CreateHardlink(existingLocation, newLink).Wait();
-                        return;
-                    }
-
-                    // take care of error conditions...
-                    handler.ThrowWhenFaulted(antecedent);
-                }, TaskContinuationOptions.AttachedToParent);
+            return PM.CreateSymlink(existingLocation, newLink, LinkType.Hardlink);
         }
 
         public Task CreateShortcut(string existingLocation, string newLink) {
-            var handler = new RemoteCallResponse();
-
-            return PackageManager.Instance.CreateSymlink(existingLocation, newLink, LinkType.Shortcut, handler).ContinueWith(
-                antecedent => {
-                    if (handler.EngineRestarting) {
-                        CreateShortcut(existingLocation, newLink).Wait();
-                        return;
-                    }
-
-                    // take care of error conditions...
-                    handler.ThrowWhenFaulted(antecedent);
-                }, TaskContinuationOptions.AttachedToParent);
+            return PM.CreateSymlink(existingLocation, newLink, LinkType.Shortcut);
         }
 
         public Task RemoveFromPolicy(string policyName, string account) {
-            var handler = new RemoteCallResponse();
-
-            return PackageManager.Instance.RemoveFromPolicy(policyName, account, handler).ContinueWith(antecedent => {
-                if (handler.EngineRestarting) {
-                    RemoveFromPolicy(policyName, account);
-                    return;
-                }
-
-                // take care of error conditions...
-                handler.ThrowWhenFaulted(antecedent);
-            }, TaskContinuationOptions.AttachedToParent);
+            return PM.RemoveFromPolicy(policyName, account);
         }
 
         public Task AddToPolicy(string policyName, string account) {
-            var handler = new RemoteCallResponse();
-
-            return PackageManager.Instance.AddToPolicy(policyName, account, handler).ContinueWith(antecedent => {
-                if (handler.EngineRestarting) {
-                    AddToPolicy(policyName, account).Wait();
-                    return;
-                }
-
-                // take care of error conditions...
-                handler.ThrowWhenFaulted(antecedent);
-            }, TaskContinuationOptions.AttachedToParent);
+            return PM.AddToPolicy(policyName, account);
         }
 
         public Task<Policy> GetPolicy(string policyName) {
-            Policy result = null;
-            var handler = new RemoteCallResponse {
-                PolicyInformation = (name, description, members) => {
-                    result = new Policy {Name = name, Description = description, Members = members};
-                }
-            };
-
-            return PackageManager.Instance.GetPolicy(policyName, handler).ContinueWith(antecedent => {
-                if (handler.EngineRestarting) {
-                    return GetPolicy(policyName).Result;
-                }
-
-                // take care of error conditions...
-                handler.ThrowWhenFaulted(antecedent);
-
-                if( result == null ) {
-                    throw new CoAppException("Policy '{0}' does not exist".format(policyName));
-                }
-
-                return result;
-            }, TaskContinuationOptions.AttachedToParent);
+            return (PM.GetPolicy(policyName) as Task<CallResponse>).Continue(response => response.Policies.FirstOrDefault());
         }
 
         public Task<IEnumerable<Policy>> Policies {
             get {
-                var result = new List<Policy>();
-
-                var handler = new RemoteCallResponse {
-                    PolicyInformation = (name, description, members) => result.Add(new Policy {Name = name, Description = description, Members = members})
-                };
-                    
-                return PackageManager.Instance.GetPolicy("*", handler).ContinueWith(antecedent => {
-                    if (handler.EngineRestarting) {
-                        return Policies.Result;
-                    }
-
-                    // take care of error conditions...
-                    handler.ThrowWhenFaulted(antecedent);
-
-                    return (IEnumerable<Policy>)result;
-                }, TaskContinuationOptions.AttachedToParent);
+                return (PM.GetPolicy("*") as Task<CallResponse>).Continue(response => response.Policies);
             }
         }
 
@@ -1319,83 +748,22 @@ namespace CoApp.Toolkit.Engine.Client {
         /// <param name="intervalInMinutes"> how often the scheduled task should consider running (on Windows XP/2003, it's not possible to run as soon as possible after a task was missed. </param>
         /// <returns> </returns>
         public Task AddScheduledTask(string taskName, string executable, string commandline, int hour, int minutes, DayOfWeek? dayOfWeek, int intervalInMinutes) {
-            var handler = new RemoteCallResponse();
-
-            return PackageManager.Instance.AddScheduledTask(taskName, executable, commandline, hour, minutes, dayOfWeek, intervalInMinutes, handler).ContinueWith(antecedent => {
-                if (handler.EngineRestarting) {
-                    AddScheduledTask(taskName, executable, commandline, hour, minutes, dayOfWeek, intervalInMinutes);
-                    return;
-                }
-                antecedent.RethrowWhenFaulted();
-            }, TaskContinuationOptions.AttachedToParent);
+            return PM.ScheduleTask(taskName, executable, commandline, hour, minutes, dayOfWeek, intervalInMinutes);
         }
 
         public Task RemoveScheduledTask(string taskName) {
-            var handler = new RemoteCallResponse();
-
-            return PackageManager.Instance.RemoveScheduledTask(taskName, handler).ContinueWith(antecedent => {
-                if (handler.EngineRestarting) {
-                    RemoveScheduledTask(taskName);
-                    return;
-                }
-                antecedent.RethrowWhenFaulted();
-            }, TaskContinuationOptions.AttachedToParent);
+            return PM.RemoveScheduledTask(taskName);
         }
 
         public Task<ScheduledTask> GetScheduledTask(string taskName) {
-            ScheduledTask result = null;
-
-            var handler = new RemoteCallResponse {
-                ScheduledTaskInfo = (name, executable, commandline, hour, minutes, dayOfWeek, intervalInMinutes) => {
-                    result = new ScheduledTask {
-                        Name = name,
-                        Executable = executable,
-                        CommandLine = commandline,
-                        Hour = hour,
-                        Minutes = minutes,
-                        DayOfWeek = dayOfWeek,
-                        IntervalInMinutes = intervalInMinutes
-                    };
-                }
-            };
-
-            return PackageManager.Instance.GetScheduledTask(taskName, handler).ContinueWith(antecedent => {
-                if (handler.EngineRestarting) {
-                    return GetScheduledTask(taskName).Result;
-                }
-                antecedent.RethrowWhenFaulted();
-                return result;
-            }, TaskContinuationOptions.AttachedToParent);
+            return (PM.GetScheduledTasks(taskName) as Task<CallResponse>).Continue(response => response.ScheduledTasks.FirstOrDefault());
         }
 
         public Task<IEnumerable<ScheduledTask>> ScheduledTasks {
             get {
-                var result = new List<ScheduledTask>();
-
-                var handler = new RemoteCallResponse {
-                    ScheduledTaskInfo = (name, executable, commandline, hour, minutes, dayOfWeek, intervalInMinutes) => result.Add(new ScheduledTask {
-                        Name = name,
-                        Executable = executable,
-                        CommandLine = commandline,
-                        Hour = hour,
-                        Minutes = minutes,
-                        DayOfWeek = dayOfWeek,
-                        IntervalInMinutes = intervalInMinutes
-                    })
-                };
-
-                return PackageManager.Instance.GetScheduledTask("*", handler).ContinueWith(antecedent => {
-                    if (handler.EngineRestarting) {
-                        return ScheduledTasks.Result;
-                    }
-                    antecedent.RethrowWhenFaulted();
-                    return result;
-                }, TaskContinuationOptions.AttachedToParent);
+                return (PM.GetScheduledTasks("*") as Task<CallResponse>).Continue(response => response.ScheduledTasks);
             }
-        }
 
-        public Task RecognizeFile(string filename) {
-            return null;
         }
 
         public Task<IEnumerable<Publisher>> TrustedPublishers {
@@ -1412,5 +780,9 @@ namespace CoApp.Toolkit.Engine.Client {
             return null;
         }
         // GS01: TrustedPublishers Coming Soon.
+
+        public Task RecognizeFile(string filename) {
+            return PM.RecognizeFile("somefile", filename, "none");
+        }
     }
 }

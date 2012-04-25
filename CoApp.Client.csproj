@@ -37,6 +37,7 @@
     <ApplicationIcon>$(SolutionDir)resources\icons\CoApp.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Microsoft.CSharp" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
     <Reference Include="System" />
@@ -53,14 +54,23 @@
   <ItemGroup>
     <Compile Include="Toolkit\Engine\Client\Dummy.cs" />
     <Compile Include="Toolkit\Engine\Client\EasyPackageManager.cs" />
+    <Compile Include="Toolkit\Engine\Client\Feed.cs" />
+    <Compile Include="Toolkit\Engine\Client\FeedState.cs" />
     <Compile Include="Toolkit\Engine\Client\Installer.cs" />
+    <Compile Include="Toolkit\Engine\Client\LoggingSettings.cs" />
     <Compile Include="Toolkit\Engine\Client\Package.cs" />
     <Compile Include="Toolkit\Engine\Client\PackageManager.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Toolkit\Engine\Client\PackageSet.cs" />
+    <Compile Include="Toolkit\Engine\Client\Policy.cs" />
+    <Compile Include="Toolkit\Engine\Client\Publisher.cs" />
     <Compile Include="Toolkit\Engine\Client\RemoteFile.cs" />
+    <Compile Include="Toolkit\Engine\Client\ScheduledTask.cs" />
     <Compile Include="Toolkit\Engine\Exceptions\ConflictedPackageException.cs" />
     <Compile Include="Toolkit\Engine\Exceptions\PackageHasPotentialUpgradesException.cs" />
+    <Compile Include="Toolkit\Engine\Exceptions\PackageInstallFailedException.cs" />
+    <Compile Include="Toolkit\Engine\IPackageManager.cs" />
     <Compile Include="Toolkit\Engine\LinkType.cs" />
     <Compile Include="Toolkit\Engine\Model\CompositionAction.cs" />
     <Compile Include="Toolkit\Engine\Model\CompositionRule.cs" />
@@ -77,7 +87,7 @@
     <Compile Include="Toolkit\Engine\PackageManagerSettings.cs" />
     <Compile Include="Toolkit\Engine\PackageName.cs" />
     <Compile Include="Toolkit\Engine\Exceptions\UnableToStartServiceException.cs" />
-    <Compile Include="Toolkit\Engine\PackageManagerMessages.cs" />
+    <Compile Include="Toolkit\Engine\IPackageManagerResponse.cs" />
     <Compile Include="Toolkit\Engine\Model\PackageRole.cs" />
     <Compile Include="Toolkit\Properties\InstallerResources.Designer.cs">
       <AutoGen>True</AutoGen>

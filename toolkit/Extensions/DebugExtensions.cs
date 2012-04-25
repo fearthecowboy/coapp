@@ -94,10 +94,6 @@ namespace CoApp.Toolkit.Extensions {
 #endif
         }
     }
-
-    public class DebugMessage : MessageHandlers<DebugMessage> {
-        public Action<string> WriteLine;
-    }
 }
 
 #if LINQPAD

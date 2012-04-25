@@ -14,6 +14,7 @@ namespace CoApp.Toolkit.Pipes {
     using System.Collections.Generic;
     using System.Linq;
     using System.Text.RegularExpressions;
+    using Exceptions;
     using Extensions;
 
     /// <summary>
@@ -25,7 +26,7 @@ namespace CoApp.Toolkit.Pipes {
     /// NOTE: EXPLICITLY IGNORE, NOT READY FOR TESTING.
     /// </remarks>
     public class UrlEncodedMessage : IEnumerable<string> {
-
+        /*
         public class UrlEncodedMessageValue {
             private readonly string _value;
             public UrlEncodedMessageValue(string value) {
@@ -78,7 +79,7 @@ namespace CoApp.Toolkit.Pipes {
                 }
             }
         }
-
+        */
         /// <summary>
         /// 
         /// </summary>
@@ -117,7 +118,7 @@ namespace CoApp.Toolkit.Pipes {
         /// <remarks></remarks>
         public UrlEncodedMessage(string rawMessage) {
             var parts = rawMessage.Split(_query, StringSplitOptions.RemoveEmptyEntries);
-            Command = (parts.FirstOrDefault() ?? "" ).UrlDecode().ToLower();
+            Command = (parts.FirstOrDefault() ?? "" ).UrlDecode();
             Data = (parts.Skip(1).FirstOrDefault() ?? "").Split(_separator, StringSplitOptions.RemoveEmptyEntries).Select(
                 p => p.Split(_equals, StringSplitOptions.RemoveEmptyEntries)).ToDictionary(
                     s => s[0].UrlDecode(),
@@ -136,8 +137,66 @@ namespace CoApp.Toolkit.Pipes {
             Data = data;
         }
 
+        /*
         public UrlEncodedMessageValue this[string key] {
             get { return new UrlEncodedMessageValue( Data.ContainsKey(key) ? Data[key] : null ); }
+        }
+        */
+
+        public object GetValueAsArray( string collectionName, Type elementType) {
+            var rx = new Regex(@"^{0}\[\d*\]$".format(Regex.Escape(collectionName)));
+            if (elementType == typeof(string)) {
+                return (from k in Data.Keys where rx.IsMatch(k) select Data[k]).ToArray();
+            }
+
+            if (elementType.IsParsable()) {
+                return (from k in Data.Keys where rx.IsMatch(k) select elementType.ParseString(Data[k])).ToArray();
+            }
+            throw new CoAppException("Unsupported Array type '{0}' (must support tryparse)".format(elementType.Name));
+        }
+
+        public object GetValueAsIEnumerable(string collectionName, Type elementType ) {
+            var rx = new Regex(@"^{0}\[\d*\]$".format(Regex.Escape(collectionName)));
+            if (elementType == typeof(string)) {
+                return from k in Data.Keys where rx.IsMatch(k) select Data[k];
+            }
+
+            if (elementType.IsParsable() ) {
+                return from k in Data.Keys where rx.IsMatch(k) select elementType.ParseString(Data[k]);
+            }
+            throw new CoAppException("Unsupported IEnumerable type '{0}' (must support tryparse)".format(elementType.Name));
+        }
+
+        public object GetValueAsDictionary(string collectionName, Type keyType, Type valueType) {
+            var rx = new Regex(@"^{0}\[(.*)\]$".format(Regex.Escape(collectionName)));
+            var keys = from k in Data.Keys let match = rx.Match(k) where match.Success select match.Groups[1].Captures[0].Value.UrlDecode();
+
+            if (keyType == typeof(string) && valueType == typeof(string)) {
+                return keys.ToDictionary(key => key, key => Data[key]);
+            }
+            if (keyType == typeof(string) && valueType.IsParsable()) {
+                return keys.ToDictionary(key => key, key => valueType.ParseString(Data[key]));
+            }
+            if (keyType.IsParsable() && valueType == typeof(string) ) {
+                return keys.ToDictionary(key => keyType.ParseString(key), key => Data[key]);
+            }
+            if (keyType.IsParsable() && valueType.IsParsable()) {
+                return keys.ToDictionary(key => keyType.ParseString(key), key => valueType.ParseString(Data[key]));
+            }
+
+            throw new CoAppException("Unsupported Dictionary type '{0}/{1}' (keys and values must support tryparse)".format(keyType.Name, valueType.Name));
+        }
+
+        public string GetValueAsString( string key ) {
+            return Data.ContainsKey(key) ? Data[key] : string.Empty;
+        }
+
+        public object GetValueAsPrimitive( string key, Type primitiveType ) {
+            return primitiveType.ParseString(Data.ContainsKey(key) ? Data[key] : null);
+        }
+
+        public object GetValueAsNullable( string key, Type primitiveType ) {
+            return Data.ContainsKey(key) ?  primitiveType.ParseString(Data[key]) : null;
         }
 
         /// <summary>
@@ -147,13 +206,13 @@ namespace CoApp.Toolkit.Pipes {
         /// <remarks></remarks>
         public override string ToString() {
             return Data.Any()
-                ? Data.Keys.Aggregate(Command.UrlEncode().ToLower() + "?", (current, k) => current + (!string.IsNullOrEmpty(Data[k]) ? (k.UrlEncode() + "=" + Data[k].UrlEncode() + "&") : string.Empty))
+                ? Data.Keys.Aggregate(Command.UrlEncode() + "?", (current, k) => current + (!string.IsNullOrEmpty(Data[k]) ? (k.UrlEncode() + "=" + Data[k].UrlEncode() + "&") : string.Empty))
                 : Command.UrlEncode();
         }
 
         public string ToSmallerString() {
             return Data.Any()
-                ? Data.Keys.Aggregate(Command.UrlEncode().ToLower() + "?", (current, k) => current + (!string.IsNullOrEmpty(Data[k]) ? (k.UrlEncode() + "=" + Data[k].Substring(0, Math.Min(Data[k].Length, 512)).UrlEncode() + "&") : string.Empty))
+                ? Data.Keys.Aggregate(Command.UrlEncode() + "?", (current, k) => current + (!string.IsNullOrEmpty(Data[k]) ? (k.UrlEncode() + "=" + Data[k].Substring(0, Math.Min(Data[k].Length, 512)).UrlEncode() + "&") : string.Empty))
                 : Command.UrlEncode();
         }
 
@@ -227,11 +286,26 @@ namespace CoApp.Toolkit.Pipes {
             }
         }
 
+        public void AddDictionary(string key, IDictionary collection) {
+            foreach (var each in collection.Keys) {
+                AddKeyValuePair(key, each.ToString() , collection[each].ToString());
+            }
+        }
+
         public void AddCollection( string key, IEnumerable<string>  values ) {
             if (!values.IsNullOrEmpty()) {
                 var index = 0;
                 foreach (var s in values.Where(s => !string.IsNullOrEmpty(s))) {
                     Add("{0}[{1}]".format(key, index++), s);
+                }
+            }
+        }
+
+        public void AddCollection(string key, IEnumerable values) {
+            if (values != null ) {
+                var index = 0;
+                for (var enmerator = values.GetEnumerator(); enmerator.MoveNext();  ) {
+                    Add("{0}[{1}]".format(key, index++), enmerator.Current.ToString());
                 }
             }
         }

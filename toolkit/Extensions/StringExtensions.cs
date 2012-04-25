@@ -20,11 +20,13 @@
 
 namespace CoApp.Toolkit.Extensions {
     using System;
+    using System.Collections;
     using System.Collections.Generic;
     using System.Globalization;
     using System.IO;
     using System.Linq;
     using System.Net;
+    using System.Reflection;
     using System.Runtime.Remoting.Metadata.W3cXsd2001;
     using System.Security.Cryptography;
     using System.Text;
@@ -77,18 +79,18 @@ namespace CoApp.Toolkit.Extensions {
         /// What? 
         /// Note: Eric is this yours?
         /// </summary>
-        private static readonly Regex _badDirIdCharsRegex = new Regex(@"\s|\.|\-|\\");
+        private static readonly Regex BadDirIdCharsRegex = new Regex(@"\s|\.|\-|\\");
 
         /// <summary>
         /// a two-part version regex.
         /// </summary>
-        private static readonly Regex _majorMinorRegex = new Regex(@"^\d{1,5}\.\d{1,5}$");
+        private static readonly Regex MajorMinorRegex = new Regex(@"^\d{1,5}\.\d{1,5}$");
 
         //TODO this SUCKS. Thanks MS.
         /// <summary>
         /// Email regex. Needs revising
         /// </summary>
-        private static readonly Regex _emailRegex = new Regex(@"^(?<name>\S+)@(?<domain>\S+)$");
+        private static readonly Regex EmailRegex = new Regex(@"^(?<name>\S+)@(?<domain>\S+)$");
 
         // ReSharper disable InconsistentNaming
         /// <summary>
@@ -162,7 +164,7 @@ namespace CoApp.Toolkit.Extensions {
         /// <param name="defaultValue">The default value if the string isn't a valid int.</param>
         /// <returns></returns>
         /// <remarks></remarks>
-        public static int ToInt32(this string str, int defaultValue = 0) {
+        public static int ToInt32(this string str, int defaultValue) {
             int i;
             return Int32.TryParse(str, out i) ? i : defaultValue;
         }
@@ -236,7 +238,7 @@ namespace CoApp.Toolkit.Extensions {
         /// <summary>
         /// wildcard cache for IsWildcardMatch (so we're not rebuilding the regex every time)
         /// </summary>
-        private static readonly Dictionary<string, Regex> _wildcards = new Dictionary<string, Regex>();
+        private static readonly Dictionary<string, Regex> Wildcards = new Dictionary<string, Regex>();
 
         /// <summary>
         /// Determines if a given string is a match for the given wildcard pattern.
@@ -256,8 +258,8 @@ namespace CoApp.Toolkit.Extensions {
             }
 
             var key = wildcardMask + ignorePrefix;
-            if (_wildcards.ContainsKey(key)) {
-                return _wildcards[key].IsMatch(text);
+            if (Wildcards.ContainsKey(key)) {
+                return Wildcards[key].IsMatch(text);
             }
 
             if (wildcardMask.EndsWith("**")) {
@@ -284,9 +286,9 @@ namespace CoApp.Toolkit.Extensions {
                             .Replace("?", @"[^\<\>\|]*") + '$'), RegexOptions.IgnoreCase);*/
 
             
-            lock (_wildcards) {
-                if (!_wildcards.ContainsKey(key)) {
-                    _wildcards.Add(key, mask);
+            lock (Wildcards) {
+                if (!Wildcards.ContainsKey(key)) {
+                    Wildcards.Add(key, mask);
                 }
             }
             return mask.IsMatch(text);
@@ -295,8 +297,8 @@ namespace CoApp.Toolkit.Extensions {
         /// <summary>
         /// wildcard cache for IsWildcardMatch (so we're not rebuilding the regex every time)
         /// </summary>
-        private static readonly Dictionary<string, Regex> _newWildcards = new Dictionary<string, Regex>();
-        private static Regex EscapeFilepathCharacters = new Regex(@"([\\|\$|\^|\{|\[|\||\)|\+|\.|\]|\}|\/])");
+        private static readonly Dictionary<string, Regex> NewWildcards = new Dictionary<string, Regex>();
+        private static readonly Regex EscapeFilepathCharacters = new Regex(@"([\\|\$|\^|\{|\[|\||\)|\+|\.|\]|\}|\/])");
 
         private static Regex WildcardToRegex( string wildcard, string noEscapePrefix = "^" ) {
             return new Regex(noEscapePrefix + EscapeFilepathCharacters.Replace(wildcard, "\\$1")
@@ -317,29 +319,31 @@ namespace CoApp.Toolkit.Extensions {
         /// </summary>
         /// <param name="text"></param>
         /// <param name="wildcardMask"></param>
+        /// <param name="isMatchingLocation"> </param>
+        /// <param name="currentLocation"> </param>
         /// <returns></returns>
         public static bool NewIsWildcardMatch(this string text, string wildcardMask, bool isMatchingLocation = false, string currentLocation = null) {
             string key;
             
             if (!isMatchingLocation) {
                 key = (currentLocation ?? "" )+ wildcardMask;
-                if (!_newWildcards.ContainsKey(key)) {
-                    _newWildcards.Add(key, WildcardToRegex(key));
+                if (!NewWildcards.ContainsKey(key)) {
+                    NewWildcards.Add(key, WildcardToRegex(key));
                 }
                 
-                return _newWildcards[key].IsMatch(text);
+                return NewWildcards[key].IsMatch(text);
             }
 
             key = wildcardMask + (currentLocation ?? "" );
-            if (!_newWildcards.ContainsKey(key)) {
+            if (!NewWildcards.ContainsKey(key)) {
                 var prefix = currentLocation == null
                     ? @".*[\\|\/]"
                     : Regex.Escape((currentLocation.EndsWith("\\") || currentLocation.EndsWith("/")
                         ? currentLocation : currentLocation + (text.Contains("\\") ? "\\" : (text.Contains("/") ? "/" : ""))));
-                _newWildcards.Add(key, WildcardToRegex(wildcardMask, prefix));
+                NewWildcards.Add(key, WildcardToRegex(wildcardMask, prefix));
             }
             
-            return _newWildcards[key].IsMatch(text);
+            return NewWildcards[key].IsMatch(text);
         }
 
         /// <summary>
@@ -617,7 +621,7 @@ namespace CoApp.Toolkit.Extensions {
         /// <returns>Your safe directory ID</returns>
         /// <remarks></remarks>
         public static string MakeSafeDirectoryId(this string input) {
-            return _badDirIdCharsRegex.Replace(input, "_");
+            return BadDirIdCharsRegex.Replace(input, "_");
         }
 
         public static string MakeSafeFileName(this string input ) {
@@ -662,7 +666,7 @@ namespace CoApp.Toolkit.Extensions {
         /// <returns>true if it the string is a valid major.minor version, false otherwise</returns>
         /// <remarks></remarks>
         public static bool IsValidMajorMinorVersion(this string input) {
-            return _majorMinorRegex.IsMatch(input);
+            return MajorMinorRegex.IsMatch(input);
         }
 
 #if!COAPP_ENGINE_CORE 
@@ -744,7 +748,7 @@ namespace CoApp.Toolkit.Extensions {
         /// <returns><c>true</c> if the specified email is email; otherwise, <c>false</c>.</returns>
         /// <remarks></remarks>
         public static bool IsEmail(this string email) {
-            return _emailRegex.IsMatch(email);
+            return EmailRegex.IsMatch(email);
         }
 
         /// <summary>
@@ -873,13 +877,36 @@ namespace CoApp.Toolkit.Extensions {
             return new string(camelCaseToDashed(camelCaseText,separator).ToArray());
         }
 
-        private static IEnumerable<char> camelCaseToDashed(this string camelCaseText, char separator='-' ) {
+        private static IEnumerable<char> camelCaseToDashed(this string camelCaseText, char separator='-') {
+            var firctChar = true;
+
             foreach( var ch in camelCaseText ) {
-                if( Char.IsUpper(ch) ) {
+                if (!firctChar && Char.IsUpper(ch)) {
                     yield return separator;
                 }
+                firctChar = false;
                 yield return Char.ToLower(ch);
             }
+        }
+
+        public static string DashedToCamelCase( this string dashedText, char separator = '-') {
+            return dashedText.IndexOf('-') == -1 ? dashedText : new string(dashedToCamelCase(dashedText, separator).ToArray());
+        }
+
+        private static IEnumerable<char> dashedToCamelCase(this string dashedText, char separator = '-', bool pascalCase = false) {
+            var nextIsUpper = pascalCase;
+            foreach (var ch in dashedText) {
+                if( ch == '-') {
+                    nextIsUpper = true;
+                } else {
+                    yield return nextIsUpper ? char.ToUpper(ch) : ch;
+                    nextIsUpper = false;
+                }
+            }
+        }
+
+        public static string DashedToPascalCase(this string dashedText, char separator = '-') {
+            return dashedText.IndexOf('-') == -1 ? dashedText : new string(dashedToCamelCase(dashedText, separator, true).ToArray());
         }
 
         public delegate string GetMacroValueDelegate(string valueName);
@@ -972,5 +999,38 @@ namespace CoApp.Toolkit.Extensions {
             return string.IsNullOrEmpty(text) ? defaultText : text;
         }
 
+    }
+
+    public static class TypeExtensions {
+        private static readonly Dictionary<Type, MethodInfo> TryParsers = new Dictionary<Type, MethodInfo>();
+        private static MethodInfo GetTryParse(Type parsableType) {
+            if (!TryParsers.ContainsKey(parsableType)) {
+                TryParsers.Add(parsableType, parsableType.GetMethod("TryParse", new[] {typeof (string), parsableType.MakeByRefType()}));
+            }
+            return TryParsers[parsableType];
+        }
+
+
+        public static bool IsParsable( this Type parsableType ) {
+            return GetTryParse(parsableType) != null;
+        }
+
+        public static object ParseString(this Type primitiveType , string value) {
+            if(!string.IsNullOrEmpty(value)) {
+                var pz = new[] { value, Activator.CreateInstance(primitiveType) };
+                // returns the default value if it's not successful.
+                GetTryParse(primitiveType).Invoke(null, pz);
+                return pz[1];
+            }
+            return Activator.CreateInstance(primitiveType);
+        }
+
+        public static bool IsDictionary( this Type dictionaryType ) {
+            return typeof (IDictionary).IsAssignableFrom(dictionaryType);
+        }
+
+        public static bool IsIEnumerable(this Type ienumerableType) {
+            return typeof(IDictionary).IsAssignableFrom(ienumerableType);
+        }
     }
 }

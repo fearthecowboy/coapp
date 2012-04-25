@@ -1,37 +1,26 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿//-----------------------------------------------------------------------
+// <copyright company="CoApp Project">
+//     Copyright (c) 2010-2012 Garrett Serack and CoApp Contributors. 
+//     Contributors can be discovered using the 'git log' command.
+//     All rights reserved.
+// </copyright>
+// <license>
+//     The software is licensed under the Apache 2.0 License (the "License")
+//     You may not use the software except in compliance with the License. 
+// </license>
+//-----------------------------------------------------------------------
 
 namespace CoApp.Toolkit.Tasks {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
 
-    public class SessionCacheMessages : MessageHandlers<SessionCacheMessages> {
-        public Func<Type, Func<object>,object> GetInstance;
-    }
-
-    public class RequestCacheMessages : MessageHandlers<RequestCacheMessages> {
-        private readonly Dictionary<Type, object> _requestCache = new Dictionary<Type, object>();
-
-        public Func<Type, Func<object>, object> GetInstance;
-
-        public RequestCacheMessages() {
-            GetInstance = GetInstanceImpl;
-        }
-
-        private object GetInstanceImpl(Type type, Func<object> constructor ) {
-            lock (_requestCache) {
-                if (!_requestCache.ContainsKey(type)) {
-                    _requestCache.Add(type, constructor());
-                }
-                return _requestCache[type];
-            }
-        }
-    }
+    public delegate object GetSessionCache(Type type, Func<object> constructor);
 
     public class Cache<T> where T : class {
         public static Cache<T> Value = new Cache<T>();
 
-        protected Dictionary<string, T> _cache = new Dictionary<string,T>();
+        protected Dictionary<string, T> _cache = new Dictionary<string, T>();
         protected Dictionary<string, List<Func<string, T>>> _delegateCache = new Dictionary<string, List<Func<string, T>>>();
 
         protected T GetAndRememberDelegateValue(string index) {
@@ -63,8 +52,7 @@ namespace CoApp.Toolkit.Tasks {
                 lock (_cache) {
                     if (_cache.ContainsKey(index)) {
                         _cache[index] = value;
-                    }
-                    else {
+                    } else {
                         _cache.Add(index, value);
                     }
                 }
@@ -72,12 +60,11 @@ namespace CoApp.Toolkit.Tasks {
         }
 
         /// <summary>
-        /// Adds a function delegate to the cache that can get the value requested
-        /// This adds the delegate at the bottom of the list of possible functions that can get the value requested.
+        ///   Adds a function delegate to the cache that can get the value requested This adds the delegate at the bottom of the list of possible functions that can get the value requested.
         /// </summary>
-        /// <param name="index"></param>
-        /// <param name="delegte"></param>
-        public virtual void Add( string index, Func<string, T> delegte ) {
+        /// <param name="index"> </param>
+        /// <param name="delegte"> </param>
+        public virtual void Add(string index, Func<string, T> delegte) {
             lock (_delegateCache) {
                 if (!_delegateCache.ContainsKey(index)) {
                     _delegateCache.Add(index, new List<Func<string, T>>());
@@ -95,7 +82,7 @@ namespace CoApp.Toolkit.Tasks {
             }
         }
 
-        public virtual void ReplaceOrAdd( string index, Func<string, T> delegte ) {
+        public virtual void ReplaceOrAdd(string index, Func<string, T> delegte) {
             lock (_delegateCache) {
                 if (!_delegateCache.ContainsKey(index)) {
                     _delegateCache.Add(index, new List<Func<string, T>>());
@@ -111,7 +98,7 @@ namespace CoApp.Toolkit.Tasks {
             }
         }
 
-        public virtual void Clear(string index ) {
+        public virtual void Clear(string index) {
             lock (_cache) {
                 if (_cache.ContainsKey(index)) {
                     _cache.Remove(index);
@@ -135,62 +122,39 @@ namespace CoApp.Toolkit.Tasks {
             }
         }
 
-        public virtual IEnumerable<string> Keys { get { return _cache.Keys; } }
-        public virtual IEnumerable<T> Values { get { return _cache.Values.AsEnumerable(); } }
-    }
-
-    public class SessionCache<T> : Cache<T> where T : class  {
-        private static Dictionary<Type, object> _nullSessionCache = new Dictionary<Type, object>();
-        public new static SessionCache<T> Value { get {
-            SessionCache<T> result  = null;
-            try {
-                result = (SessionCacheMessages.Invoke.GetInstance(typeof (T), () => new SessionCache<T>())) as SessionCache<T>;
-            } catch {
-            }
-            if( result == null ) {
-                var type = typeof (T);
-                lock (_nullSessionCache) {
-                    if (!_nullSessionCache.ContainsKey(type)) {
-                        _nullSessionCache.Add(type, new SessionCache<T>());
-                    }
-                    result = _nullSessionCache[type] as SessionCache<T>;
-                }
-            }
-            return result;
-        }}
-
-        public override T this[string index] {
+        public virtual IEnumerable<string> Keys {
             get {
-                if( index == null ) {
-                    return default(T);
-                }
-                // check current cache.
-                return _cache.ContainsKey(index) ? _cache[index] : GetAndRememberDelegateValue(index) ??  Cache<T>.Value[index];
-            }
-            set {
-                lock (_cache) {
-                    if (_cache.ContainsKey(index)) {
-                        _cache[index] = value;
-                    }
-                    else {
-                        _cache.Add(index, value);
-                    }
-                }
+                return _cache.Keys;
             }
         }
 
-        public override IEnumerable<string> Keys { get { return _cache.Keys.Union(Cache<T>.Value.Keys); } }
-        public override IEnumerable<T> Values { get { return _cache.Values.AsEnumerable().Union(Cache<T>.Value.Values); } }
-
-        public IEnumerable<string> SessionKeys { get { return _cache.Keys; } }
-        public IEnumerable<T> SessionValues { get { return _cache.Values.AsEnumerable(); } }
-
+        public virtual IEnumerable<T> Values {
+            get {
+                return _cache.Values.AsEnumerable();
+            }
+        }
     }
 
-    public class RequestCache<T> : Cache<T> where T : class {
-        public new static RequestCache<T> Value {
+    public class SessionCache<T> : Cache<T> where T : class {
+        private static Dictionary<Type, object> _nullSessionCache = new Dictionary<Type, object>();
+
+        public new static SessionCache<T> Value {
             get {
-                return (RequestCacheMessages.Invoke.GetInstance(typeof(T), () => new RequestCache<T>())) as RequestCache<T>;
+                SessionCache<T> result = null;
+                try {
+                    result = (Event<GetSessionCache>.Raise(typeof (T), () => new SessionCache<T>())) as SessionCache<T>;
+                } catch {
+                }
+                if (result == null) {
+                    var type = typeof (T);
+                    lock (_nullSessionCache) {
+                        if (!_nullSessionCache.ContainsKey(type)) {
+                            _nullSessionCache.Add(type, new SessionCache<T>());
+                        }
+                        result = _nullSessionCache[type] as SessionCache<T>;
+                    }
+                }
+                return result;
             }
         }
 
@@ -199,7 +163,6 @@ namespace CoApp.Toolkit.Tasks {
                 if (index == null) {
                     return default(T);
                 }
-
                 // check current cache.
                 return _cache.ContainsKey(index) ? _cache[index] : GetAndRememberDelegateValue(index) ?? Cache<T>.Value[index];
             }
@@ -207,15 +170,35 @@ namespace CoApp.Toolkit.Tasks {
                 lock (_cache) {
                     if (_cache.ContainsKey(index)) {
                         _cache[index] = value;
-                    }
-                    else {
+                    } else {
                         _cache.Add(index, value);
                     }
                 }
             }
         }
 
-        public override IEnumerable<string> Keys { get { return _cache.Keys; } }
-        public override IEnumerable<T> Values { get { return _cache.Values.AsEnumerable(); } }
+        public override IEnumerable<string> Keys {
+            get {
+                return _cache.Keys.Union(Cache<T>.Value.Keys);
+            }
+        }
+
+        public override IEnumerable<T> Values {
+            get {
+                return _cache.Values.AsEnumerable().Union(Cache<T>.Value.Values);
+            }
+        }
+
+        public IEnumerable<string> SessionKeys {
+            get {
+                return _cache.Keys;
+            }
+        }
+
+        public IEnumerable<T> SessionValues {
+            get {
+                return _cache.Values.AsEnumerable();
+            }
+        }
     }
 }

@@ -1,6 +1,8 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright company="CoApp Project">
-//     Copyright (c) 2011 Garrett Serack. All rights reserved.
+//     Copyright (c) 2010-2012 Garrett Serack and CoApp Contributors. 
+//     Contributors can be discovered using the 'git log' command.
+//     All rights reserved.
 // </copyright>
 // <license>
 //     The software is licensed under the Apache 2.0 License (the "License")
@@ -8,17 +10,11 @@
 // </license>
 //-----------------------------------------------------------------------
 
-using CoApp.Toolkit.Exceptions;
-using CoApp.Toolkit.Win32;
-using Microsoft.Win32.SafeHandles;
-
 namespace CoApp.Toolkit.Engine {
     using System;
     using System.Diagnostics;
     using System.IO;
-    using System.IO.Pipes;
     using System.Linq;
-    using System.Reflection;
     using System.Runtime.InteropServices;
     using System.Security.AccessControl;
     using System.Security.Principal;
@@ -27,16 +23,18 @@ namespace CoApp.Toolkit.Engine {
     using Exceptions;
     using Extensions;
     using Logging;
+    using Toolkit.Exceptions;
+    using Win32;
     using TimeoutException = System.TimeoutException;
 
     [Flags]
     internal enum SERVICE_ACCESS {
-        SERVICE_INTERROGATE =0x0080,
+        SERVICE_INTERROGATE = 0x0080,
         SERVICE_PAUSE_CONTINUE = 0x0040,
-        SERVICE_QUERY_CONFIG =0x0001,
-        SERVICE_QUERY_STATUS =0x0004,
-        SERVICE_START =0x0010,
-        SERVICE_STOP =0x0020, 
+        SERVICE_QUERY_CONFIG = 0x0001,
+        SERVICE_QUERY_STATUS = 0x0004,
+        SERVICE_START = 0x0010,
+        SERVICE_STOP = 0x0020,
         SERVICE_COAPP = SERVICE_INTERROGATE | SERVICE_PAUSE_CONTINUE | SERVICE_QUERY_CONFIG | SERVICE_QUERY_STATUS | SERVICE_START | SERVICE_STOP
     }
 
@@ -45,15 +43,17 @@ namespace CoApp.Toolkit.Engine {
         public const string CoAppDisplayName = "CoApp Package Installer Service";
 
         public static bool IsServiceInstalled {
-            get { return ServiceController.GetServices().Any(service => service.ServiceName == CoAppServiceName); }
+            get {
+                return ServiceController.GetServices().Any(service => service.ServiceName == CoAppServiceName);
+            }
         }
 
-        private static readonly Lazy<ServiceController> _controller = new Lazy<ServiceController>(() => new ServiceController(CoAppServiceName));
+        private static readonly Lazy<ServiceController> Controller = new Lazy<ServiceController>(() => new ServiceController(CoAppServiceName));
 
         internal static void EnsureServiceAclsCorrect() {
             var psd = new byte[0];
             uint bufSizeNeeded;
-            var ok = Advapi32.QueryServiceObjectSecurity(_controller.Value.ServiceHandle, SecurityInfos.DiscretionaryAcl, psd, 0, out bufSizeNeeded);
+            var ok = Advapi32.QueryServiceObjectSecurity(Controller.Value.ServiceHandle, SecurityInfos.DiscretionaryAcl, psd, 0, out bufSizeNeeded);
             if (!ok) {
                 int err = Marshal.GetLastWin32Error();
                 if (err == 122) {
@@ -61,20 +61,21 @@ namespace CoApp.Toolkit.Engine {
                     // expected; now we know bufsize
                     psd = new byte[bufSizeNeeded];
                     ok = Advapi32.QueryServiceObjectSecurity(
-                        _controller.Value.ServiceHandle, SecurityInfos.DiscretionaryAcl, psd, bufSizeNeeded, out bufSizeNeeded);
+                        Controller.Value.ServiceHandle, SecurityInfos.DiscretionaryAcl, psd, bufSizeNeeded, out bufSizeNeeded);
                 } else {
                     throw new ApplicationException("error calling QueryServiceObjectSecurity() to get DACL for Service: error code=" + err);
                 }
             }
-            if (!ok)
+            if (!ok) {
                 throw new ApplicationException("error calling QueryServiceObjectSecurity(2) to get DACL for Service: error code=" + Marshal.GetLastWin32Error());
+            }
 
             // get security descriptor via raw into DACL form so ACE
             // ordering checks are done for us.
-            RawSecurityDescriptor rsd = new RawSecurityDescriptor(psd, 0);
-            DiscretionaryAcl dacl = new DiscretionaryAcl(false, false, rsd.DiscretionaryAcl);
-            
-            dacl.AddAccess(AccessControlType.Allow, new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null), (int)SERVICE_ACCESS.SERVICE_COAPP,InheritanceFlags.None, PropagationFlags.None );
+            var rsd = new RawSecurityDescriptor(psd, 0);
+            var dacl = new DiscretionaryAcl(false, false, rsd.DiscretionaryAcl);
+
+            dacl.AddAccess(AccessControlType.Allow, new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null), (int)SERVICE_ACCESS.SERVICE_COAPP, InheritanceFlags.None, PropagationFlags.None);
 
             // convert discretionary ACL back to raw form; looks like via byte[] is only way
             var rawdacl = new byte[dacl.BinaryLength];
@@ -85,7 +86,7 @@ namespace CoApp.Toolkit.Engine {
             var rawsd = new byte[rsd.BinaryLength];
             rsd.GetBinaryForm(rawsd, 0);
 
-            ok = Advapi32.SetServiceObjectSecurity(_controller.Value.ServiceHandle, SecurityInfos.DiscretionaryAcl, rawsd);
+            ok = Advapi32.SetServiceObjectSecurity(Controller.Value.ServiceHandle, SecurityInfos.DiscretionaryAcl, rawsd);
             if (!ok) {
                 throw new ApplicationException("error calling SetServiceObjectSecurity(); error code=" + Marshal.GetLastWin32Error());
             }
@@ -93,15 +94,19 @@ namespace CoApp.Toolkit.Engine {
 
         // some dumbass thought that they should just return the last value, forcing developers to 'refresh' to get the current value. 
         // Not quite sure WHY THIS EVER SOUNDED LIKE A GOOD IDEA!? IF I WANTED THE LAST F$(*&%^*ING VALUE, I'D HAVE CACHED IT MYSELF DUMBASS!
-        public static ServiceControllerStatus Status { get {
-            _controller.Value.Refresh();
-            return _controller.Value.Status; 
-        }}
+        public static ServiceControllerStatus Status {
+            get {
+                Controller.Value.Refresh();
+                return Controller.Value.Status;
+            }
+        }
 
-        public static bool CanStop { get {
-            _controller.Value.Refresh();
-            return _controller.Value.CanStop;
-        }}
+        public static bool CanStop {
+            get {
+                Controller.Value.Refresh();
+                return Controller.Value.CanStop;
+            }
+        }
 
         public static bool IsServiceRunning {
             get {
@@ -113,7 +118,7 @@ namespace CoApp.Toolkit.Engine {
             try {
                 if (IsServiceInstalled) {
                     if (Status != ServiceControllerStatus.Stopped && CanStop) {
-                        _controller.Value.Stop();
+                        Controller.Value.Stop();
                     }
                 }
             } catch {
@@ -124,7 +129,6 @@ namespace CoApp.Toolkit.Engine {
             KillServiceProcesses();
         }
 
-       
         public static void TryToStartService(bool secondAttempt = false) {
             if (!IsServiceInstalled) {
                 InstallAndStartService();
@@ -135,12 +139,11 @@ namespace CoApp.Toolkit.Engine {
 
             switch (Status) {
                 case ServiceControllerStatus.ContinuePending:
-                   // Logger.Message("==[State:Continuing]==");
+                    // Logger.Message("==[State:Continuing]==");
                     // wait for it to continue.
                     try {
-                        _controller.Value.WaitForStatus(ServiceControllerStatus.Running, new TimeSpan(0, 0, 0, 10));
-                    }
-                    catch (TimeoutException) {
+                        Controller.Value.WaitForStatus(ServiceControllerStatus.Running, new TimeSpan(0, 0, 0, 10));
+                    } catch (TimeoutException) {
                         throw new UnableToStartServiceException(
                             "Service is in the '{0}' state, and didn't respond before timing out.".format(Status.ToString()));
                     }
@@ -155,9 +158,8 @@ namespace CoApp.Toolkit.Engine {
                 case ServiceControllerStatus.PausePending:
                     //Logger.Message("==[State:Pausing]==");
                     try {
-                        _controller.Value.WaitForStatus(ServiceControllerStatus.Paused, new TimeSpan(0, 0, 0, 10));
-                    }
-                    catch (TimeoutException) {
+                        Controller.Value.WaitForStatus(ServiceControllerStatus.Paused, new TimeSpan(0, 0, 0, 10));
+                    } catch (TimeoutException) {
                         throw new UnableToStartServiceException(
                             "Service is in the '{0}' state, and didn't respond before timing out.".format(Status.ToString()));
                     }
@@ -174,11 +176,10 @@ namespace CoApp.Toolkit.Engine {
                     break;
                 case ServiceControllerStatus.Paused:
                     //Logger.Message("==[State:Paused]==");
-                    _controller.Value.Continue();
+                    Controller.Value.Continue();
                     try {
-                        _controller.Value.WaitForStatus(ServiceControllerStatus.Running, new TimeSpan(0, 0, 0, 10));
-                    }
-                    catch (TimeoutException) {
+                        Controller.Value.WaitForStatus(ServiceControllerStatus.Running, new TimeSpan(0, 0, 0, 10));
+                    } catch (TimeoutException) {
                         if (secondAttempt) {
                             throw new UnableToStartServiceException(
                                 "Service is in the '{0}' state, and didn't respond before timing out.".format(Status.ToString()));
@@ -195,9 +196,8 @@ namespace CoApp.Toolkit.Engine {
                 case ServiceControllerStatus.StartPending:
                     Logger.Message("==[State:Starting]==");
                     try {
-                        _controller.Value.WaitForStatus(ServiceControllerStatus.Running, new TimeSpan(0, 0, 0, 10));
-                    }
-                    catch (TimeoutException) {
+                        Controller.Value.WaitForStatus(ServiceControllerStatus.Running, new TimeSpan(0, 0, 0, 10));
+                    } catch (TimeoutException) {
                         if (secondAttempt) {
                             throw new UnableToStartServiceException(
                                 "Service is in the '{0}' state, and didn't respond before timing out.".format(Status.ToString()));
@@ -209,9 +209,8 @@ namespace CoApp.Toolkit.Engine {
                 case ServiceControllerStatus.StopPending:
                     Logger.Message("==[State:Stopping]==");
                     try {
-                        _controller.Value.WaitForStatus(ServiceControllerStatus.Stopped, new TimeSpan(0, 0, 0, 10));
-                    }
-                    catch (TimeoutException) {
+                        Controller.Value.WaitForStatus(ServiceControllerStatus.Stopped, new TimeSpan(0, 0, 0, 10));
+                    } catch (TimeoutException) {
                         throw new UnableToStartServiceException(
                             "Service is in the '{0}' state, and didn't respond before timing out.".format(Status.ToString()));
                     }
@@ -229,11 +228,10 @@ namespace CoApp.Toolkit.Engine {
 
                 case ServiceControllerStatus.Stopped:
                     //Logger.Message("==[State:Stopped]==");
-                    _controller.Value.Start();
+                    Controller.Value.Start();
                     try {
-                        _controller.Value.WaitForStatus(ServiceControllerStatus.Running, new TimeSpan(0, 0, 0, 10));
-                    }   
-                    catch (TimeoutException) {
+                        Controller.Value.WaitForStatus(ServiceControllerStatus.Running, new TimeSpan(0, 0, 0, 10));
+                    } catch (TimeoutException) {
                         if (secondAttempt) {
                             throw new UnableToStartServiceException(
                                 "Service is in the '{0}' state, and didn't respond before timing out.".format(Status.ToString()));
@@ -244,26 +242,29 @@ namespace CoApp.Toolkit.Engine {
             }
         }
 
-        public static bool Available { get {
-            lock (typeof(EngineServiceManager)) {
-                try {
-                    using( var ewh = EventWaitHandle.OpenExisting("Global\\CoAppAvailable", EventWaitHandleRights.Synchronize)) {
-                        return ewh.WaitOne(0);
+        public static bool Available {
+            get {
+                lock (typeof (EngineServiceManager)) {
+                    try {
+                        using (var ewh = EventWaitHandle.OpenExisting("Global\\CoAppAvailable", EventWaitHandleRights.Synchronize)) {
+                            return ewh.WaitOne(0);
+                        }
+                    } catch {
                     }
-                }catch {}
-                return false;
+                    return false;
+                }
             }
-        }}
+        }
 
         public static bool StartingUp {
             get {
-                lock (typeof(EngineServiceManager)) {
+                lock (typeof (EngineServiceManager)) {
                     try {
                         using (var ewh = EventWaitHandle.OpenExisting("Global\\CoAppStartingUp", EventWaitHandleRights.Synchronize)) {
                             return ewh.WaitOne(0);
                         }
+                    } catch {
                     }
-                    catch { }
                     return false;
                 }
             }
@@ -271,13 +272,13 @@ namespace CoApp.Toolkit.Engine {
 
         public static bool ShuttingDown {
             get {
-                lock (typeof(EngineServiceManager)) {
+                lock (typeof (EngineServiceManager)) {
                     try {
                         using (var ewh = EventWaitHandle.OpenExisting("Global\\CoAppShuttingDown", EventWaitHandleRights.Synchronize)) {
                             return ewh.WaitOne(0);
                         }
+                    } catch {
                     }
-                    catch { }
                     return false;
                 }
             }
@@ -285,22 +286,22 @@ namespace CoApp.Toolkit.Engine {
 
         public static bool ShutdownRequested {
             get {
-                lock (typeof(EngineServiceManager)) {
+                lock (typeof (EngineServiceManager)) {
                     try {
                         using (var ewh = EventWaitHandle.OpenExisting("Global\\CoAppShutdownRequested", EventWaitHandleRights.Synchronize)) {
                             return ewh.WaitOne(0);
                         }
+                    } catch {
                     }
-                    catch { }
                     return false;
                 }
             }
         }
 
-        public static int EngineStartupStatus { 
+        public static int EngineStartupStatus {
             get {
                 return PackageManagerSettings.CoAppInformation["StartupPercentComplete"].IntValue;
-            } 
+            }
         }
 
         public static bool IsEngineResponding {
@@ -310,7 +311,7 @@ namespace CoApp.Toolkit.Engine {
         }
 
         public static void EnsureServiceIsResponding() {
-            if( Available ) {
+            if (Available) {
                 // looks good to me!
                 return;
             }
@@ -337,9 +338,8 @@ namespace CoApp.Toolkit.Engine {
                 throw new CoAppException("CoApp Engine appears stuck in starting up state.");
             }
 
-
             count = 10;
-            while(ShuttingDown && count > 0 ) {
+            while (ShuttingDown && count > 0) {
                 if (IsServiceRunning) {
                     // looks like we caught the win32 service shutting down.
                     // let's try to start it back up (it'll safely stop first, so no worries)
@@ -352,7 +352,7 @@ namespace CoApp.Toolkit.Engine {
                 count--;
             }
 
-            if( ShuttingDown ) {
+            if (ShuttingDown) {
                 // hmm. looks like it's stuck shutting down an interactive version of the serivce
                 // he's had long enough, let's kill him.
                 KillServiceProcesses();
@@ -361,7 +361,7 @@ namespace CoApp.Toolkit.Engine {
                 return;
             }
 
-            if( IsServiceRunning ) {
+            if (IsServiceRunning) {
                 // hmm, we're not available, startingup or shutting down. 
                 // try to stop it and restart it then.
                 TryToStopService();
@@ -371,31 +371,31 @@ namespace CoApp.Toolkit.Engine {
             }
 
             // we're not running at all!
-            if( !IsServiceInstalled) {
+            if (!IsServiceInstalled) {
                 InstallAndStartService();
                 EnsureServiceIsResponding();
                 return;
             }
-           
+
             // hmm. just try to start it I guess.
             TryToStartService();
             EnsureServiceIsResponding();
         }
-
 
         private static void KillServiceProcesses() {
             foreach (var proc in Process.GetProcessesByName("coapp.service").Where(each => each.Id != Process.GetCurrentProcess().Id).ToArray()) {
                 try {
                     proc.Kill();
                 } catch {
-
                 }
             }
         }
 
-        private static bool AreAnyServiceExesRunning{get {
-            return Process.GetProcessesByName("coapp.service").Any(each => each != Process.GetCurrentProcess());
-        }}
+        private static bool AreAnyServiceExesRunning {
+            get {
+                return Process.GetProcessesByName("coapp.service").Any(each => each != Process.GetCurrentProcess());
+            }
+        }
 
         public static string CoAppServiceExecutablePath {
             get {
@@ -408,8 +408,8 @@ namespace CoApp.Toolkit.Engine {
                 // this will happen when the service has been installed and configureed at least once.
                 if (Directory.Exists(binDirectory)) {
                     var serviceExes = binDirectory.FindFilesSmarter(@"**\coapp.service.exe").OrderByDescending(Version);
-                    result = serviceExes.FirstOrDefault( each => !Symlink.IsSymlink(each) || File.Exists(Symlink.GetActualPath(each)));
-                    if( result != null ) {
+                    result = serviceExes.FirstOrDefault(each => !Symlink.IsSymlink(each) || File.Exists(Symlink.GetActualPath(each)));
+                    if (result != null) {
                         return result;
                     }
                 }
@@ -421,7 +421,7 @@ namespace CoApp.Toolkit.Engine {
                 if (Directory.Exists(searchDirectory)) {
                     // get all of the coapp.service.exes and pick the one with the highest version
                     var serviceExes = searchDirectory.FindFilesSmarter(@"**\coapp.service.exe").OrderByDescending(Version);
-                    
+
                     // ah, so we found some did we? Should never be a symlink in this case.
                     result = serviceExes.FirstOrDefault(each => !Symlink.IsSymlink(each));
                 }
@@ -480,7 +480,7 @@ namespace CoApp.Toolkit.Engine {
                 TryToStartService(); // make sure it is started too.
                 return;
             }
-            
+
             // uh, if we got here, we're not going to be able start Coapp...
             throw new CoAppException("Unable to start CoApp Service; the service executable is: '{0}'".format(exe));
         }

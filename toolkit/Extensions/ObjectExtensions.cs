@@ -13,7 +13,7 @@ namespace CoApp.Toolkit.Extensions
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using System.Reflection;
+    
     public static class ObjectExtensions
     {
         private static int[] tenPrimes = { 2, 3, 5, 7, 11, 13, 17, 19, 23, 29 };
@@ -49,9 +49,20 @@ namespace CoApp.Toolkit.Extensions
             return objects.Skip(10).Aggregate(hashCodesWithPrimes, (result, obj) => result + (obj == null ? 0 : obj.GetHashCode()));    
         }
 
-        public static T With<T>(this T item, Action<T> action) {
-            action(item);
+        public static T With<T>(this T item, Action<T> action, Action onNullOrDefault = null) {
+            if (item == null || item.Equals(default(T))) {
+                if (onNullOrDefault != null) {
+                    onNullOrDefault();
+                }
+            }
+            else {
+                action(item);
+            }
             return item;
+        }
+
+        public static U With<T,U>(this T item, Func<T,U> action, Func<U> onNullOrDefault = null) {
+            return item.Equals(default(T)) ? (onNullOrDefault != null ? onNullOrDefault() : default(U)) : action(item);
         }
 
         public static object SimpleEval(this object instance, string simpleCode) {

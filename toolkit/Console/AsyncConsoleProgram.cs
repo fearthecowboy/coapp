@@ -33,13 +33,7 @@ namespace CoApp.Toolkit.Console {
 
         protected virtual int Startup(IEnumerable<string> args) {
             var task = Task.Factory.StartNew(() => {
-#if DEBUG
-                new DebugMessage {
-                    WriteLine = (text) => {
-                        Console.WriteLine("[DEBUG][{0}] {1}", ++Counter,text);
-                    }
-                }.Register();
-#endif                
+
                 Main(args);
             }, CancellationTokenSource.Token);
 

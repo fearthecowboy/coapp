@@ -1,8 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright company="CoApp Project">
-//     Copyright (c) 2011 Eric Schultz. All rights reserved.
-//       CSIDL enum and SHGetFolderPath description from http://www.pinvoke.net/default.aspx/shell32/CSIDL%20.html
+//     Copyright (c) 2010-2012 Eric Schultz and CoApp Contributors. 
+//     Contributors can be discovered using the 'git log' command.
+//     All rights reserved.
 // </copyright>
+// <license>
+//     The software is licensed under the Apache 2.0 License (the "License")
+//     You may not use the software except in compliance with the License. 
+// </license>
+// CSIDL enum and SHGetFolderPath description from http://www.pinvoke.net/default.aspx/shell32/CSIDL%20.html
 //-----------------------------------------------------------------------
 
 namespace CoApp.Toolkit.Win32 {

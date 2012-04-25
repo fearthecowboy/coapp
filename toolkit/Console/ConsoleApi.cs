@@ -1,6 +1,8 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright company="CoApp Project">
-//     Copyright (c) 2011 Garrett Serack . All rights reserved.
+//     Copyright (c) 2010-2012 Garrett Serack and CoApp Contributors. 
+//     Contributors can be discovered using the 'git log' command.
+//     All rights reserved.
 // </copyright>
 // <license>
 //     The software is licensed under the Apache 2.0 License (the "License")
@@ -9,7 +11,6 @@
 //-----------------------------------------------------------------------
 
 namespace CoApp.Toolkit.Console {
-    using System;
     using Microsoft.Win32.SafeHandles;
     using Win32;
 
@@ -17,15 +18,6 @@ namespace CoApp.Toolkit.Console {
     ///   Declarations of some Console API functions and structures.
     /// </summary>
     public static class ConsoleApi {
-        /*
-            public const Int32 CONSOLE_TEXTMODE_BUFFER = 1;
-            public const Int32 SW_SHOW = 5;
-            public const Int32 WM_KEYDOWN = 0x100;
-            public const Int32 WM_COMMAND = 0x112;
-            public const Int32 WM_CLOSE = 0x0010;
-            public const int CREATE_NEW_CONSOLE = 0x00000010;
-            */
-
         public static void SendStringToStdIn(string text) {
             var stdIn = Kernel32.GetStdHandle(StandardHandle.INPUT);
             foreach (var c in text) {

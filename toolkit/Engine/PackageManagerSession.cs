@@ -9,12 +9,5 @@
 //-----------------------------------------------------------------------
 
 namespace CoApp.Toolkit.Engine {
-    using System;
-    using Tasks;
 
-    internal class PackageManagerSession : MessageHandlers<PackageManagerSession> {
-        public Func<PermissionPolicy, bool> CheckForPermission;
-        public Func<bool> CancellationRequested;
-        public Func<string, string> GetCanonicalizedPath;
-    }
 }

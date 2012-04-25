@@ -63,13 +63,11 @@ namespace CoApp.Toolkit.Engine {
                     lock (SessionCache<Task<RecognitionInfo>>.Value) {
                         completion = SessionCache<Task<RecognitionInfo>>.Value[safeCanonicalName];
                         if (completion != null) {
-                            return completion.ContinueAlways(antecedent => {
-                                return antecedent.Result;
-                            });
+                            return completion.ContinueAlways(antecedent => antecedent.Result);
                         }
 
                         // otherwise, let's create a delegate to run when the file gets resolved.
-                        completion = new Task<RecognitionInfo>((rrfState) => {
+                        completion = new Task<RecognitionInfo>(rrfState => {
                             var state = rrfState as RequestRemoteFileState;
                             if (state == null || string.IsNullOrEmpty(state.LocalLocation)) {
                                 // didn't fill in the local location? -- this happens when the client can't download.
@@ -116,7 +114,7 @@ namespace CoApp.Toolkit.Engine {
 
                     // GS01: Should we make a deeper path in the cache directory?
                     // perhaps that would let us use a cached version of the file we're looking for.
-                    PackageManagerMessages.Invoke.GetSession().RequireRemoteFile(safeCanonicalName, location.AbsoluteUri.SingleItemAsEnumerable(),
+                    Event<GetResponseInterface>.RaiseFirst().RequireRemoteFile(safeCanonicalName, location.AbsoluteUri.SingleItemAsEnumerable(),
                         PackageManagerSettings.CoAppPackageCache, forceRescan);
 
                     // return the completion task, as whatever is waiting for this 

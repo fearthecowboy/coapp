@@ -76,7 +76,7 @@ namespace CoApp.CLI {
         private static int Main(string[] args) {
 #if DEBUG
             if( Debugger.IsAttached ) {
-                Thread.Sleep(1000);
+                Thread.Sleep(2000);
             }
 #endif 
             return new CoAppMain().Startup(args);
@@ -86,17 +86,7 @@ namespace CoApp.CLI {
 
         private static List<string>  activeDownloads = new List<string>();
 
-        private readonly EasyPackageManager _easyPackageManager = new EasyPackageManager((itemUri, localLocation, progress) => {
-            if (!activeDownloads.Contains(itemUri)) {
-                activeDownloads.Add(itemUri);
-            }
-            "Downloading {0}".format(itemUri.UrlDecode()).PrintProgressBar(progress);
-        }, (itemUrl, localLocation) => {
-            if (activeDownloads.Contains(itemUrl)) {
-                Console.WriteLine();
-                activeDownloads.Remove(itemUrl);
-            }
-        } );
+        private readonly EasyPackageManager _easyPackageManager = new EasyPackageManager();
 
         /// <summary>
         /// The (non-static) startup method
@@ -105,7 +95,21 @@ namespace CoApp.CLI {
         /// <returns>Process return code.</returns>
         /// <remarks></remarks>
         protected override int Main(IEnumerable<string> args) {
-           
+
+            CurrentTask.Events += new DownloadProgress((remoteLocation, location, progress) => {
+                if (!activeDownloads.Contains(remoteLocation)) {
+                    activeDownloads.Add(remoteLocation);
+                }
+                "Downloading {0}".format(remoteLocation.UrlDecode()).PrintProgressBar(progress);
+            });
+
+            CurrentTask.Events += new DownloadCompleted((remoteLocation, locallocation) => {
+                if (activeDownloads.Contains(remoteLocation)) {
+                    Console.WriteLine();
+                    activeDownloads.Remove(remoteLocation);
+                }
+            });
+
             try {
                 #region command line parsing
 
@@ -913,6 +917,10 @@ namespace CoApp.CLI {
         }
         
         private Task InstallPackages(IEnumerable<string> parameters) {
+            
+            // when this line is placed in the inner scope, the whole thing gets breaky.!?
+            CurrentTask.Events += new PackageInstallProgress((canonicalName, progress, overall) => "Installing: {0}".format(canonicalName).PrintProgressBar(progress));
+
             // given what the user requested, what packages are they really asking for?
             return _easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, false, null, null, null, false, _latest ?? true, _location, false, false, false).Continue(packages => {
                 // we got back a package collection for what the user passed in.
@@ -922,8 +930,6 @@ namespace CoApp.CLI {
                     PrintNoPackagesFound(parameters);
                     return;
                 }
-
-               
 
                 // we have a collection of packages that the user has requested.
                 // first, lets auto-filter out ones that we can obviously see are not what they wanted.
@@ -935,8 +941,8 @@ namespace CoApp.CLI {
                     Console.WriteLine("{0} == {1}", exception.Message, exception.StackTrace);
                 });
 
-                findConflictTask.Continue(filteredPackages => {
 
+                findConflictTask.Continue(filteredPackages => {
                     if (!filteredPackages.Any(each => !each.IsInstalled)) {
                         Console.WriteLine("The following packages are already installed:\r\n");
                         PrintPackages(filteredPackages);
@@ -979,14 +985,10 @@ namespace CoApp.CLI {
                             return;
                         }
 
+
                         foreach (var p in filteredPackages) {
                             try {
-                                _easyPackageManager.InstallPackage(
-                                    p.CanonicalName, _autoUpgrade, (canonicalName, progress, overall) => {
-                                        ConsoleExtensions.PrintProgressBar("Installing: {0}".format(canonicalName), progress);
-                                    }, (packageName) => {
-                                        Console.WriteLine();
-                                    }).Wait();
+                                _easyPackageManager.InstallPackage(p.CanonicalName, _autoUpgrade).Continue(() => Console.WriteLine()).Wait();
                             }
                             catch (Exception failed) {
                                 failed = failed.Unwrap();
@@ -994,25 +996,32 @@ namespace CoApp.CLI {
                                 Console.WriteLine("{0} == {1}", failed.Message, failed.StackTrace);
                             }
                         }
+
                     });
                 });
             });
         }
 
+        public static void foo() {
+            
+        }
+
         private Task RemovePackages(IEnumerable<string> parameters ) {
+
+            CurrentTask.Events += new PackageRemoveProgress((name, progress) => "Removing {0}".format(name).PrintProgressBar(progress));
+
             var removePackagesTask = _easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
                 .Continue(packagesToRemove => {
                     if (packagesToRemove.IsNullOrEmpty()) {
                         PrintNoPackagesFound(parameters);
                         return 0;
                     }
-
-                    return _easyPackageManager.RemovePackages(packagesToRemove.Select(each => each.CanonicalName), _force == true, (packageCanonicalName, progress) => {
-                        ConsoleExtensions.PrintProgressBar("Removing {0}".format(packageCanonicalName), progress);
-                    }, packageCanonicalName => {
+                    
+                    return _easyPackageManager.RemovePackages(packagesToRemove.Select(each => each.CanonicalName), _force == true).Continue( total => {
                         Console.WriteLine();
+                        return total;
                     }).Result;
-                });
+                });        
                 
 
             removePackagesTask.ContinueOnFail(exception => {
@@ -1038,6 +1047,10 @@ namespace CoApp.CLI {
             return removePackagesTask.Continue((total => {
                 Console.WriteLine("\r\nSuccessfully removed {0} packages", total);
             }));
+        }
+
+        private static void foot2() {
+          
         }
 
         private void ListPolicies(string policyName = null) {

@@ -219,7 +219,6 @@ namespace CoApp.Toolkit.Engine.Feeds {
         /// <param name="version"></param>
         /// <param name="arch"></param>
         /// <param name="publicKeyToken"></param>
-        /// <param name="packageFilter">The package filter.</param>
         /// <returns></returns>
         /// <remarks></remarks>
         internal virtual IEnumerable<Package> FindPackages(string name, string version, string arch, string publicKeyToken) {

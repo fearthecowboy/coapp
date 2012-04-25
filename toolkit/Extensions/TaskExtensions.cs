@@ -21,7 +21,6 @@
             }
         }
 
-
         /// <summary>
         ///   Checks the collection of antecedent tasks for two conditions: if any are canceled, throws an OperationCompletedBeforeResultException if any are faulted, throws an AggregateException containing all the exceptions from the tasks Warning: This function will Wait() for the all the antecendent tasks to complete.
         /// </summary>

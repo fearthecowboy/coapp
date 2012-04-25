@@ -62,7 +62,7 @@ namespace CoApp.Toolkit.Extensions {
         /// <summary>
         /// A hashset of strings that has already been fullpath'd 
         /// </summary>
-        private static readonly HashSet<string> _fullPathCache = new HashSet<string>();
+        private static readonly HashSet<string> FullPathCache = new HashSet<string>();
 
         /// <summary>
         /// the Kernel filename prefix string for paths that should not be interpreted. 
@@ -74,29 +74,29 @@ namespace CoApp.Toolkit.Extensions {
         /// regular expression to identify a UNC path returned by the Kernel.
         /// (needed for path normalization for reparse points)
         /// </summary>
-        private static readonly Regex _uncPrefixRx = new Regex(@"\\\?\?\\UNC\\");
+        private static readonly Regex UncPrefixRx = new Regex(@"\\\?\?\\UNC\\");
 
         /// <summary>
         /// regular expression to match a drive letter in a low level path
         /// (needed for path normalization for reparse points)
         /// </summary>
-        private static readonly Regex _drivePrefixRx = new Regex(@"\\\?\?\\[a-z,A-Z]\:\\");
+        private static readonly Regex DrivePrefixRx = new Regex(@"\\\?\?\\[a-z,A-Z]\:\\");
 
 #pragma warning disable 169
         /// <summary>
         /// regular expression to identify a volume mount point 
         /// (needed for path normalization for reparse points)
         /// </summary>
-        private static readonly Regex _volumePrefixRx = new Regex(@"\\\?\?\\Volume");
+        private static readonly Regex VolumePrefixRx = new Regex(@"\\\?\?\\Volume");
 #pragma warning restore 169
 
         /// <summary>
         /// Apparently, Eric has gone insane?
         /// NOTE: subject to cleanup.
         /// </summary>
-        private static readonly Regex _invalidDoubleWcRx = new Regex(@"\\.+\*\*|\*\*[^\\]+\\|\*\*\\\*\*");
+        private static readonly Regex InvalidDoubleWcRx = new Regex(@"\\.+\*\*|\*\*[^\\]+\\|\*\*\\\*\*");
 
-        private static char[] wildcard_chars = new[] {
+        private static readonly char[] WildcardChars = new[] {
             '*', '?'
         };
 
@@ -129,21 +129,21 @@ namespace CoApp.Toolkit.Extensions {
 #if COAPP_ENGINE_CORE 
 
         // in the engine, we'd like disposable filenames to be session-local
-        private static List<string> _disposableFilenames {
+        private static List<string> DisposableFilenames {
             get { return SessionCache<List<string>>.Value["DisposableFilenames"] ?? (SessionCache<List<string>>.Value["DisposableFilenames"] = new List<string>()); }
         }
 #else
-        private static List<string> _disposableFilenames = new List<string>();
-
+        private static readonly List<string> DisposableFilenames = new List<string>();
 #endif
         private static bool _triedCleanup;
 
         public static void RemoveTemporaryFiles() {
-            foreach (var f in _disposableFilenames.ToArray().Where(File.Exists)) {
+            foreach (var f in DisposableFilenames.ToArray().Where(File.Exists)) {
                 f.TryHardToDelete();
             }
 
-            RemoveInvalidSymlinks();
+            // this is a wee bit more aggressive than I'm comfortable with.
+            // RemoveInvalidSymlinks();
 
             // and try to clean up as we leave the process too.
             TryToHandlePendingRenames(true);
@@ -246,7 +246,7 @@ namespace CoApp.Toolkit.Extensions {
         public static string MarkFileTemporary(this string filename) {
 #if !DEBUG
             lock(typeof(FilesystemExtensions)) {
-                _disposableFilenames.Add(filename);
+                DisposableFilenames.Add(filename);
             }
 #endif
             return filename;
@@ -350,7 +350,7 @@ namespace CoApp.Toolkit.Extensions {
 
             currentDirectory = Path.GetFullPath(currentDirectory);
             pathToMakeRelative = Path.GetFullPath(pathToMakeRelative);
-
+            
             if (!Path.GetPathRoot(currentDirectory).Equals(Path.GetPathRoot(pathToMakeRelative), StringComparison.CurrentCultureIgnoreCase)) {
                 return pathToMakeRelative;
             }
@@ -414,7 +414,7 @@ namespace CoApp.Toolkit.Extensions {
             }
 
             var uri = new Uri(filenameHint);
-            filenameHint = uri.AbsolutePath;
+            // filenameHint = uri.AbsolutePath;
 
             var localPath = uri.LocalPath.Replace("/", "\\");
 
@@ -537,7 +537,7 @@ namespace CoApp.Toolkit.Extensions {
             }
             path = path.GetFullPath().Replace("$$STAR$$", "*").Replace("$$QUERY$$", "?");
 
-            var i = path.IndexOfAny(wildcard_chars);
+            var i = path.IndexOfAny(WildcardChars);
             if (i == -1) {
                 // then there isn't any wildcards in the search. That should probably be pretty easy :S
                 i = path.Length;
@@ -578,7 +578,7 @@ namespace CoApp.Toolkit.Extensions {
             if (String.IsNullOrEmpty(pathMask)) {
                 return FindFilesSmarterComplex(pathPrefix);
             }
-            if (_invalidDoubleWcRx.IsMatch(pathMask)) {
+            if (InvalidDoubleWcRx.IsMatch(pathMask)) {
                 throw new ArgumentException("The wildcard path {0} is invalid.".format(pathMask));
             }
 
@@ -813,7 +813,7 @@ namespace CoApp.Toolkit.Extensions {
 
                     // Now we mark the locked file to be deleted upon next reboot (or until another coapp app gets there)
                     Kernel32.MoveFileEx(File.Exists(tmpFilename) ? tmpFilename : location, null, MoveFileFlags.MOVEFILE_DELAY_UNTIL_REBOOT);
-                } catch (Exception e) {
+                } catch {
                     // really. Hmmm. 
                     // Logger.Error(e);
                 }
@@ -881,12 +881,12 @@ namespace CoApp.Toolkit.Extensions {
         /// <returns></returns>
         /// <remarks></remarks>
         public static string GetFullPath(this string path) {
-            if (_fullPathCache.Contains(path)) {
+            if (FullPathCache.Contains(path)) {
                 return path;
             }
             try {
                 path = Path.GetFullPath(path.Trim('"'));
-                _fullPathCache.Add(path);
+                FullPathCache.Add(path);
             } catch {
             }
             return path;
@@ -900,11 +900,11 @@ namespace CoApp.Toolkit.Extensions {
         /// <remarks></remarks>
         public static string NormalizePath(this string path) {
             if (path.StartsWith(NonInterpretedPathPrefix)) {
-                if (_uncPrefixRx.Match(path).Success) {
-                    path = _uncPrefixRx.Replace(path, @"\\");
+                if (UncPrefixRx.Match(path).Success) {
+                    path = UncPrefixRx.Replace(path, @"\\");
                 }
 
-                if (_drivePrefixRx.Match(path).Success) {
+                if (DrivePrefixRx.Match(path).Success) {
                     path = path.Replace(NonInterpretedPathPrefix, "");
                 }
             }
@@ -1068,19 +1068,21 @@ namespace CoApp.Toolkit.Extensions {
         }
 
         public static IEnumerable<string> GetMinimalPaths(this IEnumerable<string> paths) {
-            if (paths.Any() && paths.Skip(1).Any()) {
-                IEnumerable<IEnumerable<string>> newPaths = paths.Select(each => each.GetFullPath()).Select(each => each.Split('\\'));
+            var allPaths = paths.ToArray();
+
+            if (allPaths.Any() && allPaths.Skip(1).Any()) {
+                IEnumerable<IEnumerable<string>> newPaths = allPaths.Select(each => each.GetFullPath()).Select(each => each.Split('\\'));
                 while (newPaths.All(each => each.FirstOrDefault() == newPaths.FirstOrDefault().FirstOrDefault())) {
                     newPaths = newPaths.Select(each => each.Skip(1));
                 }
                 return newPaths.Select(each => each.Aggregate((current, value) => current + "\\" + value));
             }
-            return paths.Select(Path.GetFileName);
+            return allPaths.Select(Path.GetFileName);
         }
 
         public static bool IsWebUrl( this string path ) {
             try {
-                if( new Uri(path).IsHttpScheme()) {
+                if( new Uri(path).Scheme == Uri.UriSchemeHttp || (true && new Uri(path).Scheme == Uri.UriSchemeHttps)) {
                     return true;
                 }
             } catch {
@@ -1088,13 +1090,5 @@ namespace CoApp.Toolkit.Extensions {
             }
             return false;
         }
-
-#if COAPP_ENGINE_CORE
-                public static bool IsHttpScheme(this Uri uri, bool acceptHttps=true)
-        {
-            return (uri.Scheme == Uri.UriSchemeHttp || (acceptHttps && uri.Scheme == Uri.UriSchemeHttps));
-        }
-
-#endif
     }
 }

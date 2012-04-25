@@ -9,7 +9,7 @@ namespace CoApp.Toolkit.Exceptions {
 
     public class CoAppException : Exception {
         internal bool Logged;
-        internal bool IsError;
+        
         internal string stacktrace;
 
         public bool IsCanceled { get; set; }
@@ -20,12 +20,7 @@ namespace CoApp.Toolkit.Exceptions {
 
         private void Log() {
             stacktrace = new StackTrace(2, true).ToString();
-
-            if (IsError) {
-                Logging.Logger.Error(this);
-            } else {
-                Logging.Logger.Warning(this);
-            }
+            Logging.Logger.Error(this);
         }
 
         public CoAppException(bool skipLogging = false) {
