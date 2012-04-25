@@ -26,6 +26,8 @@ namespace CoApp.Toolkit.Engine {
 
         public string CanonicalName { get; private set; }
         public string Name { get; private set; }
+        public string Flavor { get; private set; }
+        public string PackageType { get; private set; }
         public string Version { get; private set; }
         public string Version1 { get; private set; }
         public string Version2 { get; private set; }

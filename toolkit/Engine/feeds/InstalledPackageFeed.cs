@@ -15,8 +15,10 @@ namespace CoApp.Toolkit.Engine.Feeds {
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
+    using System.Threading.Tasks;
     using Extensions;
     using PackageFormatHandlers;
+    using Tasks;
 
     internal class InstalledPackageFeed : PackageFeed {
         internal static string CanonicalLocation = "CoApp://InstalledPackages";
@@ -46,24 +48,36 @@ namespace CoApp.Toolkit.Engine.Feeds {
             }
         }
 
-        public int Progress { get; set; }
+        protected void ScanInstalledMSIs() {
+            Task.Factory.StartNew(() => {
+                var systemInstalledFiles = MSIBase.InstalledMSIFilenames.ToArray();
+                foreach (var each in systemInstalledFiles) {
+                    var lookup = File.GetCreationTime(each).Ticks + each.GetHashCode();
+                    if (!Cache.Contains(lookup)) {
+                        var pkg = Package.GetPackageFromFilename(each);
+                        if (pkg != null && pkg.IsInstalled) {
+                            _packageList.Add(pkg);
+                        } else {
+                            // doesn't appear to be a coapp package
+                            Cache.Add(lookup);
+                            SaveCache();
+                        }
+                    }
+                }
+            }, TaskCreationOptions.LongRunning).AutoManage();
+        }
 
         protected void Scan() {
             lock (this) {
                 if (!Scanned || Stale) {
                     LastScanned = DateTime.Now;
+                    ScanInstalledMSIs(); // kick off the system package task. It's ok if this doesn't get done in a hurry.
 
                     // add the cached package directory, 'cause on backlevel platform, they taint the MSI in the installed files folder.
-                    var installedFiles =
-                        MSIBase.InstalledMSIFilenames.Union(PackageManagerSettings.CoAppPackageCache.FindFilesSmarter("*.msi")).ToArray();
+                    var coAppInstalledFiles = PackageManagerSettings.CoAppPackageCache.FindFilesSmarter("*.msi").ToArray();
 
-                    var count = installedFiles.Length;
-
-                    installedFiles.AsParallel().ForAll(each => {
-                        count--;
-                        Progress = (count - installedFiles.Length)*100/installedFiles.Length;
+                    coAppInstalledFiles.AsParallel().ForAll(each => {
                         var lookup = File.GetCreationTime(each).Ticks + each.GetHashCode();
-
                         if (!Cache.Contains(lookup)) {
                             var pkg = Package.GetPackageFromFilename(each);
 
@@ -72,12 +86,10 @@ namespace CoApp.Toolkit.Engine.Feeds {
                             } else {
                                 // doesn't appear to be a coapp package
                                 Cache.Add(lookup);
+                                SaveCache();
                             }
                         }
                     });
-
-                    SaveCache();
-                    Progress = 100;
                     Scanned = true;
                     Stale = false;
                 }

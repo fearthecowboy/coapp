@@ -256,6 +256,7 @@
     <Compile Include="Toolkit\Engine\Model\PackageRole.cs" />
     <Compile Include="Toolkit\Engine\Model\Role.cs" />
     <Compile Include="Toolkit\Engine\PackageName.cs" />
+    <Compile Include="Toolkit\Engine\PackageType.cs" />
     <Compile Include="Toolkit\Exceptions\CoAppException.cs" />
     <Compile Include="Toolkit\Exceptions\OperationCompletedBeforeResultException.cs" />
     <Compile Include="Toolkit\Exceptions\UnknownAccountException.cs" />

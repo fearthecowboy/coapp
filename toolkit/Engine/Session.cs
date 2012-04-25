@@ -496,7 +496,7 @@ namespace CoApp.Toolkit.Engine {
                                         Event<GetResponseInterface>.RaiseFirst().OperationCanceled("Service is shutting down");
                                     }
                                     else {
-                                        Logger.Message("Request:{0}".format(requestMessage.ToSmallerString()));
+                                        Logger.Message("Request:[{0}]{1}".format(requestMessage.GetValueAsString("rqid"), requestMessage.ToSmallerString()));
 
                                         var dispatcher = _dispatcher.ActLike();
                                         var packageRequestData = new EasyDictionary<string, PackageRequestData>();

@@ -26,60 +26,6 @@ namespace CoApp.Toolkit.Pipes {
     /// NOTE: EXPLICITLY IGNORE, NOT READY FOR TESTING.
     /// </remarks>
     public class UrlEncodedMessage : IEnumerable<string> {
-        /*
-        public class UrlEncodedMessageValue {
-            private readonly string _value;
-            public UrlEncodedMessageValue(string value) {
-                _value = value;
-            }
-
-            public override string  ToString() {
-                return _value ?? string.Empty;
-            }
-
-            public static implicit operator string(UrlEncodedMessageValue value) {
-                return value._value ?? string.Empty;
-            }
-
-            public static implicit operator int?(UrlEncodedMessageValue value) {
-                if (value._value == null)
-                    return null;
-
-                int outVal;
-                if (Int32.TryParse(value._value, out outVal)) {
-                    return outVal;
-                }
-                return null;
-            }
-
-             public static implicit operator long?(UrlEncodedMessageValue value) {
-                if (value._value == null)
-                    return null;
-
-                long outVal;
-                if (Int64.TryParse(value._value, out outVal)) {
-                    return outVal;
-                }
-                return null;
-            }
-
-            public static implicit operator bool?(UrlEncodedMessageValue value) {
-                if (value._value == null)
-                    return null;
-
-                switch (value._value.ToLower()) {
-                    case "true":
-                        return true;
-                        
-                    case "false":
-                        return false;
-                        
-                    default:
-                        return null;
-                }
-            }
-        }
-        */
         /// <summary>
         /// 
         /// </summary>
@@ -136,12 +82,12 @@ namespace CoApp.Toolkit.Pipes {
             Command = command;
             Data = data;
         }
-
-        /*
-        public UrlEncodedMessageValue this[string key] {
-            get { return new UrlEncodedMessageValue( Data.ContainsKey(key) ? Data[key] : null ); }
+        
+        public string this[string key] {
+            get { return GetValueAsString(key); } 
+            set { Add(key, value);}
         }
-        */
+        
 
         public object GetValueAsArray( string collectionName, Type elementType) {
             var rx = new Regex(@"^{0}\[\d*\]$".format(Regex.Escape(collectionName)));

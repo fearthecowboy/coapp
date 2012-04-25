@@ -55,7 +55,9 @@ namespace CoApp.Toolkit.Engine.Client {
         public string CanonicalName { get; set; }
         public string LocalPackagePath{ get; set; }
         public string Name{ get; set; }
+        public string Flavor { get; internal set; }
         public FourPartVersion Version{ get; set; }
+        public PackageType PackageType { get; set; }
         public FourPartVersion MinPolicy{ get; set; }
         public FourPartVersion MaxPolicy { get; set; }
         public Architecture Architecture { get; set; }
@@ -84,7 +86,6 @@ namespace CoApp.Toolkit.Engine.Client {
         public bool DoNotUpdate { get; set; }
         public bool DoNotUpgrade { get; set; }
 
-        
         public Package SatisfiedBy{ get; set; }
 
         public IEnumerable<string> Tags{ get; set; }  

@@ -162,70 +162,8 @@ namespace CoApp.Toolkit.Win32 {
             ret._architecture = StringToArch(input);
             return true;
         } 
-
     }
 
-    /*
-
-    public enum Architecture {
-        Unknown = 0,
-        Auto,
-        Any,
-        x86,
-        x64,
-        arm,
-    }
-
-    public static class ArchitectureExtensions {
-        public static Architecture ParseEnum(this string txt) {
-            switch (txt.ToLower()) {
-                case "unknown":
-                    return Architecture.Unknown;
-
-                case "auto":
-                    return Architecture.Auto;
-
-                case "*":
-                case "any":
-                case "anycpu":
-                    return Architecture.Any;
-
-                case "x86":
-                case "win32":
-                    return Architecture.x86;
-
-                case "x64":
-                case "amd64":
-                case "em64t":
-                case "intel64":
-                    return Architecture.x64;
-
-                case "arm":
-                case "woa":
-                    return Architecture.arm;
-            }
-            throw new CoAppException("Urecognized Architecture '{0}'".format(txt.ToLower()));
-        }
-
-        public static string CastToString(this Architecture architecture, bool starForAny = false) {
-            switch (architecture) {
-                case Architecture.Unknown:
-                    return "unknown";
-                case Architecture.Auto:
-                    return "auto";
-                case Architecture.Any:
-                    return starForAny  ? "*": "any";
-                case Architecture.x86:
-                    return "x86";
-                case Architecture.x64:
-                    return "x64";
-                case Architecture.arm:
-                    return "arm";
-            }
-            throw new CoAppException("Invalid Architecture Value");
-        }
-    }
-     */
 
     public struct TwoPartVersion : IComparable, IComparable<TwoPartVersion> {
         private uint _version;

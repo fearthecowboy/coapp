@@ -89,6 +89,7 @@
     <Compile Include="Toolkit\Engine\Exceptions\UnableToStartServiceException.cs" />
     <Compile Include="Toolkit\Engine\IPackageManagerResponse.cs" />
     <Compile Include="Toolkit\Engine\Model\PackageRole.cs" />
+    <Compile Include="Toolkit\Engine\PackageType.cs" />
     <Compile Include="Toolkit\Properties\InstallerResources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>

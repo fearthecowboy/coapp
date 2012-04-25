@@ -26,6 +26,7 @@ namespace CoApp.Toolkit.Engine.Client {
     using Extensions;
     using ImpromptuInterface;
     using Logging;
+    using Model;
     using Pipes;
     using Tasks;
     using Toolkit.Exceptions;
@@ -35,6 +36,10 @@ namespace CoApp.Toolkit.Engine.Client {
     public delegate void PackageRemoveProgress(string packageCanonicalName, int progress);
     public delegate void DownloadCompleted(string remoteLocation, string localLocation);
     public delegate void DownloadProgress(string remoteLocation, string localLocation, int progress);
+    public delegate void PackageRemoved(string canonicalName);
+    public delegate void PackageInstalled(string canonicalName);
+    public delegate void UnableToDownloadPackage(string canonicalName);
+
     internal delegate string GetCurrentRequestId();
 
     public delegate IncomingCallDispatcher<IPackageManagerResponse> GetResponseDispatcher();
@@ -134,6 +139,17 @@ namespace CoApp.Toolkit.Engine.Client {
 
         public void PackageDetails(string canonicalName, Dictionary<string, string> metadata, IEnumerable<string> iconLocations, Dictionary<string, string> licenses, Dictionary<string, string> roles, IEnumerable<string> tags, IDictionary<string, string> contributorUrls, IDictionary<string, string> contributorEmails) {
             var result = Package.GetPackage(canonicalName);
+            result.Icon = iconLocations.FirstOrDefault();
+            result.Roles = roles.Keys.Select(each => new Role { Name = each, PackageRole = (PackageRole)typeof(PackageRole).ParseString(roles[each]) });//? is this right?
+            result.Tags = tags;
+            // licenses not done yet.
+            result.Description = metadata["description"];
+            result.Summary = metadata["summary"];
+            result.Summary = metadata["summary"];
+            result.DisplayName = metadata["display-name"];
+            result.Copyright= metadata["copyright"];
+            result.AuthorVersion = metadata["author-version"];
+            result.IsPackageDetailsStale = false;
         }
 
         public void FeedDetails(string location, DateTime lastScanned, bool session, bool suppressed, bool validated, string state) {
@@ -156,10 +172,14 @@ namespace CoApp.Toolkit.Engine.Client {
 
         public void InstalledPackage(string canonicalName) {
             _packages.Value.Add(Package.GetPackage(canonicalName));
+            Package.GetPackage(canonicalName).IsInstalled = true;
+            Event<PackageInstalled>.Raise(canonicalName);
         }
 
         public void RemovedPackage(string canonicalName) {
             _packages.Value.Add(Package.GetPackage(canonicalName));
+            Package.GetPackage(canonicalName).IsInstalled = false;
+            Event<PackageRemoved>.Raise(canonicalName);
         }
 
         public void FailedPackageInstall(string canonicalName, string filename, string reason) {
@@ -272,7 +292,7 @@ namespace CoApp.Toolkit.Engine.Client {
         }
 
         public void Error(string messageName, string argumentName, string problem) {
-            if (messageName == "add-feed") {
+            if (messageName == "AddFeed") {
                 throw new CoAppException(problem);
             }
             throw new CoAppException("Message Argument Exception [{0}/{1}/{2}]".format(messageName, argumentName, problem));
@@ -350,6 +370,7 @@ namespace CoApp.Toolkit.Engine.Client {
         }
 
         public void NoFeedsFound() {
+
             // throw new NotImplementedException();
         }
 
@@ -364,7 +385,7 @@ namespace CoApp.Toolkit.Engine.Client {
         }
 
         public void UnableToDownloadPackage(string packageCanonicalName) {
-            throw new NotImplementedException();
+            Event<UnableToDownloadPackage>.Raise(packageCanonicalName);
         }
 
         public void UnableToInstallPackage(string packageCanonicalName) {
@@ -579,11 +600,12 @@ namespace CoApp.Toolkit.Engine.Client {
                             if (antecedent.Result > 0) {
                                 var rawMessage = Encoding.UTF8.GetString(incomingMessage, 0, antecedent.Result);
                                 var responseMessage = new UrlEncodedMessage(rawMessage);
+                                var rqid = responseMessage.GetValueAsNullable("rqid", typeof(int)) as int?;
 
                                 // lazy log the response (since we're at the end of this task)
-                                Logger.Message("Response:{0}".format(responseMessage.ToSmallerString()));
+                                Logger.Message("Response:[{0}]{1}".format(rqid, responseMessage.ToSmallerString()));
 
-                                var rqid = responseMessage.GetValueAsNullable("rqid", typeof(int)) as int?;
+                                
                                 try {
                                     var queue = ManualEventQueue.GetQueue(rqid.GetValueOrDefault());
                                     if (queue != null) {

@@ -29,28 +29,127 @@ namespace CoApp.Toolkit.Engine {
     using Toolkit.Exceptions;
     using Win32;
 
+    public class FlavorString {
+        
+    }
+
+    public class PackageCanonicalName {
+        public string Name { get; private set; }
+        public string Flavor { get; private set; }
+        public PackageType PackageType { get; private set; }
+        public FourPartVersion Version { get; private set; }
+        public Architecture Architecture { get; private set; }
+        public string PublicKeyToken { get; private set; }
+        private string _canonicalName;
+        private int? _hashCode;
+
+        public static PackageCanonicalName TryParse(string packageName) {
+            
+        }
+
+        
+
+        public override string ToString() {
+            return _canonicalName ?? (_canonicalName = "");
+        }
+
+        public static bool operator ==(PackageCanonicalName a, PackageCanonicalName b) {
+            return a.Equals(b);
+        }
+        public static bool operator !=(PackageCanonicalName a, PackageCanonicalName b) {
+            return !a.Equals(b);
+        }
+
+        public static bool operator ==(PackageCanonicalName a, string b) {
+            PackageCanonicalName pcn;
+            return TryParse(b, out pcn) && a.Equals(pcn);
+        }
+        public static bool operator !=(PackageCanonicalName a, string b) {
+            PackageCanonicalName pcn;
+            return !TryParse(b, out pcn) || !a.Equals(pcn);
+        }
+
+        public override bool Equals(object o) {
+            return o is PackageCanonicalName && Equals((PackageCanonicalName)o);
+        }
+        public bool Equals(PackageCanonicalName other) {
+            return other.GetHashCode() == GetHashCode();
+        }
+        public bool Equals(String other) {
+            PackageCanonicalName pcn;
+            return TryParse(other, out pcn) && Equals(pcn);
+        }
+        public override int GetHashCode() {
+            return (int)(_hashCode ?? (_hashCode = ToString().GetHashCode()));
+        }
+        public static bool operator <(PackageCanonicalName a, PackageCanonicalName b) {
+            return a.ToString() < b.ToString();
+        }
+        public static bool operator >(PackageCanonicalName a, PackageCanonicalName b) {
+            return a.ToString() > b.ToString();
+        }
+
+        public int CompareTo(object other) {
+            if (other == null) {
+                return 1;
+            }
+            return other is PackageCanonicalName ? _packageType.CompareTo(((PackageCanonicalName)other)._packageType) : _packageType.CompareTo(StringToPackageType(other.ToString()));
+        }
+
+        public int CompareTo(PackageCanonicalName other) {
+            return _packageType.CompareTo(other._packageType);
+        }
+
+        public static PackageCanonicalName Parse(string input) {
+            return new PackageCanonicalName { _packageType = StringToPackageType(input) };
+        }
+
+        public static bool TryParse(string input, out PackageCanonicalName ret) {
+            ret._packageType = StringToPackageType(input);
+            return true;
+        }
+    }
+
     public class Package : NotifiesPackageManager {
         private string _canonicalName;
         private bool? _isInstalled;
         private PackageDetails _packageDetails;
         private InternalPackageData _internalPackageData;
         internal IPackageFormatHandler PackageHandler;
-
-        public string CanonicalName { get {
-            if( _canonicalName == null && Version > 0 ) {
-                _canonicalName = "{0}-{1}-{2}-{3}".format(Name, Version.ToString(), Architecture, PublicKeyToken).ToLowerInvariant();
-            }
-            return _canonicalName;
-        } }
+        public PackageCanonicalName CanonicalName;
 
         public string Name { get; internal set; }
+        public string Flavor { get; internal set; }
+        public PackageType PackageType { get; internal set; }
         public FourPartVersion Version { get; internal set; }
         public Architecture Architecture { get; internal set; }
-        public string PublicKeyToken { get; internal  set; }
+        public string PublicKeyToken { get; internal set; }
         public Guid? ProductCode { get; internal set; }
         public string Vendor { get; internal set; }
 
         internal string DisplayName { get; set; }
+
+
+        public string CanonicalName { get {
+            if( _canonicalName == null && Version > 0 ) {
+                if( string.IsNullOrEmpty(Flavor) ) {
+                    _canonicalName = "{0}:{1}-{2}-{3}-{4}".format(Name, Version.ToString(), Architecture, PublicKeyToken).ToLowerInvariant();
+                } else {
+                    _canonicalName = "{0}:{1}[{2}]-{3}-{4}-{5}".format(Name, Version.ToString(), Architecture, PublicKeyToken).ToLowerInvariant();
+                }
+            }
+            return _canonicalName;
+        } }
+
+        public string GeneralName {
+            get { return "{0}-{1}".format(Name, PublicKeyToken).ToLowerInvariant(); }
+        }
+
+        public string CosmeticName {
+            get { return "{0}-{1}-{2}".format(Name, Version.ToString(), Architecture).ToLowerInvariant(); }
+        }
+
+
 
         internal string PackageDirectory { get { return Path.Combine(TargetDirectory, Vendor.MakeSafeFileName(), CanonicalName); } }
         internal string TargetDirectory { get { return PackageManagerSettings.CoAppInstalledDirectory[Architecture];  } }
@@ -133,13 +232,7 @@ namespace CoApp.Toolkit.Engine {
             }
         }
 
-        public string GeneralName {
-            get { return "{0}-{1}".format(Name, PublicKeyToken).ToLowerInvariant(); }
-        }
-
-        public string CosmeticName {
-            get { return "{0}-{1}-{2}".format(Name, Version.ToString(), Architecture).ToLowerInvariant(); }
-        }
+       
 
         /// <summary>
         /// the collection of all known packages
@@ -165,7 +258,7 @@ namespace CoApp.Toolkit.Engine {
             lock (Packages) {
                 var packageName = PackageName.Parse(canonicalName);
                 if (packageName.IsFullMatch) {
-                    return GetPackage(packageName.Name, packageName.Version, packageName.Arch, packageName.PublicKeyToken,null);
+                    return GetPackage(packageName.PackageType, packageName.Name, packageName.Flavor ,packageName.Version, packageName.Arch, packageName.PublicKeyToken,null);
                 }
             }
             return null; // only happens if the canonicalName isn't a canonicalName.
@@ -191,7 +284,7 @@ namespace CoApp.Toolkit.Engine {
             return pkg ?? CoAppMSI.GetCoAppPackageFileInformation(filename);
         }
 
-        internal static Package GetPackage(string packageName, FourPartVersion version, Architecture architecture, string publicKeyToken, Guid? productCode) {
+        internal static Package GetPackage(PackageType packageType, string packageName, string flavor, FourPartVersion version, Architecture architecture, string publicKeyToken, Guid? productCode) {
             Package pkg;
 
             // try via just the package product code
@@ -1168,6 +1261,9 @@ namespace CoApp.Toolkit.Engine {
         
         public string LocalValidatedLocation {
             get {
+                var remoteInterface = Event<GetResponseInterface>.RaiseFirst();
+                
+
                 if (!string.IsNullOrEmpty(_localValidatedLocation) && _localValidatedLocation.FileIsLocalAndExists()) {
                     return _localValidatedLocation;
                 }
@@ -1179,15 +1275,19 @@ namespace CoApp.Toolkit.Engine {
                 }
 
                 if (Verifier.HasValidSignature(location)) {
-                    Event<GetResponseInterface>.RaiseFirst().SignatureValidation(location, true, Verifier.GetPublisherName(location));
+                    if (remoteInterface != null) {
+                        Event<GetResponseInterface>.RaiseFirst().SignatureValidation(location, true, Verifier.GetPublisherName(location));
+                    }
                     return _localValidatedLocation = location;
                 }
-                Event<GetResponseInterface>.RaiseFirst().SignatureValidation(location, false, null);
-
+                if (remoteInterface != null) {
+                    Event<GetResponseInterface>.RaiseFirst().SignatureValidation(location, false, null);
+                }
                 var result = _package.InternalPackageData.LocalLocations.Any(Verifier.HasValidSignature) ? location : null;
 
-                Event<GetResponseInterface>.RaiseFirst().SignatureValidation(result, !string.IsNullOrEmpty(result), string.IsNullOrEmpty(result) ? null : Verifier.GetPublisherName(result));
-
+                if (remoteInterface != null) {
+                    Event<GetResponseInterface>.RaiseFirst().SignatureValidation(result, !string.IsNullOrEmpty(result), string.IsNullOrEmpty(result) ? null : Verifier.GetPublisherName(result));
+                }
                 // GS01: if all the locations end up invalid, and we're trying to remove a package 
 
                 return _localValidatedLocation = result;

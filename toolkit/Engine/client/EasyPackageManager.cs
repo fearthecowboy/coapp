@@ -688,7 +688,7 @@ namespace CoApp.Toolkit.Engine.Client {
                 return failed;
             }
 
-            return GetPackage(canonicalName).Continue(package => GetPackageDetails(package.CanonicalName).Result);
+            return GetPackage(canonicalName).Continue(package => GetPackageDetails(package).Result);
         }
 
         public Task<Package> GetPackageDetails(Package package) {

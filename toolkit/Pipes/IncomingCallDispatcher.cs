@@ -177,7 +177,7 @@ namespace CoApp.Toolkit.Pipes {
                 throw new MissingMethodException("Method '{0}' does not exist in this interface", message.Command);
             });
 
-            return !(message.Command.Equals("TaskComplete") || message.Command.Equals("OperationCanceled"));
+            return !(message.Command.Equals("TaskComplete") || message.Command.Equals("OperationCanceled") || message.Command.Equals("Restarting"));
         }
     }
 
