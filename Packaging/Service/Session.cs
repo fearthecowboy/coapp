@@ -83,6 +83,7 @@ namespace CoApp.Packaging.Service {
         private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private readonly bool _isAsychronous = true;
 
+        private readonly OutgoingCallDispatcher _outgoingDispatcher;
         private readonly IPackageManagerResponse _dispatcher;
 
         private bool Connected {
@@ -274,7 +275,8 @@ namespace CoApp.Packaging.Service {
             _isAsychronous = serverPipe == responsePipe;
             Connected = true;
 
-            _dispatcher = new OutgoingCallDispatcher(WriteAsync).ActLike<IPackageManagerResponse>();
+            _outgoingDispatcher = new OutgoingCallDispatcher(WriteAsync);
+            _dispatcher = _outgoingDispatcher.ActLike<IPackageManagerResponse>();
 
             // this session task
             _task = Task.Factory.StartNew(ProcessMesages, _cancellationTokenSource.Token);
