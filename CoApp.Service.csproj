@@ -60,10 +60,15 @@
     <Compile Include="Packaging\Common\EngineServiceManager.cs" />
     <Compile Include="Packaging\Common\Exceptions\ConfigurationException.cs" />
     <Compile Include="Packaging\Common\Exceptions\ConflictedPackagesException.cs" />
+    <Compile Include="Packaging\Common\Exceptions\FailedPackageRemoveException.cs" />
+    <Compile Include="Packaging\Common\Exceptions\InvalidCanonicalNameException.cs" />
+    <Compile Include="Packaging\Common\Exceptions\PackageBlockedException.cs" />
     <Compile Include="Packaging\Common\Exceptions\PackageHasPotentialUpgradesException.cs" />
     <Compile Include="Packaging\Common\Exceptions\PackageInstallFailedException.cs" />
+    <Compile Include="Packaging\Common\Exceptions\RequiresPermissionException.cs" />
     <Compile Include="Packaging\Common\Exceptions\UnableToStartServiceException.cs" />
     <Compile Include="Packaging\Common\Exceptions\UnableToStopServiceException.cs" />
+    <Compile Include="Packaging\Common\Exceptions\UnknownPackageException.cs" />
     <Compile Include="Packaging\Common\FlavorString.cs" />
     <Compile Include="Packaging\Common\IPackageManager.cs" />
     <Compile Include="Packaging\Common\IPackageManagerResponse.cs" />
