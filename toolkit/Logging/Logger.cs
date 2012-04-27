@@ -9,6 +9,7 @@
     using Extensions;
 
 #if COAPP_ENGINE_CORE
+    using Packaging.Service;
     using Tasks;
 
 #endif 

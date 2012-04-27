@@ -1,9 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Ionic.Encoding
+namespace CoApp.Toolkit.Compression
 {
+    using System;
+
     /// <summary>
     /// Provides a text encoder for the iso-8859-1 encoding, aka Latin1 encoding,
     /// for platforms that do not support it, for example on Silverlight or some

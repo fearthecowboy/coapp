@@ -61,10 +61,10 @@
 //
 // -----------------------------------------------------------------------
 
-
-using System;
-namespace Ionic.Zlib
+namespace CoApp.Toolkit.Compression
 {
+    using System;
+
     sealed class InflateBlocks
     {
         private const int MANY = 1440;

@@ -59,13 +59,11 @@
 //
 // -----------------------------------------------------------------------
 
-
-
-using System;
-namespace Ionic.Zlib
+namespace CoApp.Toolkit.Compression
 {
-        
-        sealed class InfTree
+    using System;
+
+    sealed class InfTree
         {
                 
                 private const int MANY = 1440;

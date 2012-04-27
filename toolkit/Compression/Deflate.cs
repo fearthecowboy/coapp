@@ -66,11 +66,9 @@
 //
 // -----------------------------------------------------------------------
 
-
-using System;
-
-namespace Ionic.Zlib
+namespace CoApp.Toolkit.Compression
 {
+    using System;
 
     internal enum BlockState
     {

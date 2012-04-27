@@ -25,12 +25,11 @@
 //
 // ------------------------------------------------------------------
 
-
-using System;
-using Interop = System.Runtime.InteropServices;
-
-namespace Ionic.Crc
+namespace CoApp.Toolkit.Compression
 {
+    using System;
+    using System.Runtime.InteropServices;
+
     /// <summary>
     ///   Computes a CRC-32. The CRC-32 algorithm is parameterized - you
     ///   can set the polynomial and enable or disable bit
@@ -42,10 +41,10 @@ namespace Ionic.Crc
     ///   archive files.
     /// </remarks>
 
-    [Interop.GuidAttribute("ebc25cf6-9120-4283-b972-0e5520d0000C")]
-    [Interop.ComVisible(true)]
+    [Guid("ebc25cf6-9120-4283-b972-0e5520d0000C")]
+    [ComVisible(true)]
 #if !NETCF
-    [Interop.ClassInterface(Interop.ClassInterfaceType.AutoDispatch)]
+    [ClassInterface(ClassInterfaceType.AutoDispatch)]
 #endif
     public class CRC32
     {

@@ -19,11 +19,10 @@ namespace CoApp.CLI {
     using System.Resources;
     using System.Threading;
     using System.Threading.Tasks;
+    using Packaging.Client;
+    using Packaging.Common.Exceptions;
     using Properties;
     using Toolkit.Console;
-    using Toolkit.Engine;
-    using Toolkit.Engine.Client;
-    using Toolkit.Engine.Exceptions;
     using Toolkit.Exceptions;
     using Toolkit.Extensions;
     using Toolkit.Logging;
@@ -1000,10 +999,6 @@ namespace CoApp.CLI {
                     });
                 });
             });
-        }
-
-        public static void foo() {
-            
         }
 
         private Task RemovePackages(IEnumerable<string> parameters ) {

@@ -4,16 +4,15 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.ServiceProcess;
-
 namespace CoApp.Service {
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
-    using System.Reflection;
+    using System.ServiceProcess;
     using System.Threading;
-    using Toolkit.Engine;
+    using Packaging.Common;
+    using Packaging.Service;
     using Toolkit.Exceptions;
     using Toolkit.Extensions;
     using Toolkit.Win32;
@@ -73,8 +72,7 @@ CoApp.Service [options]
                 return new CoAppServiceMain().main(args);
             } catch (ConsoleException failure) {
                 return Fail("\r\n{0}\r\n", failure.Message);
-            }
-            catch (Exception failure) {
+            } catch (Exception failure) {
                 return Fail("\r\n{0}\r\n{1}", failure.Message, failure.StackTrace);
             }
         }
@@ -154,15 +152,14 @@ CoApp.Service [options]
                                     Console.Write(".");
                                     Thread.Sleep(100);
                                 }
-
                             }
                             foreach (var proc in Process.GetProcessesByName("coapp.service").Where(each => each.Id != Process.GetCurrentProcess().Id).ToArray()) {
                                 try {
                                     Console.WriteLine("Killing Process... {0}", proc.Id);
                                     proc.Kill();
-                                } catch { }
+                                } catch {
+                                }
                             }
-
 
                             _interactive = true;
                             break;
@@ -261,14 +258,11 @@ CoApp.Service [options]
                 if (!options.Any()) {
                     throw new ConsoleException("Missing CoApp.Service command. Use --help for information");
                 }
-
-             
-            } catch(ConsoleException e) {
+            } catch (ConsoleException e) {
                 return Fail(e.Message);
+            } catch (Exception ex) {
+                return Fail("{0}\r\n{1}", ex.Message, ex.StackTrace);
             }
-             catch(Exception ex) {
-                 return Fail("{0}\r\n{1}",ex.Message,ex.StackTrace);
-             }
             return 0;
         }
 

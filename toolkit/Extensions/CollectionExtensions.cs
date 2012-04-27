@@ -162,6 +162,20 @@ namespace CoApp.Toolkit.Extensions {
             return collection == null ? true : !collection.Any();
         }
 
+        public static TValue AddOrSet<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key, TValue value) where TValue : class {
+            if (dictionary.ContainsKey(key)) {
+                dictionary[key] = value;
+            }
+            else {
+                dictionary.Add(key, value);
+            }
+            return value;
+        }
+
+        public static TValue GetOrAdd<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key, Func<TValue> valueFunction) where TValue : class {
+            return dictionary.ContainsKey(key) ? dictionary[key] : dictionary.AddOrSet(key, valueFunction());
+        }
+
 #if !COAPP_ENGINE_CORE
          public static Dictionary<string, IEnumerable<string>>Merge(this Dictionary<string, IEnumerable<string>> result, IDictionary<string, IEnumerable<string>> more ) {
             foreach( var k in more.Keys) {

@@ -60,10 +60,7 @@
 //
 // -----------------------------------------------------------------------
 
-
-using System;
-
-namespace Ionic.Zlib
+namespace CoApp.Toolkit.Compression
 {
     sealed class Tree
     {

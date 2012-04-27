@@ -29,10 +29,12 @@ namespace CoApp.Toolkit.Extensions {
     using Logging;
     using Exceptions;
     using Microsoft.Win32;
+    
     using Win32;
 
 #if COAPP_ENGINE_CORE
     using Tasks;
+    using Packaging.Service;
 #endif 
 
     public class PushDirectory : IDisposable {

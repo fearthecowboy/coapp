@@ -86,13 +86,9 @@
 //
 // -----------------------------------------------------------------------
 
-
-
-using System;
-using Interop=System.Runtime.InteropServices;
-
-namespace Ionic.Zlib
+namespace CoApp.Toolkit.Compression
 {
+    using System.Runtime.InteropServices;
 
     /// <summary>
     /// Describes how to flush the current deflate operation.
@@ -262,7 +258,7 @@ namespace Ionic.Zlib
     /// <summary>
     /// A general purpose exception class for exceptions in the Zlib library.
     /// </summary>
-    [Interop.GuidAttribute("ebc25cf6-9120-4283-b972-0e5520d0000E")]
+    [Guid("ebc25cf6-9120-4283-b972-0e5520d0000E")]
     public class ZlibException : System.Exception
     {
         /// <summary>

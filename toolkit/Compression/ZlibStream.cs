@@ -25,11 +25,10 @@
 //
 // ------------------------------------------------------------------
 
-using System;
-using System.IO;
-
-namespace Ionic.Zlib
+namespace CoApp.Toolkit.Compression
 {
+    using System;
+    using System.IO;
 
     /// <summary>
     /// Represents a Zlib stream for compression or decompression.
@@ -500,9 +499,9 @@ namespace Ionic.Zlib
         {
             get
             {
-                if (this._baseStream._streamMode == Ionic.Zlib.ZlibBaseStream.StreamMode.Writer)
+                if (this._baseStream._streamMode == ZlibBaseStream.StreamMode.Writer)
                     return this._baseStream._z.TotalBytesOut;
-                if (this._baseStream._streamMode == Ionic.Zlib.ZlibBaseStream.StreamMode.Reader)
+                if (this._baseStream._streamMode == ZlibBaseStream.StreamMode.Reader)
                     return this._baseStream._z.TotalBytesIn;
                 return 0;
             }

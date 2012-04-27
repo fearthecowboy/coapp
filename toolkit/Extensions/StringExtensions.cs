@@ -31,10 +31,11 @@ namespace CoApp.Toolkit.Extensions {
     using System.Security.Cryptography;
     using System.Text;
     using System.Text.RegularExpressions;
+    
     using Text;
 
 #if!COAPP_ENGINE_CORE  
-    using Ionic.Zlib;
+    using Compression;
 #endif
     //using Text;
 

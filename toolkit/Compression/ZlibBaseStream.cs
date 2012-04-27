@@ -24,11 +24,10 @@
 //
 // ------------------------------------------------------------------
 
-using System;
-using System.IO;
-
-namespace Ionic.Zlib
+namespace CoApp.Toolkit.Compression
 {
+    using System;
+    using System.IO;
 
     internal enum ZlibStreamFlavor { ZLIB = 1950, DEFLATE = 1951, GZIP = 1952 }
 
@@ -50,7 +49,7 @@ namespace Ionic.Zlib
         protected internal CompressionStrategy Strategy = CompressionStrategy.Default;
 
         // workitem 7159
-        Ionic.Crc.CRC32 crc;
+        CRC32 crc;
         protected internal string _GzipFileName;
         protected internal string _GzipComment;
         protected internal DateTime _GzipMtime;
@@ -75,7 +74,7 @@ namespace Ionic.Zlib
             // workitem 7159
             if (flavor == ZlibStreamFlavor.GZIP)
             {
-                this.crc = new Ionic.Crc.CRC32();
+                this.crc = new CRC32();
             }
         }
 

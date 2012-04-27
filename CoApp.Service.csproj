@@ -56,6 +56,39 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Packaging\Common\CanonicalName.cs" />
+    <Compile Include="Packaging\Common\EngineServiceManager.cs" />
+    <Compile Include="Packaging\Common\Exceptions\ConfigurationException.cs" />
+    <Compile Include="Packaging\Common\Exceptions\ConflictedPackageException.cs" />
+    <Compile Include="Packaging\Common\Exceptions\PackageHasPotentialUpgradesException.cs" />
+    <Compile Include="Packaging\Common\Exceptions\PackageInstallFailedException.cs" />
+    <Compile Include="Packaging\Common\Exceptions\UnableToStartServiceException.cs" />
+    <Compile Include="Packaging\Common\FlavorString.cs" />
+    <Compile Include="Packaging\Common\IPackageManager.cs" />
+    <Compile Include="Packaging\Common\IPackageManagerResponse.cs" />
+    <Compile Include="Packaging\Common\LinkType.cs" />
+    <Compile Include="Packaging\Common\Model\Atom\AtomFeed.cs" />
+    <Compile Include="Packaging\Common\Model\Atom\AtomItem.cs" />
+    <Compile Include="Packaging\Common\Model\CompositionAction.cs" />
+    <Compile Include="Packaging\Common\Model\CompositionRule.cs" />
+    <Compile Include="Packaging\Common\Model\Identity.cs" />
+    <Compile Include="Packaging\Common\Model\License.cs" />
+    <Compile Include="Packaging\Common\Model\LicenseId.cs" />
+    <Compile Include="Packaging\Common\Model\LocationAttribute.cs" />
+    <Compile Include="Packaging\Common\Model\PackageModel.cs" />
+    <Compile Include="Packaging\Common\Model\PackageRole.cs" />
+    <Compile Include="Packaging\Common\Model\Role.cs" />
+    <Compile Include="Packaging\Common\PackageManagerSettings.cs" />
+    <Compile Include="Packaging\Common\PackageType.cs" />
+    <Compile Include="Packaging\Common\SERVICE_ACCESS.cs" />
+    <Compile Include="Packaging\Service\Delegates.cs" />
+    <Compile Include="Packaging\Service\InternalPackageData.cs" />
+    <Compile Include="Packaging\Service\NotifiesPackageManager.cs" />
+    <Compile Include="Packaging\Service\PackageRequestData.cs" />
+    <Compile Include="Packaging\Service\PackageSessionData.cs" />
+    <Compile Include="Packaging\Service\RequestRemoteFileState.cs" />
+    <Compile Include="Packaging\Service\SessionCache.cs" />
+    <Compile Include="Packaging\Service\Signals.cs" />
     <Compile Include="Toolkit\Collections\EasyDictionary.cs" />
     <Compile Include="Toolkit\Compression\CRC32.cs">
       <SubType>Code</SubType>
@@ -101,165 +134,138 @@
     </Compile>
     <Compile Include="Toolkit\Configuration\RegistryView.cs" />
     <Compile Include="Toolkit\Crypto\Verifier.cs" />
-    <Compile Include="Toolkit\dtf\Compression.Cab\CabEngine.cs" />
-    <Compile Include="Toolkit\dtf\Compression.Cab\CabException.cs" />
-    <Compile Include="Toolkit\dtf\Compression.Cab\CabFileInfo.cs" />
-    <Compile Include="Toolkit\dtf\Compression.Cab\CabInfo.cs" />
-    <Compile Include="Toolkit\dtf\Compression.Cab\CabPacker.cs" />
-    <Compile Include="Toolkit\dtf\Compression.Cab\CabUnpacker.cs" />
-    <Compile Include="Toolkit\dtf\Compression.Cab\CabWorker.cs" />
-    <Compile Include="Toolkit\dtf\Compression.Cab\HandleManager.cs" />
-    <Compile Include="Toolkit\dtf\Compression.Cab\NativeMethods.cs" />
-    <Compile Include="Toolkit\dtf\Compression.Zip\ConcatStream.cs" />
-    <Compile Include="Toolkit\dtf\Compression.Zip\CrcStream.cs" />
-    <Compile Include="Toolkit\dtf\Compression.Zip\ZipCompressionMethod.cs" />
-    <Compile Include="Toolkit\dtf\Compression.Zip\ZipEngine.cs" />
-    <Compile Include="Toolkit\dtf\Compression.Zip\ZipException.cs" />
-    <Compile Include="Toolkit\dtf\Compression.Zip\ZipFileInfo.cs" />
-    <Compile Include="Toolkit\dtf\Compression.Zip\ZipFormat.cs" />
-    <Compile Include="Toolkit\dtf\Compression.Zip\ZipInfo.cs" />
-    <Compile Include="Toolkit\dtf\Compression.Zip\ZipPacker.cs" />
-    <Compile Include="Toolkit\dtf\Compression.Zip\ZipUnpacker.cs" />
-    <Compile Include="Toolkit\dtf\Compression\ArchiveException.cs" />
-    <Compile Include="Toolkit\dtf\Compression\ArchiveFileInfo.cs" />
-    <Compile Include="Toolkit\dtf\Compression\ArchiveFileStreamContext.cs" />
-    <Compile Include="Toolkit\dtf\Compression\ArchiveInfo.cs" />
-    <Compile Include="Toolkit\dtf\Compression\ArchiveProgressEventArgs.cs" />
-    <Compile Include="Toolkit\dtf\Compression\ArchiveProgressType.cs" />
-    <Compile Include="Toolkit\dtf\Compression\BasicUnpackStreamContext.cs" />
-    <Compile Include="Toolkit\dtf\Compression\CargoStream.cs" />
-    <Compile Include="Toolkit\dtf\Compression\CompressionEngine.cs" />
-    <Compile Include="Toolkit\dtf\Compression\CompressionLevel.cs" />
-    <Compile Include="Toolkit\dtf\Compression\DuplicateStream.cs" />
-    <Compile Include="Toolkit\dtf\Compression\IPackStreamContext.cs" />
-    <Compile Include="Toolkit\dtf\Compression\IUnpackStreamContext.cs" />
-    <Compile Include="Toolkit\dtf\Compression\OffsetStream.cs" />
-    <Compile Include="Toolkit\dtf\Compression\SafeNativeMethods.cs" />
-    <Compile Include="Toolkit\dtf\Resources\BitmapResource.cs" />
-    <Compile Include="Toolkit\dtf\Resources\FixedFileVersionInfo.cs" />
-    <Compile Include="Toolkit\dtf\Resources\GroupIconInfo.cs" />
-    <Compile Include="Toolkit\dtf\Resources\GroupIconResource.cs" />
-    <Compile Include="Toolkit\dtf\Resources\NativeMethods.cs" />
-    <Compile Include="Toolkit\dtf\Resources\Resource.cs" />
-    <Compile Include="Toolkit\dtf\Resources\ResourceCollection.cs" />
-    <Compile Include="Toolkit\dtf\Resources\ResourceType.cs" />
-    <Compile Include="Toolkit\dtf\Resources\VersionEnums.cs" />
-    <Compile Include="Toolkit\dtf\Resources\VersionInfo.cs" />
-    <Compile Include="Toolkit\dtf\Resources\VersionResource.cs" />
-    <Compile Include="Toolkit\dtf\Resources\VersionStringTable.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller.Linq\Attributes.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller.Linq\Entities.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller.Linq\QDatabase.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller.Linq\QRecord.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller.Linq\QTable.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller.Linq\Query.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller.Package\InstallPackage.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller.Package\InstallPath.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller.Package\PatchPackage.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller.Package\TransformInfo.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\ColumnCollection.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\ColumnEnums.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\ColumnInfo.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\ComponentInfo.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\ComponentInstallation.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\CustomActionAttribute.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\customactiondata.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\CustomActionProxy.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\Database.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\DatabaseQuery.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\DatabaseTransform.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\EmbeddedUIProxy.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\Enums.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\Exceptions.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\ExternalUIHandler.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\FeatureInfo.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\FeatureInstallation.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\Handle.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\IEmbeddedUI.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\Installation.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\InstallationPart.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\InstallCost.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\Installer.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\InstallerAdvertise.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\InstallerUtils.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\MediaDisk.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\NativeMethods.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\PatchInstallation.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\ProductInstallation.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\Record.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\RecordStream.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\RemotableNativeMethods.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\Session.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\ShortcutTarget.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\SourceList.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\SourceMediaList.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\SummaryInfo.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\TableCollection.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\TableInfo.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\Transaction.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\ValidationErrorInfo.cs" />
-    <Compile Include="Toolkit\dtf\WindowsInstaller\View.cs" />
-    <Compile Include="Toolkit\Engine\EngineServiceManager.cs" />
-    <Compile Include="Toolkit\Engine\Exceptions\ConfigurationException.cs">
+    <Compile Include="Packaging\Service\dtf\Compression.Cab\CabEngine.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression.Cab\CabException.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression.Cab\CabFileInfo.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression.Cab\CabInfo.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression.Cab\CabPacker.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression.Cab\CabUnpacker.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression.Cab\CabWorker.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression.Cab\HandleManager.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression.Cab\NativeMethods.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression.Zip\ConcatStream.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression.Zip\CrcStream.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression.Zip\ZipCompressionMethod.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression.Zip\ZipEngine.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression.Zip\ZipException.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression.Zip\ZipFileInfo.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression.Zip\ZipFormat.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression.Zip\ZipInfo.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression.Zip\ZipPacker.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression.Zip\ZipUnpacker.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression\ArchiveException.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression\ArchiveFileInfo.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression\ArchiveFileStreamContext.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression\ArchiveInfo.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression\ArchiveProgressEventArgs.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression\ArchiveProgressType.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression\BasicUnpackStreamContext.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression\CargoStream.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression\CompressionEngine.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression\CompressionLevel.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression\DuplicateStream.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression\IPackStreamContext.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression\IUnpackStreamContext.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression\OffsetStream.cs" />
+    <Compile Include="Packaging\Service\dtf\Compression\SafeNativeMethods.cs" />
+    <Compile Include="Packaging\Service\dtf\Resources\BitmapResource.cs" />
+    <Compile Include="Packaging\Service\dtf\Resources\FixedFileVersionInfo.cs" />
+    <Compile Include="Packaging\Service\dtf\Resources\GroupIconInfo.cs" />
+    <Compile Include="Packaging\Service\dtf\Resources\GroupIconResource.cs" />
+    <Compile Include="Packaging\Service\dtf\Resources\NativeMethods.cs" />
+    <Compile Include="Packaging\Service\dtf\Resources\Resource.cs" />
+    <Compile Include="Packaging\Service\dtf\Resources\ResourceCollection.cs" />
+    <Compile Include="Packaging\Service\dtf\Resources\ResourceType.cs" />
+    <Compile Include="Packaging\Service\dtf\Resources\VersionEnums.cs" />
+    <Compile Include="Packaging\Service\dtf\Resources\VersionInfo.cs" />
+    <Compile Include="Packaging\Service\dtf\Resources\VersionResource.cs" />
+    <Compile Include="Packaging\Service\dtf\Resources\VersionStringTable.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller.Linq\Attributes.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller.Linq\Entities.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller.Linq\QDatabase.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller.Linq\QRecord.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller.Linq\QTable.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller.Linq\Query.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller.Package\InstallPackage.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller.Package\InstallPath.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller.Package\PatchPackage.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller.Package\TransformInfo.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\ColumnCollection.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\ColumnEnums.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\ColumnInfo.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\ComponentInfo.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\ComponentInstallation.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\CustomActionAttribute.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\customactiondata.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\CustomActionProxy.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\Database.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\DatabaseQuery.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\DatabaseTransform.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\EmbeddedUIProxy.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\Enums.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\Exceptions.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\ExternalUIHandler.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\FeatureInfo.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\FeatureInstallation.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\Handle.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\IEmbeddedUI.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\Installation.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\InstallationPart.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\InstallCost.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\Installer.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\InstallerAdvertise.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\InstallerUtils.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\MediaDisk.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\NativeMethods.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\PatchInstallation.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\ProductInstallation.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\Record.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\RecordStream.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\RemotableNativeMethods.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\Session.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\ShortcutTarget.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\SourceList.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\SourceMediaList.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\SummaryInfo.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\TableCollection.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\TableInfo.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\Transaction.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\ValidationErrorInfo.cs" />
+    <Compile Include="Packaging\Service\dtf\WindowsInstaller\View.cs" />
+    <Compile Include="Packaging\Service\Exceptions\InvaildFeedLocationException.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Toolkit\Engine\Exceptions\InvaildFeedLocationException.cs">
+    <Compile Include="Packaging\Service\Exceptions\InvalidPackageException.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Toolkit\Engine\Exceptions\InvalidPackageException.cs">
+    <Compile Include="Packaging\Service\Exceptions\MultiplePackagesMatchException.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Toolkit\Engine\Exceptions\MultiplePackagesMatchException.cs">
+    <Compile Include="Packaging\Service\Exceptions\PackageIsNotInstalledException.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Toolkit\Engine\Exceptions\PackageHasPotentialUpgradesException.cs">
+    <Compile Include="Packaging\Service\Exceptions\PackageMissingException.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Toolkit\Engine\Exceptions\PackageInstallFailedException.cs">
+    <Compile Include="Packaging\Service\Exceptions\PackageNotFoundException.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Toolkit\Engine\Exceptions\PackageIsNotInstalledException.cs">
+    <Compile Include="Packaging\Service\Exceptions\PackageNotInstalledException.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Toolkit\Engine\Exceptions\PackageMissingException.cs">
+    <Compile Include="Packaging\Service\Exceptions\PackageNotSatisfiedException.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Toolkit\Engine\Exceptions\PackageNotFoundException.cs">
+    <Compile Include="Packaging\Service\Exceptions\PackageRemoveFailedException.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Toolkit\Engine\Exceptions\PackageNotInstalledException.cs">
+    <Compile Include="Packaging\Service\Exceptions\PackagesNotAvailableException.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Toolkit\Engine\Exceptions\PackageNotSatisfiedException.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Toolkit\Engine\Exceptions\PackageRemoveFailedException.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Toolkit\Engine\Exceptions\PackagesNotAvailableException.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Toolkit\Engine\Exceptions\UnableToStartServiceException.cs" />
-    <Compile Include="Toolkit\Engine\Feeds\AtomPackageFeed.cs" />
-    <Compile Include="Toolkit\Engine\IPackageManager.cs" />
-    <Compile Include="Toolkit\Engine\IPackageManagerResponse.cs" />
-    <Compile Include="Toolkit\Engine\LinkType.cs" />
-    <Compile Include="Toolkit\Engine\Model\Atom\AtomFeed.cs" />
-    <Compile Include="Toolkit\Engine\Model\Atom\AtomItem.cs" />
-    <Compile Include="Toolkit\Engine\Model\CompositionAction.cs" />
-    <Compile Include="Toolkit\Engine\Model\CompositionRule.cs" />
-    <Compile Include="Toolkit\Engine\Model\Identity.cs" />
-    <Compile Include="Toolkit\Engine\Model\License.cs" />
-    <Compile Include="Toolkit\Engine\Model\LicenseId.cs" />
-    <Compile Include="Toolkit\Engine\Model\LocationAttribute.cs" />
-    <Compile Include="Toolkit\Engine\Model\PackageModel.cs" />
-    <Compile Include="Toolkit\Engine\Model\PackageRole.cs" />
-    <Compile Include="Toolkit\Engine\Model\Role.cs" />
-    <Compile Include="Toolkit\Engine\PackageName.cs" />
-    <Compile Include="Toolkit\Engine\PackageType.cs" />
+    <Compile Include="Packaging\Service\Feeds\AtomPackageFeed.cs" />
     <Compile Include="Toolkit\Exceptions\CoAppException.cs" />
     <Compile Include="Toolkit\Exceptions\OperationCompletedBeforeResultException.cs" />
-    <Compile Include="Toolkit\Exceptions\UnknownAccountException.cs" />
+    <Compile Include="Packaging\Service\Exceptions\UnknownAccountException.cs" />
     <Compile Include="Toolkit\Extensions\EnumExtensions.cs" />
     <Compile Include="Toolkit\Extensions\ExceptionExtensions.cs" />
     <Compile Include="Toolkit\Extensions\TaskExtensions.cs" />
@@ -319,20 +325,18 @@
     <Compile Include="Toolkit\ImpromptuInterface\Optimization\Util.cs" />
     <Compile Include="Toolkit\Logging\Logger.cs" />
     <Compile Include="Toolkit\Pipes\AsyncPipeExtensions.cs" />
-    <Compile Include="Toolkit\Engine\EngineService.cs" />
+    <Compile Include="Packaging\Service\EngineService.cs" />
     <Compile Include="Toolkit\Exceptions\PathIsNotFileUriException.cs" />
-    <Compile Include="Toolkit\Engine\Feeds\DirectoryPackageFeed.cs" />
-    <Compile Include="Toolkit\Engine\Feeds\InstalledPackageFeed.cs" />
-    <Compile Include="Toolkit\Engine\Feeds\PackageFeed.cs" />
-    <Compile Include="Toolkit\Engine\Feeds\SessionPackageFeed.cs" />
-    <Compile Include="Toolkit\Engine\NewPackageManager.cs" />
-    <Compile Include="Toolkit\Engine\Package.cs" />
-    <Compile Include="Toolkit\Engine\PackageCollectionExtensions.cs" />
-    <Compile Include="Toolkit\Engine\PackageManagerSettings.cs" />
-    <Compile Include="Toolkit\Engine\PermissionPolicy.cs" />
-    <Compile Include="Toolkit\Engine\Recognizer.cs" />
-    <Compile Include="Toolkit\Engine\PackageAssemblyInfo.cs" />
-    <Compile Include="Toolkit\Engine\Session.cs" />
+    <Compile Include="Packaging\Service\Feeds\DirectoryPackageFeed.cs" />
+    <Compile Include="Packaging\Service\Feeds\InstalledPackageFeed.cs" />
+    <Compile Include="Packaging\Service\Feeds\PackageFeed.cs" />
+    <Compile Include="Packaging\Service\Feeds\SessionPackageFeed.cs" />
+    <Compile Include="Packaging\Service\NewPackageManager.cs" />
+    <Compile Include="Packaging\Service\Package.cs" />
+    <Compile Include="Packaging\Service\PackageCollectionExtensions.cs" />
+    <Compile Include="Packaging\Service\PermissionPolicy.cs" />
+    <Compile Include="Packaging\Service\Recognizer.cs" />
+    <Compile Include="Packaging\Service\Session.cs" />
     <Compile Include="Toolkit\Pipes\IncomingCallDispatcher.cs" />
     <Compile Include="Toolkit\Pipes\UrlEncodedMessage.cs" />
     <Compile Include="Toolkit\Exceptions\ConflictingFileOrFolderException.cs">
@@ -352,11 +356,11 @@
     <Compile Include="Toolkit\Extensions\SortedObservableCollection.cs" />
     <Compile Include="Toolkit\Extensions\StringExtensions.cs" />
     <Compile Include="Toolkit\Extensions\XmlExtensions.cs" />
-    <Compile Include="Toolkit\PackageFormatHandlers\CoAppMSI.cs" />
-    <Compile Include="Toolkit\PackageFormatHandlers\LegacyMSI.cs" />
-    <Compile Include="Toolkit\PackageFormatHandlers\MSIBase.cs" />
-    <Compile Include="Toolkit\PackageFormatHandlers\PackageFormatHandler.cs" />
-    <Compile Include="Toolkit\Engine\Properties\Resources.Designer.cs">
+    <Compile Include="Packaging\Service\PackageFormatHandlers\CoAppMSI.cs" />
+    <Compile Include="Packaging\Service\PackageFormatHandlers\LegacyMSI.cs" />
+    <Compile Include="Packaging\Service\PackageFormatHandlers\MSIBase.cs" />
+    <Compile Include="Packaging\Service\PackageFormatHandlers\PackageFormatHandler.cs" />
+    <Compile Include="Service\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
@@ -407,9 +411,8 @@
     <Compile Include="Toolkit\TaskService\V1\TaskSchedulerV1Interop.cs" />
     <Compile Include="Toolkit\TaskService\V2\TaskSchedulerV2Interop.cs" />
     <Compile Include="Toolkit\TaskService\Wildcard.cs" />
-    <Compile Include="Toolkit\Tasks\Cache.cs" />
+    <Compile Include="Packaging\Service\Cache.cs" />
     <Compile Include="Toolkit\Tasks\CoTask.cs" />
-    <Compile Include="Toolkit\Tasks\TriggeredProperty.cs" />
     <Compile Include="Toolkit\Text\HttpUtility.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -474,11 +477,11 @@
     <None Include="Service\app.config" />
     <EmbeddedResource Include="$(SolutionDir)binaries\CoApp.Rehash.x86.dll" />
     <EmbeddedResource Include="$(SolutionDir)binaries\CoApp.Rehash.x64.dll" />
-    <Content Include="Toolkit\dtf\Compression.Cab\Errors.txt" />
-    <Content Include="Toolkit\dtf\WindowsInstaller\Errors.txt" />
-    <EmbeddedResource Include="Toolkit\dtf\Compression.Cab\Errors.resources.resources" />
-    <EmbeddedResource Include="Toolkit\dtf\WindowsInstaller\Errors.resources" />
-    <EmbeddedResource Include="Toolkit\Engine\Properties\Resources.resx">
+    <Content Include="Packaging\Service\dtf\Compression.Cab\Errors.txt" />
+    <Content Include="Packaging\Service\dtf\WindowsInstaller\Errors.txt" />
+    <EmbeddedResource Include="Packaging\Service\dtf\Compression.Cab\Errors.resources.resources" />
+    <EmbeddedResource Include="Packaging\Service\dtf\WindowsInstaller\Errors.resources" />
+    <EmbeddedResource Include="Service\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <SubType>Designer</SubType>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
@@ -502,10 +505,7 @@
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Toolkit\NewFolder1\" />
-    <Folder Include="Toolkit\NewFolder2\" />
-    <Folder Include="Toolkit\NewFolder3\" />
-    <Folder Include="Toolkit\NewFolder4\" />
+    <Folder Include="Service\Engine\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -14,7 +14,7 @@ using CoApp.Toolkit.Extensions;
 
 namespace CoApp.Toolkit.Win32 {
 
-    public struct Architecture :IComparable, IComparable<Architecture> {
+    public struct Architecture : IComparable, IComparable<Architecture>, IEquatable<Architecture> {
         public static readonly Architecture Unknown = new Architecture { _architecture = ArchType.Unknown };
         public static readonly Architecture Auto = new Architecture { _architecture = ArchType.Auto };
         public static readonly Architecture Any = new Architecture { _architecture = ArchType.Any };
@@ -47,6 +47,25 @@ namespace CoApp.Toolkit.Win32 {
                     return "arm";
                 default:
                     return "unknown";
+            }
+        }
+
+        public string InCanonicalFormat {
+            get {
+                switch (_architecture) {
+                    case ArchType.Auto:
+                        return "*";
+                    case ArchType.Any:
+                        return "any";
+                    case ArchType.x86:
+                        return "x86";
+                    case ArchType.x64:
+                        return "x64";
+                    case ArchType.arm:
+                        return "arm";
+                    default:
+                        return "unknown";
+                }
             }
         }
 
@@ -84,6 +103,7 @@ namespace CoApp.Toolkit.Win32 {
 
             switch (architecture.ToLower()) {
                 case "*":
+                case "all":
                 case "auto":
                     return ArchType.Auto;
 
@@ -165,7 +185,7 @@ namespace CoApp.Toolkit.Win32 {
     }
 
 
-    public struct TwoPartVersion : IComparable, IComparable<TwoPartVersion> {
+    public struct TwoPartVersion : IComparable, IComparable<TwoPartVersion>,IEquatable<TwoPartVersion> {
         private uint _version;
 
         public override string ToString() {
@@ -251,7 +271,7 @@ namespace CoApp.Toolkit.Win32 {
         } 
     }
 
-    public struct FourPartVersion : IComparable, IComparable<FourPartVersion> {
+    public struct FourPartVersion : IComparable, IComparable<FourPartVersion>,IEquatable<FourPartVersion> {
         private ulong _version;
 
         public override string ToString() {

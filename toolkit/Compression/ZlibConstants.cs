@@ -60,10 +60,7 @@
 //
 // -----------------------------------------------------------------------
 
-
-using System;
-
-namespace Ionic.Zlib
+namespace CoApp.Toolkit.Compression
 {
     /// <summary>
     /// A bunch of constants used in the Zlib interface.

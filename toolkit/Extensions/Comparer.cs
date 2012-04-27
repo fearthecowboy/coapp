@@ -11,6 +11,7 @@
 namespace CoApp.Toolkit.Extensions {
     using System;
     using System.Collections.Generic;
+    using System.Text.RegularExpressions;
 
     /// <summary>
     /// A generic implementation of a comparer that takes a delegate to compare with
@@ -98,4 +99,22 @@ namespace CoApp.Toolkit.Extensions {
              return _getHashCodeFn(obj);
          }
      }
+
+     public static class CompareExtensions {
+         public static bool WithCompareResult(this int result, Func<bool> onLess, Func<bool> onMore, Func<bool> onEqual) {
+             return result < 0 ? onLess() : (result > 0 ? onMore() : onEqual());
+         }
+         public static bool WithCompareResult(this int result, bool lessResult, bool moreResult, bool equalResult) {
+             return result < 0 ? lessResult : (result > 0 ? moreResult : equalResult);
+         }
+         public static int WithCompareResult(this int result, int lessResult, int moreResult, int equalResult) {
+             return result < 0 ? lessResult : (result > 0 ? moreResult : equalResult);
+         }
+     }
+
+    public static class RegexExtensions {
+        public static string GetValue(this Match match, string group, string _default = null) {
+            return (match.Groups[@group].Success ? match.Groups[@group].Captures[0].Value : _default ?? String.Empty).Trim('-', ' ');
+        }
+    }
 }
