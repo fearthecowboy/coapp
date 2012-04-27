@@ -497,7 +497,7 @@ namespace CoApp.Packaging.Service {
                                         CurrentTask.Events += new GetResponseInterface(() => dispatcher);
                                         CurrentTask.Events += new GetRequestPackageDataCache(() => packageRequestData);
 
-                                        var dispatchTask = NewPackageManager.Dispatcher.Dispatch(requestMessage);
+                                        var dispatchTask = PackageManagerImpl.Dispatcher.Dispatch(requestMessage);
                                         dispatchTask.ContinueOnFail(failure => {
                                             if (!IsCanceled) {
                                                 Logger.Error(failure);

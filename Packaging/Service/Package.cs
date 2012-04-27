@@ -345,7 +345,7 @@ namespace CoApp.Packaging.Service {
                 var dependentPackage = dpkg;
 
                 // find each dependency that is the policy-preferred version, and mark it as currentlyrequested.
-                var supercedentPackage = (from supercedent in NewPackageManager.Instance.SearchForInstalledPackages(dependentPackage.CanonicalName.OtherVersionFilter)
+                var supercedentPackage = (from supercedent in PackageManagerImpl.Instance.SearchForInstalledPackages(dependentPackage.CanonicalName.OtherVersionFilter)
                     where supercedent.InternalPackageData.PolicyMinimumVersion <= dependentPackage.CanonicalName.Version && supercedent.InternalPackageData.PolicyMaximumVersion >= dependentPackage.CanonicalName.Version
                     select supercedent).OrderByDescending(p => p.CanonicalName.Version).FirstOrDefault();
 
@@ -719,7 +719,7 @@ namespace CoApp.Packaging.Service {
         }
 
         internal static FourPartVersion GetCurrentPackageVersion(CanonicalName canonicalName) {
-            var installedVersionsOfPackage = NewPackageManager.Instance.InstalledPackages.Where(each => canonicalName.DiffersOnlyByVersion(each.CanonicalName)).OrderByDescending(each => each.CanonicalName.Version);
+            var installedVersionsOfPackage = PackageManagerImpl.Instance.InstalledPackages.Where(each => canonicalName.DiffersOnlyByVersion(each.CanonicalName)).OrderByDescending(each => each.CanonicalName.Version);
             var latestPackage = installedVersionsOfPackage.FirstOrDefault();
 
             // clean as we go...

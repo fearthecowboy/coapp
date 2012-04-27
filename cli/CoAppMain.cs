@@ -85,7 +85,7 @@ namespace CoApp.CLI {
 
         private static List<string>  activeDownloads = new List<string>();
 
-        private readonly EasyPackageManager _easyPackageManager = new EasyPackageManager();
+        private readonly PackageManager _packageManager = new PackageManager();
 
         /// <summary>
         /// The (non-static) startup method
@@ -158,7 +158,7 @@ namespace CoApp.CLI {
                         case "force-rescan":
                         case "scan":
                         case "rescan":
-                            preCommandTasks.Add(_easyPackageManager.SetAllFeedsStale());
+                            preCommandTasks.Add(_packageManager.SetAllFeedsStale());
                             break;
 
                         case "download":
@@ -187,9 +187,9 @@ namespace CoApp.CLI {
                             Logger.Errors = true;
                             Logger.Messages = true;
                             Logger.Warnings = true;
-                            _easyPackageManager.EnableMessageLogging();
-                            _easyPackageManager.EnableWarningLogging();
-                            _easyPackageManager.EnableErrorLogging();
+                            _packageManager.EnableMessageLogging();
+                            _packageManager.EnableWarningLogging();
+                            _packageManager.EnableErrorLogging();
                             break;
 
                         case "dependencies":
@@ -283,7 +283,7 @@ namespace CoApp.CLI {
                             _latest = true;
                         }
 
-                        task = preCommandTasks.Continue(() => _easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, false, _installed, _active, null, _blocked, _latest, _location )
+                        task = preCommandTasks.Continue(() => _packageManager.GetPackages(parameters, _minVersion, _maxVersion, false, _installed, _active, null, _blocked, _latest, _location )
                             .Continue(packages => {
                                 if (packages.IsNullOrEmpty()) {
                                     PrintNoPackagesFound(parameters);
@@ -330,7 +330,7 @@ namespace CoApp.CLI {
                     case "upgrade":
                     case "upgrade-package":
                     case "upgrade-packages":
-                        task = preCommandTasks.Continue(() => _easyPackageManager.GetUpgradablePackages(parameters)).Continue(pkgs => PrintPackages(pkgs));
+                        task = preCommandTasks.Continue(() => _packageManager.GetUpgradablePackages(parameters)).Continue(pkgs => PrintPackages(pkgs));
                         break;
 
                     case "-u":
@@ -339,8 +339,8 @@ namespace CoApp.CLI {
                     case "update-packages":
                         Console.WriteLine("UPDATE CURRENTLY DISABLED. CHECK BACK SOON");
 
-                        task = preCommandTasks.Continue(() => _easyPackageManager.GetUpdatablePackages(parameters)).Continue(pkgs => PrintPackages(pkgs));
-                        // task = preCommandTasks.Continue(() => _easyPackageManager.GetUpdatablePackages(parameters)).Continue( packages => Update(packages) );
+                        task = preCommandTasks.Continue(() => _packageManager.GetUpdatablePackages(parameters)).Continue(pkgs => PrintPackages(pkgs));
+                        // task = preCommandTasks.Continue(() => _packageManager.GetUpdatablePackages(parameters)).Continue( packages => Update(packages) );
                         break;
 
                     case "-A":
@@ -383,7 +383,7 @@ namespace CoApp.CLI {
                     case "feed-active":
                     case "activate-feed":
                         task = preCommandTasks.Continue(() => MatchFeeds(parameters)).Continue(feeds => {
-                            feeds.Select(each => _easyPackageManager.SetFeed(each, FeedState.active)).ToArray();
+                            feeds.Select(each => _packageManager.SetFeed(each, FeedState.active)).ToArray();
                         });
                         
                         break;
@@ -391,7 +391,7 @@ namespace CoApp.CLI {
                     case "feed-passive":
                     case "passivate-feed":
                         task = preCommandTasks.Continue(() => MatchFeeds(parameters)).Continue(feeds => {
-                            feeds.Select(each => _easyPackageManager.SetFeed(each, FeedState.passive)).ToArray();
+                            feeds.Select(each => _packageManager.SetFeed(each, FeedState.passive)).ToArray();
                         });
                         break;
                     case "set-feed-ignored":
@@ -400,7 +400,7 @@ namespace CoApp.CLI {
                     case "feed-ignore":
                     case "disable-feed":
                         task = preCommandTasks.Continue(() => MatchFeeds(parameters)).Continue(feeds => {
-                            feeds.Select(each => _easyPackageManager.SetFeed(each, FeedState.ignored)).ToArray();
+                            feeds.Select(each => _packageManager.SetFeed(each, FeedState.ignored)).ToArray();
                         });
                         break;
 
@@ -408,7 +408,7 @@ namespace CoApp.CLI {
                     case "activate":
                     case "activate-package":
                     case "activate-packages":
-                        task = preCommandTasks.Continue(() => _easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, false, true, _active, _required, false, _latest, _location)
+                        task = preCommandTasks.Continue(() => _packageManager.GetPackages(parameters, _minVersion, _maxVersion, false, true, _active, _required, false, _latest, _location)
                             .Continue(packages => Activate(parameters, packages)));
 
                         break;
@@ -416,7 +416,7 @@ namespace CoApp.CLI {
                     case "-g":
                     case "get-packageinfo":
                     case "info":
-                        task = preCommandTasks.Continue(() => _easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, _installed, _active, _required, _blocked, _latest, _location)
+                        task = preCommandTasks.Continue(() => _packageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, _installed, _active, _required, _blocked, _latest, _location)
                             .Continue(packages => GetPackageInfo(parameters,packages)));
                         break;
 
@@ -424,7 +424,7 @@ namespace CoApp.CLI {
                     case "block-packages":
                     case "block-package":
                     case "block":
-                        task = preCommandTasks.Continue(() => _easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, _installed, _active, _required, _blocked, _latest, _location)
+                        task = preCommandTasks.Continue(() => _packageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, _installed, _active, _required, _blocked, _latest, _location)
                             .Continue(packages=> Block(parameters, packages)));
 
                         break;
@@ -433,7 +433,7 @@ namespace CoApp.CLI {
                     case "unblock-packages":
                     case "unblock-package":
                     case "unblock":
-                        task = preCommandTasks.Continue(() => _easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, _installed, _active, _required, _blocked, _latest, _location)
+                        task = preCommandTasks.Continue(() => _packageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, _installed, _active, _required, _blocked, _latest, _location)
                             .Continue(packages => UnBlock(parameters,packages)));
                         break;
 
@@ -441,7 +441,7 @@ namespace CoApp.CLI {
                     case "require-package":
                     case "require-packages":
                     case "require":
-                        task = preCommandTasks.Continue(() => _easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
+                        task = preCommandTasks.Continue(() => _packageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
                             .Continue(packages => Require(parameters, packages)));
                         
                         break;
@@ -451,43 +451,43 @@ namespace CoApp.CLI {
                     case "unrequire-packages":
                     case "unrequire":
                     case "notrequire":
-                        task = preCommandTasks.Continue(() => _easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
+                        task = preCommandTasks.Continue(() => _packageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
                             .Continue(packages => UnRequire(parameters, packages)));
                         break;
 
                     case "do-not-update":
                     case "hold":
-                        task = preCommandTasks.Continue(() => _easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
+                        task = preCommandTasks.Continue(() => _packageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
                             .Continue(packages => DoNotUpdate(parameters, packages)));
                         break;
 
                     case "do-update":
                     case "release":
-                        task = preCommandTasks.Continue(() => _easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
+                        task = preCommandTasks.Continue(() => _packageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
                            .Continue(packages => DoUpdate(parameters, packages)));
                         break;
 
                     case "do-not-upgrade":
                     case "freeze":
-                        task = preCommandTasks.Continue(() => _easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
+                        task = preCommandTasks.Continue(() => _packageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
                            .Continue(packages => DoNotUpgrade(parameters, packages)));
                         break;
 
                     case "do-upgrade":
                     case "thaw":
-                        task = preCommandTasks.Continue(() => _easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
+                        task = preCommandTasks.Continue(() => _packageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
                            .Continue(packages => DoUpgrade(parameters, packages)));
                         break;
 
                     case "enable-telemetry":
-                        task = preCommandTasks.Continue(() => _easyPackageManager.SetTelemetry(true)).ContinueAlways((a)=> {
-                            Console.WriteLine("Telemetry is currently set to : {0}", _easyPackageManager.GetTelemetry().Result ? "Enabled" : "Disabled");
+                        task = preCommandTasks.Continue(() => _packageManager.SetTelemetry(true)).ContinueAlways((a)=> {
+                            Console.WriteLine("Telemetry is currently set to : {0}", _packageManager.GetTelemetry().Result ? "Enabled" : "Disabled");
                         });
                         break;
 
                     case "disable-telemetry":
-                        task = preCommandTasks.Continue(() => _easyPackageManager.SetTelemetry(false)).ContinueAlways((a) => {
-                            Console.WriteLine("Telemetry is currently set to : {0}", _easyPackageManager.GetTelemetry().Result ? "Enabled" : "Disabled");
+                        task = preCommandTasks.Continue(() => _packageManager.SetTelemetry(false)).ContinueAlways((a) => {
+                            Console.WriteLine("Telemetry is currently set to : {0}", _packageManager.GetTelemetry().Result ? "Enabled" : "Disabled");
                         });
                         break;
 
@@ -495,21 +495,21 @@ namespace CoApp.CLI {
                         if (parameters.Count() != 2) {
                             throw new ConsoleException("Create-symlink requires two parameters: existing-location and new-link");
                         }
-                        task = preCommandTasks.Continue(() =>  _easyPackageManager.CreateSymlink(parameters.First().GetFullPath(), parameters.Last().GetFullPath()));
+                        task = preCommandTasks.Continue(() =>  _packageManager.CreateSymlink(parameters.First().GetFullPath(), parameters.Last().GetFullPath()));
                         break;
 
                     case "create-hardlink":
                         if (parameters.Count() != 2) {
                             throw new ConsoleException("Create-hardlink requires two parameters: existing-location and new-link");
                         }
-                        task = preCommandTasks.Continue(() =>  _easyPackageManager.CreateHardlink(parameters.First().GetFullPath(), parameters.Last().GetFullPath()));
+                        task = preCommandTasks.Continue(() =>  _packageManager.CreateHardlink(parameters.First().GetFullPath(), parameters.Last().GetFullPath()));
                         break;
 
                     case "create-shortcut":
                         if (parameters.Count() != 2) {
                             throw new ConsoleException("Create-shortcut requires two parameters: existing-location and new-link");
                         }
-                        task = preCommandTasks.Continue(() =>  _easyPackageManager.CreateShortcut(parameters.First().GetFullPath(), parameters.Last().GetFullPath()));
+                        task = preCommandTasks.Continue(() =>  _packageManager.CreateShortcut(parameters.First().GetFullPath(), parameters.Last().GetFullPath()));
                         break;
 
                     case "-p" :
@@ -528,9 +528,9 @@ namespace CoApp.CLI {
                         var account = parameters.Last();
 
                         task = preCommandTasks.Continue(() => {
-                            _easyPackageManager.GetPolicy(policyName).Continue(policy => {
+                            _packageManager.GetPolicy(policyName).Continue(policy => {
                                 // found the policy, so continue.
-                                _easyPackageManager.AddToPolicy(policyName, account).Continue(() => {
+                                _packageManager.AddToPolicy(policyName, account).Continue(() => {
                                     Console.WriteLine("Account '{0} added to policy '{1}", account, policyName);
                                     ListPolicies(policyName);
                                 });
@@ -548,9 +548,9 @@ namespace CoApp.CLI {
                             var account = parameters.Last();
 
                             task = preCommandTasks.Continue(() => {
-                                _easyPackageManager.GetPolicy(policyName).Continue(policy => {
+                                _packageManager.GetPolicy(policyName).Continue(policy => {
                                     // found the policy, so continue.
-                                    _easyPackageManager.RemoveFromPolicy(policyName, account).Continue(() => {
+                                    _packageManager.RemoveFromPolicy(policyName, account).Continue(() => {
                                         Console.WriteLine("Account '{0} removed from policy '{1}", account, policyName);
                                         ListPolicies(policyName);
                                     });
@@ -593,7 +593,7 @@ namespace CoApp.CLI {
                 return "".AsResultTask();
             }
 
-            var remoteTasks = packages.Select(package => _easyPackageManager.MarkPackageDoNotUpdate(package.CanonicalName)).ToArray();
+            var remoteTasks = packages.Select(package => _packageManager.MarkPackageDoNotUpdate(package.CanonicalName)).ToArray();
             remoteTasks.ContinueOnFail(ex => FailOnExceptions(ex));
             return remoteTasks.Continue(() => {
                 Console.WriteLine("Marked packages as 'do-not-update' :");
@@ -608,7 +608,7 @@ namespace CoApp.CLI {
                 return "".AsResultTask();
             }
 
-            var remoteTasks = packages.Select(package => _easyPackageManager.MarkPackageOkToUpdate(package.CanonicalName)).ToArray();
+            var remoteTasks = packages.Select(package => _packageManager.MarkPackageOkToUpdate(package.CanonicalName)).ToArray();
             remoteTasks.ContinueOnFail(ex => FailOnExceptions(ex));
             return remoteTasks.Continue(() => {
                 Console.WriteLine("Marked packages as 'do-update' :");
@@ -623,7 +623,7 @@ namespace CoApp.CLI {
                 return "".AsResultTask();
             }
 
-            var remoteTasks = packages.Select(package => _easyPackageManager.MarkPackageDoNotUpgrade(package.CanonicalName)).ToArray();
+            var remoteTasks = packages.Select(package => _packageManager.MarkPackageDoNotUpgrade(package.CanonicalName)).ToArray();
             remoteTasks.ContinueOnFail(ex => FailOnExceptions(ex));
             return remoteTasks.Continue(() => {
                 Console.WriteLine("Marked packages as 'do-not-upgrade' :");
@@ -638,7 +638,7 @@ namespace CoApp.CLI {
                 return "".AsResultTask();
             }
 
-            var remoteTasks = packages.Select(package => _easyPackageManager.MarkPackageOkToUpgrade(package.CanonicalName)).ToArray();
+            var remoteTasks = packages.Select(package => _packageManager.MarkPackageOkToUpgrade(package.CanonicalName)).ToArray();
             remoteTasks.ContinueOnFail(ex => FailOnExceptions(ex));
             return remoteTasks.Continue(() => {
                 Console.WriteLine("Marked packages as 'do-upgrade' :");
@@ -649,7 +649,7 @@ namespace CoApp.CLI {
         }
 
         private Task AddFeed(IEnumerable<string> feeds) {
-            var tasks = feeds.Select(each => _easyPackageManager.AddSystemFeed(each));
+            var tasks = feeds.Select(each => _packageManager.AddSystemFeed(each));
             return tasks.ContinueAlways(antecedents => {
                 foreach( var ex in antecedents.Where(each => each.IsFaulted).Select(each => each.Exception.Unwrap()) ) {
                     var coappEx = ex as CoAppException;
@@ -667,7 +667,7 @@ namespace CoApp.CLI {
         }
 
         private Task<IEnumerable<string>>  MatchFeeds(IEnumerable<string> feeds) {
-            return _easyPackageManager.Feeds.Continue(systemFeeds => {
+            return _packageManager.Feeds.Continue(systemFeeds => {
                 var locations = systemFeeds.Select(each => each.Location).ToArray();
 
                 foreach (var notFeed in feeds.Where(each => !locations.ContainsIgnoreCase(each))) {
@@ -679,14 +679,14 @@ namespace CoApp.CLI {
         }
 
         private Task DeleteFeed(IEnumerable<string> feeds) {
-            var systemFeeds = _easyPackageManager.Feeds.Result.Select(each => each.Location).ToArray();
+            var systemFeeds = _packageManager.Feeds.Result.Select(each => each.Location).ToArray();
             
             foreach( var notFeed in feeds.Where(each => !systemFeeds.ContainsIgnoreCase(each))) {
                 Console.WriteLine("Skipping '{0}' -- is not registered as a system feed.", notFeed);
             }
 
-            //var tasks = feeds.Where(each => systemFeeds.ContainsIgnoreCase(each)).Select(each => _easyPackageManager.RemoveSystemFeed(each));
-            var tasks = systemFeeds.Where(each => feeds.ContainsIgnoreCase(each)).Select(each => _easyPackageManager.RemoveSystemFeed(each));
+            //var tasks = feeds.Where(each => systemFeeds.ContainsIgnoreCase(each)).Select(each => _packageManager.RemoveSystemFeed(each));
+            var tasks = systemFeeds.Where(each => feeds.ContainsIgnoreCase(each)).Select(each => _packageManager.RemoveSystemFeed(each));
             return tasks.ContinueAlways(antecedents => {
                 foreach (var ex in antecedents.Where(each => each.IsFaulted).Select(each => each.Exception.Unwrap())) {
                     var coappEx = ex as CoAppException;
@@ -708,7 +708,7 @@ namespace CoApp.CLI {
                 return "".AsResultTask();
             }
 
-            var remoteTasks = packages.Select(package => _easyPackageManager.MarkPackageRequested(package.CanonicalName)).ToArray();
+            var remoteTasks = packages.Select(package => _packageManager.MarkPackageRequested(package.CanonicalName)).ToArray();
             remoteTasks.ContinueOnFail(ex => FailOnExceptions(ex));
             return remoteTasks.Continue(() => {
                 Console.WriteLine("Marked packages as 'required' :");
@@ -724,7 +724,7 @@ namespace CoApp.CLI {
                 return "".AsResultTask();
             }
 
-            var remoteTasks = packages.Select(package => _easyPackageManager.MarkPackageNotRequested(package.CanonicalName)).ToArray();
+            var remoteTasks = packages.Select(package => _packageManager.MarkPackageNotRequested(package.CanonicalName)).ToArray();
             remoteTasks.ContinueOnFail(ex => FailOnExceptions(ex));
             return remoteTasks.Continue(() => {
                 Console.WriteLine("Marked packages as 'not-required' :");
@@ -740,7 +740,7 @@ namespace CoApp.CLI {
                 return "".AsResultTask();
             }
 
-            var remoteTasks = packages.Select(package => _easyPackageManager.UnBlockPackage(package.CanonicalName)).ToArray();
+            var remoteTasks = packages.Select(package => _packageManager.UnBlockPackage(package.CanonicalName)).ToArray();
             remoteTasks.ContinueOnFail(ex => FailOnExceptions(ex));
             return remoteTasks.Continue(() => {
                 Console.WriteLine("Marked packages as 'unblocked' :");
@@ -756,7 +756,7 @@ namespace CoApp.CLI {
                 return "".AsResultTask();
             }
 
-            var remoteTasks = packages.Select(package => _easyPackageManager.BlockPackage(package.CanonicalName)).ToArray();
+            var remoteTasks = packages.Select(package => _packageManager.BlockPackage(package.CanonicalName)).ToArray();
             remoteTasks.ContinueOnFail(ex => FailOnExceptions(ex));
             return remoteTasks.Continue(() => {
                 Console.WriteLine("Marked packages as 'blocked' :");
@@ -772,7 +772,7 @@ namespace CoApp.CLI {
                 return "".AsResultTask();
             }
 
-            var remoteTasks = packages.Select(package => _easyPackageManager.MarkPackageActive(package.CanonicalName)).ToArray();
+            var remoteTasks = packages.Select(package => _packageManager.MarkPackageActive(package.CanonicalName)).ToArray();
             remoteTasks.ContinueOnFail(ex => FailOnExceptions(ex));
             return remoteTasks.Continue(() => {
                 Console.WriteLine("Activated packages:");
@@ -808,7 +808,7 @@ namespace CoApp.CLI {
                 return;
             }
 
-            packages.Select(package => _easyPackageManager.GetPackageDetails(package.CanonicalName)).ToArray().Continue(detailedPackages => {
+            packages.Select(package => _packageManager.GetPackageDetails(package.CanonicalName)).ToArray().Continue(detailedPackages => {
                 var length0 = detailedPackages.Max(each => Math.Max(Math.Max(each.Name.Length, each.Architecture.ToString().Length), each.PublisherName.Length)) + 1;
                 var length1 = detailedPackages.Max(each => Math.Max(Math.Max(((string)each.Version).Length, each.AuthorVersion.Length), each.PublisherUrl.Length)) + 1;
 
@@ -881,7 +881,7 @@ namespace CoApp.CLI {
         }
 
         private Task ListFeeds() {
-            return _easyPackageManager.Feeds.ContinueWith(
+            return _packageManager.Feeds.ContinueWith(
                 antecedent => {
                     antecedent.RethrowWhenFaulted();
 
@@ -921,7 +921,7 @@ namespace CoApp.CLI {
             CurrentTask.Events += new PackageInstallProgress((canonicalName, progress, overall) => "Installing: {0}".format(canonicalName).PrintProgressBar(progress));
 
             // given what the user requested, what packages are they really asking for?
-            return _easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, false, null, null, null, false, _latest ?? true, _location, false, false, false).Continue(packages => {
+            return _packageManager.GetPackages(parameters, _minVersion, _maxVersion, false, null, null, null, false, _latest ?? true, _location, false, false, false).Continue(packages => {
                 // we got back a package collection for what the user passed in.
 
                 // but, we *can* get back an empty collection...
@@ -932,7 +932,7 @@ namespace CoApp.CLI {
 
                 // we have a collection of packages that the user has requested.
                 // first, lets auto-filter out ones that we can obviously see are not what they wanted.
-                var findConflictTask = _easyPackageManager.FilterConflictsForInstall(packages, _x86, _x64, _cpuany);
+                var findConflictTask = _packageManager.FilterConflictsForInstall(packages, _x86, _x64, _cpuany);
 
                 // hmm. had a problem filtering out conflicts.
                 findConflictTask.ContinueOnFail(exception => {
@@ -949,7 +949,7 @@ namespace CoApp.CLI {
                     }
 
                     // lets get the package install plan.
-                    var getPackagePlanTask = _easyPackageManager.IdentifyPackageAndDependenciesToInstall(filteredPackages, _autoUpgrade);
+                    var getPackagePlanTask = _packageManager.IdentifyPackageAndDependenciesToInstall(filteredPackages, _autoUpgrade);
 
                     // hmm. The plan did not work out so well. 
                     getPackagePlanTask.ContinueOnFail((exception) => {
@@ -987,7 +987,7 @@ namespace CoApp.CLI {
 
                         foreach (var p in filteredPackages) {
                             try {
-                                _easyPackageManager.InstallPackage(p.CanonicalName, _autoUpgrade).Continue(() => Console.WriteLine()).Wait();
+                                _packageManager.InstallPackage(p.CanonicalName, _autoUpgrade).Continue(() => Console.WriteLine()).Wait();
                             }
                             catch (Exception failed) {
                                 failed = failed.Unwrap();
@@ -1005,14 +1005,14 @@ namespace CoApp.CLI {
 
             CurrentTask.Events += new PackageRemoveProgress((name, progress) => "Removing {0}".format(name).PrintProgressBar(progress));
 
-            var removePackagesTask = _easyPackageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
+            var removePackagesTask = _packageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
                 .Continue(packagesToRemove => {
                     if (packagesToRemove.IsNullOrEmpty()) {
                         PrintNoPackagesFound(parameters);
                         return 0;
                     }
                     
-                    return _easyPackageManager.RemovePackages(packagesToRemove.Select(each => each.CanonicalName), _force == true).Continue( total => {
+                    return _packageManager.RemovePackages(packagesToRemove.Select(each => each.CanonicalName), _force == true).Continue( total => {
                         Console.WriteLine();
                         return total;
                     }).Result;
@@ -1049,7 +1049,7 @@ namespace CoApp.CLI {
         }
 
         private void ListPolicies(string policyName = null) {
-            _easyPackageManager.Policies.Continue(policies => {
+            _packageManager.Policies.Continue(policies => {
                 if (!string.IsNullOrEmpty(policyName)) {
                     policies = policies.Where(each => each.Name == policyName);
                 }

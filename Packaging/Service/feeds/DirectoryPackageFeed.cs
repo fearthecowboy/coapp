@@ -72,7 +72,7 @@ namespace CoApp.Packaging.Service.Feeds {
 
                     // GS01: BUG: recursive now should use ** in pattern match.
                     var files = _path.DirectoryEnumerateFilesSmarter(
-                        _filter, false ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly /*, NewPackageManager.Instance.BlockedScanLocations*/).ToArray();
+                        _filter, false ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly /*, PackageManagerImpl.Instance.BlockedScanLocations*/).ToArray();
 
                     _lastCount = files.Count();
 

@@ -346,7 +346,7 @@
     <Compile Include="Packaging\Service\Feeds\InstalledPackageFeed.cs" />
     <Compile Include="Packaging\Service\Feeds\PackageFeed.cs" />
     <Compile Include="Packaging\Service\Feeds\SessionPackageFeed.cs" />
-    <Compile Include="Packaging\Service\NewPackageManager.cs" />
+    <Compile Include="Packaging\Service\PackageManagerImpl.cs" />
     <Compile Include="Packaging\Service\Package.cs" />
     <Compile Include="Packaging\Service\PackageCollectionExtensions.cs" />
     <Compile Include="Packaging\Service\PermissionPolicy.cs" />

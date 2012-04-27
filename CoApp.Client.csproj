@@ -59,7 +59,7 @@
     <Compile Include="Packaging\Client\UI\InstSelection.cs" />
     <Compile Include="Packaging\Client\UI\RemoveCommand.cs" />
     <Compile Include="Packaging\Common\CanonicalName.cs" />
-    <Compile Include="Packaging\Client\EasyPackageManager.cs" />
+    <Compile Include="Packaging\Client\PackageManager.cs" />
     <Compile Include="Packaging\Client\Feed.cs" />
     <Compile Include="Packaging\Client\FeedState.cs" />
     <Compile Include="Packaging\Client\UI\Installer.cs" />

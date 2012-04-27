@@ -63,7 +63,7 @@ namespace CoApp.Packaging.Service.Feeds {
             }
             set {
                 _scanned = value;
-                NewPackageManager.Instance.Updated();
+                PackageManagerImpl.Instance.Updated();
             }
         }
 

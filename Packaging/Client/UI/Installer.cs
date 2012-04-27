@@ -372,7 +372,7 @@ namespace CoApp.Packaging.Client.UI {
             }
         }
 
-        private EasyPackageManager _easyPackageManager = new EasyPackageManager();
+        private PackageManager _packageManager = new PackageManager();
         private EventWaitHandle _ping;
 
         internal bool Ping {
@@ -448,13 +448,13 @@ namespace CoApp.Packaging.Client.UI {
         }
 
         private Task LoadPackageDetails() {
-            return _easyPackageManager.GetPackageFromFile(Path.GetFullPath(MsiFilename)).ContinueWith(antecedent => {
+            return _packageManager.GetPackageFromFile(Path.GetFullPath(MsiFilename)).ContinueWith(antecedent => {
                 if (antecedent.IsFaulted) {
                     DoError(InstallerFailureState.FailedToGetPackageFromFile, antecedent.Exception.Unwrap());
                     return;
                 }
 
-                _easyPackageManager.GetPackageDetails(antecedent.Result).ContinueWith(antecedent2 => {
+                _packageManager.GetPackageDetails(antecedent.Result).ContinueWith(antecedent2 => {
                     if (antecedent2.IsFaulted) {
                         DoError(InstallerFailureState.FailedToGetPackageDetails, antecedent2.Exception.Unwrap());
                         return;
@@ -464,7 +464,7 @@ namespace CoApp.Packaging.Client.UI {
                     // PackageIcon = GetPackageBitmap(SelectedPackage.Icon);
 
                     // now get additonal package information...
-                    _easyPackageManager.GetPackageSet(antecedent2.Result.CanonicalName).ContinueWith(
+                    _packageManager.GetPackageSet(antecedent2.Result.CanonicalName).ContinueWith(
                         antecedent3 => {
                             if (antecedent3.IsFaulted) {
                                 DoError(InstallerFailureState.FailedToGetPackageDetails, antecedent3.Exception.Unwrap());
@@ -571,7 +571,7 @@ namespace CoApp.Packaging.Client.UI {
                     Progress = overallProgress;
                 });
 
-                var instTask = _easyPackageManager.InstallPackage(SelectedPackage.CanonicalName, autoUpgrade: false);
+                var instTask = _packageManager.InstallPackage(SelectedPackage.CanonicalName, autoUpgrade: false);
 
                 instTask.Continue(() => {
                     OnFinished();

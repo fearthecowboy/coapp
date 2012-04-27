@@ -43,7 +43,7 @@ namespace CoApp.Packaging.Service.Feeds {
                 _packageList.Add(package);
                 Scanned = true;
                 LastScanned = DateTime.Now;
-                NewPackageManager.Instance.Updated();
+                PackageManagerImpl.Instance.Updated();
             }
         }
 

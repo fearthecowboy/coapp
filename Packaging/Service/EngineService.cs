@@ -118,7 +118,7 @@ namespace CoApp.Packaging.Service {
                 EngineServiceManager.EnsureServiceAclsCorrect();
             }
 
-            var npmi = NewPackageManager.Instance;
+            var npmi = PackageManagerImpl.Instance;
 
             _cancellationTokenSource = new CancellationTokenSource();
             _isRunning = true;

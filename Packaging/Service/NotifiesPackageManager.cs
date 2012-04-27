@@ -14,7 +14,7 @@ namespace CoApp.Packaging.Service {
     public class NotifiesPackageManager {
         internal static void Changed() {
             // notify the Registrar that a change has occured in a package.
-            NewPackageManager.Instance.Updated();
+            PackageManagerImpl.Instance.Updated();
         }
     }
 }

@@ -22,7 +22,6 @@ namespace CoApp.Packaging.Service {
     using Feeds;
     using PackageFormatHandlers;
     using Toolkit.Crypto;
-
     using Toolkit.Exceptions;
     using Toolkit.Extensions;
     using Toolkit.Logging;
@@ -31,18 +30,17 @@ namespace CoApp.Packaging.Service {
     using Toolkit.Tasks;
     using Toolkit.Win32;
 
-    public class NewPackageManager : IPackageManager {
+    public class PackageManagerImpl : IPackageManager {
         private static Task FinishedSynchronously {
             get {
                 return CoTask.AsResultTask<object>(null);
             }
         }
 
-        public static NewPackageManager Instance = new NewPackageManager();
-        private static readonly Regex CanonicalNameParser = new Regex(@"^(.*)-(\d{1,5}\.\d{1,5}\.\d{1,5}\.\d{1,5})-(any|x86|x64|arm)-([0-9a-f]{16})$", RegexOptions.IgnoreCase);
+        public static PackageManagerImpl Instance = new PackageManagerImpl();
 
         private readonly List<ManualResetEvent> _manualResetEvents = new List<ManualResetEvent>();
-        internal static IncomingCallDispatcher<NewPackageManager> Dispatcher = new IncomingCallDispatcher<NewPackageManager>(Instance);
+        internal static IncomingCallDispatcher<PackageManagerImpl> Dispatcher = new IncomingCallDispatcher<PackageManagerImpl>(Instance);
 
         private bool CancellationRequested {
             get {
@@ -50,7 +48,7 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        private NewPackageManager() {
+        private PackageManagerImpl() {
             // always load the Installed Package Feed.
             PackageFeed.GetPackageFeedFromLocation(InstalledPackageFeed.CanonicalLocation);
         }
@@ -1137,10 +1135,7 @@ namespace CoApp.Packaging.Service {
         /// <summary>
         ///   Gets packages from all visible feeds based on criteria
         /// </summary>
-        /// <param name="name"> </param>
-        /// <param name="version"> </param>
-        /// <param name="arch"> </param>
-        /// <param name="publicKeyToken"> </param>
+        /// <param name="canonicalName"> </param>
         /// <param name="location"> </param>
         /// <returns> </returns>
         internal IEnumerable<Package> SearchForPackages(CanonicalName canonicalName, string location = null) {
@@ -1186,10 +1181,7 @@ namespace CoApp.Packaging.Service {
         /// <summary>
         ///   Gets just installed packages based on criteria
         /// </summary>
-        /// <param name="name"> </param>
-        /// <param name="version"> </param>
-        /// <param name="arch"> </param>
-        /// <param name="publicKeyToken"> </param>
+        /// <param name="canonicalName"> </param>
         /// <returns> </returns>
         internal IEnumerable<Package> SearchForInstalledPackages(CanonicalName canonicalName) {
             return InstalledPackageFeed.Instance.FindPackages(canonicalName);
