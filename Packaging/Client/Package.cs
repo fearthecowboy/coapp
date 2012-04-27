@@ -13,10 +13,10 @@
 namespace CoApp.Packaging.Client {
     using System.Collections.Generic;
     using System.Linq;
-    using CoApp.Toolkit.Extensions;
-    using CoApp.Toolkit.Win32;
     using Common;
     using Common.Model;
+    using Toolkit.Extensions;
+    using Toolkit.Win32;
 
     public class Package {
         private static readonly Dictionary<CanonicalName, Package> AllPackages = new Dictionary<CanonicalName, Package>();
@@ -40,29 +40,40 @@ namespace CoApp.Packaging.Client {
 
         public CanonicalName CanonicalName { get; set; }
         public string LocalPackagePath { get; set; }
-        public string Name { get {
-            return CanonicalName.Name;
-        } }
-        public string Flavor { get {
-            return CanonicalName.Flavor;
-        } }
+
+        public string Name {
+            get {
+                return CanonicalName.Name;
+            }
+        }
+
+        public string Flavor {
+            get {
+                return CanonicalName.Flavor;
+            }
+        }
+
         public FourPartVersion Version {
             get {
                 return CanonicalName.Version;
             }
         }
+
         public PackageType PackageType {
             get {
                 return CanonicalName.PackageType;
             }
         }
+
         public FourPartVersion MinPolicy { get; set; }
         public FourPartVersion MaxPolicy { get; set; }
+
         public Architecture Architecture {
             get {
                 return CanonicalName.Architecture;
             }
         }
+
         public string PublicKeyToken {
             get {
                 return CanonicalName.PublicKeyToken;

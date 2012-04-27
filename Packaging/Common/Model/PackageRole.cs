@@ -12,46 +12,44 @@
 
 namespace CoApp.Packaging.Common.Model {
     /// <summary>
-    /// Different types of package roles
+    ///   Different types of package roles
     /// </summary>
-    /// <remarks></remarks>
+    /// <remarks>
+    /// </remarks>
     public enum PackageRole {
         /// <summary>
-        /// Shared Library (.NET Assembly, or native DLL)
+        ///   Shared Library (.NET Assembly, or native DLL)
         /// </summary>
         Assembly,
-        
+
         /// <summary>
-        /// Developer Library (.NET assembly or .lib/.h files)
+        ///   Developer Library (.NET assembly or .lib/.h files)
         /// </summary>
         DeveloperLibrary,
-        
+
         /// <summary>
-        /// Source Code MSI
+        ///   Source Code MSI
         /// </summary>
         SourceCode,
-        
+
         /// <summary>
-        /// Application (binaries, etc)
+        ///   Application (binaries, etc)
         /// </summary>
         Application,
 
         /// <summary>
-        /// Device Driver
+        ///   Device Driver
         /// </summary>
         Driver,
 
         /// <summary>
-        /// A web-application (registers with a web server)
+        ///   A web-application (registers with a web server)
         /// </summary>
         WebApplication,
 
         /// <summary>
-        /// Win32 Service (registers with SC)
+        ///   Win32 Service (registers with SC)
         /// </summary>
         Service,
-
     }
 }
-
-

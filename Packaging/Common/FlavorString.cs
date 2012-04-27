@@ -14,7 +14,7 @@ namespace CoApp.Packaging.Common {
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using CoApp.Toolkit.Extensions;
+    using Toolkit.Extensions;
 
     public class FlavorString : IComparable, IComparable<FlavorString>, IEquatable<FlavorString> {
         private readonly IEnumerable<string> _strings;
@@ -23,7 +23,7 @@ namespace CoApp.Packaging.Common {
 
         public FlavorString(string flavor) {
             // null flavor means no flavor
-            if( string.IsNullOrEmpty(flavor)) {
+            if (string.IsNullOrEmpty(flavor)) {
                 _string = "";
                 _hashCode = 0x4A3B9853;
                 _strings = Enumerable.Empty<string>();
@@ -32,7 +32,7 @@ namespace CoApp.Packaging.Common {
 
             // remove any extra brackets
             flavor = flavor.TrimStart('[').TrimEnd(']');
-            
+
             // gotta check again after its trimmed.
             if (string.IsNullOrEmpty(flavor)) {
                 _string = "";
@@ -42,7 +42,7 @@ namespace CoApp.Packaging.Common {
             }
 
             var i = flavor.IndexOf('-');
-            if( i > -1 ) {
+            if (i > -1) {
                 _strings = flavor.Split(new[] {'-'}, StringSplitOptions.RemoveEmptyEntries);
                 _string = "[{0}]".format(_string = _strings.Aggregate("", (current, each) => current + "-" + each));
             }
@@ -59,21 +59,24 @@ namespace CoApp.Packaging.Common {
         }
 
         public bool IsWildcardMatch(FlavorString flavor) {
-            if( (flavor._string.Contains("*") ||  flavor._string.Contains("?")) && _string.IsWildcardMatch(flavor._string)) {
+            if ((flavor._string.Contains("*") || flavor._string.Contains("?")) && _string.IsWildcardMatch(flavor._string)) {
                 return true;
             }
             return Equals(flavor);
         }
 
         public override string ToString() {
-            return _string ;
+            return _string;
         }
-        public static bool operator ==(FlavorString a, FlavorString b) {
-            if (ReferenceEquals(a, b))
-                return true;
 
-            if (ReferenceEquals(a, null) || ReferenceEquals(b, null))
+        public static bool operator ==(FlavorString a, FlavorString b) {
+            if (ReferenceEquals(a, b)) {
+                return true;
+            }
+
+            if (ReferenceEquals(a, null) || ReferenceEquals(b, null)) {
                 return false;
+            }
 
             return a.Equals(b);
         }
@@ -81,22 +84,28 @@ namespace CoApp.Packaging.Common {
         public static bool operator !=(FlavorString a, FlavorString b) {
             return !(a == b);
         }
+
         public static bool operator ==(FlavorString a, string b) {
             return a == new FlavorString(b);
         }
+
         public static bool operator !=(FlavorString a, string b) {
             return !(a == new FlavorString(b));
         }
+
         public override bool Equals(object o) {
-            if (ReferenceEquals(this, o))
+            if (ReferenceEquals(this, o)) {
                 return true;
-            if (ReferenceEquals(o, null))
+            }
+            if (ReferenceEquals(o, null)) {
                 return false;
-            if(o is FlavorString) {
+            }
+            if (o is FlavorString) {
                 return Equals(o as FlavorString);
             }
             return Equals(o.ToString());
         }
+
         public bool Equals(string s) {
             return !ReferenceEquals(s, null) && Equals(new FlavorString(s));
         }
@@ -110,6 +119,7 @@ namespace CoApp.Packaging.Common {
         public static bool operator <(FlavorString a, FlavorString b) {
             return a.CompareTo(b) < 0;
         }
+
         public static bool operator >(FlavorString a, FlavorString b) {
             return a.CompareTo(b) > 0;
         }
@@ -125,7 +135,7 @@ namespace CoApp.Packaging.Common {
         }
 
         public int CompareTo(object obj) {
-            if( ReferenceEquals(obj, null)) {
+            if (ReferenceEquals(obj, null)) {
                 return -1;
             }
             if (ReferenceEquals(obj, this)) {
@@ -144,16 +154,16 @@ namespace CoApp.Packaging.Common {
             if (ReferenceEquals(other, this)) {
                 return 0;
             }
-            if( Equals(other)) {
+            if (Equals(other)) {
                 return 0;
             }
 
             var s = _strings.OrderBy(each => each).ToArray();
             var t = other._strings.OrderBy(each => each).ToArray();
 
-            for( var i= 0; i< s.Length && i < t.Length ; i++ ) {
+            for (var i = 0; i < s.Length && i < t.Length; i++) {
                 var n = s[i].CompareTo(t[i]);
-                if( n != 0 ) {
+                if (n != 0) {
                     return n;
                 }
             }

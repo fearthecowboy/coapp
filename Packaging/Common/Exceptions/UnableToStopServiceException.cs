@@ -10,19 +10,16 @@
 // </license>
 //-----------------------------------------------------------------------
 
-namespace CoApp.Packaging.Common.Model {
+namespace CoApp.Packaging.Common.Exceptions {
     using System;
-    using System.Xml.Serialization;
+    using Toolkit.Extensions;
 
-    [XmlRoot(ElementName = "Identity", Namespace = "http://coapp.org/atom-package-feed-1.0")]
-    public class Identity {
-        [XmlElement(IsNullable = false)]
-        public string Name { get; set; }
+    public class UnableToStopServiceException : Exception {
+        public string Reason;
 
-        [XmlElement(IsNullable = false)]
-        public Uri Location { get; set; }
-
-        [XmlElement(IsNullable = false)]
-        public string Email { get; set; }
+        public UnableToStopServiceException(string reason)
+            : base("Unable to start service: {0}".format(reason)) {
+            Reason = reason;
+        }
     }
 }

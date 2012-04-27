@@ -69,15 +69,16 @@
 #endregion
 
 namespace CoApp.Packaging.Common.Model.Atom {
-    using System.Collections.Generic;
+    
     using System.Linq;
     using System.ServiceModel.Syndication;
     using System.Xml;
-    using CoApp.Toolkit.Extensions;
+    using Toolkit.Extensions;
+
 #if COAPP_ENGINE_CORE
     using Packaging.Service;
     using Toolkit.Tasks;
-
+    using System.Collections.Generic;
 #endif
 
     public class AtomItem : SyndicationItem {
@@ -115,7 +116,7 @@ namespace CoApp.Packaging.Common.Model.Atom {
                 }
             }
 
-            if( !string.IsNullOrEmpty(Model.PackageDetails.CopyrightStatement)) {
+            if (!string.IsNullOrEmpty(Model.PackageDetails.CopyrightStatement)) {
                 Copyright = new TextSyndicationContent(Model.PackageDetails.CopyrightStatement);
             }
 
@@ -145,7 +146,9 @@ namespace CoApp.Packaging.Common.Model.Atom {
                         link.Title = Model.Name;
                     }));
 
-                    Links.Add(CreateLink().With(link => { link.Uri = location; }));
+                    Links.Add(CreateLink().With(link => {
+                        link.Uri = location;
+                    }));
                 }
             }
             // and serialize that out.
@@ -181,16 +184,16 @@ namespace CoApp.Packaging.Common.Model.Atom {
             var content = (Content as TextSyndicationContent);
             Model.PackageDetails.Description = content == null ? string.Empty : content.Text;
 
-            Model.PackageDetails.CopyrightStatement = Copyright == null ? string.Empty : Copyright.Text; 
+            Model.PackageDetails.CopyrightStatement = Copyright == null ? string.Empty : Copyright.Text;
 
             Model.Locations = Links.Select(each => each.Uri.AbsoluteUri.ToUri()).Distinct().ToList();
         }
 
         /// <summary>
         /// </summary>
-        /// <param name = "reader"></param>
-        /// <param name = "version"></param>
-        /// <returns>When the reader parses the embedded package model we sync that back to the exposed model right away.</returns>
+        /// <param name="reader"> </param>
+        /// <param name="version"> </param>
+        /// <returns> When the reader parses the embedded package model we sync that back to the exposed model right away. </returns>
         protected override bool TryParseElement(XmlReader reader, string version) {
             var extension = Model.XmlSerializer.Deserialize(reader) as PackageModel;
             if (extension != null) {
@@ -286,6 +289,5 @@ namespace CoApp.Packaging.Common.Model.Atom {
         }
 
 #endif
-
     }
 }

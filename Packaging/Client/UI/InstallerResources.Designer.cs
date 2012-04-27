@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace CoApp.Packaging.Client {
+namespace CoApp.Packaging.Client.UI {
     using System;
     
     
@@ -39,7 +39,7 @@ namespace CoApp.Packaging.Client {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("CoApp.Packaging.Client.InstallerResources", typeof(InstallerResources).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("CoApp.Packaging.Client.UI.InstallerResources", typeof(InstallerResources).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;

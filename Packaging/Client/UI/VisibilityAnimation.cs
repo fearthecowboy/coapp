@@ -1,4 +1,16 @@
-﻿namespace CoApp.Packaging.Client {
+﻿//-----------------------------------------------------------------------
+// <copyright company="CoApp Project">
+//     Copyright (c) 2010-2012 Garrett Serack and CoApp Contributors. 
+//     Contributors can be discovered using the 'git log' command.
+//     All rights reserved.
+// </copyright>
+// <license>
+//     The software is licensed under the Apache 2.0 License (the "License")
+//     You may not use the software except in compliance with the License. 
+// </license>
+//-----------------------------------------------------------------------
+
+namespace CoApp.Packaging.Client.UI {
     using System;
     using System.Collections.Generic;
     using System.Windows;
@@ -6,65 +18,65 @@
     using System.Windows.Media.Animation;
 
     /// <summary>
-    /// Supplies attached properties that provides visibility of animations
+    ///   Supplies attached properties that provides visibility of animations
     /// </summary>
     public class VisibilityAnimation {
         public enum AnimationType {
             /// <summary>
-            /// No animation
+            ///   No animation
             /// </summary>
             None,
 
             /// <summary>
-            /// Fade in / Fade out
+            ///   Fade in / Fade out
             /// </summary>
             Fade
         }
 
         /// <summary>
-        /// Animation duration
+        ///   Animation duration
         /// </summary>
         private const int AnimationDuration = 300;
 
         /// <summary>
-        /// List of hooked objects
+        ///   List of hooked objects
         /// </summary>
         private static readonly Dictionary<FrameworkElement, bool> _hookedElements = new Dictionary<FrameworkElement, bool>();
 
         /// <summary>
-        /// Get AnimationType attached property
+        ///   Get AnimationType attached property
         /// </summary>
-        /// <param name="obj">Dependency object</param>
-        /// <returns>AnimationType value</returns>
+        /// <param name="obj"> Dependency object </param>
+        /// <returns> AnimationType value </returns>
         public static AnimationType GetAnimationType(DependencyObject obj) {
             return (AnimationType)obj.GetValue(AnimationTypeProperty);
         }
 
         /// <summary>
-        /// Set AnimationType attached property
+        ///   Set AnimationType attached property
         /// </summary>
-        /// <param name="obj">Dependency object</param>
-        /// <param name="value">New value for AnimationType</param>
+        /// <param name="obj"> Dependency object </param>
+        /// <param name="value"> New value for AnimationType </param>
         public static void SetAnimationType(DependencyObject obj, AnimationType value) {
             obj.SetValue(AnimationTypeProperty, value);
         }
 
         /// <summary>
-        /// Using a DependencyProperty as the backing store for AnimationType.  This enables animation, styling, binding, etc...
+        ///   Using a DependencyProperty as the backing store for AnimationType. This enables animation, styling, binding, etc...
         /// </summary>
         public static readonly DependencyProperty AnimationTypeProperty = DependencyProperty.RegisterAttached(
             "AnimationType",
-            typeof(AnimationType),
-            typeof(VisibilityAnimation),
-            new FrameworkPropertyMetadata(AnimationType.None, new PropertyChangedCallback(OnAnimationTypePropertyChanged)));
+            typeof (AnimationType),
+            typeof (VisibilityAnimation),
+            new FrameworkPropertyMetadata(AnimationType.None, OnAnimationTypePropertyChanged));
 
         /// <summary>
-        /// AnimationType property changed
+        ///   AnimationType property changed
         /// </summary>
-        /// <param name="dependencyObject">Dependency object</param>
-        /// <param name="e">e</param>
+        /// <param name="dependencyObject"> Dependency object </param>
+        /// <param name="e"> e </param>
         private static void OnAnimationTypePropertyChanged(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs e) {
-            FrameworkElement frameworkElement = dependencyObject as FrameworkElement;
+            var frameworkElement = dependencyObject as FrameworkElement;
 
             if (frameworkElement == null) {
                 return;
@@ -81,17 +93,17 @@
         }
 
         /// <summary>
-        /// Add framework element to list of hooked objects
+        ///   Add framework element to list of hooked objects
         /// </summary>
-        /// <param name="frameworkElement">Framework element</param>
+        /// <param name="frameworkElement"> Framework element </param>
         private static void HookVisibilityChanges(FrameworkElement frameworkElement) {
             _hookedElements.Add(frameworkElement, false);
         }
 
         /// <summary>
-        /// Remove framework element from list of hooked objects
+        ///   Remove framework element from list of hooked objects
         /// </summary>
-        /// <param name="frameworkElement">Framework element</param>
+        /// <param name="frameworkElement"> Framework element </param>
         private static void UnHookVisibilityChanges(FrameworkElement frameworkElement) {
             if (_hookedElements.ContainsKey(frameworkElement)) {
                 _hookedElements.Remove(frameworkElement);
@@ -99,39 +111,39 @@
         }
 
         /// <summary>
-        /// VisibilityAnimation static ctor
+        ///   VisibilityAnimation static ctor
         /// </summary>
         static VisibilityAnimation() {
             // Here we "register" on Visibility property "before change" event
             UIElement.VisibilityProperty.AddOwner(
-                typeof(FrameworkElement),
+                typeof (FrameworkElement),
                 new FrameworkPropertyMetadata(Visibility.Visible, VisibilityChanged, CoerceVisibility));
         }
 
         /// <summary>
-        /// Visibility changed
+        ///   Visibility changed
         /// </summary>
-        /// <param name="dependencyObject">Dependency object</param>
-        /// <param name="e">e</param>
+        /// <param name="dependencyObject"> Dependency object </param>
+        /// <param name="e"> e </param>
         private static void VisibilityChanged(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs e) {
             // Ignore
         }
 
         /// <summary>
-        /// Coerce visibility
+        ///   Coerce visibility
         /// </summary>
-        /// <param name="dependencyObject">Dependency object</param>
-        /// <param name="baseValue">Base value</param>
-        /// <returns>Coerced value</returns>
+        /// <param name="dependencyObject"> Dependency object </param>
+        /// <param name="baseValue"> Base value </param>
+        /// <returns> Coerced value </returns>
         private static object CoerceVisibility(DependencyObject dependencyObject, object baseValue) {
             // Make sure object is a framework element
-            FrameworkElement frameworkElement = dependencyObject as FrameworkElement;
+            var frameworkElement = dependencyObject as FrameworkElement;
             if (frameworkElement == null) {
                 return baseValue;
             }
 
             // Cast to type safe value
-            Visibility visibility = (Visibility)baseValue;
+            var visibility = (Visibility)baseValue;
 
             // If Visibility value hasn't change, do nothing.
             // This can happen if the Visibility property is set using data binding and the binding source has changed 
@@ -153,7 +165,7 @@
 
             // If we get here, it means we have to start fade in or fade out animation. 
             // In any case return value of this method will be Visibility.Visible, to allow the animation.
-            DoubleAnimation doubleAnimation = new DoubleAnimation {
+            var doubleAnimation = new DoubleAnimation {
                 Duration = new Duration(TimeSpan.FromMilliseconds(AnimationDuration))
             };
 
@@ -197,21 +209,21 @@
         }
 
         /// <summary>
-        /// Check if framework element is hooked with AnimationType property
+        ///   Check if framework element is hooked with AnimationType property
         /// </summary>
-        /// <param name="frameworkElement">Framework element to check</param>
-        /// <returns>Is the framework element hooked?</returns>
+        /// <param name="frameworkElement"> Framework element to check </param>
+        /// <returns> Is the framework element hooked? </returns>
         private static bool IsHookedElement(FrameworkElement frameworkElement) {
             return _hookedElements.ContainsKey(frameworkElement);
         }
 
         /// <summary>
-        /// Update animation started flag or a given framework element
+        ///   Update animation started flag or a given framework element
         /// </summary>
-        /// <param name="frameworkElement">Given framework element</param>
-        /// <returns>Old value of animation started flag</returns>
+        /// <param name="frameworkElement"> Given framework element </param>
+        /// <returns> Old value of animation started flag </returns>
         private static bool UpdateAnimationStartedFlag(FrameworkElement frameworkElement) {
-            bool animationStarted = (bool)_hookedElements[frameworkElement];
+            bool animationStarted = _hookedElements[frameworkElement];
             _hookedElements[frameworkElement] = !animationStarted;
 
             return animationStarted;

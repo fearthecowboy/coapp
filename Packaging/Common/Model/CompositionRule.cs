@@ -11,37 +11,7 @@
 //-----------------------------------------------------------------------
 
 namespace CoApp.Packaging.Common.Model {
-    using System.Collections.Generic;
-    using System.Xml;
     using System.Xml.Serialization;
-
-    [XmlRoot(ElementName = "Composition", Namespace = "http://coapp.org/atom-package-feed-1.0")]
-    public class Composition {
-        [XmlArray(IsNullable = false)]
-        public List<CompositionRule> CompositionRules { get; set; }
-
-        [XmlArray(IsNullable = false)]
-        public List<DeveloperLibrary> DeveloperLibraries { get; set; }
-
-        [XmlArray(IsNullable = false)]
-        public List<WebApplication> WebApplications { get; set; }
-
-        [XmlArray(IsNullable = false)]
-        public List<Service> Services { get; set; }
-
-        [XmlArray(IsNullable = false)]
-        public List<SourceCode> SourceCodes { get; set; }
-
-        [XmlArray(IsNullable = false)]
-        public List<Driver> Drivers { get; set; }
-
-        // soak up anything we don't recognize
-        [XmlAnyAttribute]
-        public XmlAttribute[] UnknownAttributes;
-
-        [XmlAnyElement]
-        public XmlElement[] UnknownElements;
-    }
 
     [XmlRoot(ElementName = "CompositionRule", Namespace = "http://coapp.org/atom-package-feed-1.0")]
     public class CompositionRule {
@@ -57,10 +27,18 @@ namespace CoApp.Packaging.Common.Model {
         public string Source { get; set; }
 
         [XmlIgnore]
-        public string Value { get { return Source; } }
+        public string Value {
+            get {
+                return Source;
+            }
+        }
 
         [XmlIgnore]
-        public string Key { get { return Destination; } }
+        public string Key {
+            get {
+                return Destination;
+            }
+        }
 
         [XmlAttribute]
         public string Parameters { get; set; }

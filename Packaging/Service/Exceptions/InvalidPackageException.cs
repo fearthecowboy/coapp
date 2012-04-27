@@ -14,28 +14,6 @@ namespace CoApp.Packaging.Service.Exceptions {
     using Toolkit.Exceptions;
 
     /// <summary>
-    ///   Represents th reason that the package file is considered invalid.
-    /// </summary>
-    /// <remarks>
-    /// </remarks>
-    public enum InvalidReason {
-        /// <summary>
-        ///   The package isn't an MSI
-        /// </summary>
-        NotValidMSI,
-
-        /// <summary>
-        ///   The package isn't a coapp-style MSI
-        /// </summary>
-        NotCoAppMSI,
-
-        /// <summary>
-        ///   the package is a coapp msi that doesn't conform right (old version?).
-        /// </summary>
-        MalformedCoAppMSI,
-    }
-
-    /// <summary>
     ///   Exception for when a given package file isn't valid
     /// </summary>
     /// <remarks>

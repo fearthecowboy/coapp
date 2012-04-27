@@ -13,14 +13,12 @@
 namespace CoApp.Packaging.Common.Model {
     using System;
     using System.Collections.Generic;
-    using System.IO;
     using System.Linq;
     using System.Xml;
     using System.Xml.Serialization;
-    using Atom;
-    using CoApp.Toolkit.Extensions;
-    using CoApp.Toolkit.Exceptions;
-    using CoApp.Toolkit.Win32;
+    using Toolkit.Exceptions;
+    using Toolkit.Extensions;
+    using Toolkit.Win32;
 
 #if COAPP_ENGINE_CORE
     using Packaging.Service;
@@ -50,10 +48,10 @@ namespace CoApp.Packaging.Common.Model {
         }
 
         [XmlAttribute]
-        public string Name { 
+        public string Name {
             get {
                 return CanonicalName.Name;
-            } 
+            }
             set {
                 // ignore this value when deserializing, check just for consistency.
                 if (null != CanonicalName && CanonicalName.Name != value) {
@@ -75,9 +73,11 @@ namespace CoApp.Packaging.Common.Model {
         }
 
         [XmlIgnore]
-        public PackageType PackageType { get {
-            return CanonicalName.PackageType;
-        } }
+        public PackageType PackageType {
+            get {
+                return CanonicalName.PackageType;
+            }
+        }
 
         // Workaround to get around stupid .NET limitation of not being able to let a class/struct serialize as an attribute. #FAIL
         [XmlAttribute("PackageType")]
@@ -94,9 +94,11 @@ namespace CoApp.Packaging.Common.Model {
         }
 
         [XmlIgnore]
-        public Architecture Architecture { get {
-            return CanonicalName.Architecture;
-        }}
+        public Architecture Architecture {
+            get {
+                return CanonicalName.Architecture;
+            }
+        }
 
         // Workaround to get around stupid .NET limitation of not being able to let a class/struct serialize as an attribute. #FAIL
         [XmlAttribute("Architecture")]
@@ -113,9 +115,11 @@ namespace CoApp.Packaging.Common.Model {
         }
 
         [XmlIgnore]
-        public FourPartVersion Version { get {
-            return CanonicalName.Version;
-        } }
+        public FourPartVersion Version {
+            get {
+                return CanonicalName.Version;
+            }
+        }
 
         // Workaround to get around stupid .NET limitation of not being able to let a class/struct serialize as an attribute. #FAIL
         [XmlAttribute("Version")]
@@ -141,7 +145,6 @@ namespace CoApp.Packaging.Common.Model {
                 }
             }
         }
-
 
         [XmlAttribute]
         public string DisplayName { get; set; }
@@ -228,90 +231,6 @@ namespace CoApp.Packaging.Common.Model {
 
         [XmlIgnore]
         public XmlSerializer XmlSerializer;
-
-        // soak up anything we don't recognize
-        [XmlAnyAttribute]
-        public XmlAttribute[] UnknownAttributes;
-
-        [XmlAnyElement]
-        public XmlElement[] UnknownElements;
-    }
-
-    [XmlRoot(ElementName = "Details", Namespace = "http://coapp.org/atom-package-feed-1.0")]
-    public class PackageDetails {
-        // Elements marked with XmlIgnore won't persist in the package feed as themselves
-        // they get persisted as elements in the Atom Format (so that we have a suitable Atom feed to look at)
-        public PackageDetails() {
-            Publisher = new Identity();
-            Contributors = new List<Identity>();
-        }
-
-        [XmlElement(IsNullable = false)]
-        public string AuthorVersion { get; set; }
-
-        [XmlElement(IsNullable = false)]
-        public string BugTracker { get; set; }
-
-        [XmlArray(IsNullable = false)]
-        public List<string> IconLocations {
-            get {
-                return Icons.IsNullOrEmpty() ? new List<string>() : Icons.Select(each => each.AbsoluteUri).ToList();
-            }
-            set {
-                Icons = new List<Uri>(value.Select(each => each.ToUri()));
-            }
-        }
-
-        [XmlIgnore]
-        public List<Uri> Icons { get; set; }
-
-        [XmlArray(IsNullable = false)]
-        public List<License> Licenses { get; set; }
-
-        [XmlElement(IsNullable = false)]
-        public bool IsNsfw { get; set; }
-
-        /// <summary>
-        ///   -100 = DEATHLY_UNSTABLE ... 0 == release ... +100 = CERTIFIED_NEVER_GONNA_GIVE_YOU_UP.
-        /// </summary>
-        [XmlElement(IsNullable = false)]
-        public sbyte Stability { get; set; }
-
-        [XmlIgnore]
-        public string SummaryDescription { get; set; }
-
-        [XmlIgnore]
-        public DateTime PublishDate { get; set; }
-
-        [XmlIgnore]
-        public Identity Publisher { get; set; }
-
-        [XmlIgnore]
-        public List<Identity> Contributors { get; set; }
-
-        [XmlIgnore]
-        public string CopyrightStatement { get; set; }
-
-        [XmlIgnore]
-        public List<string> Tags { get; set; }
-
-        [XmlIgnore]
-        public List<string> Categories { get; set; }
-
-        [XmlIgnore]
-        public string Description { get; set; }
-
-#if COAPP_ENGINE_CORE
-        internal string GetAtomItemText(Package package) {
-            var item = new AtomItem(package);
-            using (var sw = new StringWriter()) {
-                using (var xw = XmlWriter.Create(sw)) {
-                    item.SaveAsAtom10(xw);
-                }
-                return sw.ToString();
-            }
-        }
-#endif
 
         // soak up anything we don't recognize
         [XmlAnyAttribute]

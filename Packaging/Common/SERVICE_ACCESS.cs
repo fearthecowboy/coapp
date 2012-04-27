@@ -10,7 +10,6 @@
 // </license>
 //-----------------------------------------------------------------------
 
-
 namespace CoApp.Packaging.Common {
     using System;
 

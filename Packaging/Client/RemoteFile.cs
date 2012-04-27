@@ -1,13 +1,14 @@
 //-----------------------------------------------------------------------
 // <copyright company="CoApp Project">
-//     Copyright (c) 2011 Garrett Serack. All rights reserved.
+//     Copyright (c) 2010-2012 Garrett Serack and CoApp Contributors. 
+//     Contributors can be discovered using the 'git log' command.
+//     All rights reserved.
 // </copyright>
 // <license>
 //     The software is licensed under the Apache 2.0 License (the "License")
 //     You may not use the software except in compliance with the License. 
 // </license>
 //-----------------------------------------------------------------------
-
 
 namespace CoApp.Packaging.Client {
     using System;
@@ -19,10 +20,10 @@ namespace CoApp.Packaging.Client {
     using System.Reflection;
     using System.Security.Cryptography;
     using System.Threading.Tasks;
-    using CoApp.Toolkit.Exceptions;
-    using CoApp.Toolkit.Extensions;
-    using CoApp.Toolkit.Tasks;
-    using CoApp.Toolkit.Logging;
+    using Toolkit.Exceptions;
+    using Toolkit.Extensions;
+    using Toolkit.Logging;
+    using Toolkit.Tasks;
 
     public delegate void RemoteFileFailed(Uri remoteLocation);
 
@@ -40,7 +41,7 @@ namespace CoApp.Packaging.Client {
         public readonly Uri RemoteLocation;
         private readonly string _localDirectory;
         private string _filename;
-        private bool IsCanceled = false;
+        private bool IsCanceled;
         private string _fullPath;
         private DateTime _lastModified;
         private long _contentLength;
@@ -160,7 +161,6 @@ namespace CoApp.Packaging.Client {
                         if (response.Headers.AllKeys.ContainsIgnoreCase("x-ms-meta-MD5")) {
                             // it's coming from azure, check the value of the md5 and compare against the file on disk ... better than date/size matching.
                             md5 = response.Headers["x-ms-meta-MD5"].Trim();
-
                         } else if (response.Headers.AllKeys.ContainsIgnoreCase("Content-MD5")) {
                             md5 = response.Headers["Content-MD5"].Trim();
                             if (md5.EndsWith("=")) {
@@ -210,18 +210,16 @@ namespace CoApp.Packaging.Client {
                                     filestream.Write(buffer, 0, bytesRead);
                                     totalRead += bytesRead;
                                     if (contentLength > 0) {
-                                        _progress(RemoteLocation, (int)((totalRead * 100) / contentLength));
+                                        _progress(RemoteLocation, (int)((totalRead*100)/contentLength));
                                     }
                                 } while (bytesRead != 0);
-                            }
-                            catch (Exception e) {
+                            } catch (Exception e) {
                                 Logger.Error(e);
                                 _failed(RemoteLocation);
                             }
                         }
                     }
-                }
-                catch (Exception ex) {
+                } catch (Exception ex) {
                     // if it fails during download, then we cleanup the file too.
                     if (File.Exists(Filename)) {
                         Filename.TryHardToDelete();
@@ -240,14 +238,12 @@ namespace CoApp.Packaging.Client {
                     // don't care if setting the timestamps fails.
                 }
                 _completed(RemoteLocation);
-            }
-            catch (WebException ex) {
+            } catch (WebException ex) {
                 if ((int)ex.Status != 404) {
                     Logger.Error(ex);
                 }
                 _failed(RemoteLocation);
-            }
-            catch( Exception ex ) {
+            } catch (Exception ex) {
                 // on other errors, remove the file.
                 Logger.Error(ex);
                 _failed(RemoteLocation);
@@ -259,8 +255,8 @@ namespace CoApp.Packaging.Client {
             webRequest.AllowAutoRedirect = true;
             webRequest.Method = WebRequestMethods.Http.Get;
             webRequest.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
-            
-            return Task.Factory.FromAsync<WebResponse>(webRequest.BeginGetResponse, (Func<IAsyncResult, WebResponse>)webRequest.BetterEndGetResponse, this).ContinueWith(asyncResult => {
+
+            return Task.Factory.FromAsync(webRequest.BeginGetResponse, (Func<IAsyncResult, WebResponse>)webRequest.BetterEndGetResponse, this).ContinueWith(asyncResult => {
                 // Logging.Logger.Message("In FromAsync Task::::::{0}", RemoteLocation);
                 try {
                     if (IsCanceled) {
@@ -354,7 +350,6 @@ namespace CoApp.Packaging.Client {
                     }
                     // this is not good. 
                     _failed(RemoteLocation);
-
                 } catch (AggregateException e) {
                     _failed(RemoteLocation);
                     // at this point, we've failed somehow
@@ -379,7 +374,6 @@ namespace CoApp.Packaging.Client {
                     Console.WriteLine(e.Message);
                     Console.WriteLine(e.StackTrace);
                 }
-
             }, TaskContinuationOptions.AttachedToParent);
         }
 

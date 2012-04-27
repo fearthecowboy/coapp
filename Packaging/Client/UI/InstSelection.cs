@@ -10,19 +10,16 @@
 // </license>
 //-----------------------------------------------------------------------
 
-namespace CoApp.Packaging.Common.Model {
-    using System;
-    using System.Xml.Serialization;
+namespace CoApp.Packaging.Client.UI {
+    using Toolkit.Extensions;
 
-    [XmlRoot(ElementName = "Identity", Namespace = "http://coapp.org/atom-package-feed-1.0")]
-    public class Identity {
-        [XmlElement(IsNullable = false)]
-        public string Name { get; set; }
+    public class InstSelection {
+        public InstSelection(InstallChoice key, string value, params object[] args) {
+            Key = key;
+            Value = value.format(args);
+        }
 
-        [XmlElement(IsNullable = false)]
-        public Uri Location { get; set; }
-
-        [XmlElement(IsNullable = false)]
-        public string Email { get; set; }
+        public InstallChoice Key { get; set; }
+        public string Value { get; set; }
     }
 }

@@ -13,7 +13,7 @@
 namespace CoApp.Packaging.Common {
     using System;
     using System.Threading.Tasks;
-    using CoApp.Toolkit.ImpromptuInterface.Dynamic;
+    using Toolkit.ImpromptuInterface.Dynamic;
 
     [UseNamedArgument]
     public interface IPackageManager {

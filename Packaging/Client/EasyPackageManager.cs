@@ -16,22 +16,22 @@ namespace CoApp.Packaging.Client {
     using System.IO;
     using System.Linq;
     using System.Threading.Tasks;
-    using CoApp.Toolkit.Extensions;
-    using CoApp.Toolkit.Logging;
-    using CoApp.Toolkit.Tasks;
-    using CoApp.Toolkit.Exceptions;
-    using CoApp.Toolkit.Win32;
     using Common;
     using Common.Exceptions;
+    using Toolkit.Exceptions;
+    using Toolkit.Extensions;
+    using Toolkit.Logging;
+    using Toolkit.Tasks;
+    using Toolkit.Win32;
 
     public class EasyPackageManager {
         private static readonly IPackageManager PM = PackageManager.RemoteService;
 
         #region FlexibleGetPackages
-        public Task<IEnumerable<Package>> GetPackagesEx(IEnumerable<string> parameters, ulong? minVersion = null, ulong? maxVersion = null,
-                    bool? dependencies = null, bool? installed = null, bool? active = null, bool? required = null, bool? blocked = null, bool? latest = null,
-                    string location = null, bool? forceScan = null, bool? updates = null, bool? upgrades = null, bool? trimable = null) {
 
+        public Task<IEnumerable<Package>> GetPackagesEx(IEnumerable<string> parameters, ulong? minVersion = null, ulong? maxVersion = null,
+            bool? dependencies = null, bool? installed = null, bool? active = null, bool? required = null, bool? blocked = null, bool? latest = null,
+            string location = null, bool? forceScan = null, bool? updates = null, bool? upgrades = null, bool? trimable = null) {
             if (parameters.IsNullOrEmpty()) {
                 return GetPackagesEx(string.Empty, minVersion, maxVersion, dependencies, installed, active, required, blocked, latest, location, forceScan, updates, upgrades, trimable);
             }
@@ -43,8 +43,8 @@ namespace CoApp.Packaging.Client {
             return tasks.Continue(packages => packages.SelectMany(each => each).Distinct());
         }
 
-
-        public Task<IEnumerable<Package>> GetPackagesEx(string parameter, ulong? minVersion = null, ulong? maxVersion = null, bool? dependencies = null, bool? installed = null, bool? active = null, bool? required = null, bool? blocked = null, bool? latest = null, string location = null, bool? forceScan = null, bool? updates = null, bool? upgrades = null, bool? trimable = null) {
+        public Task<IEnumerable<Package>> GetPackagesEx(string parameter, ulong? minVersion = null, ulong? maxVersion = null, bool? dependencies = null, bool? installed = null, bool? active = null, bool? required = null, bool? blocked = null,
+            bool? latest = null, string location = null, bool? forceScan = null, bool? updates = null, bool? upgrades = null, bool? trimable = null) {
             if (parameter.IsNullOrEmpty()) {
                 return (PM.FindPackages(null, dependencies, installed, active, required, blocked, latest, null, null, location, forceScan, updates, upgrades, trimable) as Task<CallResponse>).Continue(response => response.Packages);
             }
@@ -65,7 +65,9 @@ namespace CoApp.Packaging.Client {
                         // a feed!
                         if (response.Feeds.Any()) {
                             return (PM.FindPackages(null, dependencies, installed, active, required, blocked, latest, null, null, response.Feeds.First().Location, forceScan, updates, upgrades, trimable) as Task<CallResponse>).Continue(
-                                response1 => response1.Packages.Where(package => (!((FourPartVersion?)minVersion).HasValue || package.Version >= (FourPartVersion?)minVersion) && (!((FourPartVersion?)maxVersion).HasValue || package.Version <= (FourPartVersion?)maxVersion))).Result;
+                                response1 =>
+                                    response1.Packages.Where(
+                                        package => (!((FourPartVersion?)minVersion).HasValue || package.Version >= (FourPartVersion?)minVersion) && (!((FourPartVersion?)maxVersion).HasValue || package.Version <= (FourPartVersion?)maxVersion))).Result;
                         }
 
                         // nothing I could discern.
@@ -83,15 +85,23 @@ namespace CoApp.Packaging.Client {
                 return (PM.AddFeed(parameter, true) as Task<CallResponse>).Continue(response => {
                     // a feed!
                     if (response.Feeds.Any()) {
-                        var task = PM.FindPackages(null, dependencies, installed, active, required, blocked, latest, null, null, response.Feeds.First().Location,forceScan, updates, upgrades, trimable) as Task<CallResponse>;
-                        return task.Continue(response1 => response1.Packages.Where(package => (!((FourPartVersion?)minVersion).HasValue || package.Version >= (FourPartVersion?)minVersion) && (!((FourPartVersion?)maxVersion).HasValue || package.Version <= (FourPartVersion?)maxVersion))).Result;
+                        var task = PM.FindPackages(null, dependencies, installed, active, required, blocked, latest, null, null, response.Feeds.First().Location, forceScan, updates, upgrades, trimable) as Task<CallResponse>;
+                        return
+                            task.Continue(
+                                response1 =>
+                                    response1.Packages.Where(
+                                        package => (!((FourPartVersion?)minVersion).HasValue || package.Version >= (FourPartVersion?)minVersion) && (!((FourPartVersion?)maxVersion).HasValue || package.Version <= (FourPartVersion?)maxVersion))).Result;
                     }
 
                     parameter = parameter.GetFullPath();
                     return (PM.AddFeed(parameter, true) as Task<CallResponse>).Continue(response2 => {
                         if (response.Feeds.Any()) {
-                            var task = PM.FindPackages(null, dependencies, installed, active, required, blocked, latest, null, null, response2.Feeds.First().Location,forceScan, updates, upgrades, trimable) as Task<CallResponse>;
-                            return task.Continue(response1 => response1.Packages.Where(package => (!((FourPartVersion?)minVersion).HasValue || package.Version >= (FourPartVersion?)minVersion) && (!((FourPartVersion?)maxVersion).HasValue || package.Version <= (FourPartVersion?)maxVersion))).Result;
+                            var task = PM.FindPackages(null, dependencies, installed, active, required, blocked, latest, null, null, response2.Feeds.First().Location, forceScan, updates, upgrades, trimable) as Task<CallResponse>;
+                            return
+                                task.Continue(
+                                    response1 =>
+                                        response1.Packages.Where(
+                                            package => (!((FourPartVersion?)minVersion).HasValue || package.Version >= (FourPartVersion?)minVersion) && (!((FourPartVersion?)maxVersion).HasValue || package.Version <= (FourPartVersion?)maxVersion))).Result;
                         }
                         return Enumerable.Empty<Package>();
                     }).Result;
@@ -99,16 +109,16 @@ namespace CoApp.Packaging.Client {
             }
 
             // can only be a canonical name match, proceed with that.            
-            return (PM.FindPackages(parameter, dependencies, installed, active, required, blocked, latest, null, null, location,forceScan, updates, upgrades, trimable) as Task<CallResponse>).Continue(response => 
+            return (PM.FindPackages(parameter, dependencies, installed, active, required, blocked, latest, null, null, location, forceScan, updates, upgrades, trimable) as Task<CallResponse>).Continue(response =>
                 response.Packages.Where(package => (!((FourPartVersion?)minVersion).HasValue || package.Version >= (FourPartVersion?)minVersion) && (!((FourPartVersion?)maxVersion).HasValue || package.Version <= (FourPartVersion?)maxVersion)));
         }
 
-        #endregion 
+        #endregion
 
         /// <summary>
         ///   Returns a collection of packages that are filtered to the platform switches passed on the command line.
         /// </summary>
-            /// <param name="packages"> The collection to filter packages for </param>
+        /// <param name="packages"> The collection to filter packages for </param>
         /// <param name="x86"> Accept x86 packages? </param>
         /// <param name="x64"> Accept x64 packages? </param>
         /// <param name="cpuany"> Accept CPUANY packages? </param>
@@ -337,15 +347,15 @@ namespace CoApp.Packaging.Client {
         }
 
         public Task<Package> GetActiveVersion(string packageName) {
-            return GetPackages(packageName, null, null, null, null, true).Continue(packages=> packages.FirstOrDefault());
+            return GetPackages(packageName, null, null, null, null, true).Continue(packages => packages.FirstOrDefault());
         }
 
         public Task<bool> IsPackageBlocked(string packageName) {
-            return GetPackages(packageName, null, null, null, null, null, null, true).Continue(packages=> packages.Any());
+            return GetPackages(packageName, null, null, null, null, null, null, true).Continue(packages => packages.Any());
         }
 
         public Task<bool> IsPackageMarkedRequested(CanonicalName canonicalName) {
-            return GetPackage(canonicalName).Continue(package=> package.IsClientRequired);
+            return GetPackage(canonicalName).Continue(package => package.IsClientRequired);
         }
 
         public Task<bool> IsPackageMarkedDoNotUpgrade(CanonicalName canonicalName) {
@@ -467,13 +477,13 @@ namespace CoApp.Packaging.Client {
             return failedResult.Task;
         }
 
-        private Task<IEnumerable<Package>> Install(CanonicalName canonicalName, bool? autoUpgrade = null, bool? isUpdate = null, bool? isUpgrade = null, bool? pretend = null, bool? download = null ) {
-            if(!canonicalName.IsCanonical) {
+        private Task<IEnumerable<Package>> Install(CanonicalName canonicalName, bool? autoUpgrade = null, bool? isUpdate = null, bool? isUpgrade = null, bool? pretend = null, bool? download = null) {
+            if (!canonicalName.IsCanonical) {
                 return InvalidCanonicalNameResult<IEnumerable<Package>>(canonicalName);
             }
 
             var completedThisPackage = false;
-           
+
             CurrentTask.Events += new PackageInstallProgress((name, progress, overallProgress) => {
                 if (overallProgress == 100) {
                     completedThisPackage = true;
@@ -510,7 +520,7 @@ namespace CoApp.Packaging.Client {
 
         public Task<int> RemovePackages(IEnumerable<CanonicalName> canonicalNames, bool forceRemoval) {
             var packagesToRemove = canonicalNames.ToList();
-            
+
             return Task.Factory.StartNew(() => {
                 int[] total = {0};
                 int packageCount;
@@ -528,7 +538,7 @@ namespace CoApp.Packaging.Client {
 
                             packagesToRemove.Remove(canonicalName);
                             total[0] = total[0] + 1;
-                        } catch( Exception exception) {
+                        } catch (Exception exception) {
                             packageFailures.Add(exception);
                         }
                     }
@@ -611,7 +621,7 @@ namespace CoApp.Packaging.Client {
         }
 
         public Task<string> AddSystemFeed(string feedLocation) {
-            return (PM.AddFeed(feedLocation, false)as Task<CallResponse>).Continue(response => response.Feeds.Select( each => each.Location ).FirstOrDefault());
+            return (PM.AddFeed(feedLocation, false) as Task<CallResponse>).Continue(response => response.Feeds.Select(each => each.Location).FirstOrDefault());
         }
 
         public Task<string> AddSessionFeed(string feedLocation) {
@@ -619,7 +629,7 @@ namespace CoApp.Packaging.Client {
         }
 
         public Task SuppressFeed(string feedLocation) {
-            return (PM.SuppressFeed(feedLocation) );
+            return (PM.SuppressFeed(feedLocation));
         }
 
         public Task SetFeed(string feedLocation, FeedState state) {
@@ -676,7 +686,7 @@ namespace CoApp.Packaging.Client {
 
         public Task<Package> GetPackageDetails(Package package) {
             if (package.IsPackageDetailsStale) {
-                return GetPackage(package.CanonicalName).Continue(pkg=> RefreshPackageDetails(pkg.CanonicalName).Result);
+                return GetPackage(package.CanonicalName).Continue(pkg => RefreshPackageDetails(pkg.CanonicalName).Result);
             }
 
             return package.Roles.IsNullOrEmpty() ? RefreshPackageDetails(package.CanonicalName) : package.AsResultTask();
@@ -746,7 +756,6 @@ namespace CoApp.Packaging.Client {
             get {
                 return (PM.GetScheduledTasks("*") as Task<CallResponse>).Continue(response => response.ScheduledTasks);
             }
-
         }
 
         public Task<IEnumerable<Publisher>> TrustedPublishers {
@@ -762,6 +771,7 @@ namespace CoApp.Packaging.Client {
         public Task RemoveTrustedPublisher(string publisherName, string publicKeyToken) {
             return null;
         }
+
         // GS01: TrustedPublishers Coming Soon.
 
         public Task RecognizeFile(string filename) {

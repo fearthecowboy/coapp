@@ -1,6 +1,8 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright company="CoApp Project">
-//     Copyright (c) 2011 Garrett Serack . All rights reserved.
+//     Copyright (c) 2010-2012 Garrett Serack and CoApp Contributors. 
+//     Contributors can be discovered using the 'git log' command.
+//     All rights reserved.
 // </copyright>
 // <license>
 //     The software is licensed under the Apache 2.0 License (the "License")
@@ -9,61 +11,63 @@
 //-----------------------------------------------------------------------
 
 namespace CoApp.Packaging.Common {
-    using System.Collections.Generic;
-    using System.Security.AccessControl;
-    using System.Security.Principal;
-    using CoApp.Toolkit.Win32;
     using System;
+    using System.Collections.Generic;
     using System.IO;
     using System.Linq;
-    using CoApp.Toolkit.Configuration;
-    using CoApp.Toolkit.Extensions;
-    using CoApp.Packaging.Common.Exceptions;
+    using System.Security.AccessControl;
+    using System.Security.Principal;
+    using Exceptions;
+    using Toolkit.Configuration;
+    using Toolkit.Extensions;
+    using Toolkit.Win32;
 
     /// <summary>
-    /// Provides access to settings of the package manager.
+    ///   Provides access to settings of the package manager.
     /// </summary>
-    /// <remarks></remarks>
+    /// <remarks>
+    /// </remarks>
     public class PackageManagerSettings {
         /// <summary>
-        /// Registry view for the package manager settings
+        ///   Registry view for the package manager settings
         /// </summary>
         public static RegistryView CoAppSettings = RegistryView.CoAppSystem[@"PackageManager"];
 
         /// <summary>
-        /// Registry view for the volatile information key
+        ///   Registry view for the volatile information key
         /// </summary>
         public static RegistryView CoAppInformation = RegistryView.CoAppSystem[@"Information"];
 
         /// <summary>
-        /// registry view for the cached items (contents subject to being dropped at a whim)
+        ///   registry view for the cached items (contents subject to being dropped at a whim)
         /// </summary>
         public static RegistryView CacheSettings = CoAppSettings[@".cache"];
 
         /// <summary>
-        /// registry view for package-specific information.
-        /// 
-        /// This data is currently the only registry data in coapp that can't be rebuilt--this stores the "current" version of a given package.
-        /// This is also where we will store flags like "blocked" or "required" 
+        ///   registry view for package-specific information. This data is currently the only registry data in coapp that can't be rebuilt--this stores the "current" version of a given package. This is also where we will store flags like "blocked" or "required"
         /// </summary>
         public static RegistryView PerPackageSettings = CoAppSettings[@".packageInformation"];
 
         /// <summary>
-        /// registry view for feed-specific information.
+        ///   registry view for feed-specific information.
         /// </summary>
         public static RegistryView PerFeedSettings = CoAppSettings[@".feedInformation"];
 
-
         /// <summary>
-        /// Gets the default for the CoApp root folder.
+        ///   Gets the default for the CoApp root folder.
         /// </summary>
-        /// <remarks></remarks>
-        private static string DefaultCoappRoot { get {return KnownFolders.GetFolderPath(KnownFolder.CommonApplicationData);} }
+        /// <remarks>
+        /// </remarks>
+        private static string DefaultCoappRoot {
+            get {
+                return KnownFolders.GetFolderPath(KnownFolder.CommonApplicationData);
+            }
+        }
 
         static PackageManagerSettings() {
             CoAppInformation.IsVolatile = true;
 #if COAPP_ENGINE_CORE
-            // on startup of the engine, we wipe the contents of this key.
+    // on startup of the engine, we wipe the contents of this key.
             WipeCoAppInformation();
 #endif
         }
@@ -76,17 +80,14 @@ namespace CoApp.Packaging.Common {
             }
             CoAppInformation.DeleteValues();
         }
-#endif 
+#endif
 
         /// <summary>
-        /// Gets or sets the coapp root directory.
-        /// 
-        /// May only change the value if the existing directory is empty.
-        /// 
-        /// If the directory can not be set, this will default to the DEFAULT_COAPP_ROOT location every time.
+        ///   Gets or sets the coapp root directory. May only change the value if the existing directory is empty. If the directory can not be set, this will default to the DEFAULT_COAPP_ROOT location every time.
         /// </summary>
-        /// <value>The coapp root directory.</value>
-        /// <remarks></remarks>
+        /// <value> The coapp root directory. </value>
+        /// <remarks>
+        /// </remarks>
         public static string CoAppRootDirectory {
             get {
                 // string result = SystemStringSetting["RootDirectory"];
@@ -142,9 +143,10 @@ namespace CoApp.Packaging.Common {
         public static Dictionary<Architecture, string> _coAppInstalledDirectory;
 
         /// <summary>
-        /// Gets the CoApp .installed directory (where the packages install to)
+        ///   Gets the CoApp .installed directory (where the packages install to)
         /// </summary>
-        /// <remarks></remarks>
+        /// <remarks>
+        /// </remarks>
         public static Dictionary<Architecture, string> CoAppInstalledDirectory {
             get {
                 if (_coAppInstalledDirectory == null) {
@@ -152,8 +154,8 @@ namespace CoApp.Packaging.Common {
                     var programFilesX86 = KnownFolders.GetFolderPath(KnownFolder.ProgramFilesX86) ?? programFilesAny;
 
                     var any = Path.Combine(CoAppRootDirectory, "program files");
-                    var x86  = Path.Combine(CoAppRootDirectory, "program files (x86)");
-                    var x64  = Path.Combine(CoAppRootDirectory, "program files (x64)");
+                    var x86 = Path.Combine(CoAppRootDirectory, "program files (x86)");
+                    var x64 = Path.Combine(CoAppRootDirectory, "program files (x64)");
 
                     Symlink.MakeDirectoryLink(x86, programFilesX86);
                     Symlink.MakeDirectoryLink(any, programFilesAny);
@@ -173,9 +175,10 @@ namespace CoApp.Packaging.Common {
         }
 
         /// <summary>
-        /// Gets the co app cache directory (where transient files are located).
+        ///   Gets the co app cache directory (where transient files are located).
         /// </summary>
-        /// <remarks></remarks>
+        /// <remarks>
+        /// </remarks>
         public static string CoAppCacheDirectory {
             get {
                 var result = Path.Combine(CoAppRootDirectory, ".cache");
@@ -184,7 +187,8 @@ namespace CoApp.Packaging.Common {
                     var di = new DirectoryInfo(result);
                     di.Attributes = FileAttributes.Hidden;
                     var acl = di.GetAccessControl();
-                    acl.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null), FileSystemRights.Modify | FileSystemRights.CreateDirectories | FileSystemRights.CreateFiles, InheritanceFlags.ObjectInherit, PropagationFlags.InheritOnly, AccessControlType.Allow));
+                    acl.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null), FileSystemRights.Modify | FileSystemRights.CreateDirectories | FileSystemRights.CreateFiles, InheritanceFlags.ObjectInherit,
+                        PropagationFlags.InheritOnly, AccessControlType.Allow));
                     di.SetAccessControl(acl);
                 }
                 return result;
@@ -192,12 +196,10 @@ namespace CoApp.Packaging.Common {
         }
 
         /// <summary>
-        /// Gets the coapp package cache.
-        ///  
-        /// Not currently used--this is where we could copy MSIs that we've installed 
-        /// This may be necessary on XP, where the OS doesn't store the complete MSI.
+        ///   Gets the coapp package cache. Not currently used--this is where we could copy MSIs that we've installed This may be necessary on XP, where the OS doesn't store the complete MSI.
         /// </summary>
-        /// <remarks></remarks>
+        /// <remarks>
+        /// </remarks>
         public static string CoAppPackageCache {
             get {
                 var result = Path.Combine(CoAppCacheDirectory, "packages");
@@ -206,7 +208,8 @@ namespace CoApp.Packaging.Common {
                     var di = new DirectoryInfo(result);
                     di.Attributes = FileAttributes.Hidden;
                     var acl = di.GetAccessControl();
-                    acl.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null), FileSystemRights.Modify | FileSystemRights.CreateDirectories | FileSystemRights.CreateFiles, InheritanceFlags.ObjectInherit, PropagationFlags.InheritOnly, AccessControlType.Allow));
+                    acl.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null), FileSystemRights.Modify | FileSystemRights.CreateDirectories | FileSystemRights.CreateFiles, InheritanceFlags.ObjectInherit,
+                        PropagationFlags.InheritOnly, AccessControlType.Allow));
                     di.SetAccessControl(acl);
                 }
                 return result;

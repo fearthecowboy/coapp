@@ -11,18 +11,11 @@
 //-----------------------------------------------------------------------
 
 namespace CoApp.Packaging.Common.Model {
-    using System;
     using System.Xml.Serialization;
 
-    [XmlRoot(ElementName = "Identity", Namespace = "http://coapp.org/atom-package-feed-1.0")]
-    public class Identity {
+    [XmlRoot(ElementName = "Driver", Namespace = "http://coapp.org/atom-package-feed-1.0")]
+    public class Driver {
         [XmlElement(IsNullable = false)]
         public string Name { get; set; }
-
-        [XmlElement(IsNullable = false)]
-        public Uri Location { get; set; }
-
-        [XmlElement(IsNullable = false)]
-        public string Email { get; set; }
     }
 }

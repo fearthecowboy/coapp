@@ -1,6 +1,8 @@
 //-----------------------------------------------------------------------
 // <copyright company="CoApp Project">
-//     Copyright (c) 2011 Garrett Serack . All rights reserved.
+//     Copyright (c) 2010-2012 Garrett Serack and CoApp Contributors. 
+//     Contributors can be discovered using the 'git log' command.
+//     All rights reserved.
 // </copyright>
 // <license>
 //     The software is licensed under the Apache 2.0 License (the "License")
@@ -10,40 +12,43 @@
 
 namespace CoApp.Packaging.Common.Model {
     /// <summary>
-    /// The type of action for this composition rule
+    ///   The type of action for this composition rule
     /// </summary>
-    /// <remarks></remarks>
+    /// <remarks>
+    /// </remarks>
     public enum CompositionAction {
         /// <summary>
-        /// Create a symlink to a file
+        ///   Create a symlink to a file
         /// </summary>
         SymlinkFile,
+
         /// <summary>
-        /// Create a symlink to a folder
+        ///   Create a symlink to a folder
         /// </summary>
         SymlinkFolder,
+
         /// <summary>
-        /// Create a .lnk shortcut to a file
+        ///   Create a .lnk shortcut to a file
         /// </summary>
         Shortcut,
 
         /// <summary>
-        /// Creates an evironment variable
+        ///   Creates an evironment variable
         /// </summary>
         EnvironmentVariable,
 
         /// <summary>
-        /// Creates a registry key
+        ///   Creates a registry key
         /// </summary>
         Registry,
 
         /// <summary>
-        /// Copies a file from one place to another
+        ///   Copies a file from one place to another
         /// </summary>
         FileCopy,
 
         /// <summary>
-        /// Copies a file from one place to another, processes ${macros} in file
+        ///   Copies a file from one place to another, processes ${macros} in file
         /// </summary>
         FileRewrite,
     }

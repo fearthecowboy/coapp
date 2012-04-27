@@ -13,7 +13,7 @@
 namespace CoApp.Packaging.Client {
     public enum FeedState {
         active,
-        passive, 
+        passive,
         ignored
     }
 }

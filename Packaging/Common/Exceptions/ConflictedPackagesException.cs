@@ -12,14 +12,15 @@
 
 namespace CoApp.Packaging.Common.Exceptions {
     using System.Collections.Generic;
-    using CoApp.Toolkit.Exceptions;
-    
+
+    using Toolkit.Exceptions;
 #if COAPP_ENGINE_CORE
     using Packaging.Service;
 #endif
 #if COAPP_ENGINE_CLIENT
-    using CoApp.Packaging.Client;
+    using Client;
 #endif
+
     public class ConflictedPackagesException : CoAppException {
         public readonly IEnumerable<Package[]> Packages;
 

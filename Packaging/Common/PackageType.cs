@@ -12,16 +12,16 @@
 
 namespace CoApp.Packaging.Common {
     using System;
-    using CoApp.Toolkit.Exceptions;
+    using Toolkit.Exceptions;
 
-    public struct PackageType : IComparable, IComparable<PackageType>,IEquatable<PackageType> {
-        public static readonly PackageType CoApp = new PackageType { _packageType = PkgType.CoApp };
-        public static readonly PackageType NuGet = new PackageType { _packageType = PkgType.NuGet};
-        public static readonly PackageType Chocolatey = new PackageType { _packageType = PkgType.Chocolatey};
-        public static readonly PackageType Python = new PackageType { _packageType = PkgType.Python};
-        public static readonly PackageType PHP = new PackageType { _packageType = PkgType.PHP};
-        public static readonly PackageType NodeJS = new PackageType { _packageType = PkgType.NodeJS};
-        public static readonly PackageType Perl = new PackageType { _packageType = PkgType.Perl };
+    public struct PackageType : IComparable, IComparable<PackageType>, IEquatable<PackageType> {
+        public static readonly PackageType CoApp = new PackageType {_packageType = PkgType.CoApp};
+        public static readonly PackageType NuGet = new PackageType {_packageType = PkgType.NuGet};
+        public static readonly PackageType Chocolatey = new PackageType {_packageType = PkgType.Chocolatey};
+        public static readonly PackageType Python = new PackageType {_packageType = PkgType.Python};
+        public static readonly PackageType PHP = new PackageType {_packageType = PkgType.PHP};
+        public static readonly PackageType NodeJS = new PackageType {_packageType = PkgType.NodeJS};
+        public static readonly PackageType Perl = new PackageType {_packageType = PkgType.Perl};
 
         private enum PkgType {
             CoApp = 0,
@@ -60,7 +60,7 @@ namespace CoApp.Packaging.Common {
         }
 
         public static implicit operator PackageType(string packageType) {
-            return new PackageType() { _packageType = StringToPackageType(packageType) };
+            return new PackageType {_packageType = StringToPackageType(packageType)};
         }
 
         private static PkgType StringToPackageType(string packageType) {
@@ -100,7 +100,6 @@ namespace CoApp.Packaging.Common {
                 case "perl":
                 case "cpan":
                     return PkgType.Perl;
-
             }
             throw new CoAppException("Unrecognized package type");
         }
@@ -108,6 +107,7 @@ namespace CoApp.Packaging.Common {
         public static bool operator ==(PackageType a, PackageType b) {
             return a._packageType == b._packageType;
         }
+
         public static bool operator !=(PackageType a, PackageType b) {
             return a._packageType != b._packageType;
         }
@@ -115,6 +115,7 @@ namespace CoApp.Packaging.Common {
         public static bool operator ==(PackageType a, string b) {
             return a._packageType == StringToPackageType(b);
         }
+
         public static bool operator !=(PackageType a, string b) {
             return a._packageType != StringToPackageType(b);
         }
@@ -122,18 +123,23 @@ namespace CoApp.Packaging.Common {
         public override bool Equals(object o) {
             return o is PackageType && Equals((PackageType)o);
         }
+
         public bool Equals(PackageType other) {
             return other._packageType == _packageType;
         }
+
         public bool Equals(String other) {
             return _packageType == StringToPackageType(other);
         }
+
         public override int GetHashCode() {
             return (int)_packageType;
         }
+
         public static bool operator <(PackageType a, PackageType b) {
             return a._packageType < b._packageType;
         }
+
         public static bool operator >(PackageType a, PackageType b) {
             return a._packageType > b._packageType;
         }
@@ -150,7 +156,7 @@ namespace CoApp.Packaging.Common {
         }
 
         public static PackageType Parse(string input) {
-            return new PackageType { _packageType = StringToPackageType(input) };
+            return new PackageType {_packageType = StringToPackageType(input)};
         }
 
         public static bool TryParse(string input, out PackageType ret) {

@@ -17,12 +17,11 @@ namespace CoApp.Packaging.Common.Model.Atom {
     using System.Linq;
     using System.ServiceModel.Syndication;
     using System.Xml;
-    using CoApp.Toolkit.Extensions;
+    using Toolkit.Extensions;
 
 #if COAPP_ENGINE_CORE
     using Packaging.Service;
 #endif
-    
 
     public class AtomFeed : SyndicationFeed {
         // private readonly List<AtomItem> _items = new List<AtomItem>();
@@ -34,6 +33,7 @@ namespace CoApp.Packaging.Common.Model.Atom {
         public AtomFeed() {
             LastUpdatedTime = DateTime.Now;
         }
+
         /* 
          output-file=<f>        
          root-url=<url>         
@@ -45,16 +45,16 @@ namespace CoApp.Packaging.Common.Model.Atom {
          title=<title>
          */
 
-        public AtomFeed(string outputFilename, string rootUrl, string packageUrl, string actualUrl = null, string title = null): this() {
+        public AtomFeed(string outputFilename, string rootUrl, string packageUrl, string actualUrl = null, string title = null) : this() {
             Title = new TextSyndicationContent(title ?? "CoApp Package Feed");
-            
+
             _rootUrl = rootUrl.EndsWith("/") ? rootUrl : rootUrl + "/";
             _actualUrl = actualUrl ?? _rootUrl + Path.GetFileName(outputFilename);
 
-            if( !packageUrl.Contains("://")) {
+            if (!packageUrl.Contains("://")) {
                 packageUrl = _rootUrl + (packageUrl.StartsWith("/") ? packageUrl.Substring(1) : packageUrl);
             }
-            _packageUrlPrefix = (packageUrl.EndsWith("/") ? packageUrl : packageUrl+"/");
+            _packageUrlPrefix = (packageUrl.EndsWith("/") ? packageUrl : packageUrl + "/");
 
             var selfLink = CreateLink();
             selfLink.RelationshipType = "self";
@@ -72,7 +72,7 @@ namespace CoApp.Packaging.Common.Model.Atom {
         }
 
         public static AtomFeed Load(string xmlDocument) {
-            if( xmlDocument.Length < 512 && xmlDocument.FileIsLocalAndExists() ) {
+            if (xmlDocument.Length < 512 && xmlDocument.FileIsLocalAndExists()) {
                 // if I sent a filename here instead, this will let it still work.
                 xmlDocument = File.ReadAllText(xmlDocument);
             }
@@ -86,7 +86,7 @@ namespace CoApp.Packaging.Common.Model.Atom {
             Save(_outputFilename);
         }
 
-        public void Save(string localPath ) {
+        public void Save(string localPath) {
             File.WriteAllText(localPath, ToString());
         }
 
@@ -103,7 +103,7 @@ namespace CoApp.Packaging.Common.Model.Atom {
                 writer.WriteEndDocument();
                 writer.Close();
                 return ms.PrettyXml();
-            } 
+            }
         }
 
         protected override void WriteAttributeExtensions(XmlWriter writer, string version) {
@@ -111,6 +111,7 @@ namespace CoApp.Packaging.Common.Model.Atom {
             writer.WriteAttributeString("xmlns", "xsi", null, "http://www.w3.org/2001/XMLSchema-instanceb");
             writer.WriteAttributeString("xmlns", "xsd", null, "http://www.w3.org/2001/XMLSchema");
         }
+
         protected override SyndicationCategory CreateCategory() {
             return base.CreateCategory();
         }
@@ -124,13 +125,10 @@ namespace CoApp.Packaging.Common.Model.Atom {
         }
 
         /// <summary>
-        /// This adds a new package model to the feed. The package model doesn't have to be completed when added,
-        ///  but the caller must fill in the values before the feed is generated, or it's kinda pointless. :)
-        /// 
-        /// Use this when trying to create feeds.
+        ///   This adds a new package model to the feed. The package model doesn't have to be completed when added, but the caller must fill in the values before the feed is generated, or it's kinda pointless. :) Use this when trying to create feeds.
         /// </summary>
-        /// <param name="model"></param>
-        /// <returns></returns>
+        /// <param name="model"> </param>
+        /// <returns> </returns>
         public AtomItem Add(PackageModel model) {
             lock (this) {
                 var item = new AtomItem(model);
@@ -147,17 +145,17 @@ namespace CoApp.Packaging.Common.Model.Atom {
         }
 
         public void Add(IEnumerable<AtomItem> items) {
-            foreach( var item in items) {
+            foreach (var item in items) {
                 Add(item);
             }
         }
 
 #if COAPP_ENGINE_CORE 
-        /// <summary>
-        /// This takes an existing package object and creates a package model from it and inserts it into the feed.
-        /// </summary>
-        /// <param name="package"></param>
-        /// <returns></returns>
+    /// <summary>
+    /// This takes an existing package object and creates a package model from it and inserts it into the feed.
+    /// </summary>
+    /// <param name="package"></param>
+    /// <returns></returns>
         public AtomItem Add(Package package) {
             var item = new AtomItem(package); 
             Items = Items.Union(item.SingleItemAsEnumerable()).ToArray();
@@ -177,7 +175,8 @@ namespace CoApp.Packaging.Common.Model.Atom {
             }
         } 
 
-#endif 
+#endif
+
         protected override SyndicationItem CreateItem() {
             return new AtomItem();
         }
