@@ -121,7 +121,7 @@ namespace CoApp.Packaging.Common {
                 }
 
                 if (Directory.Exists(rootDirectory)) {
-                    if (Directory.EnumerateFileSystemEntries(rootDirectory).Count() > 0) {
+                    if (Directory.EnumerateFileSystemEntries(rootDirectory).Any()) {
                         throw new ConfigurationException(
                             "The CoApp RootDirectory can not be changed with contents in it.", "RootDirectory",
                             "Remove contents of the existing CoApp Root Directory before changing it [{0}]".format(
@@ -184,8 +184,7 @@ namespace CoApp.Packaging.Common {
                 var result = Path.Combine(CoAppRootDirectory, ".cache");
                 if (!Directory.Exists(result)) {
                     Directory.CreateDirectory(result);
-                    var di = new DirectoryInfo(result);
-                    di.Attributes = FileAttributes.Hidden;
+                    var di = new DirectoryInfo(result) {Attributes = FileAttributes.Hidden};
                     var acl = di.GetAccessControl();
                     acl.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null), FileSystemRights.Modify | FileSystemRights.CreateDirectories | FileSystemRights.CreateFiles, InheritanceFlags.ObjectInherit,
                         PropagationFlags.InheritOnly, AccessControlType.Allow));
@@ -205,8 +204,7 @@ namespace CoApp.Packaging.Common {
                 var result = Path.Combine(CoAppCacheDirectory, "packages");
                 if (!Directory.Exists(result)) {
                     Directory.CreateDirectory(result);
-                    var di = new DirectoryInfo(result);
-                    di.Attributes = FileAttributes.Hidden;
+                    var di = new DirectoryInfo(result) {Attributes = FileAttributes.Hidden};
                     var acl = di.GetAccessControl();
                     acl.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null), FileSystemRights.Modify | FileSystemRights.CreateDirectories | FileSystemRights.CreateFiles, InheritanceFlags.ObjectInherit,
                         PropagationFlags.InheritOnly, AccessControlType.Allow));

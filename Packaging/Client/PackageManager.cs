@@ -31,12 +31,13 @@ namespace CoApp.Packaging.Client {
         public Task<IEnumerable<Package>> GetPackagesEx(IEnumerable<string> parameters, ulong? minVersion = null, ulong? maxVersion = null,
             bool? dependencies = null, bool? installed = null, bool? active = null, bool? required = null, bool? blocked = null, bool? latest = null,
             string location = null, bool? forceScan = null, bool? updates = null, bool? upgrades = null, bool? trimable = null) {
-            if (parameters.IsNullOrEmpty()) {
+            var p = parameters.ToArray();
+            if (p.IsNullOrEmpty()) {
                 return GetPackagesEx(string.Empty, minVersion, maxVersion, dependencies, installed, active, required, blocked, latest, location, forceScan, updates, upgrades, trimable);
             }
 
             // spawn the tasks off in parallel
-            var tasks = parameters.Select(each => GetPackagesEx(each, minVersion, maxVersion, dependencies, installed, active, required, blocked, latest, location, forceScan, updates, upgrades, trimable)).ToArray();
+            var tasks = p.Select(each => GetPackagesEx(each, minVersion, maxVersion, dependencies, installed, active, required, blocked, latest, location, forceScan, updates, upgrades, trimable)).ToArray();
 
             // return a task that is the sum of all the tasks.
             return tasks.Continue(packages => packages.SelectMany(each => each).Distinct());
@@ -57,7 +58,7 @@ namespace CoApp.Packaging.Client {
                     return (Remote.RecognizeFile(null, localPath, null) as Task<CallResponse>).Continue(response => {
                         // a Package!
                         if (response.Packages.Any()) {
-                            var innerTask = Remote.AddFeed(originalDirectory, true) as Task<CallResponse>;
+                            Remote.AddFeed(originalDirectory, true);
                             return response.Packages;
                         }
 

@@ -479,10 +479,10 @@ namespace CoApp.Packaging.Service {
                                             // GS01: We should put a softer lock here to keep the client aware that packages 
                                             // are being installed on other threads...
                                             lock (typeof (MSIBase)) {
-                                                if (EngineService.DoesTheServiceNeedARestart) {
+                                                if (Engine.DoesTheServiceNeedARestart) {
                                                     // something has changed where we need restart the service before we can continue.
                                                     // and the one place we don't wanna be when we issue a shutdown in in Install :) ...
-                                                    EngineService.RestartService();
+                                                    Engine.RestartService();
                                                     Event<GetResponseInterface>.RaiseFirst().OperationCanceled("install-package");
                                                     return FinishedSynchronously;
                                                 }
@@ -528,11 +528,11 @@ namespace CoApp.Packaging.Service {
 
                                 // W00T ... We did it!
                                 // check for restart required...
-                                if (EngineService.DoesTheServiceNeedARestart) {
+                                if (Engine.DoesTheServiceNeedARestart) {
                                     // something has changed where we need restart the service before we can continue.
                                     // and the one place we don't wanna be when we issue a shutdown in in Install :) ...
                                     Event<GetResponseInterface>.RaiseFirst().Restarting();
-                                    EngineService.RestartService();
+                                    Engine.RestartService();
                                     return FinishedSynchronously;
                                 }
                                 return FinishedSynchronously;
@@ -650,7 +650,7 @@ namespace CoApp.Packaging.Service {
                 foreach (var f in results) {
                     var state = PackageManagerSettings.PerPackageSettings[f.feed, "state"].StringValue;
                     if (string.IsNullOrEmpty(state)) {
-                        state = "active";
+                        state = "Active";
                     }
                     Event<GetResponseInterface>.RaiseFirst().FeedDetails(f.feed, f.LastScanned, f.session, f.suppressed, f.validated, state);
                 }

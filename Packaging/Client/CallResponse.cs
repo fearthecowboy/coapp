@@ -158,7 +158,7 @@ namespace CoApp.Packaging.Client {
                 LastScanned = lastScanned,
                 IsSession = session,
                 IsSuppressed = suppressed,
-                FeedState = state.ParseEnum(FeedState.active)
+                FeedState = state.ParseEnum(FeedState.Active)
             });
         }
 
@@ -200,7 +200,6 @@ namespace CoApp.Packaging.Client {
                             Event<DownloadCompleted>.Raise(canonicalName, targetFilename);
                             PM.RecognizeFile(canonicalName, targetFilename, remoteLocations.FirstOrDefault());
                         }
-                        return;
                     });
                     return;
                 }
@@ -225,17 +224,17 @@ namespace CoApp.Packaging.Client {
                             Task progressTask = null;
                             var success = false;
                             var rf = new RemoteFile(uri, targetFilename,
-                                completed: (itemUri) => {
+                                itemUri => {
                                     PM.RecognizeFile(canonicalName, targetFilename, uri.AbsoluteUri);
                                     Event<DownloadCompleted>.Raise(canonicalName, targetFilename);
                                     // remove it from the list of current downloads
                                     CurrentDownloads.Remove(targetFilename);
                                     success = true;
                                 },
-                                failed: (itemUri) => {
+                                itemUri => {
                                     success = false;
                                 },
-                                progress: (itemUri, percent) => {
+                                (itemUri, percent) => {
                                     if (progressTask == null) {
                                         // report progress to the engine
                                         progressTask = PM.DownloadProgress(canonicalName, percent);

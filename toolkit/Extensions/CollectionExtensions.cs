@@ -167,7 +167,7 @@ namespace CoApp.Toolkit.Extensions {
         /// <remarks>
         /// </remarks>
         public static bool IsNullOrEmpty<T>(this IEnumerable<T> collection) {
-            return collection == null ? true : !collection.Any();
+            return collection == null || !collection.Any();
         }
 
         public static TValue AddOrSet<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key, TValue value) where TValue : class {

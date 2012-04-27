@@ -1,21 +1,26 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright company="CoApp Project">
-//     Copyright (c) 2011 Garrett Serack. All rights reserved.
+//     Copyright (c) 2010-2012 Garrett Serack and CoApp Contributors. 
+//     Contributors can be discovered using the 'git log' command.
+//     All rights reserved.
 // </copyright>
+// <license>
+//     The software is licensed under the Apache 2.0 License (the "License")
+//     You may not use the software except in compliance with the License. 
+// </license>
 //-----------------------------------------------------------------------
 
-namespace CoApp.Service {
+namespace CoApp.Packaging.Service {
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
     using System.ServiceProcess;
     using System.Threading;
-    using Packaging.Common;
-    using Packaging.Service;
-    using Toolkit.Exceptions;
-    using Toolkit.Extensions;
-    using Toolkit.Win32;
+    using CoApp.Packaging.Common;
+    using CoApp.Toolkit.Exceptions;
+    using CoApp.Toolkit.Extensions;
+    using CoApp.Toolkit.Win32;
 
     internal class CoAppServiceMain {
         public static bool UseUserAccount;
@@ -90,7 +95,7 @@ CoApp.Service [options]
 
                 Console.CancelKeyPress += (x, y) => {
                     Console.WriteLine("Stopping CoAppService.");
-                    EngineService.RequestStop();
+                    Engine.RequestStop();
                 };
 
                 #region Parse Options
@@ -185,7 +190,7 @@ CoApp.Service [options]
                     }
                     Console.WriteLine("Launching CoApp Service interactively.\r\nUse ctrl-c to stop.");
 
-                    var task = EngineService.Start(true);
+                    var task = Engine.Start(true);
 
                     Console.WriteLine("[CoApp Interactive -- Press escape to stop.]");
 
@@ -194,7 +199,7 @@ CoApp.Service [options]
                         Console.Write(".");
                         while (Console.KeyAvailable) {
                             if (Console.ReadKey(true).Key == ConsoleKey.Escape) {
-                                EngineService.RequestStop();
+                                Engine.RequestStop();
                             }
                         }
                     }

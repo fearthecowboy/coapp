@@ -112,18 +112,6 @@ namespace CoApp.Packaging.Common.Model.Atom {
             writer.WriteAttributeString("xmlns", "xsd", null, "http://www.w3.org/2001/XMLSchema");
         }
 
-        protected override SyndicationCategory CreateCategory() {
-            return base.CreateCategory();
-        }
-
-        protected override SyndicationLink CreateLink() {
-            return base.CreateLink();
-        }
-
-        protected override SyndicationPerson CreatePerson() {
-            return base.CreatePerson();
-        }
-
         /// <summary>
         ///   This adds a new package model to the feed. The package model doesn't have to be completed when added, but the caller must fill in the values before the feed is generated, or it's kinda pointless. :) Use this when trying to create feeds.
         /// </summary>

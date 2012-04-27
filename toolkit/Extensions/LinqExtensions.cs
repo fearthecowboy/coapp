@@ -147,7 +147,7 @@ namespace CoApp.Toolkit.Extensions {
         }
 
         private class ListIndex : IEnumerable<int> {
-            private int _max;
+            private readonly int _max;
 
             internal ListIndex(int i) {
                 _max = i;

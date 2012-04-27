@@ -92,9 +92,7 @@ namespace CoApp.Packaging.Client.UI {
             });
 
             Installer.Finished += (src, evnt) => Invoke(() => {
-                ((Storyboard)FindResource("hideWindow")).Completed += (ss, ee) => {
-                    Invoke(Close);
-                };
+                ((Storyboard)FindResource("hideWindow")).Completed += (ss, ee) => Invoke(Close);
                 ((Storyboard)FindResource("hideWindow")).Begin();
             });
         }
@@ -137,9 +135,7 @@ namespace CoApp.Packaging.Client.UI {
             RemoveContextMenu.PlacementTarget = RemoveAdvanced;
             RemoveContextMenu.Placement = PlacementMode.Custom;
 
-            RemoveContextMenu.CustomPopupPlacementCallback = (size, targetSize, offset) => {
-                return new[] {new CustomPopupPlacement(new Point(RemoveAdvanced.Width, (RemoveAdvanced.Height - size.Height) - 10), PopupPrimaryAxis.None)};
-            };
+            RemoveContextMenu.CustomPopupPlacementCallback = (size, targetSize, offset) => new[] {new CustomPopupPlacement(new Point(RemoveAdvanced.Width, (RemoveAdvanced.Height - size.Height) - 10), PopupPrimaryAxis.None)};
             RemoveContextMenu.IsOpen = !RemoveContextMenu.IsOpen;
         }
 

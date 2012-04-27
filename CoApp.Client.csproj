@@ -121,7 +121,7 @@
       <DependentUpon>InstallerMainWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Packaging\Client\UI\VisibilityAnimation.cs" />
-    <Compile Include="Packaging\Common\SERVICE_ACCESS.cs" />
+    <Compile Include="Packaging\Common\ServiceAccess.cs" />
   </ItemGroup>
   <ItemGroup>
     <Resource Include="resources\images\logo.png" />

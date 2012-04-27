@@ -94,7 +94,7 @@
     <Compile Include="Packaging\Common\Model\WebApplication.cs" />
     <Compile Include="Packaging\Common\PackageManagerSettings.cs" />
     <Compile Include="Packaging\Common\PackageType.cs" />
-    <Compile Include="Packaging\Common\SERVICE_ACCESS.cs" />
+    <Compile Include="Packaging\Common\ServiceAccess.cs" />
     <Compile Include="Packaging\Service\Delegates.cs" />
     <Compile Include="Packaging\Service\Exceptions\InvalidReason.cs" />
     <Compile Include="Packaging\Service\InternalPackageData.cs" />
@@ -340,7 +340,7 @@
     <Compile Include="Toolkit\ImpromptuInterface\Optimization\Util.cs" />
     <Compile Include="Toolkit\Logging\Logger.cs" />
     <Compile Include="Toolkit\Pipes\AsyncPipeExtensions.cs" />
-    <Compile Include="Packaging\Service\EngineService.cs" />
+    <Compile Include="Packaging\Service\Engine.cs" />
     <Compile Include="Toolkit\Exceptions\PathIsNotFileUriException.cs" />
     <Compile Include="Packaging\Service\Feeds\DirectoryPackageFeed.cs" />
     <Compile Include="Packaging\Service\Feeds\InstalledPackageFeed.cs" />
@@ -375,7 +375,7 @@
     <Compile Include="Packaging\Service\PackageFormatHandlers\LegacyMSI.cs" />
     <Compile Include="Packaging\Service\PackageFormatHandlers\MSIBase.cs" />
     <Compile Include="Packaging\Service\PackageFormatHandlers\PackageFormatHandler.cs" />
-    <Compile Include="Service\Resources.Designer.cs">
+    <Compile Include="Packaging\Service\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
@@ -478,25 +478,25 @@
     <Compile Include="Toolkit\Win32\WinCrypt.cs" />
     <Compile Include="Toolkit\Win32\WindowsVersionInfo.cs" />
     <Compile Include="Toolkit\Win32\WinTrust.cs" />
-    <Compile Include="Service\CoAppService.cs">
+    <Compile Include="Packaging\Service\CoAppService.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="Service\CoAppServiceInstaller.cs">
+    <Compile Include="Packaging\Service\CoAppServiceInstaller.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="Service\CoAppServiceMain.cs" />
+    <Compile Include="Packaging\Service\CoAppServiceMain.cs" />
     <Compile Include="$(SolutionDir)Source\CoApp.Toolkit.AssemblyStrongName.cs" />
-    <Compile Include="Service\Properties\Service.AssemblyInfo.cs" />
+    <Compile Include="Packaging\Service\Properties\Service.AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Service\app.config" />
+    <None Include="Packaging\Service\app.config" />
     <EmbeddedResource Include="$(SolutionDir)binaries\CoApp.Rehash.x86.dll" />
     <EmbeddedResource Include="$(SolutionDir)binaries\CoApp.Rehash.x64.dll" />
     <Content Include="Packaging\Service\dtf\Compression.Cab\Errors.txt" />
     <Content Include="Packaging\Service\dtf\WindowsInstaller\Errors.txt" />
     <EmbeddedResource Include="Packaging\Service\dtf\Compression.Cab\Errors.resources.resources" />
     <EmbeddedResource Include="Packaging\Service\dtf\WindowsInstaller\Errors.resources" />
-    <EmbeddedResource Include="Service\Resources.resx">
+    <EmbeddedResource Include="Packaging\Service\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <SubType>Designer</SubType>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
@@ -519,9 +519,7 @@
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Service\Engine\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

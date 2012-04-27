@@ -33,6 +33,8 @@ namespace CoApp.Packaging.Common {
         public bool IsCanonical { get; private set; }
         private string _generalName;
         private string _wholeName;
+        private string _canonicalName;
+        private int? _hashCode;
 
         public bool IsPartial {
             get {
@@ -67,9 +69,7 @@ namespace CoApp.Packaging.Common {
             }
         }
 
-        private string _canonicalName;
-        private int? _hashCode;
-
+     
         private CanonicalName() {
         }
 

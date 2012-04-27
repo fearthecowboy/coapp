@@ -10,7 +10,6 @@
 // </license>
 //-----------------------------------------------------------------------
 
-
 namespace CoApp.Packaging.Service {
     using System.Collections.Generic;
     using System.Linq;
@@ -18,13 +17,12 @@ namespace CoApp.Packaging.Service {
     using Common;
     using Exceptions;
     using Toolkit.Configuration;
-    using Toolkit.Exceptions;
     using Toolkit.Extensions;
     using Toolkit.Win32;
 
     public class PermissionPolicy {
-        private static RegistryView _policies = PackageManagerSettings.CoAppSettings["Policy"];
-        private static SecurityIdentifier _administratorsGroup = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null);
+        private static readonly RegistryView Policies = PackageManagerSettings.CoAppSettings["Policy"];
+        private static readonly SecurityIdentifier AdministratorsGroup = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null);
         internal string Name;
         internal string Description;
         internal static IEnumerable<PermissionPolicy> AllPolicies = Enumerable.Empty<PermissionPolicy>();
@@ -37,7 +35,7 @@ namespace CoApp.Packaging.Service {
             Name = name;
             Description = description;
             _defaults = defaults;
-            _policyView = _policies["#" + Name];
+            _policyView = Policies["#" + Name];
             Refresh();
             AllPolicies = AllPolicies.UnionSingleItem(this).ToArray();
         }
@@ -141,12 +139,12 @@ namespace CoApp.Packaging.Service {
 
                 if (WindowsVersionInfo.IsVistaOrBeyond) {
                     // manual check against administrator permissions.
-                    if (_groups.Contains(_administratorsGroup)) {
+                    if (_groups.Contains(AdministratorsGroup)) {
                         if (AdminPrivilege.IsProcessElevated()) {
                             return true;
                         }
                     }
-                    return _groups.Where(each => each != _administratorsGroup).Any(principal.IsInRole);
+                    return _groups.Where(each => each != AdministratorsGroup).Any(principal.IsInRole);
                 }
 
                 return _groups.Any(principal.IsInRole);

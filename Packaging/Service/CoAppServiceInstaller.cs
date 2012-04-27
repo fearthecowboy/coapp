@@ -10,13 +10,12 @@
 // </license>
 //-----------------------------------------------------------------------
 
-using System.IO;
-
-namespace CoApp.Service {
+namespace CoApp.Packaging.Service {
+    using System.IO;
     using System.ComponentModel;
     using System.Configuration.Install;
     using System.ServiceProcess;
-    using Packaging.Common;
+    using CoApp.Packaging.Common;
 
     [RunInstaller(true)]
     public class CoAppServiceInstaller : Installer {

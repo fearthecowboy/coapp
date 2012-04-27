@@ -31,7 +31,7 @@ namespace CoApp.Packaging.Service {
     /// </summary>
     /// <remarks>
     /// </remarks>
-    public class EngineService {
+    public class Engine {
         /// <summary>
         /// </summary>
         private const string PipeName = @"CoAppInstaller";
@@ -52,7 +52,7 @@ namespace CoApp.Packaging.Service {
 
         /// <summary>
         /// </summary>
-        private static readonly Lazy<EngineService> _instance = new Lazy<EngineService>(() => new EngineService());
+        private static readonly Lazy<Engine> _instance = new Lazy<Engine>(() => new Engine());
 
         /// <summary>
         /// </summary>
@@ -66,7 +66,7 @@ namespace CoApp.Packaging.Service {
         /// </summary>
         private PipeSecurity _pipeSecurity;
 
-        private Task _engineService;
+        private Task _engineTask;
 
         /// <summary>
         ///   Stops this instance.
@@ -110,7 +110,7 @@ namespace CoApp.Packaging.Service {
         /// </remarks>
         private Task Main() {
             if (IsRunning) {
-                return _engineService;
+                return _engineTask;
             }
             Signals.EngineStartupStatus = 0;
 
@@ -157,7 +157,7 @@ namespace CoApp.Packaging.Service {
                 }
             });
 
-            _engineService = Task.Factory.StartNew(() => {
+            _engineTask = Task.Factory.StartNew(() => {
                 _pipeSecurity = new PipeSecurity();
                 _pipeSecurity.AddAccessRule(new PipeAccessRule(new SecurityIdentifier(WellKnownSidType.WorldSid, null), PipeAccessRights.ReadWrite, AccessControlType.Allow));
                 _pipeSecurity.AddAccessRule(new PipeAccessRule(WindowsIdentity.GetCurrent().Owner, PipeAccessRights.FullControl, AccessControlType.Allow));
@@ -167,13 +167,13 @@ namespace CoApp.Packaging.Service {
                 StartListener();
             }, _cancellationTokenSource.Token).AutoManage();
 
-            _engineService = _engineService.ContinueWith(antecedent => {
+            _engineTask = _engineTask.ContinueWith(antecedent => {
                 RequestStop();
                 // ensure the sessions are all getting closed.
                 Session.CancelAll();
-                _engineService = null;
+                _engineTask = null;
             }, TaskContinuationOptions.AttachedToParent).AutoManage();
-            return _engineService;
+            return _engineTask;
         }
 
         private int listenerCount;

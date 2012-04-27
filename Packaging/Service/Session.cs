@@ -429,9 +429,9 @@ namespace CoApp.Packaging.Service {
             Task<int> readTask = null;
             // SendSessionStarted(_sessionId);
 
-            var serverInput = new byte[EngineService.BufferSize];
+            var serverInput = new byte[Engine.BufferSize];
 
-            while (EngineService.IsRunning) {
+            while (Engine.IsRunning) {
                 if (!Connected) {
                     readTask = null;
 
@@ -472,7 +472,7 @@ namespace CoApp.Packaging.Service {
                                     return;
                                 }
 
-                                if (antecedent.Result >= EngineService.BufferSize) {
+                                if (antecedent.Result >= Engine.BufferSize) {
                                     _bufferReady.Set();
                                     Event<GetResponseInterface>.RaiseFirst().UnexpectedFailure("CoAppException", "Message size exceeds maximum size allowed.", "");
                                     return;

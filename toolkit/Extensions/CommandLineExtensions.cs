@@ -21,14 +21,15 @@ namespace CoApp.Toolkit.Extensions {
     using System;
     using System.Collections.Generic;
     using System.ComponentModel;
-    using System.Diagnostics;
     using System.IO;
     using System.Linq;
     using System.Reflection;
     using System.Runtime.InteropServices;
     using System.Text.RegularExpressions;
     using Win32;
-
+#if !COAPP_ENGINE_CORE
+    using System.Diagnostics;
+#endif
     /// <summary>
     ///   Storage Class for complex options from the command line.
     /// </summary>
@@ -60,11 +61,11 @@ namespace CoApp.Toolkit.Extensions {
     public static class CommandLineExtensions {
         /// <summary>
         /// </summary>
-        private static Dictionary<string, IEnumerable<string>> switches;
+        private static Dictionary<string, IEnumerable<string>> _switches;
 
         /// <summary>
         /// </summary>
-        private static IEnumerable<string> parameters;
+        private static IEnumerable<string> _parameters;
 
         /// <summary>
         ///   Gets the parameters for switch or null.
@@ -75,12 +76,12 @@ namespace CoApp.Toolkit.Extensions {
         /// <remarks>
         /// </remarks>
         public static IEnumerable<string> GetParametersForSwitchOrNull(this IEnumerable<string> args, string key) {
-            if (switches == null) {
+            if (_switches == null) {
                 Switches(args);
             }
 
-            if (switches.ContainsKey(key)) {
-                return switches[key];
+            if (_switches.ContainsKey(key)) {
+                return _switches[key];
             }
 
             return null;
@@ -95,12 +96,12 @@ namespace CoApp.Toolkit.Extensions {
         /// <remarks>
         /// </remarks>
         public static IEnumerable<string> GetParametersForSwitch(this IEnumerable<string> args, string key) {
-            if (switches == null) {
+            if (_switches == null) {
                 Switches(args);
             }
 
-            if (switches.ContainsKey(key)) {
-                return switches[key];
+            if (_switches.ContainsKey(key)) {
+                return _switches[key];
             }
 
             return new List<string>();
@@ -156,12 +157,12 @@ namespace CoApp.Toolkit.Extensions {
         /// <remarks>
         /// </remarks>
         public static Dictionary<string, IEnumerable<string>> Switches(this IEnumerable<string> args) {
-            if (switches != null) {
-                return switches;
+            if (_switches != null) {
+                return _switches;
             }
             var assemblypath = Assembly.GetEntryAssembly().Location;
 
-            switches = new Dictionary<string, IEnumerable<string>>();
+            _switches = new Dictionary<string, IEnumerable<string>>();
 
             var v = Environment.GetEnvironmentVariable("_" + Path.GetFileNameWithoutExtension(assemblypath) + "_");
             if (!string.IsNullOrEmpty(v)) {
@@ -215,14 +216,14 @@ namespace CoApp.Toolkit.Extensions {
                     continue;
                 }
 #endif
-                if (!switches.ContainsKey(arg)) {
-                    switches.Add(arg, new List<string>());
+                if (!_switches.ContainsKey(arg)) {
+                    _switches.Add(arg, new List<string>());
                 }
 
-                ((List<string>)switches[arg]).Add(param);
+                ((List<string>)_switches[arg]).Add(param);
                 // firstarg++;
             }
-            return switches;
+            return _switches;
         }
 
 #if !COAPP_ENGINE_CORE
@@ -266,15 +267,13 @@ namespace CoApp.Toolkit.Extensions {
         /// <remarks>
         /// </remarks>
         public static void LoadConfiguration(this string file) {
-            if (switches == null) {
-                switches = new Dictionary<string, IEnumerable<string>>();
+            if (_switches == null) {
+                _switches = new Dictionary<string, IEnumerable<string>>();
             }
 
             var param = "";
             var category = "";
 
-            string arg;
-            int pos;
             if (File.Exists(file)) {
                 var lines = File.ReadAllLines(file);
                 for (var ln = 0; ln < lines.Length; ln++) {
@@ -285,7 +284,7 @@ namespace CoApp.Toolkit.Extensions {
                             line += lines[ln].Trim();
                         }
                     }
-                    arg = line;
+                    var arg = line;
 
                     param = "";
 
@@ -304,22 +303,23 @@ namespace CoApp.Toolkit.Extensions {
                         arg = "{0}-{1}".format(category, arg);
                     }
 
+                    int pos;
                     if ((pos = arg.IndexOf("=")) > -1) {
                         param = arg.Substring(pos + 1);
                         arg = arg.Substring(0, pos).ToLower();
 
                         if (string.IsNullOrEmpty(param) || string.IsNullOrEmpty(arg)) {
                             "Invalid Option in config file [{0}]: {1}".Print(file, line.Trim());
-                            switches.Add("help", new List<string>());
+                            _switches.Add("help", new List<string>());
                             return;
                         }
                     }
 
-                    if (!switches.ContainsKey(arg)) {
-                        switches.Add(arg, new List<string>());
+                    if (!_switches.ContainsKey(arg)) {
+                        _switches.Add(arg, new List<string>());
                     }
 
-                    ((List<string>)switches[arg]).Add(param);
+                    ((List<string>)_switches[arg]).Add(param);
                 }
             } else {
                 "Unable to find configuration file [{0}]".Print(param);
@@ -391,7 +391,7 @@ namespace CoApp.Toolkit.Extensions {
                 }
             }
 
-            return parameters ?? (parameters = from argument in args
+            return _parameters ?? (_parameters = from argument in args
                 where !(argument.StartsWith("--"))
                 select argument);
         }

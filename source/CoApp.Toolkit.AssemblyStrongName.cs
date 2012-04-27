@@ -6,8 +6,6 @@
 
 using System;
 using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 [assembly: AssemblyCompany("Outercurve Foundation")]
 [assembly: AssemblyCopyright("Copyright (c) Garrett Serack, CoApp Contributors 2010-2012")]

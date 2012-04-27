@@ -383,7 +383,7 @@ namespace CoApp.CLI {
                     case "feed-active":
                     case "activate-feed":
                         task = preCommandTasks.Continue(() => MatchFeeds(parameters)).Continue(feeds => {
-                            feeds.Select(each => _packageManager.SetFeed(each, FeedState.active)).ToArray();
+                            feeds.Select(each => _packageManager.SetFeed(each, FeedState.Active)).ToArray();
                         });
                         
                         break;
@@ -391,7 +391,7 @@ namespace CoApp.CLI {
                     case "feed-passive":
                     case "passivate-feed":
                         task = preCommandTasks.Continue(() => MatchFeeds(parameters)).Continue(feeds => {
-                            feeds.Select(each => _packageManager.SetFeed(each, FeedState.passive)).ToArray();
+                            feeds.Select(each => _packageManager.SetFeed(each, FeedState.Passive)).ToArray();
                         });
                         break;
                     case "set-feed-ignored":
@@ -400,7 +400,7 @@ namespace CoApp.CLI {
                     case "feed-ignore":
                     case "disable-feed":
                         task = preCommandTasks.Continue(() => MatchFeeds(parameters)).Continue(feeds => {
-                            feeds.Select(each => _packageManager.SetFeed(each, FeedState.ignored)).ToArray();
+                            feeds.Select(each => _packageManager.SetFeed(each, FeedState.Ignored)).ToArray();
                         });
                         break;
 

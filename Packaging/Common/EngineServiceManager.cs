@@ -64,7 +64,7 @@ namespace CoApp.Packaging.Common {
             var rsd = new RawSecurityDescriptor(psd, 0);
             var dacl = new DiscretionaryAcl(false, false, rsd.DiscretionaryAcl);
 
-            dacl.AddAccess(AccessControlType.Allow, new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null), (int)SERVICE_ACCESS.SERVICE_COAPP, InheritanceFlags.None, PropagationFlags.None);
+            dacl.AddAccess(AccessControlType.Allow, new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null), (int)ServiceAccess.ServiceCoapp, InheritanceFlags.None, PropagationFlags.None);
 
             // convert discretionary ACL back to raw form; looks like via byte[] is only way
             var rawdacl = new byte[dacl.BinaryLength];
