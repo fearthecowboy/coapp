@@ -8,10 +8,5 @@
 // </license>
 //-----------------------------------------------------------------------
 
-
-
-namespace CoApp.Toolkit.Extensions
-{
-
-   
+namespace CoApp.Toolkit.Extensions {
 }

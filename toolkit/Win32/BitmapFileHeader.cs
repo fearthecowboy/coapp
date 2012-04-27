@@ -28,8 +28,7 @@ namespace CoApp.Toolkit.Win32 {
     using System.Runtime.InteropServices;
 
     /// <summary>
-    ///   The BITMAPFILEHEADER structure contains information about the type, size, and layout of a file that contains a DIB.
-    ///   http://msdn.microsoft.com/en-us/library/dd183374(VS.85).aspx
+    ///   The BITMAPFILEHEADER structure contains information about the type, size, and layout of a file that contains a DIB. http://msdn.microsoft.com/en-us/library/dd183374(VS.85).aspx
     /// </summary>
     [StructLayout(LayoutKind.Sequential, Pack = 2)]
     public struct BitmapFileHeader {

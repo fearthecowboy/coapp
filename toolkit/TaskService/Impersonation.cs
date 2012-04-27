@@ -55,23 +55,19 @@ namespace CoApp.Toolkit.TaskService {
             try {
                 if (string.IsNullOrEmpty(userName) && string.IsNullOrEmpty(domainName) && string.IsNullOrEmpty(password)) {
                     identity = WindowsIdentity.GetCurrent();
-                }
-                else {
+                } else {
                     if (LogonUser(userName, domainName, password, LOGON32_LOGON_INTERACTIVE, LOGON32_PROVIDER_DEFAULT, ref token) != 0) {
                         if (DuplicateToken(token, 2, ref tokenDuplicate) != 0) {
                             identity = new WindowsIdentity(tokenDuplicate);
                             impersonationContext = identity.Impersonate();
-                        }
-                        else {
+                        } else {
                             throw new Win32Exception(Marshal.GetLastWin32Error());
                         }
-                    }
-                    else {
+                    } else {
                         throw new Win32Exception(Marshal.GetLastWin32Error());
                     }
                 }
-            }
-            finally {
+            } finally {
                 if (token != IntPtr.Zero) {
                     CloseHandle(token);
                 }
@@ -104,15 +100,21 @@ namespace CoApp.Toolkit.TaskService {
         private const int LOGON32_PROVIDER_DEFAULT = 0;
 
         public string AuthenticationType {
-            get { return identity == null ? null : identity.AuthenticationType; }
+            get {
+                return identity == null ? null : identity.AuthenticationType;
+            }
         }
 
         public bool IsAuthenticated {
-            get { return identity == null ? false : identity.IsAuthenticated; }
+            get {
+                return identity == null ? false : identity.IsAuthenticated;
+            }
         }
 
         public string Name {
-            get { return identity == null ? null : identity.Name; }
+            get {
+                return identity == null ? null : identity.Name;
+            }
         }
     }
 }

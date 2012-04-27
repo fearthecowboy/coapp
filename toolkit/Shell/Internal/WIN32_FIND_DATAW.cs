@@ -30,8 +30,13 @@ namespace CoApp.Toolkit.Shell.Internal {
         public int nFileSizeLow;
         public int dwReserved0;
         public int dwReserved1;
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = MAX_PATH)] public string cFileName;
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 14)] public string cAlternateFileName;
+
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = MAX_PATH)]
+        public string cFileName;
+
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 14)]
+        public string cAlternateFileName;
+
         public const int MAX_PATH = 260;
     }
 }

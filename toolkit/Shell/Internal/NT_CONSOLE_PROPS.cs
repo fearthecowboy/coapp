@@ -86,7 +86,7 @@ namespace CoApp.Toolkit.Shell.Internal {
         ///   Sets the datablock header values for this sturcture.
         /// </summary>
         public void SetDataBlockHeader() {
-            this.dbh.cbSize = unchecked((UInt32) Marshal.SizeOf(typeof (NT_CONSOLE_PROPS)));
+            this.dbh.cbSize = unchecked((UInt32)Marshal.SizeOf(typeof (NT_CONSOLE_PROPS)));
             this.dbh.dwSignature = NT_CONSOLE_PROPS_SIG;
         }
 
@@ -102,15 +102,31 @@ namespace CoApp.Toolkit.Shell.Internal {
         public COORD dwFontSize;
         public UInt32 uFontFamily;
         public UInt32 uFontWeight;
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)] public char[] FaceName;
+
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
+        public char[] FaceName;
+
         public UInt32 uCursorSize;
-        [MarshalAs(UnmanagedType.Bool)] public bool bFullScreen;
-        [MarshalAs(UnmanagedType.Bool)] public bool bQuickEdit;
-        [MarshalAs(UnmanagedType.Bool)] public bool bInsertMode;
-        [MarshalAs(UnmanagedType.Bool)] public bool bAutoPosition;
+
+        [MarshalAs(UnmanagedType.Bool)]
+        public bool bFullScreen;
+
+        [MarshalAs(UnmanagedType.Bool)]
+        public bool bQuickEdit;
+
+        [MarshalAs(UnmanagedType.Bool)]
+        public bool bInsertMode;
+
+        [MarshalAs(UnmanagedType.Bool)]
+        public bool bAutoPosition;
+
         public UInt32 uHistoryBufferSize;
         public UInt32 uNumberOfHistoryBuffers;
-        [MarshalAs(UnmanagedType.Bool)] public bool bHistoryNoDup;
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)] public UInt32[] ColorTable;
+
+        [MarshalAs(UnmanagedType.Bool)]
+        public bool bHistoryNoDup;
+
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
+        public UInt32[] ColorTable;
     }
 }

@@ -28,8 +28,7 @@ namespace CoApp.Toolkit.Win32 {
     using System.Runtime.InteropServices;
 
     /// <summary>
-    ///   A hardware-independent icon directory resource header.
-    ///   http://msdn.microsoft.com/en-us/library/ms997538.aspx
+    ///   A hardware-independent icon directory resource header. http://msdn.microsoft.com/en-us/library/ms997538.aspx
     /// </summary>
     [StructLayout(LayoutKind.Sequential, Pack = 2)]
     public struct GrpIconDir {

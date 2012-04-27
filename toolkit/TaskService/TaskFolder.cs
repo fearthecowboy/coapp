@@ -30,7 +30,6 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR 
 // OTHER DEALINGS IN THE SOFTWARE.
 
-
 namespace CoApp.Toolkit.TaskService {
     using System;
     using System.Runtime.InteropServices;
@@ -71,14 +70,18 @@ namespace CoApp.Toolkit.TaskService {
         ///   Gets the name that is used to identify the folder that contains a task.
         /// </summary>
         public string Name {
-            get { return (v2Folder == null) ? @"\" : v2Folder.Name; }
+            get {
+                return (v2Folder == null) ? @"\" : v2Folder.Name;
+            }
         }
 
         /// <summary>
         ///   Gets the path to where the folder is stored.
         /// </summary>
         public string Path {
-            get { return (v2Folder == null) ? @"\" : v2Folder.Path; }
+            get {
+                return (v2Folder == null) ? @"\" : v2Folder.Path;
+            }
         }
 
         /*public TaskFolder GetFolder(string Path)
@@ -93,8 +96,12 @@ namespace CoApp.Toolkit.TaskService {
         /// </summary>
         /// <value> The security descriptor. </value>
         public GenericSecurityDescriptor SecurityDescriptor {
-            get { return GetSecurityDescriptor(AccessControlSections.All); }
-            set { SetSecurityDescriptor(value, AccessControlSections.All); }
+            get {
+                return GetSecurityDescriptor(AccessControlSections.All);
+            }
+            set {
+                SetSecurityDescriptor(value, AccessControlSections.All);
+            }
         }
 
         /// <summary>
@@ -113,7 +120,9 @@ namespace CoApp.Toolkit.TaskService {
         ///   Gets a collection of all the tasks in the folder.
         /// </summary>
         public TaskCollection Tasks {
-            get { return GetTasks(); }
+            get {
+                return GetTasks();
+            }
         }
 
         /// <summary>
@@ -154,8 +163,7 @@ namespace CoApp.Toolkit.TaskService {
         public void DeleteFolder(string subFolderName) {
             if (v2Folder != null) {
                 v2Folder.DeleteFolder(subFolderName, 0);
-            }
-            else {
+            } else {
                 throw new NotV1SupportedException();
             }
         }
@@ -167,8 +175,7 @@ namespace CoApp.Toolkit.TaskService {
         public void DeleteTask(string Name) {
             if (v2Folder != null) {
                 v2Folder.DeleteTask(Name, 0);
-            }
-            else {
+            } else {
                 if (!Name.EndsWith(".job", StringComparison.CurrentCultureIgnoreCase)) {
                     Name += ".job";
                 }
@@ -192,7 +199,7 @@ namespace CoApp.Toolkit.TaskService {
         /// <returns> The security descriptor for the folder. </returns>
         public string GetSecurityDescriptorSddlForm(AccessControlSections includeSections) {
             if (v2Folder != null) {
-                return v2Folder.GetSecurityDescriptor((int) includeSections);
+                return v2Folder.GetSecurityDescriptor((int)includeSections);
             }
             throw new NotV1SupportedException();
         }
@@ -223,7 +230,7 @@ namespace CoApp.Toolkit.TaskService {
         public Task RegisterTask(string Path, string XmlText, TaskCreation createType, string UserId, string password,
             TaskLogonType LogonType, string sddl) {
             if (v2Folder != null) {
-                return new Task(TaskService, v2Folder.RegisterTask(Path, XmlText, (int) createType, UserId, password, LogonType, sddl));
+                return new Task(TaskService, v2Folder.RegisterTask(Path, XmlText, (int)createType, UserId, password, LogonType, sddl));
             }
             throw new NotV1SupportedException();
         }
@@ -255,7 +262,7 @@ namespace CoApp.Toolkit.TaskService {
             string password = null, TaskLogonType LogonType = TaskLogonType.S4U, string sddl = null) {
             if (v2Folder != null) {
                 return new Task(TaskService,
-                    v2Folder.RegisterTaskDefinition(Path, definition.v2Def, (int) createType, UserId, password, LogonType, sddl));
+                    v2Folder.RegisterTaskDefinition(Path, definition.v2Def, (int)createType, UserId, password, LogonType, sddl));
             }
 
             // Adds ability to set a password for a V1 task. Provided by Arcao.
@@ -336,9 +343,8 @@ namespace CoApp.Toolkit.TaskService {
         /// <param name="includeSections"> Section(s) of the security descriptor to set. </param>
         public void SetSecurityDescriptorSddlForm(string sddlForm, AccessControlSections includeSections) {
             if (v2Folder != null) {
-                v2Folder.SetSecurityDescriptor(sddlForm, (int) includeSections);
-            }
-            else {
+                v2Folder.SetSecurityDescriptor(sddlForm, (int)includeSections);
+            } else {
                 throw new NotV1SupportedException();
             }
         }

@@ -65,8 +65,7 @@ namespace CoApp.Toolkit.Win32 {
         SparseBlock = 9,
 
         /// <summary>
-        ///   Transactional data.
-        ///   (Undocumented - BACKUP_TXFS_DATA)
+        ///   Transactional data. (Undocumented - BACKUP_TXFS_DATA)
         /// </summary>
         TransactionData = 10,
     }

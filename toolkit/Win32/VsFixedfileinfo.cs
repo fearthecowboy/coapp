@@ -23,15 +23,12 @@
 // </license>
 //-----------------------------------------------------------------------
 
-
 namespace CoApp.Toolkit.Win32 {
     using System;
     using System.Runtime.InteropServices;
 
     /// <summary>
-    ///   This structure contains version information about a file. 
-    ///   This information is language- and code page–independent.
-    ///   http://msdn.microsoft.com/en-us/library/ms647001.aspx
+    ///   This structure contains version information about a file. This information is language- and code page–independent. http://msdn.microsoft.com/en-us/library/ms647001.aspx
     /// </summary>
     [StructLayout(LayoutKind.Sequential, Pack = 2)]
     public struct VsFixedfileinfo {
@@ -103,15 +100,15 @@ namespace CoApp.Toolkit.Win32 {
         /// <summary>
         ///   Creates a default Windows VS_FIXEDFILEINFO structure.
         /// </summary>
-        /// <returns>A default Windows VS_FIXEDFILEINFO.</returns>
+        /// <returns> A default Windows VS_FIXEDFILEINFO. </returns>
         public static VsFixedfileinfo GetWindowsDefault() {
             var fixedFileInfo = new VsFixedfileinfo();
             fixedFileInfo.dwSignature = Winver.VS_FFI_SIGNATURE;
             fixedFileInfo.dwStrucVersion = Winver.VS_FFI_STRUCVERSION;
             fixedFileInfo.dwFileFlagsMask = Winver.VS_FFI_FILEFLAGSMASK;
-            fixedFileInfo.dwFileOS = (uint) Winver.FileOs.VOS__WINDOWS32;
-            fixedFileInfo.dwFileSubtype = (uint) Winver.FileSubType.VFT2_UNKNOWN;
-            fixedFileInfo.dwFileType = (uint) Winver.FileType.VFT_DLL;
+            fixedFileInfo.dwFileOS = (uint)Winver.FileOs.VOS__WINDOWS32;
+            fixedFileInfo.dwFileSubtype = (uint)Winver.FileSubType.VFT2_UNKNOWN;
+            fixedFileInfo.dwFileType = (uint)Winver.FileType.VFT_DLL;
             return fixedFileInfo;
         }
     }

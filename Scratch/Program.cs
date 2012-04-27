@@ -4,79 +4,63 @@ using System.Linq;
 using System.Text;
 
 namespace Scratch {
-    using System.IO;
-    using System.Reflection;
-    using System.Threading;
-    using System.Threading.Tasks;
-    using CoApp.Toolkit.Extensions;
-
+    
     class Program {
         
         [STAThread]
         static void Main(string[] args) {
-            Thread.Sleep(3000);
-            var appDomain = AppDomain.CreateDomain("tmp" + DateTime.Now.Ticks);
 
-             appDomain.CreateInstanceFromAndUnwrap(Path.Combine(Environment.CurrentDirectory, "CoApp.Client.dll"), "CoApp.Toolkit.Engine.Client.Installer", false, BindingFlags.Default, null, args, null, null);
+            var _methods = typeof(Program).GetMethods();
 
-            //appDomain.CreateInstanceAndUnwrap("CoApp.Client, Version=1.2.0.94, Culture=neutral, PublicKeyToken=1e373a58e25250cb",
-              //     "CoApp.Toolkit.Engine.Client.Installer", false, BindingFlags.Default, null, new[] { args[0] }, null, null);
-#if FALSE
+            foreach (var method in _methods) {
+                var parameters = method.GetParameters();
+                Console.WriteLine("\r\nMethod: {0}", method.Name);
 
-            var t = Task.Factory.StartNew(
-                () => {
-                    Console.WriteLine("Task 1");
-                    return 100;
-                });
+                foreach (var parameter in parameters) {
+                    var name = parameter.Name;
+                    var type = parameter.ParameterType;
+                    var t = type;
 
-            var q = t.Continue(
-                result => {
-                    Console.WriteLine("Result from previous task: {0}", result);
-                });
+                    Console.Write("   {0} => {1} Primitive:{2} Generic:{3}", name, type.Name, type.IsPrimitive, type.IsGenericType);
+                    if (t.IsAssignableFrom(typeof(string)) || typeof(string).IsAssignableFrom(t)) {
+                        Console.Write(" is stringy!");
+                    }
 
-            var s = q.Continue(
-                () => {
-                    Console.WriteLine("Gonna throw an error here.");
-                    throw new Exception("Crap Happens.");
-                    return 200;
-                });
-            
-#if FALSE
-            var onfail = s.OnFail(
-                (exception) => {
-                    // this is called when the antecedent task throws an exception
-                });
+                    
 
-            var oncan = s.OnCanceled(
-                () => {
-                    // this is called when the antecedent task is cancelled either by token, or by not being called.
-                });
+                    if (type.IsGenericType) {
 
-#endif
+                        //Console.Write(" Generic Type [{0}]" , type.FullName);
+                        var genargs = type.GetGenericArguments();
+                        switch (genargs.Length) {
+                            case 1:
+                                Console.Write(" GenericArg: {0}", genargs[0].Name);
+                                Console.Write(" ValueType: {0}", genargs[0].IsValueType);
+                                Console.Write(" Primitive: {0}", genargs[0].IsPrimitive);
+                                break;
 
-            var u = s.Continue(
-                (result) => {
-                    Console.WriteLine("Shouldn't see this: {0}.", result);
-                });
+                            case 2:
+                                Console.Write(" GenericArg: {0}, {1}", genargs[0].Name, genargs[1].Name);
+                                break;
 
-            var sfails = s.ContinueOnFail(
-                ex => {
-                    Console.WriteLine("Happens when you fail: {0}\r\n{1}.", ex.Unwrap().Message, ex.Unwrap().StackTrace);
-                });
+                            default:
+                                Console.WriteLine("=== TOO MANY ARGS ===");
+                                continue;
+                        }
 
-            var v = u.Continue(
-                () => {
-                    Console.WriteLine("Shouldn't see this either.");
-                });
 
-            try {
-                v.Wait();
-            } catch( Exception e) {
-                e = e.Unwrap();
-                Console.WriteLine("{0}\r\n{1}",e.Message, e.StackTrace);
+                    }
+                    //type.IsPrimitive
+                }
+
             }
-            
-#endif
+
+
+            Console.ReadLine();
+
+
         }
+
+
     }
 }

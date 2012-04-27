@@ -30,7 +30,6 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR 
 // OTHER DEALINGS IN THE SOFTWARE.
 
-
 namespace CoApp.Toolkit.TaskService {
     using System;
     using System.Collections;
@@ -116,11 +115,15 @@ namespace CoApp.Toolkit.TaskService {
             ///   Retrieves the current task. See <see cref="System.Collections.IEnumerator.Current" /> for more information.
             /// </summary>
             public Task Current {
-                get { return new Task(svc, ICurrent); }
+                get {
+                    return new Task(svc, ICurrent);
+                }
             }
 
             internal ITask ICurrent {
-                get { return m_ts.Activate(curItem, ref ITaskGuid); }
+                get {
+                    return m_ts.Activate(curItem, ref ITaskGuid);
+                }
             }
 
             /// <summary>
@@ -134,7 +137,9 @@ namespace CoApp.Toolkit.TaskService {
             }
 
             object IEnumerator.Current {
-                get { return Current; }
+                get {
+                    return Current;
+                }
             }
 
             /// <summary>
@@ -158,10 +163,8 @@ namespace CoApp.Toolkit.TaskService {
                         if (curItem.EndsWith(".job", StringComparison.InvariantCultureIgnoreCase)) {
                             curItem = curItem.Remove(curItem.Length - 4);
                         }
-                    }
-                    catch {
-                    }
-                    finally {
+                    } catch {
+                    } finally {
                         Marshal.FreeCoTaskMem(names);
                         names = IntPtr.Zero;
                     }
@@ -177,11 +180,9 @@ namespace CoApp.Toolkit.TaskService {
                     try {
                         itask = ICurrent;
                         valid = true;
-                    }
-                    catch {
+                    } catch {
                         valid = false;
-                    }
-                    finally {
+                    } finally {
                         itask = null;
                     }
                 } while (!valid);
@@ -211,7 +212,7 @@ namespace CoApp.Toolkit.TaskService {
                             }
 
                             var cName = names;
-                            for (uint i = 0; i < uFetched; cName = (IntPtr) ((long) cName + Marshal.SizeOf(cName)), i++) {
+                            for (uint i = 0; i < uFetched; cName = (IntPtr)((long)cName + Marshal.SizeOf(cName)), i++) {
                                 using (var name = new CoTaskMemString(Marshal.ReadIntPtr(cName))) {
                                     var tempStr = name.ToString();
                                     if (tempStr.EndsWith(".job", StringComparison.InvariantCultureIgnoreCase)) {
@@ -222,10 +223,8 @@ namespace CoApp.Toolkit.TaskService {
                                     }
                                 }
                             }
-                        }
-                        catch {
-                        }
-                        finally {
+                        } catch {
+                        } finally {
                             Marshal.FreeCoTaskMem(names);
                             names = IntPtr.Zero;
                         }
@@ -249,7 +248,9 @@ namespace CoApp.Toolkit.TaskService {
             }
 
             public Task Current {
-                get { return new Task(fld.TaskService, (IRegisteredTask) iEnum.Current); }
+                get {
+                    return new Task(fld.TaskService, (IRegisteredTask)iEnum.Current);
+                }
             }
 
             /// <summary>
@@ -260,7 +261,9 @@ namespace CoApp.Toolkit.TaskService {
             }
 
             object IEnumerator.Current {
-                get { return Current; }
+                get {
+                    return Current;
+                }
             }
 
             public bool MoveNext() {
@@ -293,15 +296,13 @@ namespace CoApp.Toolkit.TaskService {
                 if (v2Coll != null) {
                     if (filter == null) {
                         return v2Coll.Count;
-                    }
-                    else {
+                    } else {
                         var v2te = new V2TaskEnumerator(fld, v2Coll, filter);
                         while (v2te.MoveNext()) {
                             i++;
                         }
                     }
-                }
-                else {
+                } else {
                     var v1te = new V1TaskEnumerator(svc, filter);
                     return v1te.TaskNames.Length;
                 }
@@ -314,17 +315,17 @@ namespace CoApp.Toolkit.TaskService {
         /// </summary>
         /// <value> The regular expression filter. </value>
         private Regex Filter {
-            get { return filter; }
+            get {
+                return filter;
+            }
             set {
                 var sfilter = value == null ? string.Empty : value.ToString().TrimStart('^').TrimEnd('$');
                 if (sfilter == string.Empty || sfilter == "*") {
                     filter = null;
-                }
-                else {
+                } else {
                     if (value.ToString().TrimEnd('$').EndsWith("\\.job", StringComparison.InvariantCultureIgnoreCase)) {
                         filter = new Regex(value.ToString().Replace("\\.job", ""));
-                    }
-                    else {
+                    } else {
                         filter = value;
                     }
                 }
@@ -342,8 +343,7 @@ namespace CoApp.Toolkit.TaskService {
                 if (v2Coll != null) {
                     if (filter == null) {
                         return new Task(svc, v2Coll[++index]);
-                    }
-                    else {
+                    } else {
                         var v2te = new V2TaskEnumerator(fld, v2Coll, filter);
                         while (v2te.MoveNext()) {
                             if (i++ == index) {
@@ -351,8 +351,7 @@ namespace CoApp.Toolkit.TaskService {
                             }
                         }
                     }
-                }
-                else {
+                } else {
                     var v1te = new V1TaskEnumerator(svc, filter);
                     while (v1te.MoveNext()) {
                         if (i++ == index) {
@@ -451,7 +450,9 @@ namespace CoApp.Toolkit.TaskService {
             }
 
             public RunningTask Current {
-                get { return new RunningTask(svc, tEnum.ICurrent); }
+                get {
+                    return new RunningTask(svc, tEnum.ICurrent);
+                }
             }
 
             /// <summary>
@@ -462,7 +463,9 @@ namespace CoApp.Toolkit.TaskService {
             }
 
             object IEnumerator.Current {
-                get { return Current; }
+                get {
+                    return Current;
+                }
             }
 
             public void Reset() {
@@ -483,12 +486,11 @@ namespace CoApp.Toolkit.TaskService {
 
             public RunningTask Current {
                 get {
-                    var irt = (IRunningTask) iEnum.Current;
+                    var irt = (IRunningTask)iEnum.Current;
                     IRegisteredTask task = null;
                     try {
                         task = TaskService.GetTask(v2Svc, irt.Path);
-                    }
-                    catch {
+                    } catch {
                     }
                     if (task == null) {
                         return null;
@@ -506,7 +508,9 @@ namespace CoApp.Toolkit.TaskService {
             }
 
             object IEnumerator.Current {
-                get { return Current; }
+                get {
+                    return Current;
+                }
             }
 
             public bool MoveNext() {

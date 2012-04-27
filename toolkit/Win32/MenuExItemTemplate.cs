@@ -33,14 +33,12 @@ namespace CoApp.Toolkit.Win32 {
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct MenuExItemTemplate {
         /// <summary>
-        ///   Menu item type. This member can be a combination of the type (beginning with MFT) values 
-        ///   listed with the MENUITEMINFO structure.
+        ///   Menu item type. This member can be a combination of the type (beginning with MFT) values listed with the MENUITEMINFO structure.
         /// </summary>
         public UInt32 dwType;
 
         /// <summary>
-        ///   Menu item state. This member can be a combination of the state (beginning with MFS) values 
-        ///   listed with the MENUITEMINFO structure.
+        ///   Menu item state. This member can be a combination of the state (beginning with MFS) values listed with the MENUITEMINFO structure.
         /// </summary>
         public UInt32 dwState;
 
@@ -50,8 +48,7 @@ namespace CoApp.Toolkit.Win32 {
         public UInt32 dwMenuId;
 
         /// <summary>
-        ///   Value specifying whether the menu item is the last item in the menu bar, drop-down menu, 
-        ///   submenu, or shortcut menu and whether it is an item that opens a drop-down menu or submenu.
+        ///   Value specifying whether the menu item is the last item in the menu bar, drop-down menu, submenu, or shortcut menu and whether it is an item that opens a drop-down menu or submenu.
         /// </summary>
         public UInt16 bResInfo;
     }

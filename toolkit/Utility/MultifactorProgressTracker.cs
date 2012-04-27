@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace CoApp.Toolkit.Utility {
+﻿namespace CoApp.Toolkit.Utility {
+    using System;
+    using System.Collections;
+    using System.Collections.Generic;
+    using System.Linq;
 
     public enum ProgressWeight {
         Tiny = 1,
@@ -19,8 +17,10 @@ namespace CoApp.Toolkit.Utility {
         internal int Weight;
         private int _progress;
 
-        public int Progress { 
-            get { return _progress; }
+        public int Progress {
+            get {
+                return _progress;
+            }
             set {
                 if (value >= 0 && value <= 100 && _progress != value) {
                     _progress = value;
@@ -28,8 +28,9 @@ namespace CoApp.Toolkit.Utility {
                 }
             }
         }
+
         public ProgressFactor(ProgressWeight weight) {
-            Weight = (int) weight;
+            Weight = (int)weight;
         }
 
         internal MultifactorProgressTracker Tracker;
@@ -41,15 +42,16 @@ namespace CoApp.Toolkit.Utility {
         public int Progress { get; private set; }
 
         public delegate void Changed(int progress);
+
         public event Changed ProgressChanged;
 
         public void Updated() {
-            var progress = _factors.Sum(each => each.Weight * each.Progress);
-            progress = (progress * 100 / _total);
+            var progress = _factors.Sum(each => each.Weight*each.Progress);
+            progress = (progress*100/_total);
 
-            if( Progress != progress) {
+            if (Progress != progress) {
                 Progress = progress;
-                if( ProgressChanged != null) {
+                if (ProgressChanged != null) {
                     ProgressChanged(Progress);
                 }
             }
@@ -59,11 +61,11 @@ namespace CoApp.Toolkit.Utility {
             return progressTracker.Progress;
         }
 
-        public void Add( ProgressFactor factor) {
+        public void Add(ProgressFactor factor) {
             _factors.Add(factor);
             factor.Tracker = this;
 
-            _total = _factors.Sum(each => each.Weight * 100);
+            _total = _factors.Sum(each => each.Weight*100);
             Updated();
         }
 

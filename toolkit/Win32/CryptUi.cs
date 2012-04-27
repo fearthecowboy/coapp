@@ -8,12 +8,8 @@
 // </license>
 //-----------------------------------------------------------------------
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
 namespace CoApp.Toolkit.Win32 {
+    using System;
     using System.Runtime.InteropServices;
 
     [StructLayout(LayoutKind.Sequential)]
@@ -57,17 +53,17 @@ namespace CoApp.Toolkit.Win32 {
 
         public IntPtr psUnauthenticated;
 
-        public DigitalSignExtendedInfo(string description = null , string moreInfoUrl = null , string hashAlgorithm = null ) {
-            dwSize = (uint) Marshal.SizeOf(typeof (DigitalSignExtendedInfo));
+        public DigitalSignExtendedInfo(string description = null, string moreInfoUrl = null, string hashAlgorithm = null) {
+            dwSize = (uint)Marshal.SizeOf(typeof (DigitalSignExtendedInfo));
             dwAttrFlagsNotUsed = 0;
             pwszSigningCertDisplayString = null;
             hAdditionalCertStore = IntPtr.Zero;
             psAuthenticated = IntPtr.Zero;
             psUnauthenticated = IntPtr.Zero;
 
-            pwszDescription = string.IsNullOrEmpty(description)? null : description;
-            pwszMoreInfoLocation = string.IsNullOrEmpty(moreInfoUrl)? null :moreInfoUrl;
-            pszHashAlg = string.IsNullOrEmpty(hashAlgorithm)? null :hashAlgorithm;
+            pwszDescription = string.IsNullOrEmpty(description) ? null : description;
+            pwszMoreInfoLocation = string.IsNullOrEmpty(moreInfoUrl) ? null : moreInfoUrl;
+            pszHashAlg = string.IsNullOrEmpty(hashAlgorithm) ? null : hashAlgorithm;
         }
     }
 
@@ -103,7 +99,7 @@ namespace CoApp.Toolkit.Win32 {
     public class CryptUi {
         [DllImport("Cryptui.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         public static extern bool CryptUIWizDigitalSign(DigitalSignFlags dwFlags, IntPtr hwndParent, string pwszWizardTitle, ref DigitalSignInfo pDigitalSignInfo, ref IntPtr ppSignContext);
-        
+
         [DllImport("Cryptui.dll", CharSet = CharSet.Auto, SetLastError = true)]
         public static extern bool CryptUIWizFreeDigitalSignContext(IntPtr pSignContext);
     }

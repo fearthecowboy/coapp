@@ -27,7 +27,7 @@ namespace CoApp.Toolkit.Shell.Internal {
         /// <summary>
         ///   Gets an empty structure with a valid data block header and sensible defaults.
         /// </summary>
-        /// <returns></returns>
+        /// <returns> </returns>
         public static NT_FE_CONSOLE_PROPS AnEmptyOne() {
             var value = new NT_FE_CONSOLE_PROPS();
 
@@ -42,7 +42,7 @@ namespace CoApp.Toolkit.Shell.Internal {
         ///   Sets the datablock header values for this sturcture.
         /// </summary>
         public void SetDataBlockHeader() {
-            this.dbh.cbSize = unchecked((UInt32) Marshal.SizeOf(typeof (NT_FE_CONSOLE_PROPS)));
+            this.dbh.cbSize = unchecked((UInt32)Marshal.SizeOf(typeof (NT_FE_CONSOLE_PROPS)));
             this.dbh.dwSignature = NT_FE_CONSOLE_PROPS_SIG;
         }
 

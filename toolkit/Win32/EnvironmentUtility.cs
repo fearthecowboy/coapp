@@ -13,11 +13,9 @@ namespace CoApp.Toolkit.Win32 {
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading.Tasks;
-    using Configuration;
     using Extensions;
 
     public static class EnvironmentUtility {
-
 #if !COAPP_ENGINE_CORE
         private const Int32 HWND_BROADCAST = 0xffff;
         private const Int32 WM_SETTINGCHANGE = 0x001A;
@@ -35,7 +33,7 @@ namespace CoApp.Toolkit.Win32 {
         }
 
         public static string GetSystemEnvironmentVariable(string name) {
-            return Environment.GetEnvironmentVariable(name,EnvironmentVariableTarget.Machine);
+            return Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.Machine);
         }
 
         public static void SetSystemEnvironmentVariable(string name, string value) {
@@ -75,7 +73,7 @@ namespace CoApp.Toolkit.Win32 {
                 }
             }
         }
-        
+
         public static IEnumerable<string> UserPath {
             get {
                 var path = GetUserEnvironmentVariable("PSModulePath");
@@ -94,7 +92,9 @@ namespace CoApp.Toolkit.Win32 {
                 var path = Environment.GetEnvironmentVariable("path");
                 return string.IsNullOrEmpty(path) ? Enumerable.Empty<string>() : path.Split(";".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
             }
-            set { Environment.SetEnvironmentVariable("path", value.Any() ? value.Aggregate((current, each) => current + ";" + each) : ""); }
+            set {
+                Environment.SetEnvironmentVariable("path", value.Any() ? value.Aggregate((current, each) => current + ";" + each) : "");
+            }
         }
 
         public static IEnumerable<string> Append(this IEnumerable<string> searchPath, string pathToAdd) {

@@ -9,8 +9,6 @@
 //-----------------------------------------------------------------------
 
 namespace CoApp.Toolkit.Exceptions {
-    using System;
-
     public class PathIsNotSymlinkException : CoAppException {
         public string Path { get; set; }
 

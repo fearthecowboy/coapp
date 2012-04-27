@@ -27,8 +27,7 @@ namespace CoApp.Toolkit.Win32 {
     using System.Runtime.InteropServices;
 
     /// <summary>
-    ///   Defines the dimensions and color information of a Windows-based device-independent bitmap (DIB). 
-    ///   http://msdn.microsoft.com/en-us/library/dd183375(VS.85).aspx.
+    ///   Defines the dimensions and color information of a Windows-based device-independent bitmap (DIB). http://msdn.microsoft.com/en-us/library/dd183375(VS.85).aspx.
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     public struct BitmapInfo {

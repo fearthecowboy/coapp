@@ -29,13 +29,13 @@ namespace CoApp.Toolkit.Extensions {
         String,
         Binary,
         File
-    } ;
+    };
 
     public enum RequestType {
         GET,
         POST,
         HEAD
-    } ;
+    };
 
     public static class WebExtensions {
         private static CredentialCache credentialCache;
@@ -45,7 +45,7 @@ namespace CoApp.Toolkit.Extensions {
         public static int BufferChunkSize = 1024*8; // 8k?
 
         public static void AddBasicAuthCredentials(this WebRequest obj, string url, string username, string password) {
-            if(credentialCache == null) {
+            if (credentialCache == null) {
                 credentialCache = new CredentialCache();
             }
 
@@ -54,7 +54,7 @@ namespace CoApp.Toolkit.Extensions {
         }
 
         public static void AppendFormData(this StringBuilder stringBuilder, string name, string value) {
-            if(stringBuilder.Length != 0) {
+            if (stringBuilder.Length != 0) {
                 stringBuilder.Append("&");
             }
             stringBuilder.Append(name);
@@ -64,7 +64,7 @@ namespace CoApp.Toolkit.Extensions {
 
         public static StringBuilder GetFormData(this Dictionary<string, string> data) {
             var result = new StringBuilder();
-            foreach(string key in data.Keys) {
+            foreach (var key in data.Keys) {
                 result.AppendFormData(key, data[key]);
             }
             return result;
@@ -86,42 +86,42 @@ namespace CoApp.Toolkit.Extensions {
             object result = null;
             resultCode = -1;
 
-            var webRequest = (HttpWebRequest) WebRequest.Create(url);
+            var webRequest = (HttpWebRequest)WebRequest.Create(url);
             webRequest.CookieContainer = Cookies.GetCookieContainer();
 
-            switch(requestType) {
+            switch (requestType) {
                 case RequestType.POST:
                     webRequest.Method = "POST";
                     webRequest.ContentType = "application/x-www-form-urlencoded";
 
                     var encodedFormData = Encoding.UTF8.GetBytes(GetFormData(formData).ToString());
-                    using(var requestStream = webRequest.GetRequestStream()) {
+                    using (var requestStream = webRequest.GetRequestStream()) {
                         requestStream.Write(encodedFormData, 0, encodedFormData.Length);
                     }
                     break;
                 case RequestType.GET:
                     webRequest.Method = "GET";
-                    if(formData != null) {
+                    if (formData != null) {
                         var ub = new UriBuilder(url) {
-                                                         Query = GetFormData(formData).ToString()
-                                                     };
+                            Query = GetFormData(formData).ToString()
+                        };
                         url = ub.Uri;
                     }
                     break;
             }
 
             try {
-                if(credentialCache != null) {
+                if (credentialCache != null) {
                     webRequest.Credentials = credentialCache;
                     webRequest.PreAuthenticate = true;
                 }
                 var webResponse = webRequest.GetResponse();
 
-                if(!KeepCookiesClean) {
+                if (!KeepCookiesClean) {
                     Cookies.AddCookies(webRequest.CookieContainer.GetCookies(webResponse.ResponseUri));
                 }
 
-                switch(responseType) {
+                switch (responseType) {
                     case ResponseType.String:
                         result = GetStringResponse(webResponse);
                         resultCode = 200;
@@ -135,8 +135,7 @@ namespace CoApp.Toolkit.Extensions {
                         resultCode = 200;
                         break;
                 }
-            }
-            catch {
+            } catch {
                 resultCode = 0;
             }
             return result;
@@ -144,7 +143,7 @@ namespace CoApp.Toolkit.Extensions {
 
         private static string GetStringResponse(WebResponse response) {
             string result;
-            using(var sr = new StreamReader(response.GetResponseStream())) {
+            using (var sr = new StreamReader(response.GetResponseStream())) {
                 result = sr.ReadToEnd();
                 sr.Close();
             }
@@ -155,14 +154,14 @@ namespace CoApp.Toolkit.Extensions {
             int bytesReceived;
             var byteBuffer = new byte[BufferChunkSize];
 
-            using(var buffer = new MemoryStream()) {
-                using(var stream = response.GetResponseStream()) {
+            using (var buffer = new MemoryStream()) {
+                using (var stream = response.GetResponseStream()) {
                     do {
                         bytesReceived = stream.Read(byteBuffer, 0, BufferChunkSize);
-                        if(bytesReceived > 0) {
+                        if (bytesReceived > 0) {
                             buffer.Write(byteBuffer, 0, bytesReceived);
                         }
-                    } while(bytesReceived > 0);
+                    } while (bytesReceived > 0);
                 }
                 return buffer.ToArray();
             }
@@ -172,14 +171,14 @@ namespace CoApp.Toolkit.Extensions {
             int bytesReceived;
             var byteBuffer = new byte[BufferChunkSize];
 
-            using(var buffer = File.Create(outputFilename)) {
-                using(var stream = response.GetResponseStream()) {
+            using (var buffer = File.Create(outputFilename)) {
+                using (var stream = response.GetResponseStream()) {
                     do {
                         bytesReceived = stream.Read(byteBuffer, 0, BufferChunkSize);
-                        if(bytesReceived > 0) {
+                        if (bytesReceived > 0) {
                             buffer.Write(byteBuffer, 0, bytesReceived);
                         }
-                    } while(bytesReceived > 0);
+                    } while (bytesReceived > 0);
                 }
                 return outputFilename;
             }
@@ -228,19 +227,17 @@ namespace CoApp.Toolkit.Extensions {
 
         public static Uri CanonicalizeUri(this string uri) {
             var finalUri = new Uri(uri, UriKind.RelativeOrAbsolute);
-            if(!finalUri.IsAbsoluteUri) {
+            if (!finalUri.IsAbsoluteUri) {
                 finalUri = new Uri(new Uri("http://localhost"), finalUri);
             }
 
             return finalUri;
         }
 
-
-
         public static Uri MakeAbsolute(this Uri baseUri, string relativeUrl) {
             // first see if it's a URL or a fragment
             var uri = new Uri(relativeUrl, UriKind.RelativeOrAbsolute);
-            if(!uri.IsAbsoluteUri) {
+            if (!uri.IsAbsoluteUri) {
                 uri = new Uri(baseUri, relativeUrl);
             }
             return uri;
@@ -254,16 +251,17 @@ namespace CoApp.Toolkit.Extensions {
 
                     if (position > -1) {
                         var result = HttpUtility.UrlDecode(disposition.Substring(position + 1).Trim());
-                        if (!string.IsNullOrEmpty(result))
+                        if (!string.IsNullOrEmpty(result)) {
                             return result;
+                        }
                     }
                 }
-            } catch {}
+            } catch {
+            }
             return null;
         }
 
-        public static bool IsHttpScheme(this Uri uri, bool acceptHttps=true)
-        {
+        public static bool IsHttpScheme(this Uri uri, bool acceptHttps = true) {
             return (uri.Scheme == Uri.UriSchemeHttp || (acceptHttps && uri.Scheme == Uri.UriSchemeHttps));
         }
     }

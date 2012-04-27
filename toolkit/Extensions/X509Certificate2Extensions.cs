@@ -7,59 +7,53 @@
 //     You may not use the software except in compliance with the License. 
 // </license>
 //-----------------------------------------------------------------------
-namespace CoApp.Toolkit.Extensions
-{
+
+namespace CoApp.Toolkit.Extensions {
     using System.Collections.Generic;
     using System.Linq;
-    using System.Security.Cryptography.X509Certificates;
-    using CoApp.Toolkit.Crypto;
     using System.Security.Cryptography;
-    public static class X509Certificate2Extensions
-    {
-        public static Dictionary<string, string> GetSubjectNameParts(this X509Certificate2 cert)
-        {
+    using System.Security.Cryptography.X509Certificates;
+    using Crypto;
+
+    public static class X509Certificate2Extensions {
+        public static Dictionary<string, string> GetSubjectNameParts(this X509Certificate2 cert) {
             var result = new Dictionary<string, string>();
 
             foreach (var bits in cert.SubjectName.Name.SplitToList(',').Select(each => each.Split('='))) {
-                var newKey= bits[0].Trim(' ');
+                var newKey = bits[0].Trim(' ');
                 result.Add(result.ContainsKey(newKey) ? newKey + result.Keys.Where(key => key.StartsWith(newKey)).Count() : newKey, bits[1]);
             }
 
             return result;
         }
 
-        public static byte[] GetPublicKey(this X509Certificate2 cert)
-        {
+        public static byte[] GetPublicKey(this X509Certificate2 cert) {
             var sn = new StrongNameCertificate(cert.PublicKey.Key as RSA);
             return sn.PublicKey;
         }
 
-        public static byte[] GetPublicKeyToken(this X509Certificate2 cert)
-        {
+        public static byte[] GetPublicKeyToken(this X509Certificate2 cert) {
             var sn = new StrongNameCertificate(cert.PublicKey.Key as RSA);
             return sn.PublicKeyToken;
         }
 
-        public static string GetPktAsString(this X509Certificate2 cert)
-        {
+        public static string GetPktAsString(this X509Certificate2 cert) {
             return cert.GetPublicKeyToken().ToHexString();
         }
 
         /// <summary>
-        /// Checks that two certificate are equal. Verifies that the public keys and expiration dates for <paramref name="first"/>
-        /// and <paramref name="second"/> are the same.
+        ///   Checks that two certificate are equal. Verifies that the public keys and expiration dates for <paramref name="first" /> and <paramref
+        ///    name="second" /> are the same.
         /// </summary>
-        /// <param name="first">The first certificate to compare</param>
-        /// <param name="second">The second certificate to compare</param>
-        /// <returns>True if the certificates are equal, otherwise false</returns>
-        public static bool IsEqualTo(this X509Certificate2 first, X509Certificate2 second)
-        {
+        /// <param name="first"> The first certificate to compare </param>
+        /// <param name="second"> The second certificate to compare </param>
+        /// <returns> True if the certificates are equal, otherwise false </returns>
+        public static bool IsEqualTo(this X509Certificate2 first, X509Certificate2 second) {
             return first.GetPublicKey() == second.GetPublicKey() &&
                 first.NotAfter == second.NotAfter;
         }
 
-        public static bool FinishStrongNaming(this X509Certificate2 cert, string fileToDelaySign)
-        {
+        public static bool FinishStrongNaming(this X509Certificate2 cert, string fileToDelaySign) {
             var sn = new StrongNameCertificate(cert.PrivateKey as RSA);
             return sn.Sign(fileToDelaySign);
         }

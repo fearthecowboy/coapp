@@ -37,6 +37,7 @@
     <ApplicationIcon>$(SolutionDir)resources\icons\CoApp.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Microsoft.CSharp" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
     <Reference Include="System" />
@@ -51,45 +52,76 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Toolkit\Engine\Client\Dummy.cs" />
-    <Compile Include="Toolkit\Engine\Client\EasyPackageManager.cs" />
-    <Compile Include="Toolkit\Engine\Client\Installer.cs" />
-    <Compile Include="Toolkit\Engine\Client\Package.cs" />
-    <Compile Include="Toolkit\Engine\Client\PackageManager.cs">
+    <Compile Include="Packaging\Client\CallResponse.cs" />
+    <Compile Include="Packaging\Client\Delegates.cs" />
+    <Compile Include="Packaging\Client\UI\InstallChoice.cs" />
+    <Compile Include="Packaging\Client\UI\InstallerFailureState.cs" />
+    <Compile Include="Packaging\Client\UI\InstSelection.cs" />
+    <Compile Include="Packaging\Client\UI\RemoveCommand.cs" />
+    <Compile Include="Packaging\Common\CanonicalName.cs" />
+    <Compile Include="Packaging\Client\PackageManager.cs" />
+    <Compile Include="Packaging\Client\Feed.cs" />
+    <Compile Include="Packaging\Client\FeedState.cs" />
+    <Compile Include="Packaging\Client\UI\Installer.cs" />
+    <Compile Include="Packaging\Client\LoggingSettings.cs" />
+    <Compile Include="Packaging\Client\Package.cs" />
+    <Compile Include="Packaging\Client\RemoteCallDispatcher.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Toolkit\Engine\Client\RemoteFile.cs" />
-    <Compile Include="Toolkit\Engine\Exceptions\ConflictedPackageException.cs" />
-    <Compile Include="Toolkit\Engine\Exceptions\PackageHasPotentialUpgradesException.cs" />
-    <Compile Include="Toolkit\Engine\LinkType.cs" />
-    <Compile Include="Toolkit\Engine\Model\CompositionAction.cs" />
-    <Compile Include="Toolkit\Engine\Model\CompositionRule.cs" />
-    <Compile Include="Toolkit\Engine\EngineServiceManager.cs" />
-    <Compile Include="Toolkit\Engine\Exceptions\ConfigurationException.cs" />
-    <Compile Include="Toolkit\Engine\Model\Atom\AtomFeed.cs" />
-    <Compile Include="Toolkit\Engine\Model\Atom\AtomItem.cs" />
-    <Compile Include="Toolkit\Engine\Model\Identity.cs" />
-    <Compile Include="Toolkit\Engine\Model\License.cs" />
-    <Compile Include="Toolkit\Engine\Model\LicenseId.cs" />
-    <Compile Include="Toolkit\Engine\Model\LocationAttribute.cs" />
-    <Compile Include="Toolkit\Engine\Model\PackageModel.cs" />
-    <Compile Include="Toolkit\Engine\Model\Role.cs" />
-    <Compile Include="Toolkit\Engine\PackageManagerSettings.cs" />
-    <Compile Include="Toolkit\Engine\PackageName.cs" />
-    <Compile Include="Toolkit\Engine\Exceptions\UnableToStartServiceException.cs" />
-    <Compile Include="Toolkit\Engine\PackageManagerMessages.cs" />
-    <Compile Include="Toolkit\Engine\Model\PackageRole.cs" />
-    <Compile Include="Toolkit\Properties\InstallerResources.Designer.cs">
+    <Compile Include="Packaging\Client\PackageSet.cs" />
+    <Compile Include="Packaging\Client\Policy.cs" />
+    <Compile Include="Packaging\Client\Publisher.cs" />
+    <Compile Include="Packaging\Client\RemoteFile.cs" />
+    <Compile Include="Packaging\Client\ScheduledTask.cs" />
+    <Compile Include="Packaging\Common\Exceptions\ConflictedPackagesException.cs" />
+    <Compile Include="Packaging\Common\Exceptions\FailedPackageRemoveException.cs" />
+    <Compile Include="Packaging\Common\Exceptions\InvalidCanonicalNameException.cs" />
+    <Compile Include="Packaging\Common\Exceptions\PackageBlockedException.cs" />
+    <Compile Include="Packaging\Common\Exceptions\PackageHasPotentialUpgradesException.cs" />
+    <Compile Include="Packaging\Common\Exceptions\PackageInstallFailedException.cs" />
+    <Compile Include="Packaging\Common\Exceptions\RequiresPermissionException.cs" />
+    <Compile Include="Packaging\Common\Exceptions\UnableToStopServiceException.cs" />
+    <Compile Include="Packaging\Common\Exceptions\UnknownPackageException.cs" />
+    <Compile Include="Packaging\Common\IPackageManager.cs" />
+    <Compile Include="Packaging\Common\LinkType.cs" />
+    <Compile Include="Packaging\Common\FlavorString.cs" />
+    <Compile Include="Packaging\Common\Model\Composition.cs" />
+    <Compile Include="Packaging\Common\Model\CompositionAction.cs" />
+    <Compile Include="Packaging\Common\Model\CompositionRule.cs" />
+    <Compile Include="Packaging\Common\EngineServiceManager.cs" />
+    <Compile Include="Packaging\Common\Exceptions\ConfigurationException.cs" />
+    <Compile Include="Packaging\Common\Model\Atom\AtomFeed.cs" />
+    <Compile Include="Packaging\Common\Model\Atom\AtomItem.cs" />
+    <Compile Include="Packaging\Common\Model\DeveloperLibrary.cs" />
+    <Compile Include="Packaging\Common\Model\Driver.cs" />
+    <Compile Include="Packaging\Common\Model\Feature.cs" />
+    <Compile Include="Packaging\Common\Model\Identity.cs" />
+    <Compile Include="Packaging\Common\Model\License.cs" />
+    <Compile Include="Packaging\Common\Model\LicenseId.cs" />
+    <Compile Include="Packaging\Common\Model\LocationAttribute.cs" />
+    <Compile Include="Packaging\Common\Model\PackageDetails.cs" />
+    <Compile Include="Packaging\Common\Model\PackageModel.cs" />
+    <Compile Include="Packaging\Common\Model\Role.cs" />
+    <Compile Include="Packaging\Common\Model\Service.cs" />
+    <Compile Include="Packaging\Common\Model\SourceCode.cs" />
+    <Compile Include="Packaging\Common\Model\WebApplication.cs" />
+    <Compile Include="Packaging\Common\PackageManagerSettings.cs" />
+    <Compile Include="Packaging\Common\Exceptions\UnableToStartServiceException.cs" />
+    <Compile Include="Packaging\Common\IPackageManagerResponse.cs" />
+    <Compile Include="Packaging\Common\Model\PackageRole.cs" />
+    <Compile Include="Packaging\Common\PackageType.cs" />
+    <Compile Include="Packaging\Client\UI\InstallerResources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>InstallerResources.resx</DependentUpon>
     </Compile>
-    <Compile Include="Toolkit\Properties\CoApp.Client.AssemblyInfo.cs" />
+    <Compile Include="Packaging\Client\CoApp.Client.AssemblyInfo.cs" />
     <Compile Include="$(SolutionDir)Source\CoApp.Toolkit.AssemblyStrongName.cs" />
-    <Compile Include="Toolkit\UI\InstallerMainWindow.xaml.cs">
+    <Compile Include="Packaging\Client\UI\InstallerMainWindow.xaml.cs">
       <DependentUpon>InstallerMainWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Toolkit\UI\VisibilityAnimation.cs" />
+    <Compile Include="Packaging\Client\UI\VisibilityAnimation.cs" />
+    <Compile Include="Packaging\Common\SERVICE_ACCESS.cs" />
   </ItemGroup>
   <ItemGroup>
     <Resource Include="resources\images\logo.png" />
@@ -100,17 +132,17 @@
     <Content Include="$(SolutionDir)resources\icons\CoApp.ico" />
   </ItemGroup>
   <ItemGroup>
-    <Page Include="Toolkit\UI\InstallerMainWindow.xaml">
+    <Page Include="Packaging\Client\UI\InstallerMainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Toolkit\UI\Styles.xaml">
+    <Page Include="Packaging\Client\UI\Styles.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Toolkit\Properties\InstallerResources.resx">
+    <EmbeddedResource Include="Packaging\Client\UI\InstallerResources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>InstallerResources.Designer.cs</LastGenOutput>
     </EmbeddedResource>

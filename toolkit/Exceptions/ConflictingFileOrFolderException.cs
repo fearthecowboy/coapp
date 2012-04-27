@@ -9,12 +9,10 @@
 //-----------------------------------------------------------------------
 
 namespace CoApp.Toolkit.Exceptions {
-    using System;
-
     public class ConflictingFileOrFolderException : CoAppException {
         public string ConflictedPath { get; set; }
 
-        public ConflictingFileOrFolderException (string path) {
+        public ConflictingFileOrFolderException(string path) {
             ConflictedPath = path;
         }
     }

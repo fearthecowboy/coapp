@@ -40,19 +40,22 @@ namespace CoApp.Toolkit.Shell {
         public static ShellLink CreateShortcut(string shortcutPath, string actualFilePath, string description = null, string workingDirectory = null, string arguments = null) {
             shortcutPath = shortcutPath.GetFullPath();
             actualFilePath = actualFilePath.GetFullPath();
-            if (!System.IO.Path.HasExtension(shortcutPath))
+            if (!System.IO.Path.HasExtension(shortcutPath)) {
                 shortcutPath += ".LNK";
+            }
 
             var link = new ShellLink(shortcutPath);
             link.Path = actualFilePath;
 
             link.WorkingDirectory = workingDirectory ?? System.IO.Path.GetDirectoryName(actualFilePath);
 
-            if (description != null)
+            if (description != null) {
                 link.Description = description;
+            }
 
-            if (arguments != null)
+            if (arguments != null) {
                 link.Arguments = arguments;
+            }
 
             link.Save(shortcutPath);
             return link;
@@ -61,16 +64,43 @@ namespace CoApp.Toolkit.Shell {
         public static bool IsShellLink(string shortcutPath) {
             shortcutPath = shortcutPath.GetFullPath();
 
-            if( File.Exists(shortcutPath) ) {
+            if (File.Exists(shortcutPath)) {
                 try {
                     var shortcut = Load(shortcutPath);
                     return true;
-                }
-                catch {
+                } catch {
                     return false;
                 }
             }
             return false;
+        }
+
+        public static bool? IsInvalidShortcut(string shortcutPath) {
+            shortcutPath = shortcutPath.GetFullPath();
+
+            if (File.Exists(shortcutPath)) {
+                try {
+                    var target = Load(shortcutPath).Path;
+                    if (string.IsNullOrEmpty(target)) {
+                        // not a file-system shortcut?
+                        return false;
+                    }
+                    try {
+                        var uri = new Uri(target);
+                        if (uri.Scheme == Uri.UriSchemeHttp || (uri.Scheme == Uri.UriSchemeHttps)) {
+                            // web links are 'valid'
+                            return false;
+                        }
+                    } catch {
+                    }
+                    target = Environment.ExpandEnvironmentVariables(target).GetFullPath();
+
+                    return !(File.Exists(target) || Directory.Exists(target));
+                } catch {
+                    // likely not actually a shortcut.
+                }
+            }
+            return null;
         }
 
         public static bool PointsTo(string shortcutPath, string targetPath) {
@@ -80,8 +110,7 @@ namespace CoApp.Toolkit.Shell {
             if (File.Exists(shortcutPath)) {
                 try {
                     return Load(shortcutPath).Path.GetFullPath().Equals(targetPath, StringComparison.CurrentCultureIgnoreCase);
-                }
-                catch {
+                } catch {
                     return false;
                 }
             }
@@ -95,18 +124,18 @@ namespace CoApp.Toolkit.Shell {
         /// </summary>
         public ShellLink() {
             theShellLinkObject = new ShellLinkCoClass();
-            shellLink = (IShellLink) theShellLinkObject;
-            dataList = (IShellLinkDataList) theShellLinkObject;
+            shellLink = (IShellLink)theShellLinkObject;
+            dataList = (IShellLinkDataList)theShellLinkObject;
             consoleProperties = new ConsoleProperties(this);
         }
 
         /// <summary>
         ///   Load a shell link from a file.
         /// </summary>
-        /// <param name = "linkFilePath">the path to the file</param>
+        /// <param name="linkFilePath"> the path to the file </param>
         public ShellLink(string linkFilePath) : this() {
             if (File.Exists(linkFilePath)) {
-                ((IPersistFile) shellLink).Load(linkFilePath, (int) STGM_FLAGS.STGM_READ);
+                ((IPersistFile)shellLink).Load(linkFilePath, (int)STGM_FLAGS.STGM_READ);
                 ReadConsoleProperties();
             }
         }
@@ -137,20 +166,20 @@ namespace CoApp.Toolkit.Shell {
         #endregion
 
         /// <summary>
-        ///   Save a shortcut to a file.  The shell requires a '.lnk' file extension.
+        ///   Save a shortcut to a file. The shell requires a '.lnk' file extension.
         /// </summary>
         /// <remarks>
         ///   If the file exists it is silently overwritten.
         /// </remarks>
-        /// <param name = "lnkPath">The path to the saved file. </param>
+        /// <param name="lnkPath"> The path to the saved file. </param>
         public void Save(string lnkPath) {
-            ((IPersistFile) shellLink).Save(lnkPath, true);
+            ((IPersistFile)shellLink).Save(lnkPath, true);
         }
 
         /// <summary>
         ///   Load a shortcut from a file.
         /// </summary>
-        /// <param name = "linkPath">A path to the file.</param>
+        /// <param name="linkPath"> A path to the file. </param>
         public static ShellLink Load(string linkPath) {
             var result = new ShellLink();
             ((IPersistFile)result.shellLink).Load(linkPath, (int)STGM_FLAGS.STGM_READ);
@@ -169,7 +198,9 @@ namespace CoApp.Toolkit.Shell {
                 return sb.ToString();
             }
 
-            set { shellLink.SetPath(value); }
+            set {
+                shellLink.SetPath(value);
+            }
         }
 
         /// <summary>
@@ -206,31 +237,33 @@ namespace CoApp.Toolkit.Shell {
                 return sb.ToString();
             }
 
-            set { shellLink.SetArguments(value); }
+            set {
+                shellLink.SetArguments(value);
+            }
         }
 
         /// <summary>
         ///   Attempts to find the target of a Shell link, even if it has been moved or renamed.
         /// </summary>
-        /// <param name = "flags">Flags that control the resolution process</param>
+        /// <param name="flags"> Flags that control the resolution process </param>
         public void Resolve(ResolveFlags flags) {
-            shellLink.Resolve(IntPtr.Zero, (SLR_FLAGS) flags);
+            shellLink.Resolve(IntPtr.Zero, (SLR_FLAGS)flags);
         }
 
         /// <summary>
         ///   Attempts to find the target of a Shell link, even if it has been moved or renamed.
         /// </summary>
-        /// <param name = "hwnd">A handle to the window that the Shell will use as the parent for a dialog box. The Shell displays the dialog box if it needs to prompt the user for more information while resolving a Shell link.</param>
-        /// <param name = "flags">Flags that control the resolution process</param>
+        /// <param name="hwnd"> A handle to the window that the Shell will use as the parent for a dialog box. The Shell displays the dialog box if it needs to prompt the user for more information while resolving a Shell link. </param>
+        /// <param name="flags"> Flags that control the resolution process </param>
         public void Resolve(IntPtr hwnd, ResolveFlags flags) {
-            shellLink.Resolve(hwnd, (SLR_FLAGS) flags);
+            shellLink.Resolve(hwnd, (SLR_FLAGS)flags);
         }
 
         /// <summary>
         ///   Attempts to find the target of a Shell link, even if it has been moved or renamed.
         /// </summary>
-        /// <param name = "flags">Flags that control the resolution process</param>
-        /// <param name = "noUxTimeoutMs">The timeout, in ms, to wait for resolution when there is no UX</param>
+        /// <param name="flags"> Flags that control the resolution process </param>
+        /// <param name="noUxTimeoutMs"> The timeout, in ms, to wait for resolution when there is no UX </param>
         public void Resolve(ResolveFlags flags, int noUxTimeoutMs) {
             if ((flags & ResolveFlags.NoUi) == 0) {
                 throw new ArgumentException("This methiod requires that the ResolveFlags.NoUi flag is set in the flags parameter.");
@@ -241,11 +274,11 @@ namespace CoApp.Toolkit.Shell {
             }
 
             unchecked {
-                flags = flags & (ResolveFlags) 0x0000FFFF;
-                flags |= (ResolveFlags) (noUxTimeoutMs << 16);
+                flags = flags & (ResolveFlags)0x0000FFFF;
+                flags |= (ResolveFlags)(noUxTimeoutMs << 16);
             }
 
-            shellLink.Resolve(IntPtr.Zero, (SLR_FLAGS) flags);
+            shellLink.Resolve(IntPtr.Zero, (SLR_FLAGS)flags);
         }
 
         /// <summary>
@@ -258,7 +291,9 @@ namespace CoApp.Toolkit.Shell {
                 return sb.ToString();
             }
 
-            set { shellLink.SetWorkingDirectory(value); }
+            set {
+                shellLink.SetWorkingDirectory(value);
+            }
         }
 
         /// <summary>
@@ -270,11 +305,13 @@ namespace CoApp.Toolkit.Shell {
                 shellLink.GetDescription(sb, sb.Capacity);
                 return sb.ToString();
             }
-            set { shellLink.SetDescription(value); }
+            set {
+                shellLink.SetDescription(value);
+            }
         }
 
         /// <summary>
-        ///   Gets and sets the location of the shortcut's ICON.  This may return an empty IconLocatoin object, one where the path property is empty.
+        ///   Gets and sets the location of the shortcut's ICON. This may return an empty IconLocatoin object, one where the path property is empty.
         /// </summary>
         public IconLocation IconLocation {
             get {
@@ -286,7 +323,9 @@ namespace CoApp.Toolkit.Shell {
                 return new IconLocation(sb.ToString(), iIcon);
             }
 
-            set { shellLink.SetIconLocation(value.Path, value.Index); }
+            set {
+                shellLink.SetIconLocation(value.Path, value.Index);
+            }
         }
 
         /// <summary>
@@ -298,9 +337,11 @@ namespace CoApp.Toolkit.Shell {
                 if (shellLink.GetShowCmd(out showCmd) < 0) {
                     return ShowWindowCommand.Hide;
                 }
-                return (ShowWindowCommand) showCmd;
+                return (ShowWindowCommand)showCmd;
             }
-            set { shellLink.SetShowCmd((int) value); }
+            set {
+                shellLink.SetShowCmd((int)value);
+            }
         }
 
         /// <summary>
@@ -310,9 +351,11 @@ namespace CoApp.Toolkit.Shell {
             get {
                 UInt32 flags;
                 dataList.GetFlags(out flags);
-                return (ShellLinkFlags) flags;
+                return (ShellLinkFlags)flags;
             }
-            set { dataList.SetFlags((UInt32) value); }
+            set {
+                dataList.SetFlags((UInt32)value);
+            }
         }
 
         /// <summary>
@@ -325,8 +368,7 @@ namespace CoApp.Toolkit.Shell {
 
                 if (hr < 0) {
                     return false;
-                }
-                else {
+                } else {
                     Marshal.FreeHGlobal(ppDataBlock);
                     return true;
                 }
@@ -334,11 +376,12 @@ namespace CoApp.Toolkit.Shell {
         }
 
         /// <summary>
-        ///   Gets the console properties for a shell link.  If HasConsoleProperties is false, then this 
-        ///   property returns a ConsoleProperties that contains sensible default values.
+        ///   Gets the console properties for a shell link. If HasConsoleProperties is false, then this property returns a ConsoleProperties that contains sensible default values.
         /// </summary>
         public ConsoleProperties ConsoleProperties {
-            get { return this.consoleProperties; }
+            get {
+                return this.consoleProperties;
+            }
         }
 
         /// <summary>
@@ -351,8 +394,7 @@ namespace CoApp.Toolkit.Shell {
 
                 if (hr < 0) {
                     return false;
-                }
-                else {
+                } else {
                     Marshal.FreeHGlobal(ppDataBlock);
                     return true;
                 }
@@ -360,11 +402,9 @@ namespace CoApp.Toolkit.Shell {
         }
 
         /// <summary>
-        ///   Gets or sets the code page for the console.  if there is no code page then the value for this property is zero.
-        ///   Setting this propety to zero removes the assocated NT_FE_CONSOLE_PROPS data block from the shell link.  
-        ///   When in doubt, use the Windows 1252 code page.
+        ///   Gets or sets the code page for the console. if there is no code page then the value for this property is zero. Setting this propety to zero removes the assocated NT_FE_CONSOLE_PROPS data block from the shell link. When in doubt, use the Windows 1252 code page.
         /// </summary>
-        /// <exception cref = "OverflowExeption">Thrown if the set value cannot be converted to a UInt32 wihtout overflow.</exception>
+        /// <exception cref="OverflowExeption">Thrown if the set value cannot be converted to a UInt32 wihtout overflow.</exception>
         public long CodePage {
             get {
                 IntPtr ppDataBlock;
@@ -374,7 +414,7 @@ namespace CoApp.Toolkit.Shell {
                     return 0;
                 }
 
-                var nt_fe_console_props = (NT_FE_CONSOLE_PROPS) Marshal.PtrToStructure(ppDataBlock, typeof (NT_FE_CONSOLE_PROPS));
+                var nt_fe_console_props = (NT_FE_CONSOLE_PROPS)Marshal.PtrToStructure(ppDataBlock, typeof (NT_FE_CONSOLE_PROPS));
                 Marshal.FreeHGlobal(ppDataBlock);
                 return (nt_fe_console_props.uCodePage);
             }
@@ -388,7 +428,7 @@ namespace CoApp.Toolkit.Shell {
 
                 UInt32 uCodePage;
                 checked {
-                    uCodePage = (UInt32) value;
+                    uCodePage = (UInt32)value;
                 }
 
                 NT_FE_CONSOLE_PROPS nt_fe_console_props = NT_FE_CONSOLE_PROPS.AnEmptyOne();
@@ -411,8 +451,7 @@ namespace CoApp.Toolkit.Shell {
 
                 if (hr < 0) {
                     return false;
-                }
-                else {
+                } else {
                     Marshal.FreeHGlobal(ppDataBlock);
                     return true;
                 }
@@ -420,9 +459,7 @@ namespace CoApp.Toolkit.Shell {
         }
 
         /// <summary>
-        ///   Get and sets the EXP_SZ_LINK property for a shell link. If there is no link then the property 
-        ///   value is an empty string. Setting this to null, an empty string, or a string that is all white space 
-        ///   removes the EXP_SZ_LINK data block with the EXP_SZ_LINK_SIG signature from the assocated shell link.
+        ///   Get and sets the EXP_SZ_LINK property for a shell link. If there is no link then the property value is an empty string. Setting this to null, an empty string, or a string that is all white space removes the EXP_SZ_LINK data block with the EXP_SZ_LINK_SIG signature from the assocated shell link.
         /// </summary>
         public string ExpSzLink {
             get {
@@ -433,7 +470,7 @@ namespace CoApp.Toolkit.Shell {
                     return string.Empty;
                 }
 
-                var exp_sz_link = (EXP_SZ_LINK) Marshal.PtrToStructure(ppDataBlock, typeof (EXP_SZ_LINK));
+                var exp_sz_link = (EXP_SZ_LINK)Marshal.PtrToStructure(ppDataBlock, typeof (EXP_SZ_LINK));
                 Marshal.FreeHGlobal(ppDataBlock);
                 var value = new string(exp_sz_link.swzTarget);
                 return value;
@@ -474,8 +511,7 @@ namespace CoApp.Toolkit.Shell {
 
                 if (hr < 0) {
                     return false;
-                }
-                else {
+                } else {
                     Marshal.FreeHGlobal(ppDataBlock);
                     return true;
                 }
@@ -483,9 +519,7 @@ namespace CoApp.Toolkit.Shell {
         }
 
         /// <summary>
-        ///   Get and sets the EXP_SZ_ICON property for a shell link. If there is no link then the property 
-        ///   value is an empty string. Setting this to null, an empty string, or a string that is all white space 
-        ///   removes the EXP_SZ_LINK data block with the EXP_SZ_ICON_SIG signature from the assocated shell link.
+        ///   Get and sets the EXP_SZ_ICON property for a shell link. If there is no link then the property value is an empty string. Setting this to null, an empty string, or a string that is all white space removes the EXP_SZ_LINK data block with the EXP_SZ_ICON_SIG signature from the assocated shell link.
         /// </summary>
         public string ExpSzIcon {
             get {
@@ -496,7 +530,7 @@ namespace CoApp.Toolkit.Shell {
                     return string.Empty;
                 }
 
-                var exp_sz_icon = (EXP_SZ_ICON) Marshal.PtrToStructure(ppDataBlock, typeof (EXP_SZ_ICON));
+                var exp_sz_icon = (EXP_SZ_ICON)Marshal.PtrToStructure(ppDataBlock, typeof (EXP_SZ_ICON));
                 Marshal.FreeHGlobal(ppDataBlock);
                 var value = new string(exp_sz_icon.swzTarget);
                 return value;
@@ -537,8 +571,7 @@ namespace CoApp.Toolkit.Shell {
 
                 if (hr < 0) {
                     return false;
-                }
-                else {
+                } else {
                     Marshal.FreeHGlobal(ppDataBlock);
                     return true;
                 }
@@ -546,9 +579,7 @@ namespace CoApp.Toolkit.Shell {
         }
 
         /// <summary>
-        ///   Get and sets the EXP_DARWIN_LINK property for a shell link. If there is no link then the property 
-        ///   value is an empty string. Setting this to null, an empty string, or a string that is all white space 
-        ///   removes the EXP_DARWIN_LINK data block from the assocated shell link.
+        ///   Get and sets the EXP_DARWIN_LINK property for a shell link. If there is no link then the property value is an empty string. Setting this to null, an empty string, or a string that is all white space removes the EXP_DARWIN_LINK data block from the assocated shell link.
         /// </summary>
         public string DarwinLink {
             get {
@@ -559,7 +590,7 @@ namespace CoApp.Toolkit.Shell {
                     return string.Empty;
                 }
 
-                var exp_darwin_link = (EXP_DARWIN_LINK) Marshal.PtrToStructure(ppDataBlock, typeof (EXP_DARWIN_LINK));
+                var exp_darwin_link = (EXP_DARWIN_LINK)Marshal.PtrToStructure(ppDataBlock, typeof (EXP_DARWIN_LINK));
                 Marshal.FreeHGlobal(ppDataBlock);
                 var value = new string(exp_darwin_link.szwDarwinID);
                 return value;
@@ -595,8 +626,8 @@ namespace CoApp.Toolkit.Shell {
         /// <summary>
         ///   Removes a data block
         /// </summary>
-        /// <param name = "signature">The signature of the data block</param>
-        /// <exception cref = "ArgumentException">Thrown if the signature is not supported.</exception>
+        /// <param name="signature"> The signature of the data block </param>
+        /// <exception cref="ArgumentException">Thrown if the signature is not supported.</exception>
         internal void RemoveData(UInt32 signature) {
             switch (signature) {
                 case NT_CONSOLE_PROPS.NT_CONSOLE_PROPS_SIG:
@@ -616,7 +647,7 @@ namespace CoApp.Toolkit.Shell {
         /// <summary>
         ///   Read the console properties from the shell link
         /// </summary>
-        /// <returns>True if they exists and were read.  False if they did not exist.</returns>
+        /// <returns> True if they exists and were read. False if they did not exist. </returns>
         internal bool ReadConsoleProperties() {
             IntPtr ppDataBlock;
             Int32 hr = dataList.CopyDataBlock(NT_CONSOLE_PROPS.NT_CONSOLE_PROPS_SIG, out ppDataBlock);
@@ -625,7 +656,7 @@ namespace CoApp.Toolkit.Shell {
                 return false;
             }
 
-            var nt_console_props = (NT_CONSOLE_PROPS) Marshal.PtrToStructure(ppDataBlock, typeof (NT_CONSOLE_PROPS));
+            var nt_console_props = (NT_CONSOLE_PROPS)Marshal.PtrToStructure(ppDataBlock, typeof (NT_CONSOLE_PROPS));
             Marshal.FreeHGlobal(ppDataBlock);
 
             this.consoleProperties.nt_console_props = nt_console_props;
@@ -661,7 +692,7 @@ namespace CoApp.Toolkit.Shell {
                     return new EXP_SPECIAL_FOLDER();
                 }
 
-                value = (EXP_SPECIAL_FOLDER) Marshal.PtrToStructure(ppDataBlock, typeof (EXP_SPECIAL_FOLDER));
+                value = (EXP_SPECIAL_FOLDER)Marshal.PtrToStructure(ppDataBlock, typeof (EXP_SPECIAL_FOLDER));
                 Marshal.FreeHGlobal(ppDataBlock);
                 return value;
             }
@@ -669,7 +700,7 @@ namespace CoApp.Toolkit.Shell {
             set {
                 dataList.RemoveDataBlock(EXP_SPECIAL_FOLDER.EXP_SPECIAL_FOLDER_SIG);
 
-                value.dbh.cbSize = unchecked((UInt32) Marshal.SizeOf(typeof (EXP_SPECIAL_FOLDER)));
+                value.dbh.cbSize = unchecked((UInt32)Marshal.SizeOf(typeof (EXP_SPECIAL_FOLDER)));
                 value.dbh.dwSignature = EXP_SPECIAL_FOLDER.EXP_SPECIAL_FOLDER_SIG;
 
                 GCHandle handle = GCHandle.Alloc(value, GCHandleType.Pinned); // pin the value

@@ -28,10 +28,7 @@ namespace CoApp.Toolkit.Win32 {
     using System.Runtime.InteropServices;
 
     /// <summary>
-    ///   An extended dialog box template begins with a DIALOGEXTEMPLATE header that describes
-    ///   the dialog box and specifies the number of controls in the dialog box. For each 
-    ///   control in a dialog box, an extended dialog box template has a block of data that
-    ///   uses the DIALOGEXITEMTEMPLATE format to describe the control.
+    ///   An extended dialog box template begins with a DIALOGEXTEMPLATE header that describes the dialog box and specifies the number of controls in the dialog box. For each control in a dialog box, an extended dialog box template has a block of data that uses the DIALOGEXITEMTEMPLATE format to describe the control.
     /// </summary>
     [StructLayout(LayoutKind.Sequential, Pack = 2)]
     public struct DialogExTemplate {
@@ -46,9 +43,7 @@ namespace CoApp.Toolkit.Win32 {
         public UInt16 signature;
 
         /// <summary>
-        ///   Specifies the help context identifier for the dialog box window. When the system
-        ///   sends a WM_HELP message, it passes this value in the wContextId member of the 
-        ///   HELPINFO structure.
+        ///   Specifies the help context identifier for the dialog box window. When the system sends a WM_HELP message, it passes this value in the wContextId member of the HELPINFO structure.
         /// </summary>
         public UInt32 helpID;
 

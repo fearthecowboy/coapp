@@ -30,7 +30,6 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR 
 // OTHER DEALINGS IN THE SOFTWARE.
 
-
 namespace CoApp.Toolkit.TaskService {
     using System;
     using System.Diagnostics;
@@ -57,7 +56,9 @@ namespace CoApp.Toolkit.TaskService {
         ///   Gets a message that describes the current exception.
         /// </summary>
         public override string Message {
-            get { return myMessage; }
+            get {
+                return myMessage;
+            }
         }
 
         internal abstract string LibName { get; }
@@ -75,7 +76,9 @@ namespace CoApp.Toolkit.TaskService {
         }
 
         internal override string LibName {
-            get { return "Task Scheduler 1.0"; }
+            get {
+                return "Task Scheduler 1.0";
+            }
         }
     }
 
@@ -91,7 +94,9 @@ namespace CoApp.Toolkit.TaskService {
         }
 
         internal override string LibName {
-            get { return "Task Scheduler 2.0 (1.2)"; }
+            get {
+                return "Task Scheduler 2.0 (1.2)";
+            }
         }
     }
 }

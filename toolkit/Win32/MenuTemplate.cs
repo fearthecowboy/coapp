@@ -28,8 +28,7 @@ namespace CoApp.Toolkit.Win32 {
     using System.Runtime.InteropServices;
 
     /// <summary>
-    ///   Defines the header for a menu template. 
-    ///   A complete menu template consists of a header and one or more menu item lists.
+    ///   Defines the header for a menu template. A complete menu template consists of a header and one or more menu item lists.
     /// </summary>
     [StructLayout(LayoutKind.Sequential, Pack = 2)]
     public struct MenuTemplate {
@@ -39,9 +38,7 @@ namespace CoApp.Toolkit.Win32 {
         public UInt16 wVersion;
 
         /// <summary>
-        ///   Specifies the offset, in bytes, from the end of the header. 
-        ///   The menu item list begins at this offset. Usually, this member is zero, and the menu 
-        ///   item list follows immediately after the header.
+        ///   Specifies the offset, in bytes, from the end of the header. The menu item list begins at this offset. Usually, this member is zero, and the menu item list follows immediately after the header.
         /// </summary>
         public UInt16 wOffset;
     }

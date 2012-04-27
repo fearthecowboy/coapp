@@ -39,6 +39,7 @@
             this.checkBox1.BackColor = System.Drawing.Color.Transparent;
             this.checkBox1.Checked = true;
             this.checkBox1.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.checkBox1.ForeColor = System.Drawing.Color.Black;
             this.checkBox1.Location = new System.Drawing.Point(110, 223);
             this.checkBox1.Name = "checkBox1";
             this.checkBox1.Size = new System.Drawing.Size(374, 27);
@@ -82,6 +83,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.messageLabel.BackColor = System.Drawing.Color.Transparent;
             this.messageLabel.Font = new System.Drawing.Font("Tahoma", 18F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.messageLabel.ForeColor = System.Drawing.Color.Black;
             this.messageLabel.Location = new System.Drawing.Point(0, 0);
             this.messageLabel.Margin = new System.Windows.Forms.Padding(0);
             this.messageLabel.Name = "messageLabel";

@@ -8,38 +8,24 @@
 // </license>
 //-----------------------------------------------------------------------
 
-
-using System.ComponentModel;
-using System.IO;
-
 namespace CoApp.Toolkit.Console {
     using System;
     using System.Collections.Generic;
     using System.Resources;
     using System.Threading;
     using System.Threading.Tasks;
-    using System.Linq;
     using Exceptions;
     using Extensions;
-    using Tasks;
-    using OperationCanceledException = System.OperationCanceledException;
 
     public abstract class AsyncConsoleProgram {
         protected abstract ResourceManager Res { get; }
-        protected int Counter = 0;
+        protected int Counter;
 
         protected abstract int Main(IEnumerable<string> args);
         protected CancellationTokenSource CancellationTokenSource = new CancellationTokenSource();
 
         protected virtual int Startup(IEnumerable<string> args) {
             var task = Task.Factory.StartNew(() => {
-#if DEBUG
-                new DebugMessage {
-                    WriteLine = (text) => {
-                        Console.WriteLine("[DEBUG][{0}] {1}", ++Counter,text);
-                    }
-                }.Register();
-#endif                
                 Main(args);
             }, CancellationTokenSource.Token);
 
@@ -55,24 +41,23 @@ namespace CoApp.Toolkit.Console {
                         }
                     }
                     y.Cancel = true;
-
                 };
                 task.Wait(CancellationTokenSource.Token);
-            } catch( Exception e ) {
-                 HandleException(e.Unwrap());
-                 return 1;
+            } catch (Exception e) {
+                HandleException(e.Unwrap());
+                return 1;
             }
             FilesystemExtensions.RemoveTemporaryFiles();
             return 0;
         }
 
-        bool HandleException(Exception ex ) {
+        private bool HandleException(Exception ex) {
             if (ex is ConsoleException) {
                 Fail(ex.Message);
                 return true;
             }
 
-            if( ex is OperationCompletedBeforeResultException) {
+            if (ex is OperationCompletedBeforeResultException) {
                 // assumably, this has been actually handled elsewhere.. right?
                 return true;
             }
@@ -87,26 +72,18 @@ namespace CoApp.Toolkit.Console {
                 return true;
             }
 
-            Fail("Unexpected Exception: {0} {1}\r\n{2}", ex.GetType() ,ex.Message, ex.StackTrace);
+            Fail("Unexpected Exception: {0} {1}\r\n{2}", ex.GetType(), ex.Message, ex.StackTrace);
             return false;
         }
-
-        
 
         #region fail/help/logo
 
         /// <summary>
         ///   Displays a failure message.
         /// </summary>
-        /// <param name = "text">
-        ///   The text format string.
-        /// </param>
-        /// <param name = "par">
-        ///   The parameters for the formatted string.
-        /// </param>
-        /// <returns>
-        ///   returns 1 (usually passed out as the process end code)
-        /// </returns>
+        /// <param name="text"> The text format string. </param>
+        /// <param name="par"> The parameters for the formatted string. </param>
+        /// <returns> returns 1 (usually passed out as the process end code) </returns>
         protected int Fail(string text, params object[] par) {
             Logo();
             using (new ConsoleColors(ConsoleColor.Red, ConsoleColor.Black)) {
@@ -119,9 +96,7 @@ namespace CoApp.Toolkit.Console {
         /// <summary>
         ///   Displays the program help.
         /// </summary>
-        /// <returns>
-        ///   returns 0.
-        /// </returns>
+        /// <returns> returns 0. </returns>
         protected int Help() {
             Logo();
             using (new ConsoleColors(ConsoleColor.White, ConsoleColor.Black)) {

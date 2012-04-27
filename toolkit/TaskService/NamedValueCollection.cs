@@ -30,7 +30,6 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR 
 // OTHER DEALINGS IN THE SOFTWARE.
 
-
 namespace CoApp.Toolkit.TaskService {
     using System;
     using System.Collections;
@@ -55,7 +54,9 @@ namespace CoApp.Toolkit.TaskService {
         }
 
         internal bool Bound {
-            get { return v2Coll != null; }
+            get {
+                return v2Coll != null;
+            }
         }
 
         internal void Bind(ITaskNamedValueCollection iTaskNamedValueCollection) {
@@ -75,8 +76,7 @@ namespace CoApp.Toolkit.TaskService {
                 for (var i = 1; i <= Count; i++) {
                     destCollection.Add(v2Coll[i].Name, v2Coll[i].Value);
                 }
-            }
-            else {
+            } else {
                 foreach (var item in unboundDict) {
                     destCollection.Add(item.Key, item.Value);
                 }
@@ -96,7 +96,9 @@ namespace CoApp.Toolkit.TaskService {
         ///   Gets the number of items in the collection.
         /// </summary>
         public int Count {
-            get { return v2Coll != null ? v2Coll.Count : unboundDict.Count; }
+            get {
+                return v2Coll != null ? v2Coll.Count : unboundDict.Count;
+            }
         }
 
         /// <summary>
@@ -145,8 +147,7 @@ namespace CoApp.Toolkit.TaskService {
         public void Add(string Name, string Value) {
             if (v2Coll != null) {
                 v2Coll.Create(Name, Value);
-            }
-            else {
+            } else {
                 unboundDict.Add(Name, Value);
             }
         }
@@ -165,8 +166,7 @@ namespace CoApp.Toolkit.TaskService {
         public void Clear() {
             if (v2Coll != null) {
                 v2Coll.Clear();
-            }
-            else {
+            } else {
                 unboundDict.Clear();
             }
         }
@@ -178,8 +178,7 @@ namespace CoApp.Toolkit.TaskService {
         public IEnumerator GetEnumerator() {
             if (v2Coll != null) {
                 return v2Coll.GetEnumerator();
-            }
-            else {
+            } else {
                 return unboundDict.GetEnumerator();
             }
         }

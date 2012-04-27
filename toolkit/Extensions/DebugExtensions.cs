@@ -18,10 +18,7 @@
 // -----------------------------------------------------------------------
 
 namespace CoApp.Toolkit.Extensions {
-    using System;
-    using System.Collections.Generic;
     using System.Diagnostics;
-    using Tasks;
 
     public static class DebugExtensions {
         public static void Debug(this string buf, params object[] args) {
@@ -40,8 +37,7 @@ namespace CoApp.Toolkit.Extensions {
                 for (var y = 0; y < lnWidth; y++) {
                     if (x + y >= buf.Length) {
                         System.Diagnostics.Debug.Write("   ");
-                    }
-                    else {
+                    } else {
                         System.Diagnostics.Debug.Write(" {0:x2}".format(buf[x + y]));
                     }
                 }
@@ -50,9 +46,8 @@ namespace CoApp.Toolkit.Extensions {
                 for (var y = 0; y < lnWidth; y++) {
                     if (x + y >= buf.Length) {
                         System.Diagnostics.Debug.Write(" ");
-                    }
-                    else {
-                        var c = buf[x + y] < 32 || buf[x + y] > 127 ? '.' : (char) buf[x + y];
+                    } else {
+                        var c = buf[x + y] < 32 || buf[x + y] > 127 ? '.' : (char)buf[x + y];
                         System.Diagnostics.Debug.Write("{0}".format(c));
                     }
                 }
@@ -94,10 +89,6 @@ namespace CoApp.Toolkit.Extensions {
 #endif
         }
     }
-
-    public class DebugMessage : MessageHandlers<DebugMessage> {
-        public Action<string> WriteLine;
-    }
 }
 
 #if LINQPAD
@@ -119,4 +110,4 @@ namespace CoApp.Toolkit.Debug {
         }
     }
 }
-#endif 
+#endif

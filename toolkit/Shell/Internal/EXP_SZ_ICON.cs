@@ -43,14 +43,16 @@ namespace CoApp.Toolkit.Shell.Internal {
         ///   Sets the datablock header values for this sturcture.
         /// </summary>
         public void SetDataBlockHeader() {
-            this.dbh.cbSize = unchecked((UInt32) Marshal.SizeOf(typeof (EXP_SZ_ICON)));
+            this.dbh.cbSize = unchecked((UInt32)Marshal.SizeOf(typeof (EXP_SZ_ICON)));
             this.dbh.dwSignature = EXP_SZ_ICON_SIG;
         }
 
         public DATABLOCK_HEADER dbh;
 
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = MAX_PATH)] public sbyte[] szTarget; // ANSI target name w/EXP_SZ in it
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = MAX_PATH)]
+        public sbyte[] szTarget; // ANSI target name w/EXP_SZ in it
 
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = MAX_PATH)] public char[] swzTarget; // UNICODE target name w/EXP_SZ in it
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = MAX_PATH)]
+        public char[] swzTarget; // UNICODE target name w/EXP_SZ in it
     }
 }

@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace CoApp.Toolkit.Logging {
+﻿namespace CoApp.Toolkit.Logging {
+    using System;
     using System.Diagnostics;
     using System.Reflection;
     using System.Runtime.InteropServices;
@@ -11,14 +7,19 @@ namespace CoApp.Toolkit.Logging {
     using System.Threading.Tasks;
     using Exceptions;
     using Extensions;
+
+#if COAPP_ENGINE_CORE
+    using Packaging.Service;
     using Tasks;
 
+#endif
+
     public static class Logger {
-        private static EventLog _eventLog;
+        private static readonly EventLog EventLog;
         private static readonly string Source;
         private static bool _ready;
-        private static short pid;
-        
+        private static readonly short Pid;
+
 #if COAPP_ENGINE_CORE
         private static bool _messages;
         public static bool Messages {
@@ -35,24 +36,24 @@ namespace CoApp.Toolkit.Logging {
             get { return _warnings || SessionCache<string>.Value["LogWarnings"].IsTrue(); }
             set { _warnings = value; }
         }
-#else 
+#else
         public static bool Messages { get; set; }
         public static bool Errors { get; set; }
         public static bool Warnings { get; set; }
-#endif 
-        
+#endif
+
         [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
         internal static extern void OutputDebugString(string message);
 
         static Logger() {
             try {
-                pid = (short)Process.GetCurrentProcess().Id;
+                Pid = (short)Process.GetCurrentProcess().Id;
                 Errors = true;
 #if DEBUG
-    // by default, we'll turn warnings on only in a debug version.
-            Warnings = true;
+                // by default, we'll turn warnings on only in a debug version.
+                Warnings = true;
 #else
-                // Warnings = false;
+    // Warnings = false;
                 Warnings = true; // let's just put this on until we get into RC.
 #endif
                 Messages = true;
@@ -67,7 +68,7 @@ namespace CoApp.Toolkit.Logging {
                 if (!EventLog.SourceExists(Source)) {
                     EventLog.CreateEventSource(Source, "CoApp");
                 }
-                _eventLog = new EventLog("CoApp", ".", Source);
+                EventLog = new EventLog("CoApp", ".", Source);
 
                 Task.Factory.StartNew(() => {
                     while (!EventLog.SourceExists(Source)) {
@@ -76,19 +77,21 @@ namespace CoApp.Toolkit.Logging {
                     _ready = true;
                 });
             } catch {
-                _ready = true; 
+                _ready = true;
             }
         }
 
         /// <devdoc>
-        ///    <para>
-        ///       Writes an entry of the specified type with the
-        ///       user-defined <paramref name="eventID"/> and <paramref name="category"/> to the event log, and appends binary data to 
-        ///       the message. The Event Viewer does not interpret this data; it
-        ///       displays raw data only in a combined hexadecimal and text format. 
-        ///    </para> 
+        ///   <para>Writes an entry of the specified type with the
+        ///     user-defined
+        ///     <paramref name="eventId" />
+        ///     and
+        ///     <paramref name="category" />
+        ///     to the event log, and appends binary data to 
+        ///     the message. The Event Viewer does not interpret this data; it
+        ///     displays raw data only in a combined hexadecimal and text format.</para>
         /// </devdoc>
-        private static void WriteEntry(string message, EventLogEntryType type = EventLogEntryType.Information, short eventID = 0, short category = 0, byte[] rawData = null) {
+        private static void WriteEntry(string message, EventLogEntryType type = EventLogEntryType.Information, short eventId = 0, short category = 0, byte[] rawData = null) {
             try {
                 if (message.Length > 4096) {
                     message = message.Substring(0, 4096) + "==>[SNIPPED FOR BEREVITY]";
@@ -100,30 +103,28 @@ namespace CoApp.Toolkit.Logging {
                         }
                         // go ahead and try, but don't whine if this gets dropped.
                         try {
-                            _eventLog.WriteEntry(message, type, (short)pid, (short)category, rawData);
+                            EventLog.WriteEntry(message, type, Pid, category, rawData);
                         } catch {
-
                         }
                     });
                 } else {
                     try {
-                        _eventLog.WriteEntry(message, type, (short)pid, (short)category, rawData);
+                        EventLog.WriteEntry(message, type, Pid, category, rawData);
                     } catch {
-
                     }
                 }
 
                 // we're gonna output this to dbgview too for now.
-                if (eventID == 0 && category == 0) {
-#if COAPP_ENGINE_CORE && DEBUG
+                if (eventId == 0 && category == 0) {
+#if XCOAPP_ENGINE_CORE && DEBUG
                     Console.WriteLine(string.Format("«{0}/{1}»-{2}", type, Source, message.Replace("\r\n", "\r\n»")));
 #endif
                     OutputDebugString(string.Format("«{0}/{1}»-{2}", type, Source, message.Replace("\r\n", "\r\n»")));
                 } else {
-#if COAPP_ENGINE_CORE && DEBUG
+#if XCOAPP_ENGINE_CORE && DEBUG
                     Console.WriteLine(string.Format("«{0}/{1}»({2}/{3})-{4}", type, Source, eventID, category, message.Replace("\r\n", "\r\n»")));
 #endif
-                    OutputDebugString(string.Format("«{0}/{1}»({2}/{3})-{4}", type, Source, eventID, category, message.Replace("\r\n", "\r\n»")));
+                    OutputDebugString(string.Format("«{0}/{1}»({2}/{3})-{4}", type, Source, eventId, category, message.Replace("\r\n", "\r\n»")));
                 }
                 if (!rawData.IsNullOrEmpty()) {
                     var rd = rawData.ToUtf8String().Replace("\r\n", "\r\n»");
@@ -134,9 +135,8 @@ namespace CoApp.Toolkit.Logging {
                     }
                 }
             } catch {
-                
             }
-        } 
+        }
 
         public static void Message(string message, params object[] args) {
             if (Messages) {
@@ -146,7 +146,7 @@ namespace CoApp.Toolkit.Logging {
 
         public static void MessageWithData(string message, string data, params object[] args) {
             if (Messages) {
-                WriteEntry(message.format(args),rawData : data.ToByteArray());
+                WriteEntry(message.format(args), rawData: data.ToByteArray());
             }
         }
 
@@ -162,15 +162,14 @@ namespace CoApp.Toolkit.Logging {
             }
         }
 
-
         public static void Warning(CoAppException exception) {
             if (Warnings) {
                 if (!exception.Logged) {
                     exception.Logged = true;
-                    if(exception.InnerException != null ) {
-                        WriteEntry("{0}/{1} - {2}".format(exception.GetType(), exception.InnerException.GetType(), exception.Message), EventLogEntryType.Warning, 0, 0, exception.stacktrace.ToByteArray());    
+                    if (exception.InnerException != null) {
+                        WriteEntry("{0}/{1} - {2}".format(exception.GetType(), exception.InnerException.GetType(), exception.Message), EventLogEntryType.Warning, 0, 0, exception.stacktrace.ToByteArray());
                     } else {
-                        WriteEntry("{0} - {1}".format(exception.GetType(), exception.Message), EventLogEntryType.Warning, 0, 0, exception.stacktrace.ToByteArray());    
+                        WriteEntry("{0} - {1}".format(exception.GetType(), exception.Message), EventLogEntryType.Warning, 0, 0, exception.stacktrace.ToByteArray());
                     }
                 }
             }
@@ -185,7 +184,7 @@ namespace CoApp.Toolkit.Logging {
                 }
             }
         }
-       
+
         public static void Error(string message, params object[] args) {
             if (Errors) {
                 WriteEntry(message.format(args), EventLogEntryType.Error);

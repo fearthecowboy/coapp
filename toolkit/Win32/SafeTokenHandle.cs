@@ -13,13 +13,7 @@ namespace CoApp.Toolkit.Win32 {
     using Microsoft.Win32.SafeHandles;
 
     /// <summary>
-    ///   SafeHandleBase implements ReleaseHandle method for all our Safe Handle classes.
-    /// 
-    ///   The purpose of the safe handle class is to get away from having IntPtr objects for handles 
-    ///   coming back from Kernel APIs, and instead provide a type-safe wrapper that prohibits the 
-    ///   accidental use of one handle type where another should be.
-    /// 
-    ///   We create a common base class so that the release semantics are implemented the same.
+    ///   SafeHandleBase implements ReleaseHandle method for all our Safe Handle classes. The purpose of the safe handle class is to get away from having IntPtr objects for handles coming back from Kernel APIs, and instead provide a type-safe wrapper that prohibits the accidental use of one handle type where another should be. We create a common base class so that the release semantics are implemented the same.
     /// </summary>
     public class AutoSafeHandle : SafeHandleZeroOrMinusOneIsInvalid {
         protected AutoSafeHandle() : base(true) {
@@ -32,14 +26,11 @@ namespace CoApp.Toolkit.Win32 {
         /// <summary>
         ///   When overridden in a derived class, executes the code required to free the handle.
         /// </summary>
-        /// <returns>
-        ///   true if the handle is released successfully; otherwise, in the event of a catastrophic failure, false. In this case, it generates a releaseHandleFailed MDA Managed Debugging Assistant.
-        /// </returns>
+        /// <returns> true if the handle is released successfully; otherwise, in the event of a catastrophic failure, false. In this case, it generates a releaseHandleFailed MDA Managed Debugging Assistant. </returns>
         protected override bool ReleaseHandle() {
             return Kernel32.CloseHandle(handle);
         }
     }
-
 
     /// <summary>
     ///   Represents a wrapper class for a token handle.
@@ -64,7 +55,6 @@ namespace CoApp.Toolkit.Win32 {
         }
     }
 
-
     public sealed class SafeThreadHandle : AutoSafeHandle {
         internal static SafeThreadHandle InvalidHandle = new SafeThreadHandle(IntPtr.Zero);
 
@@ -88,9 +78,7 @@ namespace CoApp.Toolkit.Win32 {
         /// <summary>
         ///   When overridden in a derived class, executes the code required to free the handle.
         /// </summary>
-        /// <returns>
-        ///   true if the handle is released successfully; otherwise, in the event of a catastrophic failure, false. In this case, it generates a releaseHandleFailed MDA Managed Debugging Assistant.
-        /// </returns>
+        /// <returns> true if the handle is released successfully; otherwise, in the event of a catastrophic failure, false. In this case, it generates a releaseHandleFailed MDA Managed Debugging Assistant. </returns>
         protected override bool ReleaseHandle() {
             return true;
         }

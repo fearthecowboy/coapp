@@ -30,7 +30,6 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR 
 // OTHER DEALINGS IN THE SOFTWARE.
 
-
 namespace CoApp.Toolkit.TaskService {
     using System;
     using System.Collections.Generic;
@@ -83,7 +82,9 @@ namespace CoApp.Toolkit.TaskService {
         protected Dictionary<string, object> unboundValues = new Dictionary<string, object>();
 
         internal virtual bool Bound {
-            get { return iAction != null; }
+            get {
+                return iAction != null;
+            }
         }
 
         internal virtual void Bind(ITask iTask) {
@@ -111,11 +112,9 @@ namespace CoApp.Toolkit.TaskService {
             foreach (var key in unboundValues.Keys) {
                 try {
                     iAction.GetType().InvokeMember(key, BindingFlags.SetProperty, null, iAction, new[] {unboundValues[key]});
-                }
-                catch (TargetInvocationException tie) {
+                } catch (TargetInvocationException tie) {
                     throw tie.InnerException;
-                }
-                catch {
+                } catch {
                 }
             }
             unboundValues.Clear();
@@ -174,12 +173,13 @@ namespace CoApp.Toolkit.TaskService {
         ///   Gets or sets the identifier of the action.
         /// </summary>
         public virtual string Id {
-            get { return (iAction == null) ? (unboundValues.ContainsKey("Id") ? (string) unboundValues["Id"] : null) : iAction.Id; }
+            get {
+                return (iAction == null) ? (unboundValues.ContainsKey("Id") ? (string)unboundValues["Id"] : null) : iAction.Id;
+            }
             set {
                 if (iAction == null) {
                     unboundValues["Id"] = value;
-                }
-                else {
+                } else {
                     iAction.Id = value;
                 }
             }
@@ -212,14 +212,14 @@ namespace CoApp.Toolkit.TaskService {
         internal static Action CreateAction(IAction iAction) {
             switch (iAction.Type) {
                 case TaskActionType.ComHandler:
-                    return new ComHandlerAction((IComHandlerAction) iAction);
+                    return new ComHandlerAction((IComHandlerAction)iAction);
                 case TaskActionType.SendEmail:
-                    return new EmailAction((IEmailAction) iAction);
+                    return new EmailAction((IEmailAction)iAction);
                 case TaskActionType.ShowMessage:
-                    return new ShowMessageAction((IShowMessageAction) iAction);
+                    return new ShowMessageAction((IShowMessageAction)iAction);
                 case TaskActionType.Execute:
                 default:
-                    return new ExecAction((IExecAction) iAction);
+                    return new ExecAction((IExecAction)iAction);
             }
         }
 
@@ -273,15 +273,14 @@ namespace CoApp.Toolkit.TaskService {
         public Guid ClassId {
             get {
                 return (iAction == null)
-                    ? (unboundValues.ContainsKey("ClassId") ? (Guid) unboundValues["ClassId"] : Guid.Empty)
-                    : new Guid(((IComHandlerAction) iAction).ClassId);
+                    ? (unboundValues.ContainsKey("ClassId") ? (Guid)unboundValues["ClassId"] : Guid.Empty)
+                    : new Guid(((IComHandlerAction)iAction).ClassId);
             }
             set {
                 if (iAction == null) {
                     unboundValues["ClassId"] = value.ToString();
-                }
-                else {
-                    ((IComHandlerAction) iAction).ClassId = value.ToString();
+                } else {
+                    ((IComHandlerAction)iAction).ClassId = value.ToString();
                 }
             }
         }
@@ -292,15 +291,14 @@ namespace CoApp.Toolkit.TaskService {
         public string Data {
             get {
                 return (iAction == null)
-                    ? (unboundValues.ContainsKey("Data") ? (string) unboundValues["Data"] : null)
-                    : ((IComHandlerAction) iAction).Data;
+                    ? (unboundValues.ContainsKey("Data") ? (string)unboundValues["Data"] : null)
+                    : ((IComHandlerAction)iAction).Data;
             }
             set {
                 if (iAction == null) {
                     unboundValues["Data"] = value;
-                }
-                else {
-                    ((IComHandlerAction) iAction).Data = value;
+                } else {
+                    ((IComHandlerAction)iAction).Data = value;
                 }
             }
         }
@@ -312,8 +310,8 @@ namespace CoApp.Toolkit.TaskService {
         protected override void CopyProperties(Action sourceAction) {
             if (sourceAction.GetType() == GetType()) {
                 base.CopyProperties(sourceAction);
-                ClassId = ((ComHandlerAction) sourceAction).ClassId;
-                Data = ((ComHandlerAction) sourceAction).Data;
+                ClassId = ((ComHandlerAction)sourceAction).ClassId;
+                Data = ((ComHandlerAction)sourceAction).Data;
             }
         }
 
@@ -406,18 +404,16 @@ namespace CoApp.Toolkit.TaskService {
                     return v1Task.GetApplicationName();
                 }
                 if (iAction != null) {
-                    return ((IExecAction) iAction).Path;
+                    return ((IExecAction)iAction).Path;
                 }
-                return unboundValues.ContainsKey("Path") ? (string) unboundValues["Path"] : null;
+                return unboundValues.ContainsKey("Path") ? (string)unboundValues["Path"] : null;
             }
             set {
                 if (v1Task != null) {
                     v1Task.SetApplicationName(value);
-                }
-                else if (iAction != null) {
-                    ((IExecAction) iAction).Path = value;
-                }
-                else {
+                } else if (iAction != null) {
+                    ((IExecAction)iAction).Path = value;
+                } else {
                     unboundValues["Path"] = value;
                 }
             }
@@ -432,18 +428,16 @@ namespace CoApp.Toolkit.TaskService {
                     return v1Task.GetParameters();
                 }
                 if (iAction != null) {
-                    return ((IExecAction) iAction).Arguments;
+                    return ((IExecAction)iAction).Arguments;
                 }
-                return unboundValues.ContainsKey("Arguments") ? (string) unboundValues["Arguments"] : null;
+                return unboundValues.ContainsKey("Arguments") ? (string)unboundValues["Arguments"] : null;
             }
             set {
                 if (v1Task != null) {
                     v1Task.SetParameters(value);
-                }
-                else if (iAction != null) {
-                    ((IExecAction) iAction).Arguments = value;
-                }
-                else {
+                } else if (iAction != null) {
+                    ((IExecAction)iAction).Arguments = value;
+                } else {
                     unboundValues["Arguments"] = value;
                 }
             }
@@ -458,18 +452,16 @@ namespace CoApp.Toolkit.TaskService {
                     return v1Task.GetWorkingDirectory();
                 }
                 if (iAction != null) {
-                    return ((IExecAction) iAction).WorkingDirectory;
+                    return ((IExecAction)iAction).WorkingDirectory;
                 }
-                return unboundValues.ContainsKey("WorkingDirectory") ? (string) unboundValues["WorkingDirectory"] : null;
+                return unboundValues.ContainsKey("WorkingDirectory") ? (string)unboundValues["WorkingDirectory"] : null;
             }
             set {
                 if (v1Task != null) {
                     v1Task.SetWorkingDirectory(value);
-                }
-                else if (iAction != null) {
-                    ((IExecAction) iAction).WorkingDirectory = value;
-                }
-                else {
+                } else if (iAction != null) {
+                    ((IExecAction)iAction).WorkingDirectory = value;
+                } else {
                     unboundValues["WorkingDirectory"] = value;
                 }
             }
@@ -482,9 +474,9 @@ namespace CoApp.Toolkit.TaskService {
         protected override void CopyProperties(Action sourceAction) {
             if (sourceAction.GetType() == GetType()) {
                 base.CopyProperties(sourceAction);
-                Path = ((ExecAction) sourceAction).Path;
-                Arguments = ((ExecAction) sourceAction).Arguments;
-                WorkingDirectory = ((ExecAction) sourceAction).WorkingDirectory;
+                Path = ((ExecAction)sourceAction).Path;
+                Arguments = ((ExecAction)sourceAction).Arguments;
+                WorkingDirectory = ((ExecAction)sourceAction).WorkingDirectory;
             }
         }
 
@@ -530,7 +522,7 @@ namespace CoApp.Toolkit.TaskService {
         internal override void Bind(ITaskDefinition iTaskDef) {
             base.Bind(iTaskDef);
             if (nvc != null) {
-                nvc.Bind(((IEmailAction) iAction).HeaderFields);
+                nvc.Bind(((IEmailAction)iAction).HeaderFields);
             }
         }
 
@@ -540,15 +532,14 @@ namespace CoApp.Toolkit.TaskService {
         public string Server {
             get {
                 return (iAction == null)
-                    ? (unboundValues.ContainsKey("Server") ? (string) unboundValues["Server"] : null)
-                    : ((IEmailAction) iAction).Server;
+                    ? (unboundValues.ContainsKey("Server") ? (string)unboundValues["Server"] : null)
+                    : ((IEmailAction)iAction).Server;
             }
             set {
                 if (iAction == null) {
                     unboundValues["Server"] = value;
-                }
-                else {
-                    ((IEmailAction) iAction).Server = value;
+                } else {
+                    ((IEmailAction)iAction).Server = value;
                 }
             }
         }
@@ -559,15 +550,14 @@ namespace CoApp.Toolkit.TaskService {
         public string Subject {
             get {
                 return (iAction == null)
-                    ? (unboundValues.ContainsKey("Subject") ? (string) unboundValues["Subject"] : null)
-                    : ((IEmailAction) iAction).Subject;
+                    ? (unboundValues.ContainsKey("Subject") ? (string)unboundValues["Subject"] : null)
+                    : ((IEmailAction)iAction).Subject;
             }
             set {
                 if (iAction == null) {
                     unboundValues["Subject"] = value;
-                }
-                else {
-                    ((IEmailAction) iAction).Subject = value;
+                } else {
+                    ((IEmailAction)iAction).Subject = value;
                 }
             }
         }
@@ -578,15 +568,14 @@ namespace CoApp.Toolkit.TaskService {
         public string To {
             get {
                 return (iAction == null)
-                    ? (unboundValues.ContainsKey("To") ? (string) unboundValues["To"] : null)
-                    : ((IEmailAction) iAction).To;
+                    ? (unboundValues.ContainsKey("To") ? (string)unboundValues["To"] : null)
+                    : ((IEmailAction)iAction).To;
             }
             set {
                 if (iAction == null) {
                     unboundValues["To"] = value;
-                }
-                else {
-                    ((IEmailAction) iAction).To = value;
+                } else {
+                    ((IEmailAction)iAction).To = value;
                 }
             }
         }
@@ -597,15 +586,14 @@ namespace CoApp.Toolkit.TaskService {
         public string Cc {
             get {
                 return (iAction == null)
-                    ? (unboundValues.ContainsKey("Cc") ? (string) unboundValues["Cc"] : null)
-                    : ((IEmailAction) iAction).Cc;
+                    ? (unboundValues.ContainsKey("Cc") ? (string)unboundValues["Cc"] : null)
+                    : ((IEmailAction)iAction).Cc;
             }
             set {
                 if (iAction == null) {
                     unboundValues["Cc"] = value;
-                }
-                else {
-                    ((IEmailAction) iAction).Cc = value;
+                } else {
+                    ((IEmailAction)iAction).Cc = value;
                 }
             }
         }
@@ -616,15 +604,14 @@ namespace CoApp.Toolkit.TaskService {
         public string Bcc {
             get {
                 return (iAction == null)
-                    ? (unboundValues.ContainsKey("Bcc") ? (string) unboundValues["Bcc"] : null)
-                    : ((IEmailAction) iAction).Bcc;
+                    ? (unboundValues.ContainsKey("Bcc") ? (string)unboundValues["Bcc"] : null)
+                    : ((IEmailAction)iAction).Bcc;
             }
             set {
                 if (iAction == null) {
                     unboundValues["Bcc"] = value;
-                }
-                else {
-                    ((IEmailAction) iAction).Bcc = value;
+                } else {
+                    ((IEmailAction)iAction).Bcc = value;
                 }
             }
         }
@@ -635,15 +622,14 @@ namespace CoApp.Toolkit.TaskService {
         public string ReplyTo {
             get {
                 return (iAction == null)
-                    ? (unboundValues.ContainsKey("ReplyTo") ? (string) unboundValues["ReplyTo"] : null)
-                    : ((IEmailAction) iAction).ReplyTo;
+                    ? (unboundValues.ContainsKey("ReplyTo") ? (string)unboundValues["ReplyTo"] : null)
+                    : ((IEmailAction)iAction).ReplyTo;
             }
             set {
                 if (iAction == null) {
                     unboundValues["ReplyTo"] = value;
-                }
-                else {
-                    ((IEmailAction) iAction).ReplyTo = value;
+                } else {
+                    ((IEmailAction)iAction).ReplyTo = value;
                 }
             }
         }
@@ -654,15 +640,14 @@ namespace CoApp.Toolkit.TaskService {
         public string From {
             get {
                 return (iAction == null)
-                    ? (unboundValues.ContainsKey("From") ? (string) unboundValues["From"] : null)
-                    : ((IEmailAction) iAction).From;
+                    ? (unboundValues.ContainsKey("From") ? (string)unboundValues["From"] : null)
+                    : ((IEmailAction)iAction).From;
             }
             set {
                 if (iAction == null) {
                     unboundValues["From"] = value;
-                }
-                else {
-                    ((IEmailAction) iAction).From = value;
+                } else {
+                    ((IEmailAction)iAction).From = value;
                 }
             }
         }
@@ -676,9 +661,8 @@ namespace CoApp.Toolkit.TaskService {
             get {
                 if (nvc == null) {
                     if (iAction != null) {
-                        nvc = new NamedValueCollection(((IEmailAction) iAction).HeaderFields);
-                    }
-                    else {
+                        nvc = new NamedValueCollection(((IEmailAction)iAction).HeaderFields);
+                    } else {
                         nvc = new NamedValueCollection();
                     }
                 }
@@ -692,15 +676,14 @@ namespace CoApp.Toolkit.TaskService {
         public string Body {
             get {
                 return (iAction == null)
-                    ? (unboundValues.ContainsKey("Body") ? (string) unboundValues["Body"] : null)
-                    : ((IEmailAction) iAction).Body;
+                    ? (unboundValues.ContainsKey("Body") ? (string)unboundValues["Body"] : null)
+                    : ((IEmailAction)iAction).Body;
             }
             set {
                 if (iAction == null) {
                     unboundValues["Body"] = value;
-                }
-                else {
-                    ((IEmailAction) iAction).Body = value;
+                } else {
+                    ((IEmailAction)iAction).Body = value;
                 }
             }
         }
@@ -711,15 +694,14 @@ namespace CoApp.Toolkit.TaskService {
         public object[] Attachments {
             get {
                 return (iAction == null)
-                    ? (unboundValues.ContainsKey("Attachments") ? (object[]) unboundValues["Attachments"] : null)
-                    : ((IEmailAction) iAction).Attachments;
+                    ? (unboundValues.ContainsKey("Attachments") ? (object[])unboundValues["Attachments"] : null)
+                    : ((IEmailAction)iAction).Attachments;
             }
             set {
                 if (iAction == null) {
                     unboundValues["Attachments"] = value;
-                }
-                else {
-                    ((IEmailAction) iAction).Attachments = value;
+                } else {
+                    ((IEmailAction)iAction).Attachments = value;
                 }
             }
         }
@@ -731,20 +713,20 @@ namespace CoApp.Toolkit.TaskService {
         protected override void CopyProperties(Action sourceAction) {
             if (sourceAction.GetType() == GetType()) {
                 base.CopyProperties(sourceAction);
-                if (((EmailAction) sourceAction).Attachments != null) {
-                    Attachments = (object[]) ((EmailAction) sourceAction).Attachments.Clone();
+                if (((EmailAction)sourceAction).Attachments != null) {
+                    Attachments = (object[])((EmailAction)sourceAction).Attachments.Clone();
                 }
-                Bcc = ((EmailAction) sourceAction).Bcc;
-                Body = ((EmailAction) sourceAction).Body;
-                Cc = ((EmailAction) sourceAction).Cc;
-                From = ((EmailAction) sourceAction).From;
-                if (((EmailAction) sourceAction).nvc != null) {
-                    ((EmailAction) sourceAction).HeaderFields.CopyTo(HeaderFields);
+                Bcc = ((EmailAction)sourceAction).Bcc;
+                Body = ((EmailAction)sourceAction).Body;
+                Cc = ((EmailAction)sourceAction).Cc;
+                From = ((EmailAction)sourceAction).From;
+                if (((EmailAction)sourceAction).nvc != null) {
+                    ((EmailAction)sourceAction).HeaderFields.CopyTo(HeaderFields);
                 }
-                ReplyTo = ((EmailAction) sourceAction).ReplyTo;
-                Server = ((EmailAction) sourceAction).Server;
-                Subject = ((EmailAction) sourceAction).Subject;
-                To = ((EmailAction) sourceAction).To;
+                ReplyTo = ((EmailAction)sourceAction).ReplyTo;
+                Server = ((EmailAction)sourceAction).Server;
+                Subject = ((EmailAction)sourceAction).Subject;
+                To = ((EmailAction)sourceAction).To;
             }
         }
 
@@ -787,15 +769,14 @@ namespace CoApp.Toolkit.TaskService {
         public string Title {
             get {
                 return (iAction == null)
-                    ? (unboundValues.ContainsKey("Title") ? (string) unboundValues["Title"] : null)
-                    : ((IShowMessageAction) iAction).Title;
+                    ? (unboundValues.ContainsKey("Title") ? (string)unboundValues["Title"] : null)
+                    : ((IShowMessageAction)iAction).Title;
             }
             set {
                 if (iAction == null) {
                     unboundValues["Title"] = value;
-                }
-                else {
-                    ((IShowMessageAction) iAction).Title = value;
+                } else {
+                    ((IShowMessageAction)iAction).Title = value;
                 }
             }
         }
@@ -806,15 +787,14 @@ namespace CoApp.Toolkit.TaskService {
         public string MessageBody {
             get {
                 return (iAction == null)
-                    ? (unboundValues.ContainsKey("MessageBody") ? (string) unboundValues["MessageBody"] : null)
-                    : ((IShowMessageAction) iAction).MessageBody;
+                    ? (unboundValues.ContainsKey("MessageBody") ? (string)unboundValues["MessageBody"] : null)
+                    : ((IShowMessageAction)iAction).MessageBody;
             }
             set {
                 if (iAction == null) {
                     unboundValues["MessageBody"] = value;
-                }
-                else {
-                    ((IShowMessageAction) iAction).MessageBody = value;
+                } else {
+                    ((IShowMessageAction)iAction).MessageBody = value;
                 }
             }
         }
@@ -826,8 +806,8 @@ namespace CoApp.Toolkit.TaskService {
         protected override void CopyProperties(Action sourceAction) {
             if (sourceAction.GetType() == GetType()) {
                 base.CopyProperties(sourceAction);
-                Title = ((ShowMessageAction) sourceAction).Title;
-                MessageBody = ((ShowMessageAction) sourceAction).MessageBody;
+                Title = ((ShowMessageAction)sourceAction).Title;
+                MessageBody = ((ShowMessageAction)sourceAction).MessageBody;
             }
         }
 

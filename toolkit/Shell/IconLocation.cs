@@ -18,7 +18,7 @@
 
 namespace CoApp.Toolkit.Shell {
     /// <summary>
-    ///   Holds a reference to an icon in a file.  An icon locatoin object is 'empty' if its path is zero length.
+    ///   Holds a reference to an icon in a file. An icon locatoin object is 'empty' if its path is zero length.
     /// </summary>
     public class IconLocation {
         private string path = string.Empty;
@@ -35,8 +35,8 @@ namespace CoApp.Toolkit.Shell {
         /// <summary>
         ///   Create a icon locatoin object
         /// </summary>
-        /// <param name = "path">The path to the file containing the icon</param>
-        /// <param name = "index">The index of the icon.</param>
+        /// <param name="path"> The path to the file containing the icon </param>
+        /// <param name="index"> The index of the icon. </param>
         public IconLocation(string path, int index) {
             this.path = path;
             this.index = index;
@@ -46,21 +46,27 @@ namespace CoApp.Toolkit.Shell {
         ///   Gets the path to the file contaning the icon.
         /// </summary>
         public string Path {
-            get { return path; }
+            get {
+                return path;
+            }
         }
 
         /// <summary>
         ///   Gets the index of the icon in the file.
         /// </summary>
         public int Index {
-            get { return index; }
+            get {
+                return index;
+            }
         }
 
         /// <summary>
         ///   True of the icon location is empty.
         /// </summary>
         public bool IsEmpty {
-            get { return string.IsNullOrWhiteSpace(path); }
+            get {
+                return string.IsNullOrWhiteSpace(path);
+            }
         }
     }
 }

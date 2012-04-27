@@ -1,15 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace CoApp.Toolkit.Exceptions {
+﻿namespace CoApp.Toolkit.Exceptions {
+    using System;
     using System.Diagnostics;
     using System.Runtime.Serialization;
+    using Logging;
 
     public class CoAppException : Exception {
         internal bool Logged;
-        internal bool IsError;
+
         internal string stacktrace;
 
         public bool IsCanceled { get; set; }
@@ -20,12 +17,7 @@ namespace CoApp.Toolkit.Exceptions {
 
         private void Log() {
             stacktrace = new StackTrace(2, true).ToString();
-
-            if (IsError) {
-                Logging.Logger.Error(this);
-            } else {
-                Logging.Logger.Warning(this);
-            }
+            Logger.Error(this);
         }
 
         public CoAppException(bool skipLogging = false) {

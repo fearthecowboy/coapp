@@ -16,8 +16,8 @@ using System.Runtime.InteropServices;
 // we publish it, so now we will have just one set of  Version  lines, and no strong 
 // naming until publishing.
 
-[assembly: AssemblyVersion("1.2.0.151")]
-[assembly: AssemblyFileVersion("1.2.0.151")]
+[assembly: AssemblyVersion("1.2.0.175")]
+[assembly: AssemblyFileVersion("1.2.0.175")]
 
 [AttributeUsage(AttributeTargets.Assembly, Inherited = false)]
 internal class AssemblyBugtrackerAttribute : Attribute {

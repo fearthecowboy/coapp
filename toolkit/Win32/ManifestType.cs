@@ -23,7 +23,6 @@
 // </license>
 //-----------------------------------------------------------------------
 
-
 namespace CoApp.Toolkit.Win32 {
     /// <summary>
     ///   Resource manifest type.

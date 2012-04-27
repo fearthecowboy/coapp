@@ -8,7 +8,6 @@
 // </license>
 //-----------------------------------------------------------------------
 
-
 namespace CoApp.Toolkit.Win32 {
     using System;
     using System.ComponentModel;
@@ -42,7 +41,7 @@ namespace CoApp.Toolkit.Win32 {
                 return;
             }
 
-            switch ((Win32Msgs) m.Msg) {
+            switch ((Win32Msgs)m.Msg) {
                 case Win32Msgs.WM_DRAWCLIPBOARD:
                     handled = true;
 
@@ -57,8 +56,7 @@ namespace CoApp.Toolkit.Win32 {
                 case Win32Msgs.WM_CHANGECBCHAIN:
                     if (m.WParam == nextWindow) {
                         nextWindow = m.LParam;
-                    }
-                    else {
+                    } else {
                         User32.SendMessage(nextWindow, m.Msg, m.WParam, m.LParam);
                     }
                     break;

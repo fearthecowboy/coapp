@@ -25,9 +25,7 @@
 
 namespace CoApp.Toolkit.Win32 {
     /// <summary>
-    ///   Specifies whether the menu item is the last item in the menu bar, drop-down menu, submenu, or shortcut 
-    ///   menu and whether it is an item that opens a drop-down menu or submenu. This member can be zero or more 
-    ///   of these values.
+    ///   Specifies whether the menu item is the last item in the menu bar, drop-down menu, submenu, or shortcut menu and whether it is an item that opens a drop-down menu or submenu. This member can be zero or more of these values.
     /// </summary>
     public enum MenuResourceType {
         /// <summary>
@@ -36,8 +34,7 @@ namespace CoApp.Toolkit.Win32 {
         Last = 0x80,
 
         /// <summary>
-        ///   Defines a item that opens a drop-down menu or submenu. Subsequent structures define menu 
-        ///   items in the corresponding drop-down menu or submenu.
+        ///   Defines a item that opens a drop-down menu or submenu. Subsequent structures define menu items in the corresponding drop-down menu or submenu.
         /// </summary>
         Sub = 0x01
     }

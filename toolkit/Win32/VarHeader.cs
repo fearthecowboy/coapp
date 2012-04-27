@@ -28,11 +28,7 @@ namespace CoApp.Toolkit.Win32 {
     using System.Runtime.InteropServices;
 
     /// <summary>
-    ///   Language and code page combinations.
-    ///   The low-order word of each DWORD must contain a Microsoft language identifier, 
-    ///   and the high-order word must contain the IBM code page number. 
-    ///   Either high-order or low-order word can be zero, indicating that the file is language 
-    ///   or code page independent.
+    ///   Language and code page combinations. The low-order word of each DWORD must contain a Microsoft language identifier, and the high-order word must contain the IBM code page number. Either high-order or low-order word can be zero, indicating that the file is language or code page independent.
     /// </summary>
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     public struct VarHeader {

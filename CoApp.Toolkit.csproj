@@ -48,6 +48,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Toolkit\Collections\EasyDictionary.cs" />
     <Compile Include="Toolkit\Compression\CRC32.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -100,7 +101,6 @@
     <Compile Include="Toolkit\Crypto\PfxStoreLoader.cs" />
     <Compile Include="Toolkit\Crypto\Verifier.cs" />
     <Compile Include="Toolkit\Exceptions\ConflictingFileOrFolderException.cs" />
-    <Compile Include="Toolkit\Exceptions\FailedPackageRemoveException.cs" />
     <Compile Include="Toolkit\Exceptions\PathIsNotFileUriException.cs" />
     <Compile Include="Toolkit\Exceptions\PathIsNotSymlinkException.cs" />
     <Compile Include="Toolkit\Extensions\AssemblyExtensions.cs" />
@@ -128,8 +128,63 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Toolkit\Extensions\XmlExtensions.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\ActLikeCaster.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\Dynamic\Builder.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\Dynamic\CacheableInvocation.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\Dynamic\IActLike.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\Dynamic\IDynamicKnowLike.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\Dynamic\ImpromptuBuilder.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\Dynamic\ImpromptuDictionary.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\Dynamic\ImpromptuDictionaryBase.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\Dynamic\ImpromptuDummy.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\Dynamic\ImpromptuFactory.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\Dynamic\ImpromptuForwarder.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\Dynamic\ImpromptuForwarderAddRemove.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\Dynamic\ImpromptuGet.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\Dynamic\ImpromptuLateLibraryType.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\Dynamic\ImpromptuLazy.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\Dynamic\ImpromptuList.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\Dynamic\ImpromptuObject.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\Dynamic\ImpromptuPropertyDescriptor.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\Dynamic\ImpromptuRecorder.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\Dynamic\InlineLambdas2.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>InlineLambdas.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Toolkit\ImpromptuInterface\Dynamic\Invocation.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\Dynamic\ThisFunctions2.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>ThisFunctions.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Toolkit\ImpromptuInterface\Dynamic\UseNamedArgumentAttribute.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\EmitProxy\ActLikeProxy.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\EmitProxy\ActLikeProxyAttribute.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\EmitProxy\ActLikeProxySerializationHelper.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\EmitProxy\BuildProxy.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\EmitProxy\EmitExtensions.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\EmitProxy\TypeHash.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\IActLikeProxy.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\Impromptu.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\Internal\Curry.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\Internal\InvokeSetters.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\InvokeArg.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\InvokeContext.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\InvokeExt\InvokeExt.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\InvokeMemberName.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\Optimization\BareBonesList.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\Optimization\BinderHash.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\Optimization\InvokeHelper-Regular.cs" />
+    <Compile Include="Toolkit\ImpromptuInterface\Optimization\InvokeHelper2.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>InvokeHelper.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Toolkit\ImpromptuInterface\Optimization\Util.cs" />
     <Compile Include="Toolkit\Logging\Logger.cs" />
     <Compile Include="Toolkit\Pipes\AsyncPipeExtensions.cs" />
+    <Compile Include="Toolkit\Pipes\IncomingCallDispatcher.cs" />
     <Compile Include="Toolkit\Pipes\UrlEncodedMessage.cs" />
     <Compile Include="Toolkit\Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
@@ -226,7 +281,6 @@
     <Compile Include="Toolkit\Properties\AssemblyInfo.cs" />
     <Compile Include="$(SolutionDir)\Source\CoApp.Toolkit.AssemblyStrongName.cs" />
     <Compile Include="Toolkit\Tasks\CoTask.cs" />
-    <Compile Include="Toolkit\Tasks\MessageHandlers.cs" />
     <Compile Include="Toolkit\Exceptions\OperationCompletedBeforeResultException.cs" />
     <Compile Include="Toolkit\Text\HttpUtility.cs" />
     <Compile Include="Toolkit\Win32\AdminPrivilege.cs" />
@@ -311,7 +365,20 @@
     <Compile Include="Toolkit\Win32\WinTrust.cs" />
     <Compile Include="Toolkit\Win32\Winver.cs" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <None Include="Toolkit\ImpromptuInterface\Dynamic\InlineLambdas.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>InlineLambdas2.cs</LastGenOutput>
+    </None>
+    <None Include="Toolkit\ImpromptuInterface\Dynamic\ThisFunctions.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>ThisFunctions2.cs</LastGenOutput>
+    </None>
+    <None Include="Toolkit\ImpromptuInterface\Optimization\InvokeHelper.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>InvokeHelper2.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
   <ItemGroup>
     <Content Include="$(SolutionDir)resources\icons\CoApp.ico" />
   </ItemGroup>
@@ -321,6 +388,9 @@
       <SubType>Designer</SubType>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

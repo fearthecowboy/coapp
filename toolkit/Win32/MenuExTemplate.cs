@@ -38,9 +38,7 @@ namespace CoApp.Toolkit.Win32 {
         public UInt16 wVersion;
 
         /// <summary>
-        ///   Offset of the first MENUEXITEMTEMPLATE structure, relative to the end of 
-        ///   this structure member. If the first item definition immediately follows the 
-        ///   dwHelpId member, this member should be 4.
+        ///   Offset of the first MENUEXITEMTEMPLATE structure, relative to the end of this structure member. If the first item definition immediately follows the dwHelpId member, this member should be 4.
         /// </summary>
         public UInt16 wOffset;
     }

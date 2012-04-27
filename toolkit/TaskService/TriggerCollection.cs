@@ -91,7 +91,9 @@ namespace CoApp.Toolkit.TaskService {
             }
 
             public Trigger Current {
-                get { return Trigger.CreateTrigger(iTask.GetTrigger((ushort) curItem)); }
+                get {
+                    return Trigger.CreateTrigger(iTask.GetTrigger((ushort)curItem));
+                }
             }
 
             /// <summary>
@@ -102,7 +104,9 @@ namespace CoApp.Toolkit.TaskService {
             }
 
             object IEnumerator.Current {
-                get { return Current; }
+                get {
+                    return Current;
+                }
             }
 
             public bool MoveNext() {
@@ -127,7 +131,9 @@ namespace CoApp.Toolkit.TaskService {
             #region IEnumerator<Trigger> Members
 
             public Trigger Current {
-                get { return Trigger.CreateTrigger((ITrigger) iEnum.Current); }
+                get {
+                    return Trigger.CreateTrigger((ITrigger)iEnum.Current);
+                }
             }
 
             #endregion
@@ -146,7 +152,9 @@ namespace CoApp.Toolkit.TaskService {
             #region IEnumerator Members
 
             object IEnumerator.Current {
-                get { return Current; }
+                get {
+                    return Current;
+                }
             }
 
             public bool MoveNext() {
@@ -180,8 +188,7 @@ namespace CoApp.Toolkit.TaskService {
         public Trigger Add(Trigger unboundTrigger) {
             if (v2Def != null) {
                 unboundTrigger.Bind(v2Def);
-            }
-            else {
+            } else {
                 unboundTrigger.Bind(v1Task);
             }
             return unboundTrigger;
@@ -213,8 +220,7 @@ namespace CoApp.Toolkit.TaskService {
         public void Clear() {
             if (v2Coll != null) {
                 v2Coll.Clear();
-            }
-            else {
+            } else {
                 for (var i = Count - 1; i >= 0; i--) {
                     RemoveAt(i);
                 }
@@ -231,7 +237,7 @@ namespace CoApp.Toolkit.TaskService {
                 if (v2Coll != null) {
                     return Trigger.CreateTrigger(v2Coll[++index]);
                 }
-                return Trigger.CreateTrigger(v1Task.GetTrigger((ushort) index));
+                return Trigger.CreateTrigger(v1Task.GetTrigger((ushort)index));
             }
             set {
                 if (Count <= index) {
@@ -250,7 +256,7 @@ namespace CoApp.Toolkit.TaskService {
         public void Insert(int index, Trigger trigger) {
             var pushItems = new Trigger[Count - index];
             for (var i = index; i < Count; i++) {
-                pushItems[i - index] = (Trigger) this[i].Clone();
+                pushItems[i - index] = (Trigger)this[i].Clone();
             }
             for (var j = Count - 1; j >= index; j--) {
                 RemoveAt(j);
@@ -272,9 +278,8 @@ namespace CoApp.Toolkit.TaskService {
             }
             if (v2Coll != null) {
                 v2Coll.Remove(++index);
-            }
-            else {
-                v1Task.DeleteTrigger((ushort) index); //Remove the trigger from the Task Scheduler
+            } else {
+                v1Task.DeleteTrigger((ushort)index); //Remove the trigger from the Task Scheduler
             }
         }
 

@@ -29,11 +29,11 @@ namespace CoApp.Toolkit.Win32 {
         /// <summary>
         ///   Returns the handle to the block of memory.
         /// </summary>
-        /// <value>
-        ///   The <see cref = "SafeHGlobalHandle" /> representing the block of memory.
-        /// </value>
+        /// <value> The <see cref="SafeHGlobalHandle" /> representing the block of memory. </value>
         public SafeHGlobalHandle MemoryBlock {
-            get { return _memoryBlock; }
+            get {
+                return _memoryBlock;
+            }
         }
 
         #endregion
@@ -41,8 +41,7 @@ namespace CoApp.Toolkit.Win32 {
         #region Methods
 
         /// <summary>
-        ///   Performs application-defined tasks associated with freeing, 
-        ///   releasing, or resetting unmanaged resources.
+        ///   Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
         public void Dispose() {
             if (!_memoryBlock.IsInvalid) {
@@ -54,12 +53,8 @@ namespace CoApp.Toolkit.Win32 {
         /// <summary>
         ///   Ensures that there is sufficient memory allocated.
         /// </summary>
-        /// <param name = "capacity">
-        ///   The required capacity of the block, in bytes.
-        /// </param>
-        /// <exception cref = "OutOfMemoryException">
-        ///   There is insufficient memory to satisfy the request.
-        /// </exception>
+        /// <param name="capacity"> The required capacity of the block, in bytes. </param>
+        /// <exception cref="OutOfMemoryException">There is insufficient memory to satisfy the request.</exception>
         public void EnsureCapacity(int capacity) {
             var currentSize = _memoryBlock.IsInvalid ? 0 : _memoryBlock.Size;
             if (capacity > currentSize) {
@@ -80,12 +75,8 @@ namespace CoApp.Toolkit.Win32 {
         /// <summary>
         ///   Reads the Unicode string from the memory block.
         /// </summary>
-        /// <param name = "length">
-        ///   The length of the string to read, in characters.
-        /// </param>
-        /// <returns>
-        ///   The string read from the memory block.
-        /// </returns>
+        /// <param name="length"> The length of the string to read, in characters. </param>
+        /// <returns> The string read from the memory block. </returns>
         public string ReadString(int length) {
             if (0 >= length || _memoryBlock.IsInvalid) {
                 return null;
@@ -99,12 +90,8 @@ namespace CoApp.Toolkit.Win32 {
         /// <summary>
         ///   Reads the string, and extracts the stream name.
         /// </summary>
-        /// <param name = "length">
-        ///   The length of the string to read, in characters.
-        /// </param>
-        /// <returns>
-        ///   The stream name.
-        /// </returns>
+        /// <param name="length"> The length of the string to read, in characters. </param>
+        /// <returns> The stream name. </returns>
         public string ReadStreamName(int length) {
             var name = this.ReadString(length);
             if (!string.IsNullOrEmpty(name)) {
@@ -112,14 +99,12 @@ namespace CoApp.Toolkit.Win32 {
                 var separatorIndex = name.IndexOf(SafeNativeMethods.StreamSeparator, 1);
                 if (-1 != separatorIndex) {
                     name = name.Substring(1, separatorIndex - 1);
-                }
-                else {
+                } else {
                     // Should never happen!
                     separatorIndex = name.IndexOf('\0');
                     if (1 < separatorIndex) {
                         name = name.Substring(1, separatorIndex - 1);
-                    }
-                    else {
+                    } else {
                         name = null;
                     }
                 }

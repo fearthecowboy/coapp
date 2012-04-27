@@ -28,10 +28,7 @@ namespace CoApp.Toolkit.Win32 {
     using System.Runtime.InteropServices;
 
     /// <summary>
-    ///   The DIALOGTEMPLATE structure defines the dimensions and style of a dialog box. 
-    ///   This structure, always the first in a standard template for a dialog box, 
-    ///   also specifies the number of controls in the dialog box and therefore specifies 
-    ///   the number of subsequent DIALOGITEMTEMPLATE structures in the template.
+    ///   The DIALOGTEMPLATE structure defines the dimensions and style of a dialog box. This structure, always the first in a standard template for a dialog box, also specifies the number of controls in the dialog box and therefore specifies the number of subsequent DIALOGITEMTEMPLATE structures in the template.
     /// </summary>
     [StructLayout(LayoutKind.Sequential, Pack = 2)]
     public struct Dialogtemplate {
