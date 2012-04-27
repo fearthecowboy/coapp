@@ -83,7 +83,7 @@ namespace CoApp.Packaging.Service {
         private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private readonly bool _isAsychronous = true;
 
-        private readonly OutgoingCallDispatcher _dispatcher;
+        private readonly IPackageManagerResponse _dispatcher;
 
         private bool Connected {
             get {
@@ -274,6 +274,8 @@ namespace CoApp.Packaging.Service {
             _isAsychronous = serverPipe == responsePipe;
             Connected = true;
 
+            _dispatcher = new OutgoingCallDispatcher(WriteAsync).ActLike<IPackageManagerResponse>();
+
             // this session task
             _task = Task.Factory.StartNew(ProcessMesages, _cancellationTokenSource.Token);
 
@@ -282,8 +284,7 @@ namespace CoApp.Packaging.Service {
 
             // when the task is done, call end.
             _task.ContinueWith(antecedent => End());
-
-            _dispatcher = new OutgoingCallDispatcher(WriteAsync);
+            
         }
 
         private bool IsCanceled {
@@ -491,10 +492,12 @@ namespace CoApp.Packaging.Service {
                                     } else {
                                         Logger.Message("Request:[{0}]{1}".format(requestMessage.GetValueAsString("rqid"), requestMessage.ToSmallerString()));
 
-                                        var dispatcher = _dispatcher.ActLike();
+                                       
                                         var packageRequestData = new EasyDictionary<string, PackageRequestData>();
-                                        CurrentTask.Events += new GetCurrentRequestId(() => requestMessage.GetValueAsString("rqid"));
-                                        CurrentTask.Events += new GetResponseInterface(() => dispatcher);
+                                        var rqid = requestMessage.GetValueAsString("rqid");
+
+                                        CurrentTask.Events += new GetCurrentRequestId(() => rqid );
+                                        CurrentTask.Events += new GetResponseInterface(() => _dispatcher);
                                         CurrentTask.Events += new GetRequestPackageDataCache(() => packageRequestData);
 
                                         var dispatchTask = PackageManagerImpl.Dispatcher.Dispatch(requestMessage);

@@ -775,7 +775,7 @@ namespace CoApp.Packaging.Client {
         // GS01: TrustedPublishers Coming Soon.
 
         public Task RecognizeFile(string filename) {
-            return Remote.RecognizeFile("somefile", filename, "none");
+            return Remote.RecognizeFile("", filename, "");
         }
     }
 }

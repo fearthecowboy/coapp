@@ -21,6 +21,7 @@ namespace CoApp.Toolkit.Pipes {
     using Collections;
     using Exceptions;
     using Extensions;
+    using Logging;
 
     internal class DispatchableMethod {
         internal MethodInfo MethodInfo;
@@ -159,7 +160,11 @@ namespace CoApp.Toolkit.Pipes {
         /// <returns> </returns>
         public Task Dispatch(UrlEncodedMessage message) {
             return _methodTargets[message.Command].With(method => Task.Factory.StartNew(() => {
-                method.MethodInfo.Invoke(_targetObject, method.Parameters.Select(each => each.FromString(message, each.Name)).ToArray());
+                try {
+                    method.MethodInfo.Invoke(_targetObject, method.Parameters.Select(each => each.FromString(message, each.Name)).ToArray());
+                } catch( Exception e ) {
+                    Logger.Error(e);
+                }
             }, TaskCreationOptions.AttachedToParent), () => {
                 throw new MissingMethodException("Method '{0}' does not exist in this interface", message.Command);
             });

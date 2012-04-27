@@ -18,10 +18,25 @@ namespace CoApp.Packaging.Common {
     using Toolkit.Win32;
 
     public class CanonicalName : IComparable, IComparable<CanonicalName>, IEquatable<CanonicalName> {
-        public static CanonicalName AllPackages = "*:*";
-        public static CanonicalName CoAppPackages = "coapp:*";
-        public static CanonicalName NugetPackages = "nuget:*";
-        public static CanonicalName CoAppItself = "coapp:coapp.toolkit-*-any-1e373a58e25250cb";
+        private static readonly char[] Slashes;
+        private static readonly Regex CoappRx;
+        private static readonly Regex PartialCoappRx;
+
+        public static CanonicalName AllPackages;
+        public static CanonicalName CoAppPackages;
+        public static CanonicalName NugetPackages;
+        public static CanonicalName CoAppItself;
+
+        static CanonicalName() {
+            Slashes = new[] { '\\', '/' };
+            CoappRx = new Regex(@"^(?<name>.+)(?<flavor>\[.+\])?(?<v1>-\d{1,5})(?<v2>\.\d{1,5})(?<v3>\.\d{1,5})(?<v4>\.\d{1,5})(?<arch>-any|-x86|-x64|-arm)(?<pkt>-[0-9a-f]{16})$", RegexOptions.IgnoreCase);
+            PartialCoappRx = new Regex(@"^(?<name>.*?)?(?<flavor>\[.+\])?(?<v1>-\d{1,5}|-\*)?(?<v2>\.\d{1,5}|\.\*)?(?<v3>\.\d{1,5}|\.\*)?(?<v4>\.\d{1,5}|\.\*)?(<plus>\+)?(?<arch>-{1,2}any|-{1,2}x86|-{1,2}x64|-{1,2}arm|-{1,2}all|-\*)?(?<pkt>-{1,3}[0-9a-f]{16})?$", RegexOptions.IgnoreCase);
+
+            AllPackages = "*:*";
+            CoAppPackages = "coapp:*";
+            NugetPackages = "nuget:*";
+            CoAppItself = "coapp:coapp.toolkit-*-any-1e373a58e25250cb";
+        }
 
         public PackageType PackageType { get; private set; }
         public string Name { get; private set; }
@@ -345,13 +360,7 @@ namespace CoApp.Packaging.Common {
             throw new CoAppException("Unhandled Package Type");
         }
 
-        private static readonly char[] Slashes = new[] {'\\', '/'};
-
-        private static readonly Regex CoappRx = new Regex(@"^(?<name>.+)(?<flavor>\[.+\])?(?<v1>-\d{1,5})(?<v2>\.\d{1,5})(?<v3>\.\d{1,5})(?<v4>\.\d{1,5})(?<arch>-any|-x86|-x64|-arm)(?<pkt>-[0-9a-f]{16})$", RegexOptions.IgnoreCase);
-
-        private static readonly Regex PartialCoappRx =
-            new Regex(@"^(?<name>.*?)?(?<flavor>\[.+\])?(?<v1>-\d{1,5}|-\*)?(?<v2>\.\d{1,5}|\.\*)?(?<v3>\.\d{1,5}|\.\*)?(?<v4>\.\d{1,5}|\.\*)?(<plus>\+)?(?<arch>-{1,2}any|-{1,2}x86|-{1,2}x64|-{1,2}arm|-{1,2}all|-\*)?(?<pkt>-{1,3}[0-9a-f]{16})?$",
-                RegexOptions.IgnoreCase);
+        
 
         private static void SetFieldsFromMatch(Match match, ref CanonicalName result) {
             var version1 = match.GetValue("v1", "0");

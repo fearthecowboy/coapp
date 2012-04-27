@@ -15,7 +15,6 @@ namespace CoApp.Packaging.Service {
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
-    using System.Text.RegularExpressions;
     using System.Threading;
     using System.Threading.Tasks;
     using Common;
@@ -138,10 +137,10 @@ namespace CoApp.Packaging.Service {
 
         public Task FindPackages(CanonicalName canonicalName, bool? dependencies, bool? installed, bool? active, bool? required, bool? blocked, bool? latest,
             int? index, int? maxResults, string location, bool? forceScan, bool? updates, bool? upgrades, bool? trimable) {
-            IPackageManagerResponse response = Event<GetResponseInterface>.RaiseFirst();
+            var response = Event<GetResponseInterface>.RaiseFirst();
 
             if (CancellationRequested) {
-                Event<GetResponseInterface>.RaiseFirst().OperationCanceled("find-package");
+                response.OperationCanceled("find-package");
                 return FinishedSynchronously;
             }
 
@@ -253,7 +252,7 @@ namespace CoApp.Packaging.Service {
                     foreach (var pkg in results) {
                         var package = pkg;
                         if (CancellationRequested) {
-                            Event<GetResponseInterface>.RaiseFirst().OperationCanceled("find-packages");
+                            response.OperationCanceled("find-packages");
                             return FinishedSynchronously;
                         }
 
@@ -264,19 +263,21 @@ namespace CoApp.Packaging.Service {
                         PackageInformation(response, package, supercedents.Select(each => each.CanonicalName));
                     }
                 } else {
-                    Event<GetResponseInterface>.RaiseFirst().NoPackagesFound();
+                    response.NoPackagesFound();
                 }
             }
             return FinishedSynchronously;
         }
 
         public Task GetPackageDetails(CanonicalName canonicalName) {
+            var response = Event<GetResponseInterface>.RaiseFirst();
+
             if (CancellationRequested) {
-                Event<GetResponseInterface>.RaiseFirst().OperationCanceled("get-package-details");
+                response.OperationCanceled("get-package-details");
                 return FinishedSynchronously;
             }
             if (canonicalName.IsPartial) {
-                Event<GetResponseInterface>.RaiseFirst().Error("Invalid Canonical Name", "GetPackageDetails", "Canonical name '{0}' is not a complete canonical name".format(canonicalName));
+                response.Error("Invalid Canonical Name", "GetPackageDetails", "Canonical name '{0}' is not a complete canonical name".format(canonicalName));
             }
             var package = SearchForPackages(canonicalName).FirstOrDefault();
 
@@ -284,7 +285,7 @@ namespace CoApp.Packaging.Service {
                 return FinishedSynchronously;
             }
 
-            Event<GetResponseInterface>.RaiseFirst().PackageDetails(package.CanonicalName, new Dictionary<string, string> {
+            response.PackageDetails(package.CanonicalName, new Dictionary<string, string> {
                 {"description", package.PackageDetails.Description},
                 {"summary", package.PackageDetails.SummaryDescription},
                 {"display-name", package.DisplayName},
@@ -301,8 +302,10 @@ namespace CoApp.Packaging.Service {
         }
 
         public Task InstallPackage(CanonicalName canonicalName, bool? autoUpgrade, bool? force, bool? download, bool? pretend, bool? isUpdating, bool? isUpgrading) {
+            var response = Event<GetResponseInterface>.RaiseFirst();
+
             if (CancellationRequested) {
-                Event<GetResponseInterface>.RaiseFirst().OperationCanceled("install-package");
+                response.OperationCanceled("install-package");
                 return FinishedSynchronously;
             }
 
@@ -318,7 +321,7 @@ namespace CoApp.Packaging.Service {
                 lastProgress[0] = percentage;
                 // ReSharper disable PossibleNullReferenceException ... this is what I really want. :[
                 // ReSharper disable AccessToModifiedClosure
-                Event<GetResponseInterface>.RaiseFirst().InstallingPackageProgress(currentPackageInstalling.CanonicalName, percentage, (int)(overallProgress[0]*100));
+                response.InstallingPackageProgress(currentPackageInstalling.CanonicalName, percentage, (int)(overallProgress[0]*100));
                 // ReSharper restore AccessToModifiedClosure
                 // ReSharper restore PossibleNullReferenceException
             });
@@ -331,17 +334,17 @@ namespace CoApp.Packaging.Service {
 
                     var packagesTriedToDownloadThisTask = new List<Package>();
                     if (canonicalName.IsPartial) {
-                        Event<GetResponseInterface>.RaiseFirst().Error("Invalid Canonical Name", "InstallPackage", "Canonical name '{0}' is not a complete canonical name".format(canonicalName));
+                        response.Error("Invalid Canonical Name", "InstallPackage", "Canonical name '{0}' is not a complete canonical name".format(canonicalName));
                     }
                     var package = SearchForPackages(canonicalName).FirstOrDefault();
 
                     if (package == null) {
-                        Event<GetResponseInterface>.RaiseFirst().UnknownPackage(canonicalName);
+                        response.UnknownPackage(canonicalName);
                         return FinishedSynchronously;
                     }
 
                     if (package.IsBlocked) {
-                        Event<GetResponseInterface>.RaiseFirst().PackageBlocked(canonicalName);
+                        response.PackageBlocked(canonicalName);
                         return FinishedSynchronously;
                     }
 
@@ -365,13 +368,13 @@ namespace CoApp.Packaging.Service {
                     //      - check to see if there is a compatible package already installed that is marked do-not-update
                     //        fail if so.
                     if (isUpdating == true && installedCompatibleVersions.Any(each => each.DoNotUpdate)) {
-                        Event<GetResponseInterface>.RaiseFirst().PackageBlocked(canonicalName);
+                        response.PackageBlocked(canonicalName);
                     }
 
                     // if this is an upgrade, 
                     //      - check to see if this package has the do-not-upgrade flag.
                     if (isUpgrading == true && package.DoNotUpgrade) {
-                        Event<GetResponseInterface>.RaiseFirst().PackageBlocked(canonicalName);
+                        response.PackageBlocked(canonicalName);
                     }
 
                     // mark the package as the client requested.
@@ -386,7 +389,7 @@ namespace CoApp.Packaging.Service {
                         manualResetEvent.Reset();
 
                         if (CancellationRequested) {
-                            Event<GetResponseInterface>.RaiseFirst().OperationCanceled("install-package");
+                            response.OperationCanceled("install-package");
                             return FinishedSynchronously;
                         }
 
@@ -396,17 +399,17 @@ namespace CoApp.Packaging.Service {
                         } catch (OperationCompletedBeforeResultException) {
                             // we encountered an unresolvable condition in the install graph.
                             // messages should have already been sent.
-                            Event<GetResponseInterface>.RaiseFirst().FailedPackageInstall(canonicalName, package.InternalPackageData.LocalLocation,
+                            response.FailedPackageInstall(canonicalName, package.InternalPackageData.LocalLocation,
                                 "One or more dependencies are unable to be resolved.");
                             return FinishedSynchronously;
                         }
 
                         // seems like a good time to check if we're supposed to bail...
                         if (CancellationRequested) {
-                            Event<GetResponseInterface>.RaiseFirst().OperationCanceled("install-package");
+                            response.OperationCanceled("install-package");
                             return FinishedSynchronously;
                         }
-                        var response = Event<GetResponseInterface>.RaiseFirst();
+                        
                         if (download == false && pretend == true) {
                             // we can just return a bunch of foundpackage messages, since we're not going to be 
                             // actually installing anything, nor trying to download anything.
@@ -440,7 +443,7 @@ namespace CoApp.Packaging.Service {
                         if (missingFiles.Any()) {
                             // we've got some packages to install that don't have files.
                             foreach (var p in missingFiles.Where(p => !p.PackageSessionData.HasRequestedDownload)) {
-                                Event<GetResponseInterface>.RaiseFirst().RequireRemoteFile(p.CanonicalName,
+                                response.RequireRemoteFile(p.CanonicalName,
                                     p.InternalPackageData.RemoteLocations, PackageManagerSettings.CoAppPackageCache, false);
 
                                 p.PackageSessionData.HasRequestedDownload = true;
@@ -463,7 +466,7 @@ namespace CoApp.Packaging.Service {
                                 currentPackageInstalling = p;
                                 // seems like a good time to check if we're supposed to bail...
                                 if (CancellationRequested) {
-                                    Event<GetResponseInterface>.RaiseFirst().OperationCanceled("install-package");
+                                    response.OperationCanceled("install-package");
                                     return FinishedSynchronously;
                                 }
                                 var validLocation = currentPackageInstalling.PackageSessionData.LocalValidatedLocation;
@@ -472,7 +475,7 @@ namespace CoApp.Packaging.Service {
                                     if (!currentPackageInstalling.IsInstalled) {
                                         if (string.IsNullOrEmpty(validLocation)) {
                                             // can't find a valid location
-                                            Event<GetResponseInterface>.RaiseFirst().FailedPackageInstall(currentPackageInstalling.CanonicalName, currentPackageInstalling.InternalPackageData.LocalLocation, "Can not find local valid package");
+                                            response.FailedPackageInstall(currentPackageInstalling.CanonicalName, currentPackageInstalling.InternalPackageData.LocalLocation, "Can not find local valid package");
                                             currentPackageInstalling.PackageSessionData.PackageFailedInstall = true;
                                         } else {
                                             lastProgress[0] = 0;
@@ -483,7 +486,7 @@ namespace CoApp.Packaging.Service {
                                                     // something has changed where we need restart the service before we can continue.
                                                     // and the one place we don't wanna be when we issue a shutdown in in Install :) ...
                                                     Engine.RestartService();
-                                                    Event<GetResponseInterface>.RaiseFirst().OperationCanceled("install-package");
+                                                    response.OperationCanceled("install-package");
                                                     return FinishedSynchronously;
                                                 }
 
@@ -491,8 +494,8 @@ namespace CoApp.Packaging.Service {
                                                 currentPackageInstalling.Install();
                                             }
                                             overallProgress[0] += ((100 - lastProgress[0])*eachTaskIsWorth[0])/100;
-                                            Event<GetResponseInterface>.RaiseFirst().InstallingPackageProgress(currentPackageInstalling.CanonicalName, 100, (int)(overallProgress[0]*100));
-                                            Event<GetResponseInterface>.RaiseFirst().InstalledPackage(currentPackageInstalling.CanonicalName);
+                                            response.InstallingPackageProgress(currentPackageInstalling.CanonicalName, 100, (int)(overallProgress[0]*100));
+                                            response.InstalledPackage(currentPackageInstalling.CanonicalName);
                                             Signals.InstalledPackage(currentPackageInstalling.CanonicalName);
                                         }
                                     }
@@ -500,7 +503,7 @@ namespace CoApp.Packaging.Service {
                                     Logger.Error("FAILED INSTALL");
                                     Logger.Error(e);
 
-                                    Event<GetResponseInterface>.RaiseFirst().FailedPackageInstall(currentPackageInstalling.CanonicalName, validLocation, "Package failed to install.");
+                                    response.FailedPackageInstall(currentPackageInstalling.CanonicalName, validLocation, "Package failed to install.");
                                     currentPackageInstalling.PackageSessionData.PackageFailedInstall = true;
 
                                     if (!currentPackageInstalling.PackageSessionData.AllowedToSupercede) {
@@ -531,7 +534,7 @@ namespace CoApp.Packaging.Service {
                                 if (Engine.DoesTheServiceNeedARestart) {
                                     // something has changed where we need restart the service before we can continue.
                                     // and the one place we don't wanna be when we issue a shutdown in in Install :) ...
-                                    Event<GetResponseInterface>.RaiseFirst().Restarting();
+                                    response.Restarting();
                                     Engine.RestartService();
                                     return FinishedSynchronously;
                                 }
@@ -546,7 +549,7 @@ namespace CoApp.Packaging.Service {
                         // to see if the client has cancelled the operation.
                         while (!manualResetEvent.WaitOne(500)) {
                             if (CancellationRequested) {
-                                Event<GetResponseInterface>.RaiseFirst().OperationCanceled("install-package");
+                                response.OperationCanceled("install-package");
                                 return FinishedSynchronously;
                             }
 
@@ -566,7 +569,7 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        public Task DownloadProgress(CanonicalName canonicalName, int? downloadProgress) {
+        public Task DownloadProgress(string requestReference, int? downloadProgress) {
             try {
                 // it takes a non-trivial amount of time to lookup a package by its name.
                 // so, we're going to cache the package in the session.
@@ -577,18 +580,18 @@ namespace CoApp.Packaging.Service {
 
                 Package package;
 
-                var cachedPackageName = SessionCache<string>.Value["cached-the-lookup" + canonicalName];
+                var cachedPackageName = SessionCache<string>.Value["cached-the-lookup" + requestReference];
 
                 if (cachedPackageName == null) {
-                    SessionCache<string>.Value["cached-the-lookup" + canonicalName] = "yes";
+                    SessionCache<string>.Value["cached-the-lookup" + requestReference] = "yes";
 
-                    package = SearchForPackages(canonicalName).FirstOrDefault();
+                    package = SearchForPackages(requestReference).FirstOrDefault();
 
                     if (package != null) {
-                        SessionCache<Package>.Value[canonicalName] = package;
+                        SessionCache<Package>.Value[requestReference] = package;
                     }
                 } else {
-                    package = SessionCache<Package>.Value[canonicalName];
+                    package = SessionCache<Package>.Value[requestReference];
                 }
 
                 if (package != null) {
@@ -597,13 +600,15 @@ namespace CoApp.Packaging.Service {
             } catch {
                 // suppress any exceptions... we just don't care!
             }
-            SessionCache<string>.Value["busy" + canonicalName] = null;
+            SessionCache<string>.Value["busy" + requestReference] = null;
             return FinishedSynchronously;
         }
 
         public Task ListFeeds(int? index, int? maxResults) {
+            var response = Event<GetResponseInterface>.RaiseFirst();
+
             if (CancellationRequested) {
-                Event<GetResponseInterface>.RaiseFirst().OperationCanceled("list-feeds");
+                response.OperationCanceled("list-feeds");
                 return FinishedSynchronously;
             }
 
@@ -652,17 +657,18 @@ namespace CoApp.Packaging.Service {
                     if (string.IsNullOrEmpty(state)) {
                         state = "Active";
                     }
-                    Event<GetResponseInterface>.RaiseFirst().FeedDetails(f.feed, f.LastScanned, f.session, f.suppressed, f.validated, state);
+                    response.FeedDetails(f.feed, f.LastScanned, f.session, f.suppressed, f.validated, state);
                 }
             } else {
-                Event<GetResponseInterface>.RaiseFirst().NoFeedsFound();
+                response.NoFeedsFound();
             }
             return FinishedSynchronously;
         }
 
         public Task RemoveFeed(string location, bool? session) {
+            var response = Event<GetResponseInterface>.RaiseFirst();
             if (CancellationRequested) {
-                Event<GetResponseInterface>.RaiseFirst().OperationCanceled("remove-feed");
+                response.OperationCanceled("remove-feed");
                 return FinishedSynchronously;
             }
 
@@ -673,21 +679,23 @@ namespace CoApp.Packaging.Service {
                 // session feed specfied
                 if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.EditSessionFeeds)) {
                     RemoveSessionFeed(location);
-                    Event<GetResponseInterface>.RaiseFirst().FeedRemoved(location);
+                    response.FeedRemoved(location);
                 }
             } else {
                 // system feed specified
                 if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.EditSystemFeeds)) {
                     RemoveSystemFeed(location);
-                    Event<GetResponseInterface>.RaiseFirst().FeedRemoved(location);
+                    response.FeedRemoved(location);
                 }
             }
             return FinishedSynchronously;
         }
 
         public Task AddFeed(string location, bool? session) {
+            var response = Event<GetResponseInterface>.RaiseFirst();
+
             if (CancellationRequested) {
-                Event<GetResponseInterface>.RaiseFirst().OperationCanceled("add-feed");
+                response.OperationCanceled("add-feed");
                 return FinishedSynchronously;
             }
 
@@ -697,12 +705,12 @@ namespace CoApp.Packaging.Service {
                 if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.EditSessionFeeds)) {
                     // check if it is already a system feed
                     if (SystemFeedLocations.Contains(location)) {
-                        Event<GetResponseInterface>.RaiseFirst().Warning("add-feed", "location", "location '{0}' is already a system feed".format(location));
+                        response.Warning("add-feed", "location", "location '{0}' is already a system feed".format(location));
                         return FinishedSynchronously;
                     }
 
                     if (SessionFeedLocations.Contains(location)) {
-                        Event<GetResponseInterface>.RaiseFirst().Warning("add-feed", "location", "location '{0}' is already a session feed".format(location));
+                        response.Warning("add-feed", "location", "location '{0}' is already a session feed".format(location));
                         return FinishedSynchronously;
                     }
 
@@ -711,13 +719,13 @@ namespace CoApp.Packaging.Service {
                         var foundFeed = antecedent.Result;
                         if (foundFeed != null) {
                             AddSessionFeed(location);
-                            Event<GetResponseInterface>.RaiseFirst().FeedAdded(location);
+                            response.FeedAdded(location);
 
                             if (foundFeed != SessionPackageFeed.Instance || foundFeed != InstalledPackageFeed.Instance) {
                                 SessionCache<PackageFeed>.Value[location] = foundFeed;
                             }
                         } else {
-                            Event<GetResponseInterface>.RaiseFirst().Error("add-feed", "location",
+                            response.Error("add-feed", "location",
                                 "failed to recognize location '{0}' as a valid package feed".format(location));
                             Logger.Error("Feed {0} was unable to load.", location);
                         }
@@ -727,7 +735,7 @@ namespace CoApp.Packaging.Service {
                 // new feed is a system feed
                 if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.EditSystemFeeds)) {
                     if (SystemFeedLocations.Contains(location)) {
-                        Event<GetResponseInterface>.RaiseFirst().Warning("add-feed", "location", "location '{0}' is already a system feed".format(location));
+                        response.Warning("add-feed", "location", "location '{0}' is already a system feed".format(location));
                         return FinishedSynchronously;
                     }
 
@@ -736,13 +744,13 @@ namespace CoApp.Packaging.Service {
                         var foundFeed = antecedent.Result;
                         if (foundFeed != null) {
                             AddSystemFeed(location);
-                            Event<GetResponseInterface>.RaiseFirst().FeedAdded(location);
+                            response.FeedAdded(location);
 
                             if (foundFeed != SessionPackageFeed.Instance || foundFeed != InstalledPackageFeed.Instance) {
                                 Cache<PackageFeed>.Value[location] = foundFeed;
                             }
                         } else {
-                            Event<GetResponseInterface>.RaiseFirst().Error("add-feed", "location", "failed to recognize location '{0}' as a valid package feed".format(location));
+                            response.Error("add-feed", "location", "failed to recognize location '{0}' as a valid package feed".format(location));
                             Logger.Error("Feed {0} was unable to load.", location);
                         }
                     }, TaskContinuationOptions.AttachedToParent);
@@ -752,52 +760,56 @@ namespace CoApp.Packaging.Service {
         }
 
         public Task VerifyFileSignature(string filename) {
+            var response = Event<GetResponseInterface>.RaiseFirst();
+            
             if (CancellationRequested) {
-                Event<GetResponseInterface>.RaiseFirst().OperationCanceled("verify-signature");
+                response.OperationCanceled("verify-signature");
                 return FinishedSynchronously;
             }
 
             if (string.IsNullOrEmpty(filename)) {
-                Event<GetResponseInterface>.RaiseFirst().Error("verify-signature", "filename", "parameter 'filename' is required to verify a file");
+                response.Error("verify-signature", "filename", "parameter 'filename' is required to verify a file");
                 return FinishedSynchronously;
             }
 
             var location = Event<GetCanonicalizedPath>.RaiseFirst(filename);
 
             if (!File.Exists(location)) {
-                Event<GetResponseInterface>.RaiseFirst().FileNotFound(location);
+                response.FileNotFound(location);
                 return FinishedSynchronously;
             }
 
             var r = Verifier.HasValidSignature(location);
-            Event<GetResponseInterface>.RaiseFirst().SignatureValidation(location, r, r ? Verifier.GetPublisherInformation(location)["PublisherName"] : null);
+            response.SignatureValidation(location, r, r ? Verifier.GetPublisherInformation(location)["PublisherName"] : null);
             return FinishedSynchronously;
         }
 
         public Task SetPackage(CanonicalName canonicalName, bool? active, bool? required, bool? blocked, bool? doNotUpdate, bool? doNotUpgrade) {
+            var response = Event<GetResponseInterface>.RaiseFirst();
+
             if (CancellationRequested) {
-                Event<GetResponseInterface>.RaiseFirst().OperationCanceled("set-package");
+                response.OperationCanceled("set-package");
                 return FinishedSynchronously;
             }
 
             if (canonicalName.IsPartial) {
-                Event<GetResponseInterface>.RaiseFirst().Error("Invalid Canonical Name", "SetPackage", "Canonical name '{0}' is not a complete canonical name".format(canonicalName));
+                response.Error("Invalid Canonical Name", "SetPackage", "Canonical name '{0}' is not a complete canonical name".format(canonicalName));
             }
             var package = SearchForPackages(canonicalName).FirstOrDefault();
 
             if (package == null) {
-                Event<GetResponseInterface>.RaiseFirst().UnknownPackage(canonicalName);
+                response.UnknownPackage(canonicalName);
                 return FinishedSynchronously;
             }
 
             if (!package.IsInstalled) {
-                Event<GetResponseInterface>.RaiseFirst().Error("set-package", "canonical-name", "package '{0}' is not installed.".format(canonicalName));
+                response.Error("set-package", "canonical-name", "package '{0}' is not installed.".format(canonicalName));
                 return FinishedSynchronously;
             }
 
             // seems like a good time to check if we're supposed to bail...
             if (CancellationRequested) {
-                Event<GetResponseInterface>.RaiseFirst().OperationCanceled("set-package");
+                response.OperationCanceled("set-package");
                 return FinishedSynchronously;
             }
 
@@ -861,94 +873,94 @@ namespace CoApp.Packaging.Service {
                     package.DoNotUpgrade = false;
                 }
             }
-            PackageInformation(Event<GetResponseInterface>.RaiseFirst(), package);
+            PackageInformation(response, package);
             return FinishedSynchronously;
         }
 
         public Task RemovePackage(CanonicalName canonicalName, bool? force) {
+            var response = Event<GetResponseInterface>.RaiseFirst();
+            
             if (CancellationRequested) {
-                Event<GetResponseInterface>.RaiseFirst().OperationCanceled("remove-package");
+                response.OperationCanceled("remove-package");
                 return FinishedSynchronously;
             }
 
             if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.RemovePackage)) {
                 if (canonicalName.IsPartial) {
-                    Event<GetResponseInterface>.RaiseFirst().Error("Invalid Canonical Name", "InstallPackage", "Canonical name '{0}' is not a complete canonical name".format(canonicalName));
+                    response.Error("Invalid Canonical Name", "InstallPackage", "Canonical name '{0}' is not a complete canonical name".format(canonicalName));
                 }
                 var package = SearchForPackages(canonicalName).FirstOrDefault();
 
                 if (package == null) {
-                    Event<GetResponseInterface>.RaiseFirst().UnknownPackage(canonicalName);
+                    response.UnknownPackage(canonicalName);
                     return FinishedSynchronously;
                 }
 
                 if (package.CanonicalName.Matches(CanonicalName.CoAppItself) && package.IsActive) {
-                    Event<GetResponseInterface>.RaiseFirst().Error("remove-package", "canonical-name", "Active CoApp Engine may not be removed");
+                    response.Error("remove-package", "canonical-name", "Active CoApp Engine may not be removed");
                     return FinishedSynchronously;
                 }
 
                 if (!package.IsInstalled) {
-                    Event<GetResponseInterface>.RaiseFirst().Error("remove-package", "canonical-name", "package '{0}' is not installed.".format(canonicalName));
+                    response.Error("remove-package", "canonical-name", "package '{0}' is not installed.".format(canonicalName));
                     return FinishedSynchronously;
                 }
 
                 if (package.IsBlocked) {
-                    Event<GetResponseInterface>.RaiseFirst().PackageBlocked(canonicalName);
+                    response.PackageBlocked(canonicalName);
                     return FinishedSynchronously;
                 }
                 if (true != force) {
                     UpdateIsRequestedFlags();
                     if (package.PackageSessionData.IsDependency) {
-                        Event<GetResponseInterface>.RaiseFirst().FailedPackageRemoval(canonicalName,
+                        response.FailedPackageRemoval(canonicalName,
                             "Package '{0}' is a required dependency of another package.".format(canonicalName));
                         return FinishedSynchronously;
                     }
                 }
                 // seems like a good time to check if we're supposed to bail...
                 if (CancellationRequested) {
-                    Event<GetResponseInterface>.RaiseFirst().OperationCanceled("remove-package");
+                    response.OperationCanceled("remove-package");
                     return FinishedSynchronously;
                 }
 
                 try {
                     // send back the progress to the client.
-                    CurrentTask.Events += new IndividualProgress(percentage => Event<GetResponseInterface>.RaiseFirst().RemovingPackageProgress(package.CanonicalName, percentage));
+                    CurrentTask.Events += new IndividualProgress(percentage => response.RemovingPackageProgress(package.CanonicalName, percentage));
 
                     package.Remove();
 
-                    Event<GetResponseInterface>.RaiseFirst().RemovingPackageProgress(canonicalName, 100);
-                    Event<GetResponseInterface>.RaiseFirst().RemovedPackage(canonicalName);
+                    response.RemovingPackageProgress(canonicalName, 100);
+                    response.RemovedPackage(canonicalName);
 
                     Signals.RemovedPackage(canonicalName);
                 } catch (OperationCompletedBeforeResultException e) {
-                    Event<GetResponseInterface>.RaiseFirst().FailedPackageRemoval(canonicalName, e.Message);
+                    response.FailedPackageRemoval(canonicalName, e.Message);
                     return FinishedSynchronously;
                 }
             }
             return FinishedSynchronously;
         }
 
-        public Task UnableToAcquire(CanonicalName canonicalName) {
+        public Task UnableToAcquire(string requestReference) {
+            var response = Event<GetResponseInterface>.RaiseFirst();
+            
             if (CancellationRequested) {
-                Event<GetResponseInterface>.RaiseFirst().OperationCanceled("unable-to-acquire");
+                response.OperationCanceled("unable-to-acquire");
                 return FinishedSynchronously;
             }
 
-            if (null == canonicalName) {
-                Event<GetResponseInterface>.RaiseFirst().Error("unable-to-acquire", "canonical-name", "canonical-name is required.");
+            if (null == requestReference) {
+                response.Error("unable-to-acquire", "requestReference", "requestReference is required.");
                 return FinishedSynchronously;
             }
 
             // if there is a continuation task for the canonical name that goes along with this, 
             // we should continue with that task, and get the heck out of here.
             // 
-            var package = SearchForPackages(canonicalName).FirstOrDefault();
-            if (package != null) {
-                package.PackageSessionData.CouldNotDownload = true;
-            }
 
-            var continuationTask = SessionCache<Task<Recognizer.RecognitionInfo>>.Value[canonicalName];
-            SessionCache<Task<Recognizer.RecognitionInfo>>.Value.Clear(canonicalName);
+            var continuationTask = SessionCache<Task<Recognizer.RecognitionInfo>>.Value[requestReference];
+            SessionCache<Task<Recognizer.RecognitionInfo>>.Value.Clear(requestReference);
             Updated(); // do an updated regardless.
 
             if (continuationTask != null) {
@@ -965,17 +977,27 @@ namespace CoApp.Packaging.Service {
                     continuationTask.Start();
                 }
             }
+            var canonicalName = CanonicalName.Parse(requestReference);
+            if (canonicalName.IsCanonical) {
+                var package = SearchForPackages(requestReference).FirstOrDefault();
+                if (package != null) {
+                    package.PackageSessionData.CouldNotDownload = true;
+                }
+            }
+
             return FinishedSynchronously;
         }
 
-        public Task RecognizeFile(CanonicalName canonicalName, string localLocation, string remoteLocation) {
+        public Task RecognizeFile(string requestReference, string localLocation, string remoteLocation) {
+            var response = Event<GetResponseInterface>.RaiseFirst();
+            
             if (string.IsNullOrEmpty(localLocation)) {
-                Event<GetResponseInterface>.RaiseFirst().Error("recognize-file", "local-location", "parameter 'local-location' is required to recognize a file");
+                response.Error("recognize-file", "local-location", "parameter 'local-location' is required to recognize a file");
                 return FinishedSynchronously;
             }
 
             if (CancellationRequested) {
-                Event<GetResponseInterface>.RaiseFirst().OperationCanceled("recognize-file");
+                response.OperationCanceled("recognize-file");
                 return FinishedSynchronously;
             }
 
@@ -983,22 +1005,22 @@ namespace CoApp.Packaging.Service {
             if (location.StartsWith(@"\\")) {
                 // a local unc path was passed. This isn't allowed--we need a file on a local volume that
                 // the user has access to.
-                Event<GetResponseInterface>.RaiseFirst().Error("recognize-file", "local-location",
+                response.Error("recognize-file", "local-location",
                     "local-location '{0}' appears to be a file on a remote server('{1}') . Recognized files must be local".format(localLocation, location));
                 return FinishedSynchronously;
             }
 
             if (!File.Exists(location)) {
-                Event<GetResponseInterface>.RaiseFirst().FileNotFound(location);
+                response.FileNotFound(location);
                 return FinishedSynchronously;
             }
 
             // if there is a continuation task for the canonical name that goes along with this, 
             // we should continue with that task, and get the heck out of here.
             // 
-            if (null != canonicalName) {
-                var continuationTask = SessionCache<Task<Recognizer.RecognitionInfo>>.Value[canonicalName];
-                SessionCache<Task<Recognizer.RecognitionInfo>>.Value.Clear(canonicalName);
+            if (null != requestReference) {
+                var continuationTask = SessionCache<Task<Recognizer.RecognitionInfo>>.Value[requestReference];
+                SessionCache<Task<Recognizer.RecognitionInfo>>.Value.Clear(requestReference);
                 if (continuationTask != null) {
                     var state = continuationTask.AsyncState as RequestRemoteFileState;
                     if (state != null) {
@@ -1016,7 +1038,7 @@ namespace CoApp.Packaging.Service {
             // otherwise, we'll call the recognizer 
             Recognizer.Recognize(location).ContinueWith(antecedent => {
                 if (antecedent.IsFaulted) {
-                    Event<GetResponseInterface>.RaiseFirst().FileNotRecognized(location, "Unexpected error recognizing file.");
+                    response.FileNotRecognized(location, "Unexpected error recognizing file.");
                     return;
                 }
 
@@ -1028,20 +1050,20 @@ namespace CoApp.Packaging.Service {
 
                         SessionPackageFeed.Instance.Add(package);
 
-                        PackageInformation(Event<GetResponseInterface>.RaiseFirst(), package);
-                        Event<GetResponseInterface>.RaiseFirst().Recognized(localLocation);
+                        PackageInformation(response, package);
+                        response.Recognized(localLocation);
                     }
                     return;
                 }
 
                 if (antecedent.Result.IsPackageFeed) {
-                    Event<GetResponseInterface>.RaiseFirst().FeedAdded(location);
-                    Event<GetResponseInterface>.RaiseFirst().Recognized(location);
+                    response.FeedAdded(location);
+                    response.Recognized(location);
                 }
 
                 // if this isn't a package file, then there is something odd going on here.
                 // we don't accept non-package files willy-nilly. 
-                Event<GetResponseInterface>.RaiseFirst().FileNotRecognized(location, "File isn't a package, and doesn't appear to have been requested. ");
+                response.FileNotRecognized(location, "File isn't a package, and doesn't appear to have been requested. ");
             }, TaskContinuationOptions.AttachedToParent);
             return FinishedSynchronously;
         }
@@ -1056,8 +1078,10 @@ namespace CoApp.Packaging.Service {
         }
 
         public Task SetFeedFlags(string location, string activePassiveIgnored) {
+            var response = Event<GetResponseInterface>.RaiseFirst();
+            
             if (CancellationRequested) {
-                Event<GetResponseInterface>.RaiseFirst().OperationCanceled("set-feed");
+                response.OperationCanceled("set-feed");
                 return FinishedSynchronously;
             }
 
@@ -1080,8 +1104,10 @@ namespace CoApp.Packaging.Service {
         }
 
         public Task SuppressFeed(string location) {
+            var response = Event<GetResponseInterface>.RaiseFirst();
+            
             if (CancellationRequested) {
-                Event<GetResponseInterface>.RaiseFirst().OperationCanceled("suppress-feed");
+                response.OperationCanceled("suppress-feed");
                 return FinishedSynchronously;
             }
 
@@ -1093,7 +1119,7 @@ namespace CoApp.Packaging.Service {
                     SessionCache<List<string>>.Value["suppressed-feeds"] = suppressedFeeds;
                 }
             }
-            Event<GetResponseInterface>.RaiseFirst().FeedSuppressed(location);
+            response.FeedSuppressed(location);
             return FinishedSynchronously;
         }
 
@@ -1208,9 +1234,11 @@ namespace CoApp.Packaging.Service {
         /// <param name="hypothetical"> </param>
         /// <returns> </returns>
         private IEnumerable<Package> GenerateInstallGraph(Package package, bool hypothetical = false) {
+            var response = Event<GetResponseInterface>.RaiseFirst();
+            
             if (package.IsInstalled) {
                 if (!package.PackageRequestData.NotifiedClientThisSupercedes) {
-                    Event<GetResponseInterface>.RaiseFirst().PackageSatisfiedBy(package.CanonicalName, package.CanonicalName);
+                    response.PackageSatisfiedBy(package.CanonicalName, package.CanonicalName);
                     package.PackageRequestData.NotifiedClientThisSupercedes = true;
                 }
 
@@ -1246,7 +1274,7 @@ namespace CoApp.Packaging.Service {
                 var installedSupercedent = installedSupercedents.FirstOrDefault();
                 if (installedSupercedent != null) {
                     if (!installedSupercedent.PackageRequestData.NotifiedClientThisSupercedes) {
-                        Event<GetResponseInterface>.RaiseFirst().PackageSatisfiedBy(package.CanonicalName, installedSupercedent.CanonicalName);
+                        response.PackageSatisfiedBy(package.CanonicalName, installedSupercedent.CanonicalName);
                         installedSupercedent.PackageRequestData.NotifiedClientThisSupercedes = true;
                     }
                     yield break; // a supercedent package is already installed.
@@ -1284,7 +1312,7 @@ namespace CoApp.Packaging.Service {
 
                             // we should tell the client that we're making a substitution.
                             if (!supercedent.PackageRequestData.NotifiedClientThisSupercedes) {
-                                Event<GetResponseInterface>.RaiseFirst().PackageSatisfiedBy(package.CanonicalName, supercedent.CanonicalName);
+                                response.PackageSatisfiedBy(package.CanonicalName, supercedent.CanonicalName);
                                 supercedent.PackageRequestData.NotifiedClientThisSupercedes = true;
                             }
 
@@ -1306,7 +1334,7 @@ namespace CoApp.Packaging.Service {
                         // the user hasn't specifically asked us to supercede, yet we know of 
                         // potential supercedents. Let's force the user to make a decision.
                         // throw new PackageHasPotentialUpgradesException(packageToSatisfy, supercedents);
-                        Event<GetResponseInterface>.RaiseFirst().PackageHasPotentialUpgrades(package.CanonicalName, supercedents.Select(each => each.CanonicalName));
+                        response.PackageHasPotentialUpgrades(package.CanonicalName, supercedents.Select(each => each.CanonicalName));
                         throw new OperationCompletedBeforeResultException();
                     }
                 }
@@ -1314,14 +1342,14 @@ namespace CoApp.Packaging.Service {
 
             if (packageData.CouldNotDownload) {
                 if (!hypothetical) {
-                    Event<GetResponseInterface>.RaiseFirst().UnableToDownloadPackage(package.CanonicalName);
+                    response.UnableToDownloadPackage(package.CanonicalName);
                 }
                 throw new OperationCompletedBeforeResultException();
             }
 
             if (packageData.PackageFailedInstall) {
                 if (!hypothetical) {
-                    Event<GetResponseInterface>.RaiseFirst().UnableToInstallPackage(package.CanonicalName);
+                    response.UnableToInstallPackage(package.CanonicalName);
                 }
                 throw new OperationCompletedBeforeResultException();
             }
@@ -1366,52 +1394,58 @@ namespace CoApp.Packaging.Service {
         }
 
         public Task GetPolicy(string policyName) {
+            var response = Event<GetResponseInterface>.RaiseFirst();
             var policies = PermissionPolicy.AllPolicies.Where(each => each.Name.IsWildcardMatch(policyName)).ToArray();
 
             foreach (var policy in policies) {
-                Event<GetResponseInterface>.RaiseFirst().PolicyInformation(policy.Name, policy.Description, policy.Accounts);
+                response.PolicyInformation(policy.Name, policy.Description, policy.Accounts);
             }
             if (policies.IsNullOrEmpty()) {
-                Event<GetResponseInterface>.RaiseFirst().Error("get-policy", "name", "policy '{0}' not found".format(policyName));
+                response.Error("get-policy", "name", "policy '{0}' not found".format(policyName));
             }
             return FinishedSynchronously;
         }
 
         public Task AddToPolicy(string policyName, string account) {
+            var response = Event<GetResponseInterface>.RaiseFirst();
+
             if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.ModifyPolicy)) {
                 PermissionPolicy.AllPolicies.FirstOrDefault(each => each.Name.Equals(policyName, StringComparison.CurrentCultureIgnoreCase)).With(policy => {
                     try {
                         policy.Add(account);
                     } catch {
-                        Event<GetResponseInterface>.RaiseFirst().Error("remove-from-policy", "account", "policy '{0}' could not remove account '{1}'".format(policyName, account));
+                        response.Error("remove-from-policy", "account", "policy '{0}' could not remove account '{1}'".format(policyName, account));
                     }
-                }, () => Event<GetResponseInterface>.RaiseFirst().Error("remove-from-policy", "name", "policy '{0}' not found".format(policyName)));
+                }, () => response.Error("remove-from-policy", "name", "policy '{0}' not found".format(policyName)));
             }
             return FinishedSynchronously;
         }
 
         public Task RemoveFromPolicy(string policyName, string account) {
+            var response = Event<GetResponseInterface>.RaiseFirst();
+
             if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.ModifyPolicy)) {
                 PermissionPolicy.AllPolicies.FirstOrDefault(each => each.Name.Equals(policyName, StringComparison.CurrentCultureIgnoreCase)).With(policy => {
                     try {
                         policy.Remove(account);
                     } catch {
-                        Event<GetResponseInterface>.RaiseFirst().Error("remove-from-policy", "account", "policy '{0}' could not remove account '{1}'".format(policyName, account));
+                        response.Error("remove-from-policy", "account", "policy '{0}' could not remove account '{1}'".format(policyName, account));
                     }
-                }, () => Event<GetResponseInterface>.RaiseFirst().Error("remove-from-policy", "name", "policy '{0}' not found".format(policyName)));
+                }, () => response.Error("remove-from-policy", "name", "policy '{0}' not found".format(policyName)));
             }
             return FinishedSynchronously;
         }
 
         public Task CreateSymlink(string existingLocation, string newLink, LinkType linkType) {
+            var response = Event<GetResponseInterface>.RaiseFirst();
             if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.Symlink)) {
                 if (string.IsNullOrEmpty(existingLocation)) {
-                    Event<GetResponseInterface>.RaiseFirst().Error("symlink", "existing-location", "location is null/empty. ");
+                    response.Error("symlink", "existing-location", "location is null/empty. ");
                     return FinishedSynchronously;
                 }
 
                 if (string.IsNullOrEmpty(newLink)) {
-                    Event<GetResponseInterface>.RaiseFirst().Error("symlink", "new-link", "new-link is null/empty.");
+                    response.Error("symlink", "new-link", "new-link is null/empty.");
                     return FinishedSynchronously;
                 }
 
@@ -1447,10 +1481,10 @@ namespace CoApp.Packaging.Service {
                                 break;
                         }
                     } else {
-                        Event<GetResponseInterface>.RaiseFirst().Error("symlink", "existing-location", "can not make symlink for location '{0}'".format(existingLocation));
+                        response.Error("symlink", "existing-location", "can not make symlink for location '{0}'".format(existingLocation));
                     }
                 } catch (Exception exception) {
-                    Event<GetResponseInterface>.RaiseFirst().Error("symlink", "", "Failed to create symlink -- error: {0}".format(exception.Message));
+                    response.Error("symlink", "", "Failed to create symlink -- error: {0}".format(exception.Message));
                 }
             }
             return FinishedSynchronously;
@@ -1458,7 +1492,9 @@ namespace CoApp.Packaging.Service {
 
         public Task SetFeedStale(string feedLocation) {
             PackageFeed.GetPackageFeedFromLocation(feedLocation).Continue(feed => {
-                feed.Stale = true;
+                if (feed != null) {
+                    feed.Stale = true;
+                }
             });
             return FinishedSynchronously;
         }
@@ -1471,6 +1507,8 @@ namespace CoApp.Packaging.Service {
         }
 
         public Task SetLogging(bool? messages, bool? warnings, bool? errors) {
+            var response = Event<GetResponseInterface>.RaiseFirst();
+
             if (messages.HasValue) {
                 SessionCache<string>.Value["LogMessages"] = messages.ToString();
             }
@@ -1482,7 +1520,7 @@ namespace CoApp.Packaging.Service {
             if (warnings.HasValue) {
                 SessionCache<string>.Value["LogWarnings"] = warnings.ToString();
             }
-            Event<GetResponseInterface>.RaiseFirst().LoggingSettings(Logger.Messages, Logger.Warnings, Logger.Errors);
+            response.LoggingSettings(Logger.Messages, Logger.Warnings, Logger.Errors);
             return FinishedSynchronously;
         }
 

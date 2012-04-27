@@ -184,6 +184,9 @@ namespace CoApp.Toolkit.Tasks {
         /// <param name="task"> </param>
         /// <returns> </returns>
         public static Task AutoManage(this Task task) {
+            if( task == null ) {
+                return null;
+            }
 #if DEBUG
             if (task.GetParentTask() != null) {
                 var stackTrace = new StackTrace(true);
@@ -207,6 +210,8 @@ namespace CoApp.Toolkit.Tasks {
             }
 #endif
 
+            // if the task isn't associated with it's parent
+            // we can insert a 'cheat'
             if (task.GetParentTask() == null) {
                 lock (ParentTasks) {
                     var currentTask = CurrentTask;

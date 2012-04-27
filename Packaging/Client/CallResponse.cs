@@ -190,15 +190,17 @@ namespace CoApp.Packaging.Client {
             throw new FailedPackageRemoveException(canonicalName, reason);
         }
 
-        public void RequireRemoteFile(CanonicalName canonicalName, IEnumerable<string> remoteLocations, string destination, bool force) {
-            var targetFilename = Path.Combine(destination, canonicalName);
+        public void RequireRemoteFile(string requestReference, IEnumerable<string> remoteLocations, string destination, bool force) {
+            var filename = requestReference.MakeSafeFileName();
+
+            var targetFilename = Path.Combine(destination, filename);
             lock (CurrentDownloads) {
-                if (CurrentDownloads.ContainsKey(targetFilename)) {
+                if (CurrentDownloads.ContainsKey(requestReference)) {
                     // wait for this guy to respond (which should give us what we need)
-                    CurrentDownloads[targetFilename].Continue(() => {
+                    CurrentDownloads[requestReference].Continue(() => {
                         if (File.Exists(targetFilename)) {
-                            Event<DownloadCompleted>.Raise(canonicalName, targetFilename);
-                            PM.RecognizeFile(canonicalName, targetFilename, remoteLocations.FirstOrDefault());
+                            Event<DownloadCompleted>.Raise(requestReference, targetFilename);
+                            PM.RecognizeFile(requestReference, targetFilename, remoteLocations.FirstOrDefault());
                         }
                     });
                     return;
@@ -216,7 +218,7 @@ namespace CoApp.Packaging.Client {
 
                                 // if this fails, we'll just move down the line.
                                 File.Copy(remoteFile, targetFilename);
-                                PM.RecognizeFile(canonicalName, targetFilename, uri.AbsoluteUri);
+                                PM.RecognizeFile(requestReference, targetFilename, uri.AbsoluteUri);
                                 return;
                             }
 
@@ -225,10 +227,10 @@ namespace CoApp.Packaging.Client {
                             var success = false;
                             var rf = new RemoteFile(uri, targetFilename,
                                 itemUri => {
-                                    PM.RecognizeFile(canonicalName, targetFilename, uri.AbsoluteUri);
-                                    Event<DownloadCompleted>.Raise(canonicalName, targetFilename);
+                                    PM.RecognizeFile(requestReference, targetFilename, uri.AbsoluteUri);
+                                    Event<DownloadCompleted>.Raise(requestReference, targetFilename);
                                     // remove it from the list of current downloads
-                                    CurrentDownloads.Remove(targetFilename);
+                                    CurrentDownloads.Remove(requestReference);
                                     success = true;
                                 },
                                 itemUri => {
@@ -237,13 +239,13 @@ namespace CoApp.Packaging.Client {
                                 (itemUri, percent) => {
                                     if (progressTask == null) {
                                         // report progress to the engine
-                                        progressTask = PM.DownloadProgress(canonicalName, percent);
+                                        progressTask = PM.DownloadProgress(requestReference, percent);
                                         progressTask.Continue(() => {
                                             progressTask = null;
                                         });
                                     }
 
-                                    Event<DownloadProgress>.Raise(canonicalName, targetFilename, percent);
+                                    Event<DownloadProgress>.Raise(requestReference, targetFilename, percent);
                                 });
 
                             rf.Get();
@@ -251,7 +253,8 @@ namespace CoApp.Packaging.Client {
                             if (success && File.Exists(targetFilename)) {
                                 return;
                             }
-                        } catch (Exception e) {
+                        }
+                        catch (Exception e) {
                             // bogus, dude.
                             // try the next one.
                             Logger.Error(e);
@@ -261,15 +264,15 @@ namespace CoApp.Packaging.Client {
 
                     // was there a file there from before?
                     if (File.Exists(targetFilename)) {
-                        Event<DownloadCompleted>.Raise(canonicalName, targetFilename);
-                        PM.RecognizeFile(canonicalName, targetFilename, remoteLocations.FirstOrDefault());
+                        Event<DownloadCompleted>.Raise(requestReference, targetFilename);
+                        PM.RecognizeFile(requestReference, targetFilename, remoteLocations.FirstOrDefault());
                     }
 
                     // remove it from the list of current downloads
-                    CurrentDownloads.Remove(targetFilename);
+                    CurrentDownloads.Remove(requestReference);
 
                     // if we got here, that means we couldn't get the file. too bad, so sad.
-                    PM.UnableToAcquire(canonicalName);
+                    PM.UnableToAcquire(requestReference);
                 }, TaskCreationOptions.AttachedToParent);
 
                 CurrentDownloads.Add(targetFilename, task);

@@ -31,27 +31,27 @@ namespace CoApp.Packaging.Common {
         /// <summary>
         ///   Registry view for the package manager settings
         /// </summary>
-        public static RegistryView CoAppSettings = RegistryView.CoAppSystem[@"PackageManager"];
-
-        /// <summary>
-        ///   Registry view for the volatile information key
-        /// </summary>
-        public static RegistryView CoAppInformation = RegistryView.CoAppSystem[@"Information"];
+        public static RegistryView CoAppSettings;
 
         /// <summary>
         ///   registry view for the cached items (contents subject to being dropped at a whim)
         /// </summary>
-        public static RegistryView CacheSettings = CoAppSettings[@".cache"];
+        public static RegistryView CacheSettings;
 
         /// <summary>
         ///   registry view for package-specific information. This data is currently the only registry data in coapp that can't be rebuilt--this stores the "current" version of a given package. This is also where we will store flags like "blocked" or "required"
         /// </summary>
-        public static RegistryView PerPackageSettings = CoAppSettings[@".packageInformation"];
+        public static RegistryView PerPackageSettings;
 
         /// <summary>
         ///   registry view for feed-specific information.
         /// </summary>
-        public static RegistryView PerFeedSettings = CoAppSettings[@".feedInformation"];
+        public static RegistryView PerFeedSettings;
+
+        /// <summary>
+        ///   Registry view for the volatile information key
+        /// </summary>
+        public static RegistryView CoAppInformation;
 
         /// <summary>
         ///   Gets the default for the CoApp root folder.
@@ -65,6 +65,13 @@ namespace CoApp.Packaging.Common {
         }
 
         static PackageManagerSettings() {
+            CoAppSettings = RegistryView.CoAppSystem[@"PackageManager"];
+            CoAppSettings.StringValue = "";
+            CacheSettings = CoAppSettings[@".cache"];
+            PerPackageSettings = CoAppSettings[@".packageInformation"];
+            PerFeedSettings = CoAppSettings[@".feedInformation"];
+
+            CoAppInformation = RegistryView.CoAppSystem[@"Information"];
             CoAppInformation.IsVolatile = true;
 #if COAPP_ENGINE_CORE
     // on startup of the engine, we wipe the contents of this key.

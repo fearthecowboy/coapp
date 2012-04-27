@@ -17,10 +17,10 @@ namespace CoApp.Packaging.Service {
     using System.Linq;
     using System.ServiceProcess;
     using System.Threading;
-    using CoApp.Packaging.Common;
-    using CoApp.Toolkit.Exceptions;
-    using CoApp.Toolkit.Extensions;
-    using CoApp.Toolkit.Win32;
+    using Common;
+    using Toolkit.Exceptions;
+    using Toolkit.Extensions;
+    using Toolkit.Win32;
 
     internal class CoAppServiceMain {
         public static bool UseUserAccount;
