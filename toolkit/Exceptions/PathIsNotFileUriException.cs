@@ -1,13 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿namespace CoApp.Toolkit.Exceptions {
+    using System;
 
-namespace CoApp.Toolkit.Exceptions {
-    public class PathIsNotFileUriException: CoAppException {
+    public class PathIsNotFileUriException : CoAppException {
         public string Path;
         public Uri Uri;
-        public PathIsNotFileUriException( string path, Uri uri ) {
+
+        public PathIsNotFileUriException(string path, Uri uri) {
             Path = path;
             Uri = uri;
         }

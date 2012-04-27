@@ -30,7 +30,6 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR 
 // OTHER DEALINGS IN THE SOFTWARE.
 
-
 namespace CoApp.Toolkit.TaskService {
     using System;
     using System.Collections.Generic;
@@ -100,14 +99,16 @@ namespace CoApp.Toolkit.TaskService {
         /// </summary>
         [Browsable(false)]
         public bool Connected {
-            get { return (v2TaskService != null && v2TaskService.Connected) || v1TaskScheduler != null; }
+            get {
+                return (v2TaskService != null && v2TaskService.Connected) || v1TaskScheduler != null;
+            }
         }
 
         /// <summary>
         ///   Gets the name of the domain to which the <see cref="TargetServer" /> computer is connected.
         /// </summary>
         [Browsable(false)]
-        [DefaultValue((string) null)]
+        [DefaultValue((string)null)]
         [Obsolete("This property has been superceded by the UserAccountDomin property and may not be available in future releases.")]
         public string ConnectedDomain {
             get {
@@ -126,7 +127,7 @@ namespace CoApp.Toolkit.TaskService {
         ///   Gets the name of the user that is connected to the Task Scheduler service.
         /// </summary>
         [Browsable(false)]
-        [DefaultValue((string) null)]
+        [DefaultValue((string)null)]
         [Obsolete("This property has been superceded by the UserName property and may not be available in future releases.")]
         public string ConnectedUser {
             get {
@@ -146,7 +147,9 @@ namespace CoApp.Toolkit.TaskService {
         /// </summary>
         [Category("Data"), TypeConverter(typeof (VersionConverter)), Description("Highest version of library that should be used.")]
         public Version HighestSupportedVersion {
-            get { return maxVer; }
+            get {
+                return maxVer;
+            }
             set {
                 maxVer = value;
                 maxVerSet = true;
@@ -163,15 +166,19 @@ namespace CoApp.Toolkit.TaskService {
         /// </summary>
         [Browsable(false)]
         public TaskFolder RootFolder {
-            get { return GetFolder(@"\"); }
+            get {
+                return GetFolder(@"\");
+            }
         }
 
         /// <summary>
         ///   Gets or sets the name of the computer that is running the Task Scheduler service that the user is connected to.
         /// </summary>
-        [Category("Data"), DefaultValue((string) null), Description("The name of the computer to connect to.")]
+        [Category("Data"), DefaultValue((string)null), Description("The name of the computer to connect to.")]
         public string TargetServer {
-            get { return ShouldSerializeTargetServer() ? targetServer : null; }
+            get {
+                return ShouldSerializeTargetServer() ? targetServer : null;
+            }
             set {
                 if (value == null || value.Trim() == string.Empty) {
                     value = null;
@@ -188,9 +195,11 @@ namespace CoApp.Toolkit.TaskService {
         ///   Gets or sets the user account domain to be used when connecting to the <see cref="TargetServer" /> .
         /// </summary>
         /// <value> The user account domain. </value>
-        [Category("Data"), DefaultValue((string) null), Description("The user account domain to be used when connecting.")]
+        [Category("Data"), DefaultValue((string)null), Description("The user account domain to be used when connecting.")]
         public string UserAccountDomain {
-            get { return ShouldSerializeUserAccountDomain() ? userDomain : null; }
+            get {
+                return ShouldSerializeUserAccountDomain() ? userDomain : null;
+            }
             set {
                 if (value == null || value.Trim() == string.Empty) {
                     value = null;
@@ -207,9 +216,11 @@ namespace CoApp.Toolkit.TaskService {
         ///   Gets or sets the user name to be used when connecting to the <see cref="TargetServer" /> .
         /// </summary>
         /// <value> The user name. </value>
-        [Category("Data"), DefaultValue((string) null), Description("The user name to be used when connecting.")]
+        [Category("Data"), DefaultValue((string)null), Description("The user name to be used when connecting.")]
         public string UserName {
-            get { return ShouldSerializeUserName() ? userName : null; }
+            get {
+                return ShouldSerializeUserName() ? userName : null;
+            }
             set {
                 if (value == null || value.Trim() == string.Empty) {
                     value = null;
@@ -226,9 +237,11 @@ namespace CoApp.Toolkit.TaskService {
         ///   Gets or sets the user password to be used when connecting to the <see cref="TargetServer" /> .
         /// </summary>
         /// <value> The user password. </value>
-        [Category("Data"), DefaultValue((string) null), Description("The user password to be used when connecting.")]
+        [Category("Data"), DefaultValue((string)null), Description("The user password to be used when connecting.")]
         public string UserPassword {
-            get { return userPassword; }
+            get {
+                return userPassword;
+            }
             set {
                 if (value == null || value.Trim() == string.Empty) {
                     value = null;
@@ -247,7 +260,9 @@ namespace CoApp.Toolkit.TaskService {
         /// <value> </value>
         /// <returns> true if the component can raise events; otherwise, false. The default is true. </returns>
         protected override bool CanRaiseEvents {
-            get { return false; }
+            get {
+                return false;
+            }
         }
 
         /// <summary>
@@ -334,8 +349,7 @@ namespace CoApp.Toolkit.TaskService {
                 if (iTask != null) {
                     t = new Task(this, iTask);
                 }
-            }
-            else {
+            } else {
                 var iTask = GetTask(v1TaskScheduler, taskPath);
                 if (iTask != null) {
                     t = new Task(this, iTask);
@@ -388,11 +402,9 @@ namespace CoApp.Toolkit.TaskService {
             try {
                 fld = iSvc.GetFolder("\\");
                 return fld.GetTask(name);
-            }
-            catch {
+            } catch {
                 return null;
-            }
-            finally {
+            } finally {
                 if (fld != null) {
                     Marshal.ReleaseComObject(fld);
                 }
@@ -403,8 +415,7 @@ namespace CoApp.Toolkit.TaskService {
             var ITaskGuid = Marshal.GenerateGuidForType(typeof (ITask));
             try {
                 return iSvc.Activate(name, ref ITaskGuid);
-            }
-            catch {
+            } catch {
             }
             return null;
         }
@@ -460,26 +471,23 @@ namespace CoApp.Toolkit.TaskService {
                         userName = v2TaskService.ConnectedUser;
                         userDomain = v2TaskService.ConnectedDomain;
                         maxVer = GetV2Version();
-                    }
-                    else {
+                    } else {
                         v1Impersonation = new WindowsImpersonatedIdentity(userName, userDomain, userPassword);
                         var csched = new CTaskScheduler();
-                        v1TaskScheduler = (ITaskScheduler) csched;
+                        v1TaskScheduler = (ITaskScheduler)csched;
                         if (!string.IsNullOrEmpty(targetServer)) {
                             // Check to ensure UNC format for server name. (Suggested by bigsan)
                             if (!targetServer.StartsWith(@"\\")) {
                                 targetServer = @"\\" + targetServer;
                             }
-                        }
-                        else {
+                        } else {
                             targetServer = null;
                         }
                         v1TaskScheduler.SetTargetComputer(targetServer);
                         targetServer = v1TaskScheduler.GetTargetComputer();
                         maxVer = v1Ver;
                     }
-                }
-                else {
+                } else {
                     throw new ArgumentException("A username, password, and domain must be provided.");
                 }
             }
@@ -508,7 +516,7 @@ namespace CoApp.Toolkit.TaskService {
 
         private Version GetV2Version() {
             var v = v2TaskService.HighestVersion;
-            return new Version((int) (v >> 16), (int) (v & 0x0000FFFF));
+            return new Version((int)(v >> 16), (int)(v & 0x0000FFFF));
         }
 
         private void ResetUnsetProperties() {
@@ -532,8 +540,7 @@ namespace CoApp.Toolkit.TaskService {
         private void ResetHighestSupportedVersion() {
             if (Connected) {
                 maxVer = v2TaskService != null ? GetV2Version() : v1Ver;
-            }
-            else {
+            } else {
                 maxVer = hasV2 ? (Environment.OSVersion.Version.Minor > 0 ? new Version(1, 3) : new Version(1, 2)) : v1Ver;
             }
         }

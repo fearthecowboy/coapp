@@ -30,7 +30,6 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR 
 // OTHER DEALINGS IN THE SOFTWARE.
 
-
 namespace CoApp.Toolkit.TaskService {
     using System;
     using System.Collections.Generic;
@@ -49,9 +48,9 @@ namespace CoApp.Toolkit.TaskService {
         public static string GetString(object enumValue) {
             switch (enumValue.GetType().Name) {
                 case "DaysOfTheWeek":
-                    return GetCultureEquivalentString((DaysOfTheWeek) enumValue);
+                    return GetCultureEquivalentString((DaysOfTheWeek)enumValue);
                 case "MonthsOfTheYear":
-                    return GetCultureEquivalentString((MonthsOfTheYear) enumValue);
+                    return GetCultureEquivalentString((MonthsOfTheYear)enumValue);
                 case "TaskTriggerType":
                     return BuildEnumString("TriggerType", enumValue);
                 case "WhichWeek":
@@ -74,8 +73,8 @@ namespace CoApp.Toolkit.TaskService {
             var s = new List<string>(7);
             var vals = Enum.GetValues(val.GetType());
             for (var i = 0; i < vals.Length - 1; i++) {
-                if ((val & (DaysOfTheWeek) vals.GetValue(i)) > 0) {
-                    s.Add(DateTimeFormatInfo.CurrentInfo.GetDayName((DayOfWeek) i));
+                if ((val & (DaysOfTheWeek)vals.GetValue(i)) > 0) {
+                    s.Add(DateTimeFormatInfo.CurrentInfo.GetDayName((DayOfWeek)i));
                 }
             }
 
@@ -90,7 +89,7 @@ namespace CoApp.Toolkit.TaskService {
             var s = new List<string>(12);
             var vals = Enum.GetValues(val.GetType());
             for (var i = 0; i < vals.Length - 1; i++) {
-                if ((val & (MonthsOfTheYear) vals.GetValue(i)) > 0) {
+                if ((val & (MonthsOfTheYear)vals.GetValue(i)) > 0) {
                     s.Add(DateTimeFormatInfo.CurrentInfo.GetMonthName(i + 1));
                 }
             }

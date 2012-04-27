@@ -8,7 +8,6 @@
 // </license>
 //-----------------------------------------------------------------------
 
-
 namespace CoApp.Toolkit.Win32 {
     using System;
     using System.Windows.Forms;
@@ -17,7 +16,6 @@ namespace CoApp.Toolkit.Win32 {
     ///   Defines a delegate for Message handling
     /// </summary>
     public delegate void MessageEventHandler(object sender, ref Message msg, ref bool handled);
-
 
     /// <summary>
     ///   Inherits from System.Windows.Form.NativeWindow. Provides an Event for Message handling

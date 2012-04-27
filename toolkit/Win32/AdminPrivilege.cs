@@ -29,7 +29,6 @@
 * MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
 \*************************************************************************************/
 
-
 namespace CoApp.Toolkit.Win32 {
     using System;
     using System.ComponentModel;
@@ -39,16 +38,9 @@ namespace CoApp.Toolkit.Win32 {
 
     public class AdminPrivilege {
         /// <summary>
-        ///   The function checks whether the current process is run as administrator.
-        ///   In other words, it dictates whether the primary access token of the 
-        ///   process belongs to user account that is a member of the local 
-        ///   Administrators group and it is elevated.
+        ///   The function checks whether the current process is run as administrator. In other words, it dictates whether the primary access token of the process belongs to user account that is a member of the local Administrators group and it is elevated.
         /// </summary>
-        /// <returns>
-        ///   Returns true if the primary access token of the process belongs to user 
-        ///   account that is a member of the local Administrators group and it is 
-        ///   elevated. Returns false if the token does not.
-        /// </returns>
+        /// <returns> Returns true if the primary access token of the process belongs to user account that is a member of the local Administrators group and it is elevated. Returns false if the token does not. </returns>
         public static bool IsRunAsAdmin {
             get {
                 var id = WindowsIdentity.GetCurrent();
@@ -58,19 +50,11 @@ namespace CoApp.Toolkit.Win32 {
         }
 
         /// <summary>
-        ///   The function checks whether the primary access token of the process belongs 
-        ///   to user account that is a member of the local Administrators group, even if 
-        ///   it currently is not elevated.
+        ///   The function checks whether the primary access token of the process belongs to user account that is a member of the local Administrators group, even if it currently is not elevated.
         /// </summary>
-        /// <returns>
-        ///   Returns true if the primary access token of the process belongs to user 
-        ///   account that is a member of the local Administrators group. Returns false 
-        ///   if the token does not.
-        /// </returns>
-        /// <exception cref = "System.ComponentModel.Win32Exception">
-        ///   When any native Windows API call fails, the function throws a Win32Exception 
-        ///   with the last error code.
-        /// </exception>
+        /// <returns> Returns true if the primary access token of the process belongs to user account that is a member of the local Administrators group. Returns false if the token does not. </returns>
+        /// <exception cref="System.ComponentModel.Win32Exception">When any native Windows API call fails, the function throws a Win32Exception 
+        ///   with the last error code.</exception>
         public static bool IsUserInAdminGroup() {
             var fInAdminGroup = false;
             SafeTokenHandle hToken = null;
@@ -106,7 +90,7 @@ namespace CoApp.Toolkit.Win32 {
                     }
 
                     // Marshal the TOKEN_ELEVATION_TYPE enum from native to .NET.
-                    var elevType = (TokenElevationType) Marshal.ReadInt32(pElevationType);
+                    var elevType = (TokenElevationType)Marshal.ReadInt32(pElevationType);
 
                     // If limited, get the linked elevated token for further check.
                     if (elevType == TokenElevationType.TokenElevationTypeLimited) {
@@ -142,8 +126,7 @@ namespace CoApp.Toolkit.Win32 {
                 var id = new WindowsIdentity(hTokenToCheck.DangerousGetHandle());
                 var principal = new WindowsPrincipal(id);
                 fInAdminGroup = principal.IsInRole(WindowsBuiltInRole.Administrator);
-            }
-            finally {
+            } finally {
                 // Centralized cleanup for all allocated resources. 
                 if (hToken != null) {
                     hToken.Close();
@@ -166,30 +149,14 @@ namespace CoApp.Toolkit.Win32 {
             return fInAdminGroup;
         }
 
-
         /// <summary>
-        ///   The function gets the elevation information of the current process. It 
-        ///   dictates whether the process is elevated or not. Token elevation is only 
-        ///   available on Windows Vista and newer operating systems, thus 
-        ///   IsProcessElevated throws a C++ exception if it is called on systems prior 
-        ///   to Windows Vista. It is not appropriate to use this function to determine 
-        ///   whether a process is run as administartor.
+        ///   The function gets the elevation information of the current process. It dictates whether the process is elevated or not. Token elevation is only available on Windows Vista and newer operating systems, thus IsProcessElevated throws a C++ exception if it is called on systems prior to Windows Vista. It is not appropriate to use this function to determine whether a process is run as administartor.
         /// </summary>
-        /// <returns>
-        ///   Returns true if the process is elevated. Returns false if it is not.
-        /// </returns>
-        /// <exception cref = "System.ComponentModel.Win32Exception">
-        ///   When any native Windows API call fails, the function throws a Win32Exception 
-        ///   with the last error code.
-        /// </exception>
+        /// <returns> Returns true if the process is elevated. Returns false if it is not. </returns>
+        /// <exception cref="System.ComponentModel.Win32Exception">When any native Windows API call fails, the function throws a Win32Exception 
+        ///   with the last error code.</exception>
         /// <remarks>
-        ///   TOKEN_INFORMATION_CLASS provides TokenElevationType to check the elevation 
-        ///   type (TokenElevationTypeDefault / TokenElevationTypeLimited / 
-        ///   TokenElevationTypeFull) of the process. It is different from TokenElevation 
-        ///   in that, when UAC is turned off, elevation type always returns 
-        ///   TokenElevationTypeDefault even though the process is elevated (Integrity 
-        ///   Level == High). In other words, it is not safe to say if the process is 
-        ///   elevated based on elevation type. Instead, we should use TokenElevation.
+        ///   TOKEN_INFORMATION_CLASS provides TokenElevationType to check the elevation type (TokenElevationTypeDefault / TokenElevationTypeLimited / TokenElevationTypeFull) of the process. It is different from TokenElevation in that, when UAC is turned off, elevation type always returns TokenElevationTypeDefault even though the process is elevated (Integrity Level == High). In other words, it is not safe to say if the process is elevated based on elevation type. Instead, we should use TokenElevation.
         /// </remarks>
         public static bool IsProcessElevated() {
             var fIsElevated = false;
@@ -227,16 +194,14 @@ namespace CoApp.Toolkit.Win32 {
                 }
 
                 // Marshal the TOKEN_ELEVATION struct from native to .NET object.
-                var elevation = (TokenElevation) Marshal.PtrToStructure(pTokenElevation, typeof (TokenElevation));
+                var elevation = (TokenElevation)Marshal.PtrToStructure(pTokenElevation, typeof (TokenElevation));
 
                 // TOKEN_ELEVATION.TokenIsElevated is a non-zero value if the token 
                 // has elevated privileges; otherwise, a zero value.
                 fIsElevated = (elevation.TokenIsElevated != 0);
-            }
-            catch (Exception) {
+            } catch (Exception) {
                 return false;
-            }
-            finally {
+            } finally {
                 // Centralized cleanup for all allocated resources. 
                 /* if (hToken != null) {
                     hToken.Close();
@@ -253,43 +218,12 @@ namespace CoApp.Toolkit.Win32 {
             return fIsElevated;
         }
 
-
         /// <summary>
-        ///   The function gets the integrity level of the current process. Integrity 
-        ///   level is only available on Windows Vista and newer operating systems, thus 
-        ///   GetProcessIntegrityLevel throws a C++ exception if it is called on systems 
-        ///   prior to Windows Vista.
+        ///   The function gets the integrity level of the current process. Integrity level is only available on Windows Vista and newer operating systems, thus GetProcessIntegrityLevel throws a C++ exception if it is called on systems prior to Windows Vista.
         /// </summary>
-        /// <returns>
-        ///   Returns the integrity level of the current process. It is usually one of 
-        ///   these values:
-        /// 
-        ///   SECURITY_MANDATORY_UNTRUSTED_RID - means untrusted level. It is used 
-        ///   by processes started by the Anonymous group. Blocks most write access.
-        ///   (SID: S-1-16-0x0)
-        ///    
-        ///   SECURITY_MANDATORY_LOW_RID - means low integrity level. It is used by
-        ///   Protected Mode Internet Explorer. Blocks write acess to most objects 
-        ///   (such as files and registry keys) on the system. (SID: S-1-16-0x1000)
-        /// 
-        ///   SECURITY_MANDATORY_MEDIUM_RID - means medium integrity level. It is 
-        ///   used by normal applications being launched while UAC is enabled. 
-        ///   (SID: S-1-16-0x2000)
-        ///    
-        ///   SECURITY_MANDATORY_HIGH_RID - means high integrity level. It is used 
-        ///   by administrative applications launched through elevation when UAC is 
-        ///   enabled, or normal applications if UAC is disabled and the user is an 
-        ///   administrator. (SID: S-1-16-0x3000)
-        ///    
-        ///   SECURITY_MANDATORY_SYSTEM_RID - means system integrity level. It is 
-        ///   used by services and other system-level applications (such as Wininit, 
-        ///   Winlogon, Smss, etc.)  (SID: S-1-16-0x4000)
-        /// 
-        /// </returns>
-        /// <exception cref = "System.ComponentModel.Win32Exception">
-        ///   When any native Windows API call fails, the function throws a Win32Exception 
-        ///   with the last error code.
-        /// </exception>
+        /// <returns> Returns the integrity level of the current process. It is usually one of these values: SECURITY_MANDATORY_UNTRUSTED_RID - means untrusted level. It is used by processes started by the Anonymous group. Blocks most write access. (SID: S-1-16-0x0) SECURITY_MANDATORY_LOW_RID - means low integrity level. It is used by Protected Mode Internet Explorer. Blocks write acess to most objects (such as files and registry keys) on the system. (SID: S-1-16-0x1000) SECURITY_MANDATORY_MEDIUM_RID - means medium integrity level. It is used by normal applications being launched while UAC is enabled. (SID: S-1-16-0x2000) SECURITY_MANDATORY_HIGH_RID - means high integrity level. It is used by administrative applications launched through elevation when UAC is enabled, or normal applications if UAC is disabled and the user is an administrator. (SID: S-1-16-0x3000) SECURITY_MANDATORY_SYSTEM_RID - means system integrity level. It is used by services and other system-level applications (such as Wininit, Winlogon, Smss, etc.) (SID: S-1-16-0x4000) </returns>
+        /// <exception cref="System.ComponentModel.Win32Exception">When any native Windows API call fails, the function throws a Win32Exception 
+        ///   with the last error code.</exception>
         public static int GetProcessIntegrityLevel() {
             var IL = -1;
             SafeTokenHandle hToken = null;
@@ -332,15 +266,14 @@ namespace CoApp.Toolkit.Win32 {
                 }
 
                 // Marshal the TOKEN_MANDATORY_LABEL struct from native to .NET object.
-                var tokenIL = (TokenMandatoryLabel) Marshal.PtrToStructure(pTokenIL, typeof (TokenMandatoryLabel));
+                var tokenIL = (TokenMandatoryLabel)Marshal.PtrToStructure(pTokenIL, typeof (TokenMandatoryLabel));
 
                 // Integrity Level SIDs are in the form of S-1-16-0xXXXX. (e.g. 
                 // S-1-16-0x1000 stands for low integrity level SID). There is one 
                 // and only one subauthority.
                 var pIL = Advapi32.GetSidSubAuthority(tokenIL.Label.Sid, 0);
                 IL = Marshal.ReadInt32(pIL);
-            }
-            finally {
+            } finally {
                 // Centralized cleanup for all allocated resources. 
                 if (hToken != null) {
                     hToken.Close();

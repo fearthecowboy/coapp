@@ -23,11 +23,11 @@ namespace CoApp.Toolkit.Win32 {
         }
 
         public static implicit operator ulong(SizeT size) {
-            return (ulong) size._value;
+            return (ulong)size._value;
         }
 
         public static implicit operator uint(SizeT size) {
-            return (uint) size._value;
+            return (uint)size._value;
         }
 
         public static implicit operator SizeT(ulong size) {
@@ -47,19 +47,19 @@ namespace CoApp.Toolkit.Win32 {
         }
 
         public static bool operator <(SizeT a, SizeT b) {
-            return (ulong) a._value < (ulong) b._value;
+            return (ulong)a._value < (ulong)b._value;
         }
 
         public static bool operator >(SizeT a, SizeT b) {
-            return (ulong) a._value > (ulong) b._value;
+            return (ulong)a._value > (ulong)b._value;
         }
 
         public static bool operator <=(SizeT a, SizeT b) {
-            return (ulong) a._value <= (ulong) b._value;
+            return (ulong)a._value <= (ulong)b._value;
         }
 
         public static bool operator >=(SizeT a, SizeT b) {
-            return (ulong) a._value >= (ulong) b._value;
+            return (ulong)a._value >= (ulong)b._value;
         }
 
         public bool Equals(SizeT other) {
@@ -73,7 +73,7 @@ namespace CoApp.Toolkit.Win32 {
             if (obj.GetType() != typeof (SizeT)) {
                 return false;
             }
-            return Equals((SizeT) obj);
+            return Equals((SizeT)obj);
         }
 
         public override int GetHashCode() {

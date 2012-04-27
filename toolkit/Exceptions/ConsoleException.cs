@@ -9,8 +9,7 @@
 //-----------------------------------------------------------------------
 
 namespace CoApp.Toolkit.Exceptions {
-    using System;
-    using CoApp.Toolkit.Extensions;
+    using Extensions;
 
     public class ConsoleException : CoAppException {
         public ConsoleException(string reason, params object[] parameters) : base(reason.format(parameters)) {

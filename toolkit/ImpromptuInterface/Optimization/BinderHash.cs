@@ -13,16 +13,12 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-namespace CoApp.Toolkit.ImpromptuInterface.Optimization
-{
+namespace CoApp.Toolkit.ImpromptuInterface.Optimization {
     using System;
     using System.Linq;
 
-    internal class BinderHash
-    {
-
-        protected BinderHash(Type delegateType, String_OR_InvokeMemberName name, Type context, string[] argNames, Type binderType, bool staticContext, bool isEvent)
-        {
+    internal class BinderHash {
+        protected BinderHash(Type delegateType, String_OR_InvokeMemberName name, Type context, string[] argNames, Type binderType, bool staticContext, bool isEvent) {
             BinderType = binderType;
             StaticContext = staticContext;
             DelegateType = delegateType;
@@ -30,14 +26,11 @@ namespace CoApp.Toolkit.ImpromptuInterface.Optimization
             Context = context;
             ArgNames = argNames;
             IsEvent = isEvent;
-
         }
 
-        public static BinderHash Create(Type delType, String_OR_InvokeMemberName name, Type context, string[] argNames, Type binderType, bool staticContext, bool isEvent)
-        {
+        public static BinderHash Create(Type delType, String_OR_InvokeMemberName name, Type context, string[] argNames, Type binderType, bool staticContext, bool isEvent) {
             return new BinderHash(delType, name, context, argNames, binderType, staticContext, isEvent);
         }
-
 
         public Type BinderType { get; protected set; }
         public bool StaticContext { get; protected set; }
@@ -47,95 +40,89 @@ namespace CoApp.Toolkit.ImpromptuInterface.Optimization
         public Type Context { get; protected set; }
         public string[] ArgNames { get; protected set; }
 
-        public virtual bool Equals(BinderHash other)
-        {
-            if (ReferenceEquals(null, other)) return false;
-            if (ReferenceEquals(this, other)) return true;
+        public virtual bool Equals(BinderHash other) {
+            if (ReferenceEquals(null, other)) {
+                return false;
+            }
+            if (ReferenceEquals(this, other)) {
+                return true;
+            }
 
             var tArgNames = ArgNames;
             var tOtherArgNames = other.ArgNames;
 
             return
                 !(tOtherArgNames == null ^ tArgNames == null)
-                && other.IsEvent == IsEvent
-                && other.StaticContext == StaticContext
-                && Equals(other.Context, Context)
-                && Equals(other.BinderType, BinderType)
-                && Equals(other.DelegateType, DelegateType)
-                && Equals(other.Name, Name)
-                && (tArgNames == null
-                // ReSharper disable AssignNullToNotNullAttribute
-                //Exclusive Or Makes Sure this doesn't happen
-                                 
-                                 || tOtherArgNames.SequenceEqual(tArgNames));
+                    && other.IsEvent == IsEvent
+                        && other.StaticContext == StaticContext
+                            && Equals(other.Context, Context)
+                                && Equals(other.BinderType, BinderType)
+                                    && Equals(other.DelegateType, DelegateType)
+                                        && Equals(other.Name, Name)
+                                            && (tArgNames == null
+                                                // ReSharper disable AssignNullToNotNullAttribute
+                                                //Exclusive Or Makes Sure this doesn't happen
+                                                || tOtherArgNames.SequenceEqual(tArgNames));
             // ReSharper restore AssignNullToNotNullAttribute
         }
 
-
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (!(obj is BinderHash)) return false;
-            return Equals((BinderHash) obj);
+        public override bool Equals(object obj) {
+            if (ReferenceEquals(null, obj)) {
+                return false;
+            }
+            if (ReferenceEquals(this, obj)) {
+                return true;
+            }
+            if (!(obj is BinderHash)) {
+                return false;
+            }
+            return Equals((BinderHash)obj);
         }
 
-        public override int GetHashCode()
-        {
-            unchecked
-            {
+        public override int GetHashCode() {
+            unchecked {
                 var tArgNames = ArgNames;
 
-                int result = (tArgNames == null ? 0 : tArgNames.Length * 397);
-                result = (result  ^ StaticContext.GetHashCode());
-                result = (result * 397) ^ DelegateType.GetHashCode();
-                result = (result * 397) ^ Context.GetHashCode();
-                result = (result * 397) ^ Name.GetHashCode();
+                int result = (tArgNames == null ? 0 : tArgNames.Length*397);
+                result = (result ^ StaticContext.GetHashCode());
+                result = (result*397) ^ DelegateType.GetHashCode();
+                result = (result*397) ^ Context.GetHashCode();
+                result = (result*397) ^ Name.GetHashCode();
                 return result;
             }
         }
     }
 
-    internal class GenericBinderHashBase : BinderHash
-    {
+    internal class GenericBinderHashBase : BinderHash {
         protected GenericBinderHashBase(Type delegateType, String_OR_InvokeMemberName name, Type context, string[] argNames, Type binderType, bool staticContext, bool isEvent)
-            : base(delegateType, name, context, argNames, binderType, staticContext, isEvent)
-        {
+            : base(delegateType, name, context, argNames, binderType, staticContext, isEvent) {
         }
     }
 
-    internal class BinderHash<T> : GenericBinderHashBase where T : class
-    {
-
-        public static BinderHash<T> Create(String_OR_InvokeMemberName name, Type context, string[] argNames, Type binderType, bool staticContext, bool isEvent)
-        {
-            return new BinderHash<T>(name, context, argNames, binderType, staticContext, isEvent );
+    internal class BinderHash<T> : GenericBinderHashBase where T : class {
+        public static BinderHash<T> Create(String_OR_InvokeMemberName name, Type context, string[] argNames, Type binderType, bool staticContext, bool isEvent) {
+            return new BinderHash<T>(name, context, argNames, binderType, staticContext, isEvent);
         }
 
         protected BinderHash(String_OR_InvokeMemberName name, Type context, string[] argNames, Type binderType, bool staticContext, bool isEvent)
-            : base(typeof(T), name, context, argNames, binderType, staticContext, isEvent)
-        {
+            : base(typeof (T), name, context, argNames, binderType, staticContext, isEvent) {
         }
 
-
-        public override bool Equals(BinderHash other)
-        {
-            if (other is GenericBinderHashBase)
-            {
-                if (other is BinderHash<T>)
-                {
-                    return 
-                           !(other.ArgNames == null ^ ArgNames == null)
-                           && other.IsEvent == IsEvent
-                           && other.StaticContext == StaticContext
-                           && Equals(other.BinderType, BinderType)
-                           && Equals(other.Context, Context)
-                           && Equals(other.Name, Name)
-                           && (ArgNames == null
-                            // ReSharper disable AssignNullToNotNullAttribute
-                                 //Exclusive Or Makes Sure this doesn't happen
-                                 || other.ArgNames.SequenceEqual(ArgNames));
-                            // ReSharper restore AssignNullToNotNullAttribute
+        public override bool Equals(BinderHash other) {
+            if (other is GenericBinderHashBase) {
+                if (other is BinderHash<T>) {
+                    return
+                        !(other.ArgNames == null ^ ArgNames == null)
+                            && other.IsEvent == IsEvent
+                                && other.StaticContext == StaticContext
+                                    && Equals(other.BinderType, BinderType)
+                                        && Equals(other.Context, Context)
+                                            && Equals(other.Name, Name)
+                                                && (ArgNames == null
+                                                    // ReSharper disable AssignNullToNotNullAttribute
+                                                    //Exclusive Or Makes Sure this doesn't happen
+                                                    || other.ArgNames.SequenceEqual(ArgNames));
+                    // ReSharper restore AssignNullToNotNullAttribute
                 }
                 return false;
             }

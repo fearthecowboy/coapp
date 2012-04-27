@@ -28,8 +28,7 @@ namespace CoApp.Toolkit.Win32 {
     using System.Runtime.InteropServices;
 
     /// <summary>
-    ///   Hardware-independent icon directory entry.
-    ///   See http://msdn.microsoft.com/en-us/library/ms997538.aspx for more information.
+    ///   Hardware-independent icon directory entry. See http://msdn.microsoft.com/en-us/library/ms997538.aspx for more information.
     /// </summary>
     [StructLayout(LayoutKind.Sequential, Pack = 2)]
     public struct GrpIconDirEntry {
@@ -44,9 +43,8 @@ namespace CoApp.Toolkit.Win32 {
         public Byte bHeight;
 
         /// <summary>
-        ///   Number of colors in the image. 
-        ///   bColors = 1 << (wBitsPerPixel * wPlanes)
-        ///   If wBitsPerPixel* wPlanes is greater orequal to 8, then bColors =  0.
+        ///   Number of colors in the image. bColors = 1 < < (wBitsPerPixel * wPlanes)
+        ///    If wBitsPerPixel* wPlanes is greater orequal to 8, then bColors= 0 .
         /// </summary>
         public Byte bColors;
 
@@ -56,14 +54,12 @@ namespace CoApp.Toolkit.Win32 {
         public Byte bReserved;
 
         /// <summary>
-        ///   Number of bitmap planes.
-        ///   1: monochrome bitmap
+        ///   Number of bitmap planes. 1: monochrome bitmap
         /// </summary>
         public UInt16 wPlanes;
 
         /// <summary>
-        ///   Bits per pixel.
-        ///   1: monochrome bitmap
+        ///   Bits per pixel. 1: monochrome bitmap
         /// </summary>
         public UInt16 wBitsPerPixel;
 

@@ -23,7 +23,6 @@
 // </license>
 //-----------------------------------------------------------------------
 
-
 namespace CoApp.Toolkit.Win32 {
     using System;
     using System.Runtime.InteropServices;
@@ -54,14 +53,12 @@ namespace CoApp.Toolkit.Win32 {
         public Byte bReserved;
 
         /// <summary>
-        ///   Number of bitmap planes for icons.
-        ///   Horizontal hotspot for cursors.
+        ///   Number of bitmap planes for icons. Horizontal hotspot for cursors.
         /// </summary>
         public UInt16 wPlanes;
 
         /// <summary>
-        ///   Bits per pixel for icons.
-        ///   Vertical hostpot for cursors.
+        ///   Bits per pixel for icons. Vertical hostpot for cursors.
         /// </summary>
         public UInt16 wBitsPerPixel;
 

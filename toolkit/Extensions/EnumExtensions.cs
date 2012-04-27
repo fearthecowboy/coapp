@@ -8,30 +8,31 @@
 // </license>
 //-----------------------------------------------------------------------
 
-using System;
-using System.Linq;
-
 namespace CoApp.Toolkit.Extensions {
+    using System;
+    using System.Linq;
 
     public static class EnumExtensions {
         public static T ParseEnum<T>(this string value, T defaultValue = default(T)) where T : struct, IConvertible {
-            if (!typeof(T).IsEnum)
+            if (!typeof (T).IsEnum) {
                 throw new ArgumentException("T must be an enumerated type");
+            }
 
-            if (Enum.IsDefined(typeof(T), value)) {
-                return (T)Enum.Parse(typeof(T), value, true);
+            if (Enum.IsDefined(typeof (T), value)) {
+                return (T)Enum.Parse(typeof (T), value, true);
             }
             return defaultValue;
         }
 
         public static T CastToEnum<T>(this string value) where T : struct, IConvertible {
-            if (!typeof(T).IsEnum)
+            if (!typeof (T).IsEnum) {
                 throw new ArgumentException("T must be an enumerated type");
+            }
 
             if (value.Contains("+")) {
                 var values = value.Split('+');
-                Type numberType = Enum.GetUnderlyingType(typeof(T));
-                if (numberType.Equals(typeof(int))) {
+                Type numberType = Enum.GetUnderlyingType(typeof (T));
+                if (numberType.Equals(typeof (int))) {
                     var newResult = values.Aggregate(0, (current, val) => current | (int)(Object)ParseEnum<T>(val));
                     return (T)(Object)newResult;
                 }
@@ -39,8 +40,8 @@ namespace CoApp.Toolkit.Extensions {
             return ParseEnum<T>(value);
         }
 
-        public static string CastToString<T>(this T value) where T: struct, IConvertible  {
-            return Enum.Format(typeof(T), value, "G").Replace(", ", "+");
+        public static string CastToString<T>(this T value) where T : struct, IConvertible {
+            return Enum.Format(typeof (T), value, "G").Replace(", ", "+");
         }
     }
 }

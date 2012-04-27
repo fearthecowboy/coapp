@@ -23,15 +23,16 @@ namespace CoApp.Toolkit.Tasks {
     public static class CurrentTask {
         public class TaskBoundEvents {
             public static TaskBoundEvents Instance = new TaskBoundEvents();
+
             private TaskBoundEvents() {
             }
 
             /// <summary>
-            /// Adds an event handler delegate to the current tasktask 
+            ///   Adds an event handler delegate to the current tasktask
             /// </summary>
-            /// <param name="taskBoundEvents"></param>
-            /// <param name="eventHandlerDelegate"></param>
-            /// <returns></returns>
+            /// <param name="taskBoundEvents"> </param>
+            /// <param name="eventHandlerDelegate"> </param>
+            /// <returns> </returns>
             public static TaskBoundEvents operator +(TaskBoundEvents taskBoundEvents, Delegate eventHandlerDelegate) {
                 CoTask.CurrentTask.AddEventHandler(eventHandlerDelegate);
                 return Instance;
@@ -47,22 +48,24 @@ namespace CoApp.Toolkit.Tasks {
     }
 
     public static class Event<T> where T : class {
-
         private static T _emptyDelegate;
 
         /// <summary>
-        /// Gets the parameter types of a Delegate
+        ///   Gets the parameter types of a Delegate
         /// </summary>
-        /// <param name="d">The d.</param>
-        /// <returns></returns>
-        /// <remarks></remarks>
+        /// <param name="d"> The d. </param>
+        /// <returns> </returns>
+        /// <remarks>
+        /// </remarks>
         private static Type[] GetDelegateParameterTypes(Type d) {
-            if (d.BaseType != typeof(MulticastDelegate))
+            if (d.BaseType != typeof (MulticastDelegate)) {
                 throw new ApplicationException("Not a delegate.");
+            }
 
             var invoke = d.GetMethod("Invoke");
-            if (invoke == null)
+            if (invoke == null) {
                 throw new ApplicationException("Not a delegate.");
+            }
 
             var parameters = invoke.GetParameters();
             var typeParameters = new Type[parameters.Length];
@@ -73,25 +76,27 @@ namespace CoApp.Toolkit.Tasks {
         }
 
         /// <summary>
-        /// Gets the Return type of a delegate
+        ///   Gets the Return type of a delegate
         /// </summary>
-        /// <param name="d">The d.</param>
-        /// <returns></returns>
-        /// <remarks></remarks>
+        /// <param name="d"> The d. </param>
+        /// <returns> </returns>
+        /// <remarks>
+        /// </remarks>
         private static Type GetDelegateReturnType(Type d) {
-            if (d.BaseType != typeof(MulticastDelegate))
+            if (d.BaseType != typeof (MulticastDelegate)) {
                 throw new ApplicationException("Not a delegate.");
+            }
 
             MethodInfo invoke = d.GetMethod("Invoke");
-            if (invoke == null)
+            if (invoke == null) {
                 throw new ApplicationException("Not a delegate.");
+            }
 
             return invoke.ReturnType;
         }
 
         /// <summary>
-        /// Returns a delegate that does nothing, and returns default(T) that can be used
-        /// without having to check to see if the delegate is null.
+        ///   Returns a delegate that does nothing, and returns default(T) that can be used without having to check to see if the delegate is null.
         /// </summary>
         private static T EmptyDelegate {
             get {
@@ -118,7 +123,7 @@ namespace CoApp.Toolkit.Tasks {
 
         public static T Raise {
             get {
-                return (CoTask.CurrentTask.GetEventHandler(typeof(T)) as T) ?? EmptyDelegate;
+                return (CoTask.CurrentTask.GetEventHandler(typeof (T)) as T) ?? EmptyDelegate;
             }
         }
 
@@ -132,7 +137,7 @@ namespace CoApp.Toolkit.Tasks {
 
     public static class CoTask {
         private static readonly FieldInfo ParentTaskField = typeof (Task).GetField("m_parent", BindingFlags.NonPublic | BindingFlags.DeclaredOnly | BindingFlags.Instance);
-        private static readonly PropertyInfo CurrentTaskProperty = typeof(Task).GetProperty("InternalCurrent", BindingFlags.NonPublic | BindingFlags.DeclaredOnly | BindingFlags.Static);
+        private static readonly PropertyInfo CurrentTaskProperty = typeof (Task).GetProperty("InternalCurrent", BindingFlags.NonPublic | BindingFlags.DeclaredOnly | BindingFlags.Static);
         private static readonly Dictionary<Task, List<Delegate>> Tasks = new Dictionary<Task, List<Delegate>>();
         private static readonly Dictionary<Task, Task> ParentTasks = new Dictionary<Task, Task>();
         private static readonly List<Delegate> NullTaskDelegates = new List<Delegate>();
@@ -150,8 +155,9 @@ namespace CoApp.Toolkit.Tasks {
         }
 
         private static bool IsTaskReallyCompleted(Task task) {
-            if( !task.IsCompleted )
+            if (!task.IsCompleted) {
                 return false;
+            }
 
             return !(from child in ParentTasks.Keys where ParentTasks[child] == task && !IsTaskReallyCompleted(child) select child).Any();
         }
@@ -173,17 +179,13 @@ namespace CoApp.Toolkit.Tasks {
         }
 
         /// <summary>
-        /// This associates a child task with the parent task.
-        /// 
-        /// This isn't necessary (and will have no effect) when the child task is created with AttachToParent in the creation/continuation options,
-        /// but it does take a few cycles to validate that there is actually a parent, so don't call this when not needed. 
+        ///   This associates a child task with the parent task. This isn't necessary (and will have no effect) when the child task is created with AttachToParent in the creation/continuation options, but it does take a few cycles to validate that there is actually a parent, so don't call this when not needed.
         /// </summary>
-        /// <param name="task"></param>
-        /// <returns></returns>
+        /// <param name="task"> </param>
+        /// <returns> </returns>
         public static Task AutoManage(this Task task) {
-
 #if DEBUG
-            if( task.GetParentTask() != null ) {
+            if (task.GetParentTask() != null) {
                 var stackTrace = new StackTrace(true);
                 var frames = stackTrace.GetFrames();
                 if (frames != null) {
@@ -205,8 +207,8 @@ namespace CoApp.Toolkit.Tasks {
             }
 #endif
 
-            if ( task.GetParentTask() == null ) {
-                lock( ParentTasks ) {
+            if (task.GetParentTask() == null) {
+                lock (ParentTasks) {
                     var currentTask = CurrentTask;
                     if (currentTask != null) {
                         // the given task isn't attached to the parent.
@@ -219,47 +221,52 @@ namespace CoApp.Toolkit.Tasks {
         }
 
         public static Task<T> AutoManage<T>(this Task<T> task) {
-            AutoManage((Task) task);
+            AutoManage((Task)task);
             return task;
         }
 
-        internal static Task CurrentTask { get {
-            return CurrentTaskProperty.GetValue(null, null) as Task;
-        }}
+        internal static Task CurrentTask {
+            get {
+                return CurrentTaskProperty.GetValue(null, null) as Task;
+            }
+        }
 
-        internal static Task GetParentTask( this Task task ) {
+        internal static Task GetParentTask(this Task task) {
             if (task == null) {
                 return null;
             }
-                
+
             return ParentTaskField.GetValue(task) as Task ?? (ParentTasks.ContainsKey(task) ? ParentTasks[task] : null);
         }
 
         internal static Task ParentTask {
-            get { return CurrentTask.GetParentTask(); }
+            get {
+                return CurrentTask.GetParentTask();
+            }
         }
-  
+
         /// <summary>
-        /// Gets the message handler.
+        ///   Gets the message handler.
         /// </summary>
-        /// <param name="task">The task to get the message handler for.</param>
-        /// <param name="eventDelegateHandlerType">the delegate handler class</param>
-        /// <returns>A delegate handler; null if there isn't one. </returns>
-        /// <remarks></remarks>
+        /// <param name="task"> The task to get the message handler for. </param>
+        /// <param name="eventDelegateHandlerType"> the delegate handler class </param>
+        /// <returns> A delegate handler; null if there isn't one. </returns>
+        /// <remarks>
+        /// </remarks>
         internal static Delegate GetEventHandler(this Task task, Type eventDelegateHandlerType) {
             if (task == null) {
                 return Delegate.Combine((from handlerDelegate in NullTaskDelegates where eventDelegateHandlerType.IsInstanceOfType(handlerDelegate) select handlerDelegate).ToArray());
             }
 
             // if the current task has an entry.
-            if( Tasks.ContainsKey(task)) {
-                var result  = Delegate.Combine((from handler in Tasks[task] where handler.GetType().IsAssignableFrom(eventDelegateHandlerType) select handler).ToArray());
+            if (Tasks.ContainsKey(task)) {
+                var result = Delegate.Combine((from handler in Tasks[task] where handler.GetType().IsAssignableFrom(eventDelegateHandlerType) select handler).ToArray());
                 return Delegate.Combine(result, GetEventHandler(task.GetParentTask(), eventDelegateHandlerType));
             }
 
             // otherwise, check with the parent.
             return GetEventHandler(task.GetParentTask(), eventDelegateHandlerType);
-        }  
+        }
 
         internal static Delegate AddEventHandler(this Task task, Delegate handler) {
             if (handler == null) {
@@ -273,8 +280,7 @@ namespace CoApp.Toolkit.Tasks {
             lock (Tasks) {
                 if (task == null) {
                     NullTaskDelegates.Add(handler);
-                }
-                else {
+                } else {
                     if (!Tasks.ContainsKey(task)) {
                         Tasks.Add(task, new List<Delegate>());
                     }
@@ -288,11 +294,10 @@ namespace CoApp.Toolkit.Tasks {
             if (handler != null) {
                 lock (Tasks) {
                     if (task == null) {
-                        if( NullTaskDelegates.Contains(handler) ) {
+                        if (NullTaskDelegates.Contains(handler)) {
                             NullTaskDelegates.Remove(handler);
                         }
-                    }
-                    else {
+                    } else {
                         if (Tasks.ContainsKey(task) && Tasks[task].Contains(handler)) {
                             Tasks[task].Remove(handler);
                         }
@@ -308,22 +313,21 @@ namespace CoApp.Toolkit.Tasks {
                 if (completedTask != null && completedTask.IsFaulted) {
                     tcs.TrySetException(completedTask.Exception.InnerExceptions);
                     enumerator.Dispose();
-                }
-                else if (enumerator.MoveNext()) {
+                } else if (enumerator.MoveNext()) {
                     enumerator.Current.ContinueWith(recursiveBody, TaskContinuationOptions.AttachedToParent | TaskContinuationOptions.ExecuteSynchronously);
-                }
-                else {
+                } else {
                     enumerator.Dispose();
                 }
             };
             recursiveBody(null);
         }
-        
-        public static void Ignore( this AggregateException aggregateException, Type type, Action saySomething = null) {
+
+        public static void Ignore(this AggregateException aggregateException, Type type, Action saySomething = null) {
             foreach (var exception in aggregateException.Flatten().InnerExceptions) {
                 if (exception.GetType() == type) {
-                    if (saySomething != null)
+                    if (saySomething != null) {
                         saySomething();
+                    }
                     continue;
                 }
                 throw new ConsoleException("Exception Caught: {0}\r\n    {1}", exception.Message, exception.StackTrace);

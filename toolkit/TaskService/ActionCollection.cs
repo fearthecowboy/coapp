@@ -30,7 +30,6 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR 
 // OTHER DEALINGS IN THE SOFTWARE.
 
-
 namespace CoApp.Toolkit.TaskService {
     using System;
     using System.Collections;
@@ -76,8 +75,7 @@ namespace CoApp.Toolkit.TaskService {
         public Action Add(Action action) {
             if (v2Def != null) {
                 action.Bind(v2Def);
-            }
-            else {
+            } else {
                 action.Bind(v1Task);
             }
             return action;
@@ -102,8 +100,7 @@ namespace CoApp.Toolkit.TaskService {
         public void Clear() {
             if (v2Coll != null) {
                 v2Coll.Clear();
-            }
-            else {
+            } else {
                 Add(new ExecAction());
             }
         }
@@ -120,7 +117,7 @@ namespace CoApp.Toolkit.TaskService {
 
             var pushItems = new Action[Count - index];
             for (var i = index; i < Count; i++) {
-                pushItems[i - index] = (Action) this[i].Clone();
+                pushItems[i - index] = (Action)this[i].Clone();
             }
             for (var j = Count - 1; j >= index; j--) {
                 RemoveAt(j);
@@ -142,11 +139,9 @@ namespace CoApp.Toolkit.TaskService {
             }
             if (v2Coll != null) {
                 v2Coll.Remove(++index);
-            }
-            else if (index == 0) {
+            } else if (index == 0) {
                 Add(new ExecAction());
-            }
-            else {
+            } else {
                 throw new NotV1SupportedException("There can be only a single action and it cannot be removed.");
             }
         }
@@ -201,8 +196,7 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Coll != null) {
                     v2Coll.Context = value;
-                }
-                else {
+                } else {
                     throw new NotV1SupportedException();
                 }
             }
@@ -216,7 +210,7 @@ namespace CoApp.Toolkit.TaskService {
                 if (v2Coll != null) {
                     return v2Coll.Count;
                 }
-                return ((string) v1Task.GetApplicationName()).Length == 0 ? 0 : 1;
+                return ((string)v1Task.GetApplicationName()).Length == 0 ? 0 : 1;
             }
         }
 
@@ -233,8 +227,7 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Coll != null) {
                     v2Coll.XmlText = value;
-                }
-                else {
+                } else {
                     throw new NotV1SupportedException();
                 }
             }
@@ -297,7 +290,9 @@ namespace CoApp.Toolkit.TaskService {
             }
 
             object IEnumerator.Current {
-                get { return Current; }
+                get {
+                    return Current;
+                }
             }
 
             public bool MoveNext() {

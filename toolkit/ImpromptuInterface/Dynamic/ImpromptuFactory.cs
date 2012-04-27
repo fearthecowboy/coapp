@@ -13,130 +13,114 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-namespace CoApp.Toolkit.ImpromptuInterface.Dynamic
-{
+namespace CoApp.Toolkit.ImpromptuInterface.Dynamic {
     using System;
     using System.Collections.Generic;
+    using System.Dynamic;
 
     /// <summary>
-    /// Base Class for making a fluent factory using an Impromptu Interface return type.
+    ///   Base Class for making a fluent factory using an Impromptu Interface return type.
     /// </summary>
     [Serializable]
-    public class ImpromptuFactory:ImpromptuObject
-    {
+    public class ImpromptuFactory : ImpromptuObject {
         /// <summary>
-        /// Creates this instance with Interface;
+        ///   Creates this instance with Interface;
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        public static T Create<T>() where T : class
-        {
+        /// <typeparam name="T"> </typeparam>
+        /// <returns> </returns>
+        public static T Create<T>() where T : class {
             return new ImpromptuFactory().ActLike<T>();
         }
 
         /// <summary>
-        /// Provides the default implementation for operations that get instance as defined by <see cref="GetInstanceForDynamicMember"/>. Classes derived from the <see cref="T:ImpromptuInterface.ImpromptuObject"/> class can override this method to specify dynamic behavior for operations such as getting a value for a property.
+        ///   Provides the default implementation for operations that get instance as defined by <see
+        ///    cref="GetInstanceForDynamicMember" /> . Classes derived from the <see cref="T:ImpromptuInterface.ImpromptuObject" /> class can override this method to specify dynamic behavior for operations such as getting a value for a property.
         /// </summary>
-        /// <param name="binder">Provides information about the object that called the dynamic operation. The binder.Name property provides the name of the member on which the dynamic operation is performed. For example, for the Console.WriteLine(sampleObject.SampleProperty) statement, where sampleObject is an instance of the class derived from the <see cref="T:System.Dynamic.DynamicObject"/> class, binder.Name returns "SampleProperty". The binder.IgnoreCase property specifies whether the member name is case-sensitive.</param>
-        /// <param name="result">The result of the get operation. For example, if the method is called for a property, you can assign the property value to <paramref name="result"/>.</param>
-        /// <returns>
-        /// true if the operation is successful; otherwise, false. If this method returns false, the run-time binder of the language determines the behavior. (In most cases, a run-time exception is thrown.)
-        /// </returns>
-        public override bool TryGetMember(System.Dynamic.GetMemberBinder binder, out object result)
-        {
+        /// <param name="binder"> Provides information about the object that called the dynamic operation. The binder.Name property provides the name of the member on which the dynamic operation is performed. For example, for the Console.WriteLine(sampleObject.SampleProperty) statement, where sampleObject is an instance of the class derived from the <see
+        ///    cref="T:System.Dynamic.DynamicObject" /> class, binder.Name returns "SampleProperty". The binder.IgnoreCase property specifies whether the member name is case-sensitive. </param>
+        /// <param name="result"> The result of the get operation. For example, if the method is called for a property, you can assign the property value to <paramref
+        ///    name="result" /> . </param>
+        /// <returns> true if the operation is successful; otherwise, false. If this method returns false, the run-time binder of the language determines the behavior. (In most cases, a run-time exception is thrown.) </returns>
+        public override bool TryGetMember(GetMemberBinder binder, out object result) {
             result = GetInstanceForDynamicMember(binder.Name);
             return result != null;
         }
 
         /// <summary>
-        /// Provides the implementation for operations that invoke a member. Classes derived from the <see cref="T:System.Dynamic.DynamicObject"/> class can override this method to specify dynamic behavior for operations such as calling a method.
+        ///   Provides the implementation for operations that invoke a member. Classes derived from the <see
+        ///    cref="T:System.Dynamic.DynamicObject" /> class can override this method to specify dynamic behavior for operations such as calling a method.
         /// </summary>
-        /// <param name="binder">Provides information about the dynamic operation. The binder.Name property provides the name of the member on which the dynamic operation is performed. For example, for the statement sampleObject.SampleMethod(100), where sampleObject is an instance of the class derived from the <see cref="T:System.Dynamic.DynamicObject"/> class, binder.Name returns "SampleMethod". The binder.IgnoreCase property specifies whether the member name is case-sensitive.</param>
-        /// <param name="args">The arguments that are passed to the object member during the invoke operation. For example, for the statement sampleObject.SampleMethod(100), where sampleObject is derived from the <see cref="T:System.Dynamic.DynamicObject"/> class, <paramref name="args"/>[0] is equal to 100.</param>
-        /// <param name="result">The result of the member invocation.</param>
-        /// <returns>
-        /// true if the operation is successful; otherwise, false. If this method returns false, the run-time binder of the language determines the behavior. (In most cases, a language-specific run-time exception is thrown.)
-        /// </returns>
-        public override bool TryInvokeMember(System.Dynamic.InvokeMemberBinder binder, object[] args, out object result)
-        {
+        /// <param name="binder"> Provides information about the dynamic operation. The binder.Name property provides the name of the member on which the dynamic operation is performed. For example, for the statement sampleObject.SampleMethod(100), where sampleObject is an instance of the class derived from the <see
+        ///    cref="T:System.Dynamic.DynamicObject" /> class, binder.Name returns "SampleMethod". The binder.IgnoreCase property specifies whether the member name is case-sensitive. </param>
+        /// <param name="args"> The arguments that are passed to the object member during the invoke operation. For example, for the statement sampleObject.SampleMethod(100), where sampleObject is derived from the <see
+        ///    cref="T:System.Dynamic.DynamicObject" /> class, <paramref name="args" /> [0] is equal to 100. </param>
+        /// <param name="result"> The result of the member invocation. </param>
+        /// <returns> true if the operation is successful; otherwise, false. If this method returns false, the run-time binder of the language determines the behavior. (In most cases, a language-specific run-time exception is thrown.) </returns>
+        public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result) {
             result = GetInstanceForDynamicMember(binder.Name, args);
             return result != null;
         }
 
-
         /// <summary>
-        /// Constructs the type. Override for changing type intialization property changes.
+        ///   Constructs the type. Override for changing type intialization property changes.
         /// </summary>
-        /// <param name="type">The type.</param>
-        /// <param name="args">The args.</param>
-        /// <returns></returns>
-        protected virtual object CreateType(Type type, params object[] args)
-        {
+        /// <param name="type"> The type. </param>
+        /// <param name="args"> The args. </param>
+        /// <returns> </returns>
+        protected virtual object CreateType(Type type, params object[] args) {
             return Impromptu.InvokeConstructor(type, args);
         }
 
         /// <summary>
-        /// Gets the instance for a dynamic member. Override for type constrcution behavoir changes based on property name.
+        ///   Gets the instance for a dynamic member. Override for type constrcution behavoir changes based on property name.
         /// </summary>
-        /// <param name="memberName">Name of the member.</param>
-        /// <param name="args">The args.</param>
-        /// <returns></returns>
-        protected virtual object GetInstanceForDynamicMember(string memberName, params object[] args)
-        {
+        /// <param name="memberName"> Name of the member. </param>
+        /// <param name="args"> The args. </param>
+        /// <returns> </returns>
+        protected virtual object GetInstanceForDynamicMember(string memberName, params object[] args) {
             Type type;
             return TryTypeForName(memberName, out type) ? CreateType(type, args) : null;
         }
     }
 
-
     /// <summary>
-    /// Base Class for making a singleton fluent factory using an Impromptu Interface return type.
+    ///   Base Class for making a singleton fluent factory using an Impromptu Interface return type.
     /// </summary>
-    public class ImpromptuSingleInstancesFactory : ImpromptuFactory
-    { 
-        
+    public class ImpromptuSingleInstancesFactory : ImpromptuFactory {
         /// <summary>
-        /// Creates this instance with Interface;
+        ///   Creates this instance with Interface;
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        public new static T Create<T>() where T : class
-        {
+        /// <typeparam name="T"> </typeparam>
+        /// <returns> </returns>
+        public new static T Create<T>() where T : class {
             return new ImpromptuSingleInstancesFactory().ActLike<T>();
         }
-        /// <summary>
-        /// Store Singletons
-        /// </summary>
-        protected readonly Dictionary<string, dynamic> _hashFactoryTypes= new Dictionary<string, dynamic>();
 
         /// <summary>
-        /// Lock for accessing singletons
+        ///   Store Singletons
+        /// </summary>
+        protected readonly Dictionary<string, dynamic> _hashFactoryTypes = new Dictionary<string, dynamic>();
+
+        /// <summary>
+        ///   Lock for accessing singletons
         /// </summary>
         protected readonly object _lockTable = new object();
 
-
         /// <summary>
-        /// Gets the instance for a dynamic member. Override for type constrcution behavoir changes based on property name.
+        ///   Gets the instance for a dynamic member. Override for type constrcution behavoir changes based on property name.
         /// </summary>
-        /// <param name="memberName">Name of the member.</param>
-        /// <param name="args"></param>
-        /// <returns></returns>
-        protected override object GetInstanceForDynamicMember(string memberName, params object[] args)
-        {
-            lock (_lockTable)
-            {
-                if (!_hashFactoryTypes.ContainsKey(memberName))
-                {
+        /// <param name="memberName"> Name of the member. </param>
+        /// <param name="args"> </param>
+        /// <returns> </returns>
+        protected override object GetInstanceForDynamicMember(string memberName, params object[] args) {
+            lock (_lockTable) {
+                if (!_hashFactoryTypes.ContainsKey(memberName)) {
                     Type type;
-                    if (TryTypeForName(memberName, out type))
-                    {
+                    if (TryTypeForName(memberName, out type)) {
                         _hashFactoryTypes.Add(memberName, CreateType(type, args));
-                    }
-                    else
-                    {
+                    } else {
                         return null;
                     }
-
                 }
 
                 return _hashFactoryTypes[memberName];

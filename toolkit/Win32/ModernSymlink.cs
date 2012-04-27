@@ -77,8 +77,7 @@ namespace CoApp.Toolkit.Win32 {
 
             if (IsSymlink(linkPath)) {
                 deleteSymlink(linkPath);
-            }
-            else {
+            } else {
                 throw new PathIsNotSymlinkException(linkPath);
             }
         }

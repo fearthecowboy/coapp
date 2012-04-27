@@ -30,7 +30,6 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR 
 // OTHER DEALINGS IN THE SOFTWARE.
 
-
 namespace CoApp.Toolkit.TaskService {
     using System;
     using System.Collections;
@@ -428,9 +427,8 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Settings != null) {
                     v2Settings.IdleDuration = Task.TimeSpanToString(value);
-                }
-                else {
-                    v1Task.SetIdleWait((ushort) WaitTimeout.TotalMinutes, (ushort) value.TotalMinutes);
+                } else {
+                    v1Task.SetIdleWait((ushort)WaitTimeout.TotalMinutes, (ushort)value.TotalMinutes);
                 }
             }
         }
@@ -448,13 +446,11 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Settings != null) {
                     v2Settings.RestartOnIdle = value;
-                }
-                else {
+                } else {
                     var flags = v1Task.GetFlags();
                     if (value) {
                         v1Task.SetFlags(flags |= TaskFlags.RestartOnIdleResume);
-                    }
-                    else {
+                    } else {
                         v1Task.SetFlags(flags &= ~TaskFlags.RestartOnIdleResume);
                     }
                 }
@@ -474,13 +470,11 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Settings != null) {
                     v2Settings.StopOnIdleEnd = value;
-                }
-                else {
+                } else {
                     var flags = v1Task.GetFlags();
                     if (value) {
                         v1Task.SetFlags(flags |= TaskFlags.KillOnIdleEnd);
-                    }
-                    else {
+                    } else {
                         v1Task.SetFlags(flags &= ~TaskFlags.KillOnIdleEnd);
                     }
                 }
@@ -502,9 +496,8 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Settings != null) {
                     v2Settings.WaitTimeout = Task.TimeSpanToString(value);
-                }
-                else {
-                    v1Task.SetIdleWait((ushort) value.TotalMinutes, (ushort) IdleDuration.TotalMinutes);
+                } else {
+                    v1Task.SetIdleWait((ushort)value.TotalMinutes, (ushort)IdleDuration.TotalMinutes);
                 }
             }
         }
@@ -547,8 +540,7 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Settings != null) {
                     v2Settings.Id = value == Guid.Empty ? null : value.ToString();
-                }
-                else {
+                } else {
                     throw new NotV1SupportedException();
                 }
             }
@@ -567,8 +559,7 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Settings != null) {
                     v2Settings.Name = value;
-                }
-                else {
+                } else {
                     throw new NotV1SupportedException();
                 }
             }
@@ -696,8 +687,7 @@ namespace CoApp.Toolkit.TaskService {
                 if (myTD == null) {
                     if (v2Task != null) {
                         myTD = new TaskDefinition(v2Task.Definition);
-                    }
-                    else {
+                    } else {
                         myTD = new TaskDefinition(v1Task, Name);
                     }
                 }
@@ -722,13 +712,11 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Task != null) {
                     v2Task.Enabled = value;
-                }
-                else {
+                } else {
                     var flags = v1Task.GetFlags();
                     if (!value) {
                         v1Task.SetFlags(flags |= TaskFlags.Disabled);
-                    }
-                    else {
+                    } else {
                         v1Task.SetFlags(flags &= ~TaskFlags.Disabled);
                     }
                     Definition.V1Save(null);
@@ -764,7 +752,7 @@ namespace CoApp.Toolkit.TaskService {
                 if (v2Task != null) {
                     return v2Task.LastTaskResult;
                 }
-                return (int) v1Task.GetExitCode();
+                return (int)v1Task.GetExitCode();
             }
         }
 
@@ -826,7 +814,9 @@ namespace CoApp.Toolkit.TaskService {
                 var sddl = GetSecurityDescriptorSddlForm(AccessControlSections.All);
                 return new RawSecurityDescriptor(sddl);
             }
-            set { SetSecurityDescriptorSddlForm(value.GetSddlForm(AccessControlSections.All), AccessControlSections.All); }
+            set {
+                SetSecurityDescriptorSddlForm(value.GetSddlForm(AccessControlSections.All), AccessControlSections.All);
+            }
         }
 
         /// <summary>
@@ -902,16 +892,15 @@ namespace CoApp.Toolkit.TaskService {
             IntPtr runTimes = IntPtr.Zero, st;
             if (v2Task != null) {
                 v2Task.GetRunTimes(ref stStart, ref stEnd, ref count, ref runTimes);
-            }
-            else {
-                var count1 = (count > 0 && count <= TASK_MAX_RUN_TIMES) ? (ushort) count : TASK_MAX_RUN_TIMES;
+            } else {
+                var count1 = (count > 0 && count <= TASK_MAX_RUN_TIMES) ? (ushort)count : TASK_MAX_RUN_TIMES;
                 v1Task.GetRunTimes(ref stStart, ref stEnd, ref count1, ref runTimes);
                 count = count1;
             }
             var ret = new DateTime[count];
             for (var i = 0; i < count; i++) {
                 st = new IntPtr(runTimes.ToInt64() + (i*Marshal.SizeOf(typeof (SystemTime))));
-                ret[i] = (SystemTime) Marshal.PtrToStructure(st, typeof (SystemTime));
+                ret[i] = (SystemTime)Marshal.PtrToStructure(st, typeof (SystemTime));
             }
             Marshal.FreeCoTaskMem(runTimes);
             return ret;
@@ -924,7 +913,7 @@ namespace CoApp.Toolkit.TaskService {
         /// <returns> The security descriptor for the task. </returns>
         public string GetSecurityDescriptorSddlForm(AccessControlSections includeSections) {
             if (v2Task != null) {
-                return v2Task.GetSecurityDescriptor((int) includeSections);
+                return v2Task.GetSecurityDescriptor((int)includeSections);
             }
 
             throw new NotV1SupportedException();
@@ -971,7 +960,7 @@ namespace CoApp.Toolkit.TaskService {
         /// <returns> A <see cref="RunningTask" /> instance that defines the new instance of the task. </returns>
         public RunningTask RunEx(TaskRunFlags flags, int sessionID, string user, params string[] parameters) {
             if (v2Task != null) {
-                return new RunningTask(TaskService, v2Task, v2Task.RunEx(parameters, (int) flags, sessionID, user));
+                return new RunningTask(TaskService, v2Task, v2Task.RunEx(parameters, (int)flags, sessionID, user));
             }
             throw new NotV1SupportedException();
         }
@@ -983,7 +972,7 @@ namespace CoApp.Toolkit.TaskService {
         /// <param name="includeSections"> Section(s) of the security descriptor to set. </param>
         public void SetSecurityDescriptorSddlForm(string sddlForm, AccessControlSections includeSections) {
             if (v2Task != null) {
-                v2Task.SetSecurityDescriptor(sddlForm, (int) includeSections);
+                v2Task.SetSecurityDescriptor(sddlForm, (int)includeSections);
             }
 
             throw new NotV1SupportedException();
@@ -1013,8 +1002,7 @@ namespace CoApp.Toolkit.TaskService {
                         }
                     }
                 }
-            }
-            catch {
+            } catch {
             }
             return false;
         }
@@ -1025,8 +1013,7 @@ namespace CoApp.Toolkit.TaskService {
         public void ShowPropertyPage() {
             if (v1Task != null) {
                 v1Task.EditWorkItem(IntPtr.Zero, 0);
-            }
-            else {
+            } else {
                 throw new NotV2SupportedException();
             }
         }
@@ -1037,8 +1024,7 @@ namespace CoApp.Toolkit.TaskService {
         public void Stop() {
             if (v2Task != null) {
                 v2Task.Stop(0);
-            }
-            else {
+            } else {
                 v1Task.Terminate();
             }
         }
@@ -1061,10 +1047,9 @@ namespace CoApp.Toolkit.TaskService {
         internal static string GetV1Path(ITask v1Task) {
             var fileName = string.Empty;
             try {
-                var iFile = (IPersistFile) v1Task;
+                var iFile = (IPersistFile)v1Task;
                 iFile.GetCurFile(out fileName);
-            }
-            catch (Exception ex) {
+            } catch (Exception ex) {
                 throw ex;
             }
             return fileName;
@@ -1074,8 +1059,7 @@ namespace CoApp.Toolkit.TaskService {
             if (!string.IsNullOrEmpty(input)) {
                 try {
                     return XmlConvert.ToTimeSpan(input);
-                }
-                catch {
+                } catch {
                 }
             }
             return TimeSpan.Zero;
@@ -1085,8 +1069,7 @@ namespace CoApp.Toolkit.TaskService {
             if (span != TimeSpan.Zero) {
                 try {
                     return XmlConvert.ToString(span);
-                }
-                catch {
+                } catch {
                 }
             }
             return null;
@@ -1124,8 +1107,7 @@ namespace CoApp.Toolkit.TaskService {
                 if (actions == null) {
                     if (v2Def != null) {
                         actions = new ActionCollection(v2Def);
-                    }
-                    else {
+                    } else {
                         actions = new ActionCollection(v1Task);
                     }
                 }
@@ -1146,8 +1128,7 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Def != null) {
                     v2Def.Data = value;
-                }
-                else {
+                } else {
                     TaskRegistrationInfo.SetTaskData(v1Task, value);
                 }
             }
@@ -1161,8 +1142,7 @@ namespace CoApp.Toolkit.TaskService {
                 if (principal == null) {
                     if (v2Def != null) {
                         principal = new TaskPrincipal(v2Def.Principal);
-                    }
-                    else {
+                    } else {
                         principal = new TaskPrincipal(v1Task);
                     }
                 }
@@ -1178,8 +1158,7 @@ namespace CoApp.Toolkit.TaskService {
                 if (regInfo == null) {
                     if (v2Def != null) {
                         regInfo = new TaskRegistrationInfo(v2Def.RegistrationInfo);
-                    }
-                    else {
+                    } else {
                         regInfo = new TaskRegistrationInfo(v1Task);
                     }
                 }
@@ -1195,8 +1174,7 @@ namespace CoApp.Toolkit.TaskService {
                 if (settings == null) {
                     if (v2Def != null) {
                         settings = new TaskSettings(v2Def.Settings);
-                    }
-                    else {
+                    } else {
                         settings = new TaskSettings(v1Task);
                     }
                 }
@@ -1212,8 +1190,7 @@ namespace CoApp.Toolkit.TaskService {
                 if (triggers == null) {
                     if (v2Def != null) {
                         triggers = new TriggerCollection(v2Def);
-                    }
-                    else {
+                    } else {
                         triggers = new TriggerCollection(v1Task);
                     }
                 }
@@ -1234,8 +1211,7 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Def != null) {
                     v2Def.XmlText = value;
-                }
-                else {
+                } else {
                     throw new NotV1SupportedException();
                 }
             }
@@ -1260,14 +1236,13 @@ namespace CoApp.Toolkit.TaskService {
             if (v1Task != null) {
                 Triggers.Bind();
 
-                var iFile = (IPersistFile) v1Task;
+                var iFile = (IPersistFile)v1Task;
                 if (string.IsNullOrEmpty(newName) || newName == v1Name) {
                     try {
                         iFile.Save(null, false);
                         iFile = null;
                         return;
-                    }
-                    catch {
+                    } catch {
                     }
                 }
 
@@ -1295,9 +1270,8 @@ namespace CoApp.Toolkit.TaskService {
         internal TaskPrincipal(IPrincipal iPrincipal) {
             v2Principal = iPrincipal;
             try {
-                v2Principal2 = (IPrincipal2) v2Principal;
-            }
-            catch {
+                v2Principal2 = (IPrincipal2)v2Principal;
+            } catch {
             }
         }
 
@@ -1318,8 +1292,7 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Principal != null) {
                     v2Principal.DisplayName = value;
-                }
-                else {
+                } else {
                     throw new NotV1SupportedException();
                 }
             }
@@ -1340,14 +1313,12 @@ namespace CoApp.Toolkit.TaskService {
                 if (v2Principal != null) {
                     if (string.IsNullOrEmpty(value)) {
                         value = null;
-                    }
-                    else {
+                    } else {
                         v2Principal.UserId = null;
                         v2Principal.LogonType = TaskLogonType.Group;
                     }
                     v2Principal.GroupId = value;
-                }
-                else {
+                } else {
                     throw new NotV1SupportedException();
                 }
             }
@@ -1366,8 +1337,7 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Principal != null) {
                     v2Principal.Id = value;
-                }
-                else {
+                } else {
                     throw new NotV1SupportedException();
                 }
             }
@@ -1392,16 +1362,14 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Principal != null) {
                     v2Principal.LogonType = value;
-                }
-                else {
+                } else {
                     if (value == TaskLogonType.Group || value == TaskLogonType.None || value == TaskLogonType.S4U) {
                         throw new NotV1SupportedException();
                     }
                     var flags = v1Task.GetFlags();
                     if (value == TaskLogonType.InteractiveToken) {
                         flags |= TaskFlags.RunOnlyIfLoggedOn;
-                    }
-                    else {
+                    } else {
                         flags &= ~(TaskFlags.RunOnlyIfLoggedOn);
                     }
                     v1Task.SetFlags(flags);
@@ -1426,8 +1394,7 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Principal2 != null) {
                     v2Principal2.ProcessTokenSidType = value;
-                }
-                else {
+                } else {
                     throw new NotV1SupportedException();
                 }
             }
@@ -1461,8 +1428,7 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Principal != null) {
                     v2Principal.RunLevel = value;
-                }
-                else {
+                } else {
                     throw new NotV1SupportedException();
                 }
             }
@@ -1480,8 +1446,7 @@ namespace CoApp.Toolkit.TaskService {
                 try {
                     string acct = v1Task.GetAccountInformation();
                     return string.IsNullOrEmpty(acct) ? localSystemAcct : acct;
-                }
-                catch {
+                } catch {
                     return null;
                 }
             }
@@ -1489,16 +1454,14 @@ namespace CoApp.Toolkit.TaskService {
                 if (v2Principal != null) {
                     if (string.IsNullOrEmpty(value)) {
                         value = null;
-                    }
-                    else {
+                    } else {
                         v2Principal.GroupId = null;
                         if (value.Contains(@"\") && !value.Contains(@"\\")) {
                             value = value.Replace(@"\", @"\\");
                         }
                     }
                     v2Principal.UserId = value;
-                }
-                else {
+                } else {
                     if (value.Equals(localSystemAcct, StringComparison.CurrentCultureIgnoreCase)) {
                         value = "";
                     }
@@ -1602,7 +1565,9 @@ namespace CoApp.Toolkit.TaskService {
                 }
                 throw new IndexOutOfRangeException();
             }
-            set { throw new NotImplementedException(); }
+            set {
+                throw new NotImplementedException();
+            }
         }
 
         /// <summary>
@@ -1615,8 +1580,7 @@ namespace CoApp.Toolkit.TaskService {
         public void Add(string item) {
             if (v2Principal2 != null) {
                 v2Principal2.AddRequiredPrivilege(item);
-            }
-            else {
+            } else {
                 throw new NotV1SupportedException();
             }
         }
@@ -1660,7 +1624,9 @@ namespace CoApp.Toolkit.TaskService {
         /// </summary>
         /// <returns> The number of elements contained in the <see cref="T:System.Collections.Generic.ICollection`1" /> . </returns>
         public int Count {
-            get { return (v2Principal2 != null) ? (int) v2Principal2.RequiredPrivilegeCount : 0; }
+            get {
+                return (v2Principal2 != null) ? (int)v2Principal2.RequiredPrivilegeCount : 0;
+            }
         }
 
         /// <summary>
@@ -1668,7 +1634,9 @@ namespace CoApp.Toolkit.TaskService {
         /// </summary>
         /// <returns> true if the <see cref="T:System.Collections.Generic.ICollection`1" /> is read-only; otherwise, false. </returns>
         public bool IsReadOnly {
-            get { return false; }
+            get {
+                return false;
+            }
         }
 
         /// <summary>
@@ -1715,7 +1683,9 @@ namespace CoApp.Toolkit.TaskService {
             /// </summary>
             /// <returns> The element in the collection at the current position of the enumerator. </returns>
             public string Current {
-                get { return curString; }
+                get {
+                    return curString;
+                }
             }
 
             /// <summary>
@@ -1725,7 +1695,9 @@ namespace CoApp.Toolkit.TaskService {
             }
 
             object IEnumerator.Current {
-                get { return Current; }
+                get {
+                    return Current;
+                }
             }
 
             /// <summary>
@@ -1782,8 +1754,7 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2RegInfo != null) {
                     v2RegInfo.Author = value;
-                }
-                else {
+                } else {
                     v1Task.SetCreator(value);
                 }
             }
@@ -1808,13 +1779,11 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2RegInfo != null) {
                     v2RegInfo.Date = value.ToString(Trigger.V2BoundaryDateFormat);
-                }
-                else {
+                } else {
                     var v1Path = Task.GetV1Path(v1Task);
                     if (!string.IsNullOrEmpty(v1Path) && File.Exists(v1Path)) {
                         File.SetLastWriteTime(v1Path, value);
-                    }
-                    else {
+                    } else {
                         throw new NotV1SupportedException("This property cannot be set on an unregistered task.");
                     }
                 }
@@ -1834,8 +1803,7 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2RegInfo != null) {
                     v2RegInfo.Description = value;
-                }
-                else {
+                } else {
                     v1Task.SetComment(value);
                 }
             }
@@ -1854,8 +1822,7 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2RegInfo != null) {
                     v2RegInfo.Documentation = value;
-                }
-                else {
+                } else {
                     SetTaskData(v1Task, value);
                 }
             }
@@ -1866,8 +1833,12 @@ namespace CoApp.Toolkit.TaskService {
         /// </summary>
         /// <value> The security descriptor. </value>
         public GenericSecurityDescriptor SecurityDescriptor {
-            get { return new RawSecurityDescriptor(SecurityDescriptorSddlForm); }
-            set { SecurityDescriptorSddlForm = value.GetSddlForm(AccessControlSections.All); }
+            get {
+                return new RawSecurityDescriptor(SecurityDescriptorSddlForm);
+            }
+            set {
+                SecurityDescriptorSddlForm = value.GetSddlForm(AccessControlSections.All);
+            }
         }
 
         /// <summary>
@@ -1884,8 +1855,7 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2RegInfo != null) {
                     v2RegInfo.SecurityDescriptor = value;
-                }
-                else {
+                } else {
                     throw new NotV1SupportedException();
                 }
             }
@@ -1904,8 +1874,7 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2RegInfo != null) {
                     v2RegInfo.Source = value;
-                }
-                else {
+                } else {
                     throw new NotV1SupportedException();
                 }
             }
@@ -1928,8 +1897,7 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2RegInfo != null) {
                     v2RegInfo.URI = value.ToString();
-                }
-                else {
+                } else {
                     throw new NotV1SupportedException();
                 }
             }
@@ -1943,8 +1911,7 @@ namespace CoApp.Toolkit.TaskService {
                 if (v2RegInfo != null) {
                     try {
                         return new Version(v2RegInfo.Version);
-                    }
-                    catch {
+                    } catch {
                     }
                 }
                 return new Version(1, 0);
@@ -1952,8 +1919,7 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2RegInfo != null) {
                     v2RegInfo.Version = value.ToString();
-                }
-                else {
+                } else {
                     throw new NotV1SupportedException();
                 }
             }
@@ -1972,8 +1938,7 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2RegInfo != null) {
                     v2RegInfo.XmlText = value;
-                }
-                else {
+                } else {
                     throw new NotV1SupportedException();
                 }
             }
@@ -1999,8 +1964,7 @@ namespace CoApp.Toolkit.TaskService {
                 var stream = new MemoryStream(bytes, false);
                 var b = new BinaryFormatter();
                 return b.Deserialize(stream);
-            }
-            catch {
+            } catch {
             }
             return string.Empty;
         }
@@ -2009,7 +1973,7 @@ namespace CoApp.Toolkit.TaskService {
             var b = new BinaryFormatter();
             var stream = new MemoryStream();
             b.Serialize(stream, value);
-            v1Task.SetWorkItemData((ushort) stream.Length, stream.ToArray());
+            v1Task.SetWorkItemData((ushort)stream.Length, stream.ToArray());
         }
     }
 
@@ -2026,9 +1990,8 @@ namespace CoApp.Toolkit.TaskService {
         internal TaskSettings(ITaskSettings iSettings) {
             v2Settings = iSettings;
             try {
-                v2Settings2 = (ITaskSettings2) v2Settings;
-            }
-            catch {
+                v2Settings2 = (ITaskSettings2)v2Settings;
+            } catch {
             }
         }
 
@@ -2049,8 +2012,7 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Settings != null) {
                     v2Settings.AllowDemandStart = value;
-                }
-                else {
+                } else {
                     throw new NotV1SupportedException();
                 }
             }
@@ -2069,8 +2031,7 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Settings != null) {
                     v2Settings.AllowHardTerminate = value;
-                }
-                else {
+                } else {
                     throw new NotV1SupportedException();
                 }
             }
@@ -2082,15 +2043,14 @@ namespace CoApp.Toolkit.TaskService {
         public TaskCompatibility Compatibility {
             get {
                 if (v2Settings != null) {
-                    return ((int) v2Settings.Compatibility) >= 2 ? TaskCompatibility.V2 : v2Settings.Compatibility;
+                    return ((int)v2Settings.Compatibility) >= 2 ? TaskCompatibility.V2 : v2Settings.Compatibility;
                 }
                 return TaskCompatibility.V1;
             }
             set {
                 if (v2Settings != null) {
                     v2Settings.Compatibility = value;
-                }
-                else {
+                } else {
                     throw new NotV1SupportedException();
                 }
             }
@@ -2112,13 +2072,11 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Settings != null) {
                     v2Settings.DeleteExpiredTaskAfter = Task.TimeSpanToString(value);
-                }
-                else {
+                } else {
                     var flags = v1Task.GetFlags();
                     if (value >= TimeSpan.FromSeconds(1)) {
                         v1Task.SetFlags(flags |= TaskFlags.DeleteWhenDone);
-                    }
-                    else {
+                    } else {
                         v1Task.SetFlags(flags &= ~TaskFlags.DeleteWhenDone);
                     }
                 }
@@ -2138,13 +2096,11 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Settings != null) {
                     v2Settings.DisallowStartIfOnBatteries = value;
-                }
-                else {
+                } else {
                     var flags = v1Task.GetFlags();
                     if (value) {
                         v1Task.SetFlags(flags |= TaskFlags.DontStartIfOnBatteries);
-                    }
-                    else {
+                    } else {
                         v1Task.SetFlags(flags &= ~TaskFlags.DontStartIfOnBatteries);
                     }
                 }
@@ -2164,8 +2120,7 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Settings2 != null) {
                     v2Settings2.DisallowStartOnRemoteAppSession = value;
-                }
-                else {
+                } else {
                     throw new NotV1SupportedException();
                 }
             }
@@ -2184,13 +2139,11 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Settings != null) {
                     v2Settings.Enabled = value;
-                }
-                else {
+                } else {
                     var flags = v1Task.GetFlags();
                     if (!value) {
                         v1Task.SetFlags(flags |= TaskFlags.Disabled);
-                    }
-                    else {
+                    } else {
                         v1Task.SetFlags(flags &= ~TaskFlags.Disabled);
                     }
                 }
@@ -2210,8 +2163,7 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Settings != null) {
                     v2Settings.ExecutionTimeLimit = value == TimeSpan.Zero ? "PT0S" : Task.TimeSpanToString(value);
-                }
-                else {
+                } else {
                     v1Task.SetMaxRunTime(Convert.ToUInt32(value.TotalMilliseconds));
                 }
             }
@@ -2230,13 +2182,11 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Settings != null) {
                     v2Settings.Hidden = value;
-                }
-                else {
+                } else {
                     var flags = v1Task.GetFlags();
                     if (value) {
                         v1Task.SetFlags(flags |= TaskFlags.Hidden);
-                    }
-                    else {
+                    } else {
                         v1Task.SetFlags(flags &= ~TaskFlags.Hidden);
                     }
                 }
@@ -2251,8 +2201,7 @@ namespace CoApp.Toolkit.TaskService {
                 if (idleSettings == null) {
                     if (v2Settings != null) {
                         idleSettings = new IdleSettings(v2Settings.IdleSettings);
-                    }
-                    else {
+                    } else {
                         idleSettings = new IdleSettings(v1Task);
                     }
                 }
@@ -2273,8 +2222,7 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Settings != null) {
                     v2Settings.MultipleInstances = value;
-                }
-                else {
+                } else {
                     throw new NotV1SupportedException();
                 }
             }
@@ -2288,8 +2236,7 @@ namespace CoApp.Toolkit.TaskService {
                 if (networkSettings == null) {
                     if (v2Settings != null) {
                         networkSettings = new NetworkSettings(v2Settings.NetworkSettings);
-                    }
-                    else {
+                    } else {
                         networkSettings = new NetworkSettings();
                     }
                 }
@@ -2324,7 +2271,7 @@ namespace CoApp.Toolkit.TaskService {
                             return ProcessPriorityClass.Normal;
                     }
                 }
-                return (ProcessPriorityClass) v1Task.GetPriority();
+                return (ProcessPriorityClass)v1Task.GetPriority();
             }
             set {
                 if (v2Settings != null) {
@@ -2350,12 +2297,11 @@ namespace CoApp.Toolkit.TaskService {
                             break;
                     }
                     v2Settings.Priority = p;
-                }
-                else {
+                } else {
                     if (value == ProcessPriorityClass.AboveNormal || value == ProcessPriorityClass.BelowNormal) {
                         throw new NotV1SupportedException("Unsupported priority level on Task Scheduler 1.0.");
                     }
-                    v1Task.SetPriority((uint) value);
+                    v1Task.SetPriority((uint)value);
                 }
             }
         }
@@ -2373,8 +2319,7 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Settings != null) {
                     v2Settings.RestartCount = value;
-                }
-                else {
+                } else {
                     throw new NotV1SupportedException();
                 }
             }
@@ -2393,8 +2338,7 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Settings != null) {
                     v2Settings.RestartInterval = Task.TimeSpanToString(value);
-                }
-                else {
+                } else {
                     throw new NotV1SupportedException();
                 }
             }
@@ -2413,13 +2357,11 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Settings != null) {
                     v2Settings.RunOnlyIfIdle = value;
-                }
-                else {
+                } else {
                     var flags = v1Task.GetFlags();
                     if (value) {
                         v1Task.SetFlags(flags |= TaskFlags.StartOnlyIfIdle);
-                    }
-                    else {
+                    } else {
                         v1Task.SetFlags(flags &= ~TaskFlags.StartOnlyIfIdle);
                     }
                 }
@@ -2441,12 +2383,10 @@ namespace CoApp.Toolkit.TaskService {
                     var flags = v1Task.GetFlags();
                     if (value) {
                         v1Task.SetFlags(flags |= TaskFlags.RunOnlyIfLoggedOn);
-                    }
-                    else {
+                    } else {
                         v1Task.SetFlags(flags &= ~TaskFlags.RunOnlyIfLoggedOn);
                     }
-                }
-                else if (v2Settings != null) {
+                } else if (v2Settings != null) {
                     throw new NotV2SupportedException(
                         "Task Scheduler 2.0 (1.2) does not support setting this property. You must use an InteractiveToken in order to have the task run in the current user session.");
                 }
@@ -2466,13 +2406,11 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Settings != null) {
                     v2Settings.RunOnlyIfNetworkAvailable = value;
-                }
-                else {
+                } else {
                     var flags = v1Task.GetFlags();
                     if (value) {
                         v1Task.SetFlags(flags |= TaskFlags.RunIfConnectedToInternet);
-                    }
-                    else {
+                    } else {
                         v1Task.SetFlags(flags &= ~TaskFlags.RunIfConnectedToInternet);
                     }
                 }
@@ -2492,8 +2430,7 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Settings != null) {
                     v2Settings.StartWhenAvailable = value;
-                }
-                else {
+                } else {
                     throw new NotV1SupportedException();
                 }
             }
@@ -2512,13 +2449,11 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Settings != null) {
                     v2Settings.StopIfGoingOnBatteries = value;
-                }
-                else {
+                } else {
                     var flags = v1Task.GetFlags();
                     if (value) {
                         v1Task.SetFlags(flags |= TaskFlags.KillIfGoingOnBatteries);
-                    }
-                    else {
+                    } else {
                         v1Task.SetFlags(flags &= ~TaskFlags.KillIfGoingOnBatteries);
                     }
                 }
@@ -2538,8 +2473,7 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Settings2 != null) {
                     v2Settings2.UseUnifiedSchedulingEngine = value;
-                }
-                else {
+                } else {
                     throw new NotV1SupportedException();
                 }
             }
@@ -2558,13 +2492,11 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Settings != null) {
                     v2Settings.WakeToRun = value;
-                }
-                else {
+                } else {
                     var flags = v1Task.GetFlags();
                     if (value) {
                         v1Task.SetFlags(flags |= TaskFlags.SystemRequired);
-                    }
-                    else {
+                    } else {
                         v1Task.SetFlags(flags &= ~TaskFlags.SystemRequired);
                     }
                 }
@@ -2584,8 +2516,7 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Settings != null) {
                     v2Settings.XmlText = value;
-                }
-                else {
+                } else {
                     throw new NotV1SupportedException();
                 }
             }

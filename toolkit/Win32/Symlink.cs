@@ -33,8 +33,8 @@ namespace CoApp.Toolkit.Win32 {
         /// <summary>
         ///   Wrapper Method: Makes the file link.
         /// </summary>
-        /// <param name = "linkPath">The link path.</param>
-        /// <param name = "actualFilePath">The actual file path.</param>
+        /// <param name="linkPath"> The link path. </param>
+        /// <param name="actualFilePath"> The actual file path. </param>
         /// <remarks>
         /// </remarks>
         public static void MakeFileLink(string linkPath, string actualFilePath) {
@@ -44,8 +44,8 @@ namespace CoApp.Toolkit.Win32 {
         /// <summary>
         ///   Wrapper Method: Makes the directory link.
         /// </summary>
-        /// <param name = "linkPath">The link path.</param>
-        /// <param name = "actualFolderPath">The actual folder path.</param>
+        /// <param name="linkPath"> The link path. </param>
+        /// <param name="actualFolderPath"> The actual folder path. </param>
         /// <remarks>
         /// </remarks>
         public static void MakeDirectoryLink(string linkPath, string actualFolderPath) {
@@ -55,8 +55,8 @@ namespace CoApp.Toolkit.Win32 {
         /// <summary>
         ///   Wrapper Method: Changes the link target.
         /// </summary>
-        /// <param name = "linkPath">The link path.</param>
-        /// <param name = "newActualPath">The new actual path.</param>
+        /// <param name="linkPath"> The link path. </param>
+        /// <param name="newActualPath"> The new actual path. </param>
         /// <remarks>
         /// </remarks>
         public static void ChangeLinkTarget(string linkPath, string newActualPath) {
@@ -66,7 +66,7 @@ namespace CoApp.Toolkit.Win32 {
         /// <summary>
         ///   Wrapper Method: Deletes the symlink.
         /// </summary>
-        /// <param name = "linkPath">The link path.</param>
+        /// <param name="linkPath"> The link path. </param>
         /// <remarks>
         /// </remarks>
         public static void DeleteSymlink(string linkPath) {
@@ -76,15 +76,14 @@ namespace CoApp.Toolkit.Win32 {
         /// <summary>
         ///   Wrapper Method: Determines whether the specified link path is symlink.
         /// </summary>
-        /// <param name = "linkPath">The link path.</param>
-        /// <returns><c>true</c> if the specified link path is symlink; otherwise, <c>false</c>.</returns>
+        /// <param name="linkPath"> The link path. </param>
+        /// <returns> <c>true</c> if the specified link path is symlink; otherwise, <c>false</c> . </returns>
         /// <remarks>
         /// </remarks>
         public static bool IsSymlink(string linkPath) {
             try {
                 return _symlink.Value.IsSymlink(linkPath);
-            }
-            catch {
+            } catch {
             }
             return false;
         }
@@ -92,12 +91,12 @@ namespace CoApp.Toolkit.Win32 {
         /// <summary>
         ///   Wrapper Method: Determines whether the specified link path is symlink and that it points to an actual file or directory
         /// </summary>
-        /// <param name = "linkPath">The link path.</param>
-        /// <returns><c>true</c> if the specified link path is symlink and the target exists; otherwise, <c>false</c>.</returns>
+        /// <param name="linkPath"> The link path. </param>
+        /// <returns> <c>true</c> if the specified link path is symlink and the target exists; otherwise, <c>false</c> . </returns>
         /// <remarks>
         /// </remarks>
         public static bool? IsValidLink(string linkPath) {
-            if( IsSymlink(linkPath) ) {
+            if (IsSymlink(linkPath)) {
                 var actualPath = _symlink.Value.GetActualPath(linkPath);
                 return File.Exists(actualPath) || Directory.Exists(actualPath);
             }
@@ -107,8 +106,8 @@ namespace CoApp.Toolkit.Win32 {
         /// <summary>
         ///   Wrapper Method: Determines whether the specified link path is a symlink and if it points to an invalid location.
         /// </summary>
-        /// <param name = "linkPath">The link path.</param>
-        /// <returns><c>true</c> if the specified link path is symlink and the target exists; otherwise, <c>false</c>.</returns>
+        /// <param name="linkPath"> The link path. </param>
+        /// <returns> <c>true</c> if the specified link path is symlink and the target exists; otherwise, <c>false</c> . </returns>
         /// <remarks>
         /// </remarks>
         public static bool? IsInvalidLink(string linkPath) {
@@ -119,12 +118,11 @@ namespace CoApp.Toolkit.Win32 {
             return null;
         }
 
-
         /// <summary>
         ///   Wrapper Method: Gets the actual path.
         /// </summary>
-        /// <param name = "linkPath">The link path.</param>
-        /// <returns></returns>
+        /// <param name="linkPath"> The link path. </param>
+        /// <returns> </returns>
         /// <remarks>
         /// </remarks>
         public static string GetActualPath(string linkPath) {

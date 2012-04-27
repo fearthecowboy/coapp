@@ -33,20 +33,17 @@ namespace CoApp.Toolkit.Win32 {
     [StructLayout(LayoutKind.Sequential)]
     public struct Iconinfo {
         /// <summary>
-        ///   Specifies whether this structure defines an icon or a cursor. 
-        ///   A value of TRUE specifies an icon; FALSE specifies a cursor.
+        ///   Specifies whether this structure defines an icon or a cursor. A value of TRUE specifies an icon; FALSE specifies a cursor.
         /// </summary>
         public bool IsIcon;
 
         /// <summary>
-        ///   Specifies the x-coordinate of a cursor's hot spot. If this structure defines an icon, the hot spot is 
-        ///   always in the center of the icon, and this member is ignored.
+        ///   Specifies the x-coordinate of a cursor's hot spot. If this structure defines an icon, the hot spot is always in the center of the icon, and this member is ignored.
         /// </summary>
         public int xHotspot;
 
         /// <summary>
-        ///   Specifies the y-coordinate of the cursor's hot spot. If this structure defines an icon, the hot spot 
-        ///   is always in the center of the icon, and this member is ignored.
+        ///   Specifies the y-coordinate of the cursor's hot spot. If this structure defines an icon, the hot spot is always in the center of the icon, and this member is ignored.
         /// </summary>
         public int yHotspot;
 

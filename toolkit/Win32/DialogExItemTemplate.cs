@@ -33,9 +33,7 @@ namespace CoApp.Toolkit.Win32 {
     [StructLayout(LayoutKind.Sequential, Pack = 4)]
     public struct DialogExItemTemplate {
         /// <summary>
-        ///   Specifies the help context identifier for the dialog box window. When the system
-        ///   sends a WM_HELP message, it passes this value in the wContextId member of the 
-        ///   HELPINFO structure.
+        ///   Specifies the help context identifier for the dialog box window. When the system sends a WM_HELP message, it passes this value in the wContextId member of the HELPINFO structure.
         /// </summary>
         public UInt32 helpID;
 

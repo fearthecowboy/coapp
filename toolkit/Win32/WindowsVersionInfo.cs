@@ -30,12 +30,15 @@ namespace CoApp.Toolkit.Win32 {
         /// <remarks>
         /// </remarks>
         public static bool IsVistaOrBeyond {
-            get { return Environment.OSVersion.Version.Major > 5; }
+            get {
+                return Environment.OSVersion.Version.Major > 5;
+            }
         }
 
-
         public static bool IsVistaOrPrior {
-            get { return Environment.OSVersion.Version.Major < 6 || (Environment.OSVersion.Version.Major == 6 && Environment.OSVersion.Version.Minor == 0); }
+            get {
+                return Environment.OSVersion.Version.Major < 6 || (Environment.OSVersion.Version.Major == 6 && Environment.OSVersion.Version.Minor == 0);
+            }
         }
 
         /// <summary>
@@ -44,7 +47,9 @@ namespace CoApp.Toolkit.Win32 {
         /// <remarks>
         /// </remarks>
         public static bool IsCurrentProcess32Bit {
-            get { return !Environment.Is64BitProcess; }
+            get {
+                return !Environment.Is64BitProcess;
+            }
         }
 
         /// <summary>
@@ -53,7 +58,9 @@ namespace CoApp.Toolkit.Win32 {
         /// <remarks>
         /// </remarks>
         public static bool IsCurrentProcess64Bit {
-            get { return Environment.Is64BitProcess; }
+            get {
+                return Environment.Is64BitProcess;
+            }
         }
 
         /// <summary>
@@ -62,7 +69,9 @@ namespace CoApp.Toolkit.Win32 {
         /// <remarks>
         /// </remarks>
         public static bool IsOS32Bit {
-            get { return !Environment.Is64BitOperatingSystem; }
+            get {
+                return !Environment.Is64BitOperatingSystem;
+            }
         }
 
         /// <summary>
@@ -71,7 +80,9 @@ namespace CoApp.Toolkit.Win32 {
         /// <remarks>
         /// </remarks>
         public static bool IsOS64Bit {
-            get { return Environment.Is64BitOperatingSystem; }
+            get {
+                return Environment.Is64BitOperatingSystem;
+            }
         }
 
         public static ProcessorType ProcessorType {

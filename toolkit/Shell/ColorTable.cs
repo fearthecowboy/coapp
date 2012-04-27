@@ -33,7 +33,7 @@ namespace CoApp.Toolkit.Shell {
         public int IndexOf(long item) {
             UInt32 value;
             checked {
-                value = (UInt32) item;
+                value = (UInt32)item;
             }
             for (int i = 0; i < owner.nt_console_props.ColorTable.Length; i++) {
                 if (owner.nt_console_props.ColorTable[i] == value) {
@@ -53,10 +53,12 @@ namespace CoApp.Toolkit.Shell {
         }
 
         public long this[int index] {
-            get { return owner.nt_console_props.ColorTable[index]; }
+            get {
+                return owner.nt_console_props.ColorTable[index];
+            }
             set {
                 checked {
-                    owner.nt_console_props.ColorTable[index] = (UInt32) value;
+                    owner.nt_console_props.ColorTable[index] = (UInt32)value;
                 }
                 ;
                 this.Commit();
@@ -89,11 +91,15 @@ namespace CoApp.Toolkit.Shell {
         }
 
         public int Count {
-            get { return owner.nt_console_props.ColorTable.Length; }
+            get {
+                return owner.nt_console_props.ColorTable.Length;
+            }
         }
 
         public bool IsReadOnly {
-            get { return false; }
+            get {
+                return false;
+            }
         }
 
         public bool Remove(long item) {

@@ -13,115 +13,99 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-namespace CoApp.Toolkit.ImpromptuInterface.Dynamic
-{
+namespace CoApp.Toolkit.ImpromptuInterface.Dynamic {
     using System;
     using System.Collections.Generic;
+    using System.Dynamic;
     using System.Linq;
     using System.Runtime.Serialization;
     using Optimization;
 
     /// <summary>
-    /// Proxy that Records Dynamic Invocations on an object
+    ///   Proxy that Records Dynamic Invocations on an object
     /// </summary>
     [Serializable]
-    public class ImpromptuRecorder:ImpromptuForwarder
-    {
-
+    public class ImpromptuRecorder : ImpromptuForwarder {
         /// <summary>
-        /// Initializes a new instance of the <see cref="ImpromptuRecorder"/> class.
+        ///   Initializes a new instance of the <see cref="ImpromptuRecorder" /> class.
         /// </summary>
-        public ImpromptuRecorder():base(new ImpromptuDummy())
-        {
+        public ImpromptuRecorder() : base(new ImpromptuDummy()) {
             Recording = new List<Invocation>();
         }
 
         /// <summary>
-        /// Gets or sets the recording.
+        ///   Gets or sets the recording.
         /// </summary>
-        /// <value>The recording.</value>
+        /// <value> The recording. </value>
         public IList<Invocation> Recording { get; protected set; }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ImpromptuRecorder"/> class.
+        ///   Initializes a new instance of the <see cref="ImpromptuRecorder" /> class.
         /// </summary>
-        /// <param name="target">The target.</param>
-        public ImpromptuRecorder(object target) : base(target)
-        {
+        /// <param name="target"> The target. </param>
+        public ImpromptuRecorder(object target) : base(target) {
             Recording = new List<Invocation>();
         }
 
 #if !SILVERLIGHT
         /// <summary>
-        /// Initializes a new instance of the <see cref="ImpromptuRecorder"/> class.
+        ///   Initializes a new instance of the <see cref="ImpromptuRecorder" /> class.
         /// </summary>
-        /// <param name="info">The info.</param>
-        /// <param name="context">The context.</param>
-        protected ImpromptuRecorder(SerializationInfo info, 
-           StreamingContext context):base(info,context)
-        {
-
-
+        /// <param name="info"> The info. </param>
+        /// <param name="context"> The context. </param>
+        protected ImpromptuRecorder(SerializationInfo info,
+            StreamingContext context) : base(info, context) {
             Recording = info.GetValue<IList<Invocation>>("Recording");
         }
 
         /// <summary>
-        /// Gets the object data.
+        ///   Gets the object data.
         /// </summary>
-        /// <param name="info">The info.</param>
-        /// <param name="context">The context.</param>
-        public override void GetObjectData(SerializationInfo info, StreamingContext context)
-        {
-            base.GetObjectData(info,context);
+        /// <param name="info"> The info. </param>
+        /// <param name="context"> The context. </param>
+        public override void GetObjectData(SerializationInfo info, StreamingContext context) {
+            base.GetObjectData(info, context);
             info.AddValue("Recording", Recording);
         }
 #endif
 
         /// <summary>
-        /// Replays the recording on target.
+        ///   Replays the recording on target.
         /// </summary>
-        /// <param name="target">The target.</param>
-        public T ReplayOn<T>(T target)
-        {
-            foreach (var tInvocation in Recording)
-            {
+        /// <param name="target"> The target. </param>
+        public T ReplayOn<T>(T target) {
+            foreach (var tInvocation in Recording) {
                 tInvocation.InvokeWithStoredArgs(target);
             }
 
             return target;
         }
 
-        public override bool TryGetMember(System.Dynamic.GetMemberBinder binder, out object result)
-        {
-            if (base.TryGetMember(binder, out result))
-            {
-                Recording.Add(new Invocation(InvocationKind.Get,binder.Name));
+        public override bool TryGetMember(GetMemberBinder binder, out object result) {
+            if (base.TryGetMember(binder, out result)) {
+                Recording.Add(new Invocation(InvocationKind.Get, binder.Name));
                 return true;
             }
             return false;
         }
 
-        public override bool TrySetMember(System.Dynamic.SetMemberBinder binder, object value)
-        {
-            if (base.TrySetMember(binder, value))
-            {
-                Recording.Add(new Invocation(InvocationKind.Set,binder.Name,value));
+        public override bool TrySetMember(SetMemberBinder binder, object value) {
+            if (base.TrySetMember(binder, value)) {
+                Recording.Add(new Invocation(InvocationKind.Set, binder.Name, value));
                 return true;
             }
             return false;
         }
 
         /// <summary>
-        /// Tries the invoke member.
+        ///   Tries the invoke member.
         /// </summary>
-        /// <param name="binder">The binder.</param>
-        /// <param name="args">The args.</param>
-        /// <param name="result">The result.</param>
-        /// <returns></returns>
-        public override bool TryInvokeMember(System.Dynamic.InvokeMemberBinder binder, object[] args, out object result)
-        {
-            if (base.TryInvokeMember(binder, args, out result))
-            {
+        /// <param name="binder"> The binder. </param>
+        /// <param name="args"> The args. </param>
+        /// <param name="result"> The result. </param>
+        /// <returns> </returns>
+        public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result) {
+            if (base.TryInvokeMember(binder, args, out result)) {
                 Recording.Add(new Invocation(InvocationKind.InvokeMemberUnknown, binder.Name, Util.NameArgsIfNecessary(binder.CallInfo, args)));
                 return true;
             }
@@ -129,16 +113,14 @@ namespace CoApp.Toolkit.ImpromptuInterface.Dynamic
         }
 
         /// <summary>
-        /// Tries the index of the get.
+        ///   Tries the index of the get.
         /// </summary>
-        /// <param name="binder">The binder.</param>
-        /// <param name="indexes">The indexes.</param>
-        /// <param name="result">The result.</param>
-        /// <returns></returns>
-        public override bool TryGetIndex(System.Dynamic.GetIndexBinder binder, object[] indexes, out object result)
-        {
-            if (base.TryGetIndex(binder, indexes, out result))
-            {
+        /// <param name="binder"> The binder. </param>
+        /// <param name="indexes"> The indexes. </param>
+        /// <param name="result"> The result. </param>
+        /// <returns> </returns>
+        public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result) {
+            if (base.TryGetIndex(binder, indexes, out result)) {
                 Recording.Add(new Invocation(InvocationKind.GetIndex, Invocation.IndexBinderName, Util.NameArgsIfNecessary(binder.CallInfo, indexes)));
                 return true;
             }
@@ -146,22 +128,19 @@ namespace CoApp.Toolkit.ImpromptuInterface.Dynamic
         }
 
         /// <summary>
-        /// Tries the index of the set.
+        ///   Tries the index of the set.
         /// </summary>
-        /// <param name="binder">The binder.</param>
-        /// <param name="indexes">The indexes.</param>
-        /// <param name="value">The value.</param>
-        /// <returns></returns>
-        public override bool TrySetIndex(System.Dynamic.SetIndexBinder binder, object[] indexes, object value)
-        {
-            if (base.TrySetIndex(binder, indexes, value))
-            {
-                var tCombinedArgs = indexes.Concat(new[] { value }).ToArray();
+        /// <param name="binder"> The binder. </param>
+        /// <param name="indexes"> The indexes. </param>
+        /// <param name="value"> The value. </param>
+        /// <returns> </returns>
+        public override bool TrySetIndex(SetIndexBinder binder, object[] indexes, object value) {
+            if (base.TrySetIndex(binder, indexes, value)) {
+                var tCombinedArgs = indexes.Concat(new[] {value}).ToArray();
                 Recording.Add(new Invocation(InvocationKind.GetIndex, Invocation.IndexBinderName, Util.NameArgsIfNecessary(binder.CallInfo, tCombinedArgs)));
                 return true;
             }
             return false;
         }
-
     }
 }

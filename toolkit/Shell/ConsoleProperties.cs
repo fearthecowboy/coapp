@@ -45,7 +45,7 @@ namespace CoApp.Toolkit.Shell {
         /// <summary>
         ///   This should be only called by a ShellLink constructor
         /// </summary>
-        /// <param name = "owner"></param>
+        /// <param name="owner"> </param>
         internal ConsoleProperties(ShellLink owner)
             : this() {
             this.owner = owner;
@@ -55,10 +55,12 @@ namespace CoApp.Toolkit.Shell {
         ///   Gets or sets the Fill attribute for the console.
         /// </summary>
         public int FillAttribute {
-            get { return nt_console_props.wFillAttribute; }
+            get {
+                return nt_console_props.wFillAttribute;
+            }
             set {
                 checked {
-                    nt_console_props.wFillAttribute = (UInt16) value;
+                    nt_console_props.wFillAttribute = (UInt16)value;
                 }
                 ;
                 this.Commit();
@@ -69,10 +71,12 @@ namespace CoApp.Toolkit.Shell {
         ///   Gets or sets Fill attribute for console popups.
         /// </summary>
         public int PopupFillAttribute {
-            get { return nt_console_props.wPopupFillAttribute; }
+            get {
+                return nt_console_props.wPopupFillAttribute;
+            }
             set {
                 checked {
-                    nt_console_props.wPopupFillAttribute = (UInt16) value;
+                    nt_console_props.wPopupFillAttribute = (UInt16)value;
                 }
                 ;
                 this.Commit();
@@ -80,10 +84,12 @@ namespace CoApp.Toolkit.Shell {
         }
 
         /// <summary>
-        ///   gets or sets the console's screen buffer size.  X is width, Y is height.
+        ///   gets or sets the console's screen buffer size. X is width, Y is height.
         /// </summary>
         public Coordinate ScreenBufferSize {
-            get { return new Coordinate(nt_console_props.dwScreenBufferSize); }
+            get {
+                return new Coordinate(nt_console_props.dwScreenBufferSize);
+            }
             set {
                 checked {
                     nt_console_props.dwScreenBufferSize = value.AsCOORD();
@@ -94,10 +100,12 @@ namespace CoApp.Toolkit.Shell {
         }
 
         /// <summary>
-        ///   gets or sets the console's window size.  X is width, Y is height.
+        ///   gets or sets the console's window size. X is width, Y is height.
         /// </summary>
         public Coordinate WindowSize {
-            get { return new Coordinate(nt_console_props.dwWindowSize); }
+            get {
+                return new Coordinate(nt_console_props.dwWindowSize);
+            }
             set {
                 checked {
                     nt_console_props.dwWindowSize = value.AsCOORD();
@@ -108,10 +116,12 @@ namespace CoApp.Toolkit.Shell {
         }
 
         /// <summary>
-        ///   gets or sets the console's window origin.  X is left, Y is top.
+        ///   gets or sets the console's window origin. X is left, Y is top.
         /// </summary>
         public Coordinate WindowOrigin {
-            get { return new Coordinate(nt_console_props.dwWindowOrigin); }
+            get {
+                return new Coordinate(nt_console_props.dwWindowOrigin);
+            }
             set {
                 checked {
                     nt_console_props.dwWindowOrigin = value.AsCOORD();
@@ -127,12 +137,12 @@ namespace CoApp.Toolkit.Shell {
         public long Font {
             get {
                 checked {
-                    return (int) nt_console_props.nFont;
+                    return (int)nt_console_props.nFont;
                 }
             }
             set {
                 checked {
-                    nt_console_props.nFont = (UInt32) value;
+                    nt_console_props.nFont = (UInt32)value;
                 }
                 ;
                 this.Commit();
@@ -150,7 +160,7 @@ namespace CoApp.Toolkit.Shell {
             }
             set {
                 checked {
-                    nt_console_props.nInputBufferSize = (UInt32) value;
+                    nt_console_props.nInputBufferSize = (UInt32)value;
                 }
                 ;
                 this.Commit();
@@ -161,7 +171,9 @@ namespace CoApp.Toolkit.Shell {
         ///   gets or sets the console's font size.
         /// </summary>
         public Coordinate FontSize {
-            get { return new Coordinate(nt_console_props.dwFontSize); }
+            get {
+                return new Coordinate(nt_console_props.dwFontSize);
+            }
             set {
                 checked {
                     nt_console_props.dwFontSize = value.AsCOORD();
@@ -182,7 +194,7 @@ namespace CoApp.Toolkit.Shell {
             }
             set {
                 checked {
-                    nt_console_props.uFontFamily = (UInt32) value;
+                    nt_console_props.uFontFamily = (UInt32)value;
                 }
                 ;
                 this.Commit();
@@ -200,7 +212,7 @@ namespace CoApp.Toolkit.Shell {
             }
             set {
                 checked {
-                    nt_console_props.uFontWeight = (UInt32) value;
+                    nt_console_props.uFontWeight = (UInt32)value;
                 }
                 ;
                 this.Commit();
@@ -262,7 +274,7 @@ namespace CoApp.Toolkit.Shell {
             }
             set {
                 checked {
-                    nt_console_props.uCursorSize = (UInt32) value;
+                    nt_console_props.uCursorSize = (UInt32)value;
                 }
                 ;
                 this.Commit();
@@ -273,7 +285,9 @@ namespace CoApp.Toolkit.Shell {
         ///   Gets or sets the console's full screen flag.
         /// </summary>
         public bool FullScreen {
-            get { return nt_console_props.bFullScreen; }
+            get {
+                return nt_console_props.bFullScreen;
+            }
             set {
                 nt_console_props.bFullScreen = value;
                 this.Commit();
@@ -284,7 +298,9 @@ namespace CoApp.Toolkit.Shell {
         ///   Gets or sets the console's quick edit flag.
         /// </summary>
         public bool QuickEdit {
-            get { return nt_console_props.bQuickEdit; }
+            get {
+                return nt_console_props.bQuickEdit;
+            }
             set {
                 nt_console_props.bQuickEdit = value;
                 this.Commit();
@@ -295,7 +311,9 @@ namespace CoApp.Toolkit.Shell {
         ///   Gets or sets the console's insert mode flag. True for insert mode, false for overrite
         /// </summary>
         public bool InsertMode {
-            get { return nt_console_props.bInsertMode; }
+            get {
+                return nt_console_props.bInsertMode;
+            }
             set {
                 nt_console_props.bInsertMode = value;
                 this.Commit();
@@ -306,7 +324,9 @@ namespace CoApp.Toolkit.Shell {
         ///   Gets or sets the console's auto position flag. True to auto position the window.
         /// </summary>
         public bool AutoPosition {
-            get { return nt_console_props.bAutoPosition; }
+            get {
+                return nt_console_props.bAutoPosition;
+            }
             set {
                 nt_console_props.bAutoPosition = value;
                 this.Commit();
@@ -324,7 +344,7 @@ namespace CoApp.Toolkit.Shell {
             }
             set {
                 checked {
-                    nt_console_props.uHistoryBufferSize = (UInt32) value;
+                    nt_console_props.uHistoryBufferSize = (UInt32)value;
                 }
                 ;
                 this.Commit();
@@ -342,7 +362,7 @@ namespace CoApp.Toolkit.Shell {
             }
             set {
                 checked {
-                    nt_console_props.uNumberOfHistoryBuffers = (UInt32) value;
+                    nt_console_props.uNumberOfHistoryBuffers = (UInt32)value;
                 }
                 ;
                 this.Commit();
@@ -352,7 +372,9 @@ namespace CoApp.Toolkit.Shell {
         /// <summary>
         ///   Gets or sets the console's histry no dupe flag. True if old duplicate history lists should be discarded, or false otherwise.
         public bool HistoryNoDup {
-            get { return nt_console_props.bHistoryNoDup; }
+            get {
+                return nt_console_props.bHistoryNoDup;
+            }
             set {
                 nt_console_props.bHistoryNoDup = value;
                 this.Commit();
@@ -363,7 +385,9 @@ namespace CoApp.Toolkit.Shell {
         ///   An array of color reference values for the console. Colors are specified as an index into this array.
         /// </summary>
         public ColorTable ColorTable {
-            get { return this.colorTable; }
+            get {
+                return this.colorTable;
+            }
         }
 
         #region ICommiter Members

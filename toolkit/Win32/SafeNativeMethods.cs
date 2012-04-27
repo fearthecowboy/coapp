@@ -228,8 +228,7 @@ namespace CoApp.Toolkit.Win32 {
                 long value;
                 if (Kernel32.GetFileSizeEx(handle, out value)) {
                     result = value;
-                }
-                else {
+                } else {
                     ThrowLastIOError(path);
                 }
             }
@@ -275,22 +274,18 @@ namespace CoApp.Toolkit.Win32 {
                                 // Read the next stream header:
                                 if (!Kernel32.BackupRead(hFile, ref streamId, dwStreamHeaderSize, out bytesRead, false, false, ref context)) {
                                     finished = true;
-                                }
-                                else if (dwStreamHeaderSize != bytesRead) {
+                                } else if (dwStreamHeaderSize != bytesRead) {
                                     finished = true;
-                                }
-                                else {
+                                } else {
                                     // Read the stream name:
                                     if (0 >= streamId.StreamNameSize) {
                                         name = null;
-                                    }
-                                    else {
+                                    } else {
                                         hName.EnsureCapacity(streamId.StreamNameSize);
                                         if (!Kernel32.BackupRead(hFile, hName.MemoryBlock, streamId.StreamNameSize, out bytesRead, false, false, ref context)) {
                                             name = null;
                                             finished = true;
-                                        }
-                                        else {
+                                        } else {
                                             // Unicode chars are 2 bytes:
                                             name = hName.ReadStreamName(bytesRead >> 1);
                                         }
@@ -299,8 +294,8 @@ namespace CoApp.Toolkit.Win32 {
                                     // Add the stream info to the result:
                                     if (!string.IsNullOrEmpty(name)) {
                                         result.Add(new Win32StreamInfo {
-                                            StreamType = (FileStreamType) streamId.StreamId,
-                                            StreamAttributes = (FileStreamAttributes) streamId.StreamAttributes,
+                                            StreamType = (FileStreamType)streamId.StreamId,
+                                            StreamAttributes = (FileStreamAttributes)streamId.StreamAttributes,
                                             StreamSize = streamId.Size,
                                             StreamName = name
                                         });
@@ -311,14 +306,13 @@ namespace CoApp.Toolkit.Win32 {
                                         bytesSeekedHigh;
 
                                     if (!finished &&
-                                        !Kernel32.BackupSeek(hFile, (int) (streamId.Size & 0xffffffff), (int) (streamId.Size >> 32), out bytesSeekedLow,
+                                        !Kernel32.BackupSeek(hFile, (int)(streamId.Size & 0xffffffff), (int)(streamId.Size >> 32), out bytesSeekedLow,
                                             out bytesSeekedHigh, ref context)) {
                                         finished = true;
                                     }
                                 }
                             }
-                        }
-                        finally {
+                        } finally {
                             // Abort the backup:
                             Kernel32.BackupRead(hFile, hName.MemoryBlock, 0, out bytesRead, true, false, ref context);
                         }

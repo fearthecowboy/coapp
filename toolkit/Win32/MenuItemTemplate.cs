@@ -33,8 +33,7 @@ namespace CoApp.Toolkit.Win32 {
     [StructLayout(LayoutKind.Sequential, Pack = 2)]
     public struct MenuItemTemplate {
         /// <summary>
-        ///   Specifies one or more of the following predefined menu options that control the appearance of the menu item.
-        ///   TODO
+        ///   Specifies one or more of the following predefined menu options that control the appearance of the menu item. TODO
         /// </summary>
         public UInt16 mtOption;
     }

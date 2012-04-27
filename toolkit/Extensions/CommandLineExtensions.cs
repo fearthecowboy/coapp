@@ -30,89 +30,94 @@ namespace CoApp.Toolkit.Extensions {
     using Win32;
 
     /// <summary>
-    /// Storage Class for complex options from the command line.
+    ///   Storage Class for complex options from the command line.
     /// </summary>
-    /// <remarks></remarks>
+    /// <remarks>
+    /// </remarks>
     public class ComplexOption {
         /// <summary>
-        /// 
         /// </summary>
         public string WholePrefix; // stuff in the []
+
         /// <summary>
-        /// 
         /// </summary>
         public string WholeValue; // stuff after the []
+
         /// <summary>
-        /// 
         /// </summary>
         public List<string> PrefixParameters = new List<string>(); // individual items in the []
+
         /// <summary>
-        /// 
         /// </summary>
         public Dictionary<string, string> Values = new Dictionary<string, string>(); // individual key/values after the []
     }
 
     /// <summary>
-    /// 
     /// </summary>
     /// <remarks>
-    /// NOTE: Explicity Ignore, testing this will produce no discernable value, and will only lead to heartbreak.
+    ///   NOTE: Explicity Ignore, testing this will produce no discernable value, and will only lead to heartbreak.
     /// </remarks>
     public static class CommandLineExtensions {
         /// <summary>
-        /// 
         /// </summary>
         private static Dictionary<string, IEnumerable<string>> switches;
+
         /// <summary>
-        /// 
         /// </summary>
         private static IEnumerable<string> parameters;
 
         /// <summary>
-        /// Gets the parameters for switch or null.
+        ///   Gets the parameters for switch or null.
         /// </summary>
-        /// <param name="args">The args.</param>
-        /// <param name="key">The key.</param>
-        /// <returns></returns>
-        /// <remarks></remarks>
+        /// <param name="args"> The args. </param>
+        /// <param name="key"> The key. </param>
+        /// <returns> </returns>
+        /// <remarks>
+        /// </remarks>
         public static IEnumerable<string> GetParametersForSwitchOrNull(this IEnumerable<string> args, string key) {
-            if(switches == null)
+            if (switches == null) {
                 Switches(args);
+            }
 
-            if(switches.ContainsKey(key))
+            if (switches.ContainsKey(key)) {
                 return switches[key];
+            }
 
             return null;
         }
 
-
         /// <summary>
-        /// Gets the parameters for switch.
+        ///   Gets the parameters for switch.
         /// </summary>
-        /// <param name="args">The args.</param>
-        /// <param name="key">The key.</param>
-        /// <returns></returns>
-        /// <remarks></remarks>
-        public static IEnumerable<string> GetParametersForSwitch(this IEnumerable<string> args,string key) {
-            if (switches == null) 
+        /// <param name="args"> The args. </param>
+        /// <param name="key"> The key. </param>
+        /// <returns> </returns>
+        /// <remarks>
+        /// </remarks>
+        public static IEnumerable<string> GetParametersForSwitch(this IEnumerable<string> args, string key) {
+            if (switches == null) {
                 Switches(args);
+            }
 
-            if (switches.ContainsKey(key))
+            if (switches.ContainsKey(key)) {
                 return switches[key];
+            }
 
             return new List<string>();
         }
 
         /// <summary>
-        /// Switches the value.
+        ///   Switches the value.
         /// </summary>
-        /// <param name="args">The args.</param>
-        /// <param name="key">The key.</param>
-        /// <returns></returns>
-        /// <remarks></remarks>
+        /// <param name="args"> The args. </param>
+        /// <param name="key"> The key. </param>
+        /// <returns> </returns>
+        /// <remarks>
+        /// </remarks>
         public static string SwitchValue(this IEnumerable<string> args, string key) {
-            if(args.Switches().ContainsKey(key))
+            if (args.Switches().ContainsKey(key)) {
                 return args.GetParametersForSwitch(key).FirstOrDefault();
+            }
             return null;
         }
 
@@ -122,8 +127,9 @@ namespace CoApp.Toolkit.Extensions {
             var ptrToSplitArgs = Kernel32.CommandLineToArgvW(unsplitArgumentLine, out numberOfArgs);
 
             // CommandLineToArgvW returns NULL upon failure.
-            if (ptrToSplitArgs == IntPtr.Zero)
+            if (ptrToSplitArgs == IntPtr.Zero) {
                 throw new ArgumentException("Unable to split argument.", new Win32Exception());
+            }
 
             // Make sure the memory ptrToSplitArgs to is freed, even upon failure.
             try {
@@ -131,25 +137,26 @@ namespace CoApp.Toolkit.Extensions {
 
                 // ptrToSplitArgs is an array of pointers to null terminated Unicode strings.
                 // Copy each of these strings into our split argument array.
-                for (var i = 0; i < numberOfArgs; i++)
-                    splitArgs[i] = Marshal.PtrToStringUni(Marshal.ReadIntPtr(ptrToSplitArgs, i * IntPtr.Size));
+                for (var i = 0; i < numberOfArgs; i++) {
+                    splitArgs[i] = Marshal.PtrToStringUni(Marshal.ReadIntPtr(ptrToSplitArgs, i*IntPtr.Size));
+                }
 
                 return splitArgs;
-            }
-            finally {
+            } finally {
                 // Free memory obtained by CommandLineToArgW.
                 Kernel32.LocalFree(ptrToSplitArgs);
             }
         }
 
         /// <summary>
-        /// Switcheses the specified args.
+        ///   Switcheses the specified args.
         /// </summary>
-        /// <param name="args">The args.</param>
-        /// <returns></returns>
-        /// <remarks></remarks>
+        /// <param name="args"> The args. </param>
+        /// <returns> </returns>
+        /// <remarks>
+        /// </remarks>
         public static Dictionary<string, IEnumerable<string>> Switches(this IEnumerable<string> args) {
-            if(switches != null) {
+            if (switches != null) {
                 return switches;
             }
             var assemblypath = Assembly.GetEntryAssembly().Location;
@@ -158,30 +165,27 @@ namespace CoApp.Toolkit.Extensions {
 
             var v = Environment.GetEnvironmentVariable("_" + Path.GetFileNameWithoutExtension(assemblypath) + "_");
             if (!string.IsNullOrEmpty(v)) {
-                var extraSwitches = SplitArgs(v).Where( each => each.StartsWith("--") );
+                var extraSwitches = SplitArgs(v).Where(each => each.StartsWith("--"));
                 if (!args.IsNullOrEmpty()) {
                     args = args.Union(extraSwitches);
                 }
             }
 
             // load a <exe>.properties file in the same location as the executing assembly.
-            
+
             var propertiespath = "{0}\\{1}.properties".format(Path.GetDirectoryName(assemblypath), Path.GetFileNameWithoutExtension(assemblypath));
-            if(File.Exists(propertiespath)) {
+            if (File.Exists(propertiespath)) {
                 propertiespath.LoadConfiguration();
             }
 
-            
-            
-
             var argEnumerator = args.GetEnumerator();
             //while(firstarg < args.Length && args[firstarg].StartsWith("--")) {
-            while(argEnumerator.MoveNext() && argEnumerator.Current.StartsWith("--"))  {
+            while (argEnumerator.MoveNext() && argEnumerator.Current.StartsWith("--")) {
                 var arg = argEnumerator.Current.Substring(2).ToLower();
                 var param = "";
                 int pos;
 
-                if((pos = arg.IndexOf("=")) > -1) {
+                if ((pos = arg.IndexOf("=")) > -1) {
                     param = argEnumerator.Current.Substring(pos + 3);
                     arg = arg.Substring(0, pos);
                     /*
@@ -191,15 +195,14 @@ namespace CoApp.Toolkit.Extensions {
                         switches.Add("help", new List<string>());
                         return switches;
                     } */
-
                 }
-                if(arg.Equals("load-config")) {
+                if (arg.Equals("load-config")) {
                     // loads the config file, and then continues parsing this line.
                     LoadConfiguration(param);
                     // firstarg++;
                     continue;
                 }
-#if !COAPP_ENGINE_CORE 
+#if !COAPP_ENGINE_CORE
                 if (arg.Equals("list-bugtracker") || arg.Equals("list-bugtrackers")) {
                     // the user is asking for the bugtracker URLs for this application.
                     ListBugTrackers();
@@ -211,8 +214,8 @@ namespace CoApp.Toolkit.Extensions {
                     OpenBugTracker();
                     continue;
                 }
-#endif 
-                if(!switches.ContainsKey(arg)) {
+#endif
+                if (!switches.ContainsKey(arg)) {
                     switches.Add(arg, new List<string>());
                 }
 
@@ -222,7 +225,7 @@ namespace CoApp.Toolkit.Extensions {
             return switches;
         }
 
-#if !COAPP_ENGINE_CORE 
+#if !COAPP_ENGINE_CORE
         public static void ListBugTrackers() {
             using (new ConsoleColors(ConsoleColor.Cyan, ConsoleColor.Black)) {
                 Assembly.GetEntryAssembly().Logo().Print();
@@ -237,31 +240,33 @@ namespace CoApp.Toolkit.Extensions {
 
         public static void OpenBugTracker() {
             foreach (var a in GetBugTrackers()) {
-                if( a.Key == Assembly.GetEntryAssembly()) {
+                if (a.Key == Assembly.GetEntryAssembly()) {
                     Process.Start(a.Value);
                     return;
                 }
             }
             var tracker = GetBugTrackers().FirstOrDefault().Value;
-            if( tracker != null ) {
+            if (tracker != null) {
                 Process.Start(tracker);
             }
         }
 
-        public static IEnumerable<KeyValuePair<Assembly,string>> GetBugTrackers() {
-            return from a in System.AppDomain.CurrentDomain.GetAssemblies() 
-                   let attributes = a.GetCustomAttributes(false) from attribute in attributes.Where(attribute => (attribute as Attribute) != null).Where(attribute => (attribute as Attribute).GetType().Name == "AssemblyBugtrackerAttribute") 
-                   select new KeyValuePair<Assembly, string>(a, attribute.ToString());
+        public static IEnumerable<KeyValuePair<Assembly, string>> GetBugTrackers() {
+            return from a in AppDomain.CurrentDomain.GetAssemblies()
+                let attributes = a.GetCustomAttributes(false)
+                from attribute in attributes.Where(attribute => (attribute as Attribute) != null).Where(attribute => (attribute as Attribute).GetType().Name == "AssemblyBugtrackerAttribute")
+                select new KeyValuePair<Assembly, string>(a, attribute.ToString());
         }
 #endif
 
         /// <summary>
-        /// Loads the configuration.
+        ///   Loads the configuration.
         /// </summary>
-        /// <param name="file">The file.</param>
-        /// <remarks></remarks>
+        /// <param name="file"> The file. </param>
+        /// <remarks>
+        /// </remarks>
         public static void LoadConfiguration(this string file) {
-            if(switches == null) {
+            if (switches == null) {
                 switches = new Dictionary<string, IEnumerable<string>>();
             }
 
@@ -270,13 +275,13 @@ namespace CoApp.Toolkit.Extensions {
 
             string arg;
             int pos;
-            if(File.Exists(file)) {
+            if (File.Exists(file)) {
                 var lines = File.ReadAllLines(file);
-                for(var ln = 0; ln < lines.Length; ln++) {
+                for (var ln = 0; ln < lines.Length; ln++) {
                     var line = lines[ln].Trim();
-                    while(line.EndsWith("\\") && ln < lines.Length) {
+                    while (line.EndsWith("\\") && ln < lines.Length) {
                         line = line.Substring(0, line.Length - 1);
-                        if(++ln < lines.Length) {
+                        if (++ln < lines.Length) {
                             line += lines[ln].Trim();
                         }
                     }
@@ -284,39 +289,39 @@ namespace CoApp.Toolkit.Extensions {
 
                     param = "";
 
-                    if(arg.IndexOf("[") == 0) {
+                    if (arg.IndexOf("[") == 0) {
                         // category 
-                        category = arg.Substring(1, arg.IndexOf(']')-1).Trim();
+                        category = arg.Substring(1, arg.IndexOf(']') - 1).Trim();
                         continue;
                     }
 
-                    if(string.IsNullOrEmpty(arg) || arg.StartsWith(";") || arg.StartsWith("#")) // comments
+                    if (string.IsNullOrEmpty(arg) || arg.StartsWith(";") || arg.StartsWith("#")) // comments
                     {
                         continue;
                     }
 
-                    if(!string.IsNullOrEmpty(category))
-                    arg = "{0}-{1}".format(category, arg);
+                    if (!string.IsNullOrEmpty(category)) {
+                        arg = "{0}-{1}".format(category, arg);
+                    }
 
-                    if((pos = arg.IndexOf("=")) > -1) {
+                    if ((pos = arg.IndexOf("=")) > -1) {
                         param = arg.Substring(pos + 1);
                         arg = arg.Substring(0, pos).ToLower();
 
-                        if(string.IsNullOrEmpty(param) || string.IsNullOrEmpty(arg)) {
+                        if (string.IsNullOrEmpty(param) || string.IsNullOrEmpty(arg)) {
                             "Invalid Option in config file [{0}]: {1}".Print(file, line.Trim());
                             switches.Add("help", new List<string>());
                             return;
                         }
                     }
 
-                    if(!switches.ContainsKey(arg)) {
+                    if (!switches.ContainsKey(arg)) {
                         switches.Add(arg, new List<string>());
                     }
 
                     ((List<string>)switches[arg]).Add(param);
                 }
-            }
-            else {
+            } else {
                 "Unable to find configuration file [{0}]".Print(param);
             }
         }
@@ -328,16 +333,17 @@ namespace CoApp.Toolkit.Extensions {
         //  http://regexlib.com/REDetails.aspx?regexp_id=621
         //      @",(?!(?<=(?:^|,)\s*\x22(?:[^\x22]|\x22\x22|\\\x22)*,)(?:[^\x22]|\x22\x22|\\\x22)*\x22\s*(?:,|$))"
         /// <summary>
-        /// Gets the complex options.
+        ///   Gets the complex options.
         /// </summary>
-        /// <param name="rawParameterList">The raw parameter list.</param>
-        /// <returns></returns>
-        /// <remarks></remarks>
+        /// <param name="rawParameterList"> The raw parameter list. </param>
+        /// <returns> </returns>
+        /// <remarks>
+        /// </remarks>
         public static IEnumerable<ComplexOption> GetComplexOptions(this IEnumerable<string> rawParameterList) {
             var optionList = new List<ComplexOption>();
-            foreach(string p in rawParameterList) {
+            foreach (var p in rawParameterList) {
                 var m = Regex.Match(p, @"\[(?>\"".*?\""|\[(?<DEPTH>)|\](?<-DEPTH>)|[^[]]?)*\](?(DEPTH)(?!))");
-                if(m.Success) {
+                if (m.Success) {
                     var co = new ComplexOption();
                     var v = m.Groups[0].Value;
                     var len = v.Length;
@@ -345,21 +351,20 @@ namespace CoApp.Toolkit.Extensions {
                     co.WholeValue = p.Substring(len);
 
                     var parameterStrings = Regex.Split(co.WholePrefix, @",(?!(?<=(?:^|,)\s*\x22(?:[^\x22]|\x22\x22|\\\x22)*,)(?:[^\x22]|\x22\x22|\\\x22)*\x22\s*(?:,|$))");
-                    foreach(string q in parameterStrings) {
+                    foreach (var q in parameterStrings) {
                         v = q.Trim();
-                        if(v[0] == '"' && v[v.Length - 1] == '"') {
+                        if (v[0] == '"' && v[v.Length - 1] == '"') {
                             v = v.Trim('"');
                         }
                         co.PrefixParameters.Add(v);
                     }
 
                     var values = co.WholeValue.Split('&');
-                    foreach(string q in values) {
+                    foreach (var q in values) {
                         var pos = q.IndexOf('=');
-                        if(pos > -1 && pos < q.Length - 1) {
+                        if (pos > -1 && pos < q.Length - 1) {
                             co.Values.Add(q.Substring(0, pos).UrlDecode(), q.Substring(pos + 1).UrlDecode());
-                        }
-                        else {
+                        } else {
                             co.Values.Add(q.Trim('='), "");
                         }
                     }
@@ -371,11 +376,12 @@ namespace CoApp.Toolkit.Extensions {
 
         // public static List<string> Data(this string[] args) {
         /// <summary>
-        /// Parameterses the specified args.
+        ///   Parameterses the specified args.
         /// </summary>
-        /// <param name="args">The args.</param>
-        /// <returns></returns>
-        /// <remarks></remarks>
+        /// <param name="args"> The args. </param>
+        /// <returns> </returns>
+        /// <remarks>
+        /// </remarks>
         public static IEnumerable<string> Parameters(this IEnumerable<string> args) {
             var v = Environment.GetEnvironmentVariable("_" + Path.GetFileNameWithoutExtension(Assembly.GetEntryAssembly().Location) + "_");
             if (!string.IsNullOrEmpty(v)) {
@@ -386,14 +392,14 @@ namespace CoApp.Toolkit.Extensions {
             }
 
             return parameters ?? (parameters = from argument in args
-                                               where !(argument.StartsWith("--"))
-                                               select argument);
+                where !(argument.StartsWith("--"))
+                select argument);
         }
 
         /// <summary>
-        /// 
         /// </summary>
-        public const string HelpConfigSyntax = @"
+        public const string HelpConfigSyntax =
+            @"
 Advanced Command Line Configuration Files 
 -----------------------------------------
 You may pass any double-dashed command line options in a configuration file 

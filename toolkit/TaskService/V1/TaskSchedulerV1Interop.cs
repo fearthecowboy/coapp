@@ -30,7 +30,6 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR 
 // OTHER DEALINGS IN THE SOFTWARE.
 
-
 namespace CoApp.Toolkit.TaskService.V1 {
     using System;
     using System.Runtime.InteropServices;
@@ -58,33 +57,33 @@ namespace CoApp.Toolkit.TaskService.V1 {
         // Event triggers don't have set run times.
         public const int SCHED_S_EVENT_TRIGGER = 0x00041308;
         // Trigger not found.
-        public const int SCHED_E_TRIGGER_NOT_FOUND = unchecked((int) 0x80041309);
+        public const int SCHED_E_TRIGGER_NOT_FOUND = unchecked((int)0x80041309);
         // One or more of the properties that are needed to run this task have not been set.
-        public const int SCHED_E_TASK_NOT_READY = unchecked((int) 0x8004130A);
+        public const int SCHED_E_TASK_NOT_READY = unchecked((int)0x8004130A);
         // There is no running instance of the task to terminate.
-        public const int SCHED_E_TASK_NOT_RUNNING = unchecked((int) 0x8004130B);
+        public const int SCHED_E_TASK_NOT_RUNNING = unchecked((int)0x8004130B);
         // The Task Scheduler Service is not installed on this computer.
-        public const int SCHED_E_SERVICE_NOT_INSTALLED = unchecked((int) 0x8004130C);
+        public const int SCHED_E_SERVICE_NOT_INSTALLED = unchecked((int)0x8004130C);
         // The task object could not be opened.
-        public const int SCHED_E_CANNOT_OPEN_TASK = unchecked((int) 0x8004130D);
+        public const int SCHED_E_CANNOT_OPEN_TASK = unchecked((int)0x8004130D);
         // The object is either an invalid task object or is not a task object.
-        public const int SCHED_E_INVALID_TASK = unchecked((int) 0x8004130E);
+        public const int SCHED_E_INVALID_TASK = unchecked((int)0x8004130E);
         // No account information could be found in the Task Scheduler security database for the task indicated.
-        public const int SCHED_E_ACCOUNT_INFORMATION_NOT_SET = unchecked((int) 0x8004130F);
+        public const int SCHED_E_ACCOUNT_INFORMATION_NOT_SET = unchecked((int)0x8004130F);
         // Unable to establish existence of the account specified.
-        public const int SCHED_E_ACCOUNT_NAME_NOT_FOUND = unchecked((int) 0x80041310);
+        public const int SCHED_E_ACCOUNT_NAME_NOT_FOUND = unchecked((int)0x80041310);
         // Corruption was detected in the Task Scheduler security database; the database has been reset.
-        public const int SCHED_E_ACCOUNT_DBASE_CORRUPT = unchecked((int) 0x80041311);
+        public const int SCHED_E_ACCOUNT_DBASE_CORRUPT = unchecked((int)0x80041311);
         // Task Scheduler security services are available only on Windows NT.
-        public const int SCHED_E_NO_SECURITY_SERVICES = unchecked((int) 0x80041312);
+        public const int SCHED_E_NO_SECURITY_SERVICES = unchecked((int)0x80041312);
         // The task object version is either unsupported or invalid.
-        public const int SCHED_E_UNKNOWN_OBJECT_VERSION = unchecked((int) 0x80041313);
+        public const int SCHED_E_UNKNOWN_OBJECT_VERSION = unchecked((int)0x80041313);
         // The task has been configured with an unsupported combination of account settings and run time options.
-        public const int SCHED_E_UNSUPPORTED_ACCOUNT_OPTION = unchecked((int) 0x80041314);
+        public const int SCHED_E_UNSUPPORTED_ACCOUNT_OPTION = unchecked((int)0x80041314);
         // The Task Scheduler Service is not running.
-        public const int SCHED_E_SERVICE_NOT_RUNNING = unchecked((int) 0x80041315);
+        public const int SCHED_E_SERVICE_NOT_RUNNING = unchecked((int)0x80041315);
         // The Task Scheduler service must be configured to run in the System account to function properly.  Individual tasks may be configured to run in other accounts.
-        public const int SCHED_E_SERVICE_NOT_LOCALSYSTEM = unchecked((int) 0x80041316);
+        public const int SCHED_E_SERVICE_NOT_LOCALSYSTEM = unchecked((int)0x80041316);
     }
 
     #endregion
@@ -293,13 +292,14 @@ namespace CoApp.Toolkit.TaskService.V1 {
         public MonthsOfTheYear Months;
 
         public WhichWeek V2WhichWeek {
-            get { return (WhichWeek) (1 << ((short) WhichWeek - 1)); }
+            get {
+                return (WhichWeek)(1 << ((short)WhichWeek - 1));
+            }
             set {
-                var idx = Array.IndexOf(new short[] {0x1, 0x2, 0x4, 0x8, 0x10}, (short) value);
+                var idx = Array.IndexOf(new short[] {0x1, 0x2, 0x4, 0x8, 0x10}, (short)value);
                 if (idx >= 0) {
-                    WhichWeek = (ushort) (idx + 1);
-                }
-                else {
+                    WhichWeek = (ushort)(idx + 1);
+                } else {
                     throw new NotV1SupportedException("Only a single week can be set with Task Scheduler 1.0.");
                 }
             }
@@ -308,10 +308,17 @@ namespace CoApp.Toolkit.TaskService.V1 {
 
     [StructLayout(LayoutKind.Explicit)]
     internal struct TriggerTypeData {
-        [FieldOffset(0)] public Daily daily;
-        [FieldOffset(0)] public Weekly weekly;
-        [FieldOffset(0)] public MonthlyDate monthlyDate;
-        [FieldOffset(0)] public MonthlyDOW monthlyDOW;
+        [FieldOffset(0)]
+        public Daily daily;
+
+        [FieldOffset(0)]
+        public Weekly weekly;
+
+        [FieldOffset(0)]
+        public MonthlyDate monthlyDate;
+
+        [FieldOffset(0)]
+        public MonthlyDOW monthlyDOW;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -335,31 +342,33 @@ namespace CoApp.Toolkit.TaskService.V1 {
         public ushort RandomMinutesInterval; // Maximum number of random minutes after start time.
 
         public DateTime BeginDate {
-            get { return new DateTime(BeginYear, BeginMonth, BeginDay, StartHour, StartMinute, 0, DateTimeKind.Local); }
+            get {
+                return new DateTime(BeginYear, BeginMonth, BeginDay, StartHour, StartMinute, 0, DateTimeKind.Local);
+            }
             set {
                 if (value != DateTime.MinValue) {
-                    BeginYear = (ushort) value.Year;
-                    BeginMonth = (ushort) value.Month;
-                    BeginDay = (ushort) value.Day;
-                    StartHour = (ushort) value.Hour;
-                    StartMinute = (ushort) value.Minute;
-                }
-                else {
+                    BeginYear = (ushort)value.Year;
+                    BeginMonth = (ushort)value.Month;
+                    BeginDay = (ushort)value.Day;
+                    StartHour = (ushort)value.Hour;
+                    StartMinute = (ushort)value.Minute;
+                } else {
                     BeginYear = BeginMonth = BeginDay = StartHour = StartMinute = 0;
                 }
             }
         }
 
         public DateTime EndDate {
-            get { return EndYear == 0 ? DateTime.MaxValue : new DateTime(EndYear, EndMonth, EndDay); }
+            get {
+                return EndYear == 0 ? DateTime.MaxValue : new DateTime(EndYear, EndMonth, EndDay);
+            }
             set {
                 if (value != DateTime.MaxValue) {
-                    EndYear = (ushort) value.Year;
-                    EndMonth = (ushort) value.Month;
-                    EndDay = (ushort) value.Day;
+                    EndYear = (ushort)value.Year;
+                    EndMonth = (ushort)value.Month;
+                    EndDay = (ushort)value.Day;
                     Flags |= TaskTriggerFlags.HasEndDate;
-                }
-                else {
+                } else {
                     EndYear = EndMonth = EndDay = 0;
                     Flags &= ~TaskTriggerFlags.HasEndDate;
                 }
@@ -576,7 +585,9 @@ namespace CoApp.Toolkit.TaskService.V1 {
         }
 
         public override bool IsInvalid {
-            get { return (handle == null || handle == IntPtr.Zero); }
+            get {
+                return (handle == null || handle == IntPtr.Zero);
+            }
         }
 
         protected override bool ReleaseHandle() {

@@ -19,12 +19,9 @@
 
 namespace CoApp.Toolkit.Extensions {
     using System;
-    using System.Collections;
     using System.Collections.Generic;
     using System.Linq;
     using System.Reflection;
-    using System.Runtime.InteropServices;
-    using System.Text;
     using Microsoft.Win32.SafeHandles;
     using Win32;
 
@@ -49,45 +46,60 @@ namespace CoApp.Toolkit.Extensions {
         public static Lazy<SafeFileHandle> StandardOutputHandle = new Lazy<SafeFileHandle>(() => {
             return Kernel32.GetStdHandle(StandardHandle.OUTPUT);
         });
+
         public static Lazy<SafeFileHandle> StandardInputHandle = new Lazy<SafeFileHandle>(() => {
             return Kernel32.GetStdHandle(StandardHandle.INPUT);
         });
+
         public static Lazy<SafeFileHandle> StandardErrorHandle = new Lazy<SafeFileHandle>(() => {
             return Kernel32.GetStdHandle(StandardHandle.ERROR);
         });
 
         public static bool OutputRedirected {
-            get {return FileType.Char != Kernel32.GetFileType(StandardOutputHandle.Value); }
+            get {
+                return FileType.Char != Kernel32.GetFileType(StandardOutputHandle.Value);
+            }
         }
+
         public static bool InputRedirected {
-            get { return FileType.Char != Kernel32.GetFileType(StandardInputHandle.Value); }
+            get {
+                return FileType.Char != Kernel32.GetFileType(StandardInputHandle.Value);
+            }
         }
+
         public static bool ErrorRedirected {
-            get { return FileType.Char != Kernel32.GetFileType(StandardErrorHandle.Value); }
+            get {
+                return FileType.Char != Kernel32.GetFileType(StandardErrorHandle.Value);
+            }
         }
 
         public static bool IsConsole {
-            get { try { return Console.BufferWidth != 0; } catch { } return false; }
+            get {
+                try {
+                    return Console.BufferWidth != 0;
+                } catch {
+                }
+                return false;
+            }
         }
 
         public static void PrintProgressBar(this string message, long progress) {
             if (!OutputRedirected) {
                 if (progress > -1) {
-                    if( progress <= 100) {
-                        if( Console.BufferWidth < (message.Length + 5) ) {
+                    if (progress <= 100) {
+                        if (Console.BufferWidth < (message.Length + 5)) {
                             message = message.Substring(0, Console.BufferWidth - 12);
                         }
 
                         var sz = Console.BufferWidth - (message.Length + 5);
-                        var done = (int)((progress * sz) / 100);
-                        
+                        var done = (int)((progress*sz)/100);
+
                         Console.Write("\r{0} [{1}] ", message, "".PadRight(done, '=').PadRight(sz, ' '));
                     } else {
                         Console.Write("\r{0} [{1} ]", message, progress);
                     }
-                }
-                else {
-                    Console.Write("\r".PadRight( Console.BufferWidth - 1, ' '));
+                } else {
+                    Console.Write("\r".PadRight(Console.BufferWidth - 1, ' '));
                 }
             }
         }
@@ -96,26 +108,23 @@ namespace CoApp.Toolkit.Extensions {
             try {
                 var v = propertyInfo.GetValue(obj, null);
                 return v != null ? v.ToString() : @default;
-            }
-            catch {
+            } catch {
                 return @default;
             }
         }
-
 
         private static string SafeGet(this Object obj, FieldInfo fieldInfo, string @default = "") {
             try {
                 var v = fieldInfo.GetValue(obj);
                 return v != null ? v.ToString() : @default;
-            }
-            catch {
+            } catch {
                 return @default;
             }
         }
 
-        private static string Justify( this string str, int width, int justification) {
+        private static string Justify(this string str, int width, int justification) {
             var result = str.PadLeft(justification == 2 ? 0 : justification == 3 ? (width - str.Length)/2 : width);
-            if( result.Length > width ) {
+            if (result.Length > width) {
                 int sz = (result.Length - (width + 3))/2;
                 result = result.Substring(0, sz) + " ... " + result.Substring(result.Length - sz);
             }
@@ -126,28 +135,26 @@ namespace CoApp.Toolkit.Extensions {
             return s.Length < sz ? s : s.Substring(s.Length - sz);
         }
 
-        private static string[] JustifyAll( this IList<string> elements, IList<int> widths,IList<int> justifications ) {
+        private static string[] JustifyAll(this IList<string> elements, IList<int> widths, IList<int> justifications) {
             var count = elements.Count;
             var result = new string[count];
             for (var i = 0; i < count; i++) {
-                result[i] = elements[i].PadRight(justifications[i] == 2 ? 0 : justifications[i] == 3 ? ((widths[i] - elements[i].Length) / 2) + elements[i].Length : widths[i]);
-                
+                result[i] = elements[i].PadRight(justifications[i] == 2 ? 0 : justifications[i] == 3 ? ((widths[i] - elements[i].Length)/2) + elements[i].Length : widths[i]);
+
                 if (result[i].Length > widths[i]) {
                     if (widths[i] < 15) {
-                        result[i] = result[i].Substring(0,(widths[i]-3))+"...";
-                    }
-                    else {
+                        result[i] = result[i].Substring(0, (widths[i] - 3)) + "...";
+                    } else {
                         int keep = widths[i]/2;
-                        result[i] = result[i].Substring(0, keep - 1) + "..." + result[i].Substring(result[i].Length - (keep - 2+(widths[i] & 1)));
+                        result[i] = result[i].Substring(0, keep - 1) + "..." + result[i].Substring(result[i].Length - (keep - 2 + (widths[i] & 1)));
                     }
                 }
-
             }
             return result;
         }
 
         public static IEnumerable<string> ToTable(this IEnumerable<object> data, int maxWidth = 500) {
-            if( !data.Any()) {
+            if (!data.Any()) {
                 return "Collection does not contain any data.".SingleItemAsEnumerable();
             }
             var fields = data.First().GetType().GetProperties();
@@ -186,9 +193,10 @@ namespace CoApp.Toolkit.Extensions {
             return result;
         }
 
-        public static void ConsoleOut(this IEnumerable<string> strings ) {
-            foreach( var s in strings)
+        public static void ConsoleOut(this IEnumerable<string> strings) {
+            foreach (var s in strings) {
                 Console.WriteLine(s);
+            }
         }
     }
 }

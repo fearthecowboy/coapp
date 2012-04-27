@@ -24,6 +24,7 @@ namespace CoApp.Toolkit.Win32 {
 
         [DllImport("ntdll.dll")]
         //public static extern UInt32 RtlCreateUserThread(SafeProcessHandle processHandle, IntPtr lpThreadSecurity, bool createSuspended, int stackZeroBits, IntPtr stackReserved, IntPtr stackCommit, IntPtr startAddress, IntPtr parameter, out uint threadId, out IntPtr clientId);
-        public static extern UInt32 RtlCreateUserThread(SafeProcessHandle processHandle, IntPtr lpThreadSecurity, bool createSuspended, int stackZeroBits, IntPtr stackReserved, IntPtr stackCommit, IntPtr startAddress, IntPtr parameter, out uint threadId, IntPtr clientId);
+        public static extern UInt32 RtlCreateUserThread(SafeProcessHandle processHandle, IntPtr lpThreadSecurity, bool createSuspended, int stackZeroBits, IntPtr stackReserved, IntPtr stackCommit, IntPtr startAddress, IntPtr parameter, out uint threadId,
+            IntPtr clientId);
     }
 }

@@ -34,28 +34,22 @@ namespace CoApp.Toolkit.Win32 {
         VIRTKEY = 0x01,
 
         /// <summary>
-        ///   Specifies that no top-level menu item is highlighted when the accelerator is used. 
-        ///   This is useful when defining accelerators for actions such as scrolling that do not 
-        ///   correspond to a menu item. If NOINVERT is omitted, a top-level menu item will be 
-        ///   highlighted (if possible) when the accelerator is used.
+        ///   Specifies that no top-level menu item is highlighted when the accelerator is used. This is useful when defining accelerators for actions such as scrolling that do not correspond to a menu item. If NOINVERT is omitted, a top-level menu item will be highlighted (if possible) when the accelerator is used.
         /// </summary>
         NOINVERT = 0x02,
 
         /// <summary>
-        ///   Causes the accelerator to be activated only if the SHIFT key is down. 
-        ///   Applies only to virtual keys.
+        ///   Causes the accelerator to be activated only if the SHIFT key is down. Applies only to virtual keys.
         /// </summary>
         SHIFT = 0x04,
 
         /// <summary>
-        ///   Causes the accelerator to be activated only if the CONTROL key is down. 
-        ///   Applies only to virtual keys.
+        ///   Causes the accelerator to be activated only if the CONTROL key is down. Applies only to virtual keys.
         /// </summary>
         CONTROL = 0x08,
 
         /// <summary>
-        ///   Causes the accelerator to be activated only if the ALT key is down. 
-        ///   Applies only to virtual keys.
+        ///   Causes the accelerator to be activated only if the ALT key is down. Applies only to virtual keys.
         /// </summary>
         ALT = 0x10
     }

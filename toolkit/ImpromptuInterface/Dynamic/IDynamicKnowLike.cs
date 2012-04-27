@@ -13,25 +13,23 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-namespace CoApp.Toolkit.ImpromptuInterface.Dynamic
-{
+namespace CoApp.Toolkit.ImpromptuInterface.Dynamic {
     using System;
     using System.Collections.Generic;
 
     /// <summary>
-    /// This interface can be used on your custom dynamic objects if you want to know the interface you are impromptu-ly implementing.
+    ///   This interface can be used on your custom dynamic objects if you want to know the interface you are impromptu-ly implementing.
     /// </summary>
-    public interface IDynamicKnowLike
-    {
+    public interface IDynamicKnowLike {
         ///<summary>
-        /// Property used to pass interface information to proxied object
+        ///  Property used to pass interface information to proxied object
         ///</summary>
         IEnumerable<Type> KnownInterfaces { set; }
 
         /// <summary>
-        /// Sets the known property spec.
+        ///   Sets the known property spec.
         /// </summary>
-        /// <value>The known property spec.</value>
+        /// <value> The known property spec. </value>
         IDictionary<string, Type> KnownPropertySpec { set; }
     }
 }

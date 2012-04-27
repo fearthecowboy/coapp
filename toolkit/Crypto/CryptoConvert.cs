@@ -6,46 +6,37 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-namespace CoApp.Toolkit.Crypto
-{
+namespace CoApp.Toolkit.Crypto {
     using System;
     using System.Globalization;
     using System.Security.Cryptography;
     using System.Text;
 
     /// <summary>
-    /// Originally from Mono project in Mono.Security assembly as Mono.Security.Cryptography.CryptoConvert
+    ///   Originally from Mono project in Mono.Security assembly as Mono.Security.Cryptography.CryptoConvert
     /// </summary>
-    internal static class CryptoConvert
-    {
-
-        static private int ToInt32LE(byte[] bytes, int offset)
-        {
+    internal static class CryptoConvert {
+        private static int ToInt32LE(byte[] bytes, int offset) {
             return (bytes[offset + 3] << 24) | (bytes[offset + 2] << 16) | (bytes[offset + 1] << 8) | bytes[offset];
         }
 
-        static private uint ToUInt32LE(byte[] bytes, int offset)
-        {
+        private static uint ToUInt32LE(byte[] bytes, int offset) {
             return (uint)((bytes[offset + 3] << 24) | (bytes[offset + 2] << 16) | (bytes[offset + 1] << 8) | bytes[offset]);
         }
 
-        static private byte[] GetBytesLE(int val)
-        {
-            return new byte[] { 
-                (byte) (val & 0xff), 
-                (byte) ((val >> 8) & 0xff), 
-                (byte) ((val >> 16) & 0xff), 
-                (byte) ((val >> 24) & 0xff)
+        private static byte[] GetBytesLE(int val) {
+            return new[] {
+                (byte)(val & 0xff),
+                (byte)((val >> 8) & 0xff),
+                (byte)((val >> 16) & 0xff),
+                (byte)((val >> 24) & 0xff)
             };
         }
 
-        static private byte[] Trim(byte[] array)
-        {
-            for (int i = 0; i < array.Length; i++)
-            {
-                if (array[i] != 0x00)
-                {
-                    byte[] result = new byte[array.Length - i];
+        private static byte[] Trim(byte[] array) {
+            for (int i = 0; i < array.Length; i++) {
+                if (array[i] != 0x00) {
+                    var result = new byte[array.Length - i];
                     Buffer.BlockCopy(array, i, result, 0, result.Length);
                     return result;
                 }
@@ -56,27 +47,28 @@ namespace CoApp.Toolkit.Crypto
         // convert the key from PRIVATEKEYBLOB to RSA
         // http://msdn.microsoft.com/library/default.asp?url=/library/en-us/security/Security/private_key_blobs.asp
         // e.g. SNK files, PVK files
-        static public RSA FromCapiPrivateKeyBlob(byte[] blob)
-        {
+        public static RSA FromCapiPrivateKeyBlob(byte[] blob) {
             return FromCapiPrivateKeyBlob(blob, 0);
         }
 
-        static public RSA FromCapiPrivateKeyBlob(byte[] blob, int offset)
-        {
-            if (blob == null)
+        public static RSA FromCapiPrivateKeyBlob(byte[] blob, int offset) {
+            if (blob == null) {
                 throw new ArgumentNullException("blob");
-            if (offset >= blob.Length)
+            }
+            if (offset >= blob.Length) {
                 throw new ArgumentException("blob is too small.");
+            }
 
-            RSAParameters rsap = new RSAParameters();
-            try
-            {
-                if ((blob[offset] != 0x07) ||				// PRIVATEKEYBLOB (0x07)
-                    (blob[offset + 1] != 0x02) ||				// Version (0x02)
-                    (blob[offset + 2] != 0x00) ||				// Reserved (word)
-                    (blob[offset + 3] != 0x00) ||
-                    (ToUInt32LE(blob, offset + 8) != 0x32415352))	// DWORD magic = RSA2
+            var rsap = new RSAParameters();
+            try {
+                if ((blob[offset] != 0x07) || // PRIVATEKEYBLOB (0x07)
+                    (blob[offset + 1] != 0x02) || // Version (0x02)
+                        (blob[offset + 2] != 0x00) || // Reserved (word)
+                            (blob[offset + 3] != 0x00) ||
+                                (ToUInt32LE(blob, offset + 8) != 0x32415352)) // DWORD magic = RSA2
+                {
                     throw new CryptographicException("Invalid blob header");
+                }
 
                 // ALGID (CALG_RSA_SIGN, CALG_RSA_KEYX, ...)
                 // int algId = ToInt32LE (blob, offset+4);
@@ -85,7 +77,7 @@ namespace CoApp.Toolkit.Crypto
                 int bitLen = ToInt32LE(blob, offset + 12);
 
                 // DWORD public exponent
-                byte[] exp = new byte[4];
+                var exp = new byte[4];
                 Buffer.BlockCopy(blob, offset + 16, exp, 0, 4);
                 Array.Reverse(exp);
                 rsap.Exponent = Trim(exp);
@@ -133,38 +125,29 @@ namespace CoApp.Toolkit.Crypto
                 // note: only works because CRT is used by default
                 // http://bugzilla.ximian.com/show_bug.cgi?id=57941
                 rsap.D = new byte[byteLen]; // must be allocated
-                if (pos + byteLen + offset <= blob.Length)
-                {
+                if (pos + byteLen + offset <= blob.Length) {
                     // BYTE privateExponent[rsapubkey.bitlen/8];
                     Buffer.BlockCopy(blob, pos, rsap.D, 0, byteLen);
                     Array.Reverse(rsap.D);
                 }
-            }
-            catch (Exception e)
-            {
+            } catch (Exception e) {
                 throw new CryptographicException("Invalid blob.", e);
             }
 
             RSA rsa = null;
-            try
-            {
+            try {
                 rsa = RSA.Create();
                 rsa.ImportParameters(rsap);
-            }
-            catch (CryptographicException ce)
-            {
+            } catch (CryptographicException ce) {
                 // this may cause problem when this code is run under
                 // the SYSTEM identity on Windows (e.g. ASP.NET). See
                 // http://bugzilla.ximian.com/show_bug.cgi?id=77559
-                try
-                {
-                    CspParameters csp = new CspParameters();
+                try {
+                    var csp = new CspParameters();
                     csp.Flags = CspProviderFlags.UseMachineKeyStore;
                     rsa = new RSACryptoServiceProvider(csp);
                     rsa.ImportParameters(rsap);
-                }
-                catch
-                {
+                } catch {
                     // rethrow original, not the later, exception if this fails
                     throw ce;
                 }
@@ -172,27 +155,28 @@ namespace CoApp.Toolkit.Crypto
             return rsa;
         }
 
-        static public DSA FromCapiPrivateKeyBlobDSA(byte[] blob)
-        {
+        public static DSA FromCapiPrivateKeyBlobDSA(byte[] blob) {
             return FromCapiPrivateKeyBlobDSA(blob, 0);
         }
 
-        static public DSA FromCapiPrivateKeyBlobDSA(byte[] blob, int offset)
-        {
-            if (blob == null)
+        public static DSA FromCapiPrivateKeyBlobDSA(byte[] blob, int offset) {
+            if (blob == null) {
                 throw new ArgumentNullException("blob");
-            if (offset >= blob.Length)
+            }
+            if (offset >= blob.Length) {
                 throw new ArgumentException("blob is too small.");
+            }
 
-            DSAParameters dsap = new DSAParameters();
-            try
-            {
-                if ((blob[offset] != 0x07) ||				// PRIVATEKEYBLOB (0x07)
-                    (blob[offset + 1] != 0x02) ||			// Version (0x02)
-                    (blob[offset + 2] != 0x00) ||			// Reserved (word)
-                    (blob[offset + 3] != 0x00) ||
-                    (ToUInt32LE(blob, offset + 8) != 0x32535344))	// DWORD magic
+            var dsap = new DSAParameters();
+            try {
+                if ((blob[offset] != 0x07) || // PRIVATEKEYBLOB (0x07)
+                    (blob[offset + 1] != 0x02) || // Version (0x02)
+                        (blob[offset + 2] != 0x00) || // Reserved (word)
+                            (blob[offset + 3] != 0x00) ||
+                                (ToUInt32LE(blob, offset + 8) != 0x32535344)) // DWORD magic
+                {
                     throw new CryptographicException("Invalid blob header");
+                }
 
                 int bitlen = ToInt32LE(blob, offset + 12);
                 int bytelen = bitlen >> 3;
@@ -225,32 +209,24 @@ namespace CoApp.Toolkit.Crypto
                 Buffer.BlockCopy(blob, pos, dsap.Seed, 0, 20);
                 Array.Reverse(dsap.Seed);
                 pos += 20;
-            }
-            catch (Exception e)
-            {
+            } catch (Exception e) {
                 throw new CryptographicException("Invalid blob.", e);
             }
 
             DSA dsa = null;
-            try
-            {
-                dsa = (DSA)DSA.Create();
+            try {
+                dsa = DSA.Create();
                 dsa.ImportParameters(dsap);
-            }
-            catch (CryptographicException ce)
-            {
+            } catch (CryptographicException ce) {
                 // this may cause problem when this code is run under
                 // the SYSTEM identity on Windows (e.g. ASP.NET). See
                 // http://bugzilla.ximian.com/show_bug.cgi?id=77559
-                try
-                {
-                    CspParameters csp = new CspParameters();
+                try {
+                    var csp = new CspParameters();
                     csp.Flags = CspProviderFlags.UseMachineKeyStore;
                     dsa = new DSACryptoServiceProvider(csp);
                     dsa.ImportParameters(dsap);
-                }
-                catch
-                {
+                } catch {
                     // rethrow original, not the later, exception if this fails
                     throw ce;
                 }
@@ -258,23 +234,22 @@ namespace CoApp.Toolkit.Crypto
             return dsa;
         }
 
-        static public byte[] ToCapiPrivateKeyBlob(RSA rsa)
-        {
+        public static byte[] ToCapiPrivateKeyBlob(RSA rsa) {
             RSAParameters p = rsa.ExportParameters(true);
             int keyLength = p.Modulus.Length; // in bytes
-            byte[] blob = new byte[20 + (keyLength << 2) + (keyLength >> 1)];
+            var blob = new byte[20 + (keyLength << 2) + (keyLength >> 1)];
 
-            blob[0] = 0x07;	// Type - PRIVATEKEYBLOB (0x07)
-            blob[1] = 0x02;	// Version - Always CUR_BLOB_VERSION (0x02)
+            blob[0] = 0x07; // Type - PRIVATEKEYBLOB (0x07)
+            blob[1] = 0x02; // Version - Always CUR_BLOB_VERSION (0x02)
             // [2], [3]		// RESERVED - Always 0
-            blob[5] = 0x24;	// ALGID - Always 00 24 00 00 (for CALG_RSA_SIGN)
-            blob[8] = 0x52;	// Magic - RSA2 (ASCII in hex)
+            blob[5] = 0x24; // ALGID - Always 00 24 00 00 (for CALG_RSA_SIGN)
+            blob[8] = 0x52; // Magic - RSA2 (ASCII in hex)
             blob[9] = 0x53;
             blob[10] = 0x41;
             blob[11] = 0x32;
 
             byte[] bitlen = GetBytesLE(keyLength << 3);
-            blob[12] = bitlen[0];	// bitlen
+            blob[12] = bitlen[0]; // bitlen
             blob[13] = bitlen[1];
             blob[14] = bitlen[2];
             blob[15] = bitlen[3];
@@ -282,8 +257,9 @@ namespace CoApp.Toolkit.Crypto
             // public exponent (DWORD)
             int pos = 16;
             int n = p.Exponent.Length;
-            while (n > 0)
+            while (n > 0) {
                 blob[pos++] = p.Exponent[--n];
+            }
             // modulus
             pos = 20;
             byte[] part = p.Modulus;
@@ -330,19 +306,18 @@ namespace CoApp.Toolkit.Crypto
             return blob;
         }
 
-        static public byte[] ToCapiPrivateKeyBlob(DSA dsa)
-        {
+        public static byte[] ToCapiPrivateKeyBlob(DSA dsa) {
             DSAParameters p = dsa.ExportParameters(true);
             int keyLength = p.P.Length; // in bytes
 
             // header + P + Q + G + X + count + seed
-            byte[] blob = new byte[16 + keyLength + 20 + keyLength + 20 + 4 + 20];
+            var blob = new byte[16 + keyLength + 20 + keyLength + 20 + 4 + 20];
 
-            blob[0] = 0x07;	// Type - PRIVATEKEYBLOB (0x07)
-            blob[1] = 0x02;	// Version - Always CUR_BLOB_VERSION (0x02)
+            blob[0] = 0x07; // Type - PRIVATEKEYBLOB (0x07)
+            blob[1] = 0x02; // Version - Always CUR_BLOB_VERSION (0x02)
             // [2], [3]		// RESERVED - Always 0
-            blob[5] = 0x22;	// ALGID
-            blob[8] = 0x44;	// Magic
+            blob[5] = 0x22; // ALGID
+            blob[8] = 0x44; // Magic
             blob[9] = 0x53;
             blob[10] = 0x53;
             blob[11] = 0x32;
@@ -384,26 +359,27 @@ namespace CoApp.Toolkit.Crypto
             return blob;
         }
 
-        static public RSA FromCapiPublicKeyBlob(byte[] blob)
-        {
+        public static RSA FromCapiPublicKeyBlob(byte[] blob) {
             return FromCapiPublicKeyBlob(blob, 0);
         }
 
-        static public RSA FromCapiPublicKeyBlob(byte[] blob, int offset)
-        {
-            if (blob == null)
+        public static RSA FromCapiPublicKeyBlob(byte[] blob, int offset) {
+            if (blob == null) {
                 throw new ArgumentNullException("blob");
-            if (offset >= blob.Length)
+            }
+            if (offset >= blob.Length) {
                 throw new ArgumentException("blob is too small.");
+            }
 
-            try
-            {
-                if ((blob[offset] != 0x06) ||				// PUBLICKEYBLOB (0x06)
-                    (blob[offset + 1] != 0x02) ||				// Version (0x02)
-                    (blob[offset + 2] != 0x00) ||				// Reserved (word)
-                    (blob[offset + 3] != 0x00) ||
-                    (ToUInt32LE(blob, offset + 8) != 0x31415352))	// DWORD magic = RSA1
+            try {
+                if ((blob[offset] != 0x06) || // PUBLICKEYBLOB (0x06)
+                    (blob[offset + 1] != 0x02) || // Version (0x02)
+                        (blob[offset + 2] != 0x00) || // Reserved (word)
+                            (blob[offset + 3] != 0x00) ||
+                                (ToUInt32LE(blob, offset + 8) != 0x31415352)) // DWORD magic = RSA1
+                {
                     throw new CryptographicException("Invalid blob header");
+                }
 
                 // ALGID (CALG_RSA_SIGN, CALG_RSA_KEYX, ...)
                 // int algId = ToInt32LE (blob, offset+4);
@@ -412,7 +388,7 @@ namespace CoApp.Toolkit.Crypto
                 int bitLen = ToInt32LE(blob, offset + 12);
 
                 // DWORD public exponent
-                RSAParameters rsap = new RSAParameters();
+                var rsap = new RSAParameters();
                 rsap.Exponent = new byte[3];
                 rsap.Exponent[0] = blob[offset + 18];
                 rsap.Exponent[1] = blob[offset + 17];
@@ -426,52 +402,48 @@ namespace CoApp.Toolkit.Crypto
                 Array.Reverse(rsap.Modulus);
 
                 RSA rsa = null;
-                try
-                {
+                try {
                     rsa = RSA.Create();
                     rsa.ImportParameters(rsap);
-                }
-                catch (CryptographicException)
-                {
+                } catch (CryptographicException) {
                     // this may cause problem when this code is run under
                     // the SYSTEM identity on Windows (e.g. ASP.NET). See
                     // http://bugzilla.ximian.com/show_bug.cgi?id=77559
-                    CspParameters csp = new CspParameters();
+                    var csp = new CspParameters();
                     csp.Flags = CspProviderFlags.UseMachineKeyStore;
                     rsa = new RSACryptoServiceProvider(csp);
                     rsa.ImportParameters(rsap);
                 }
                 return rsa;
-            }
-            catch (Exception e)
-            {
+            } catch (Exception e) {
                 throw new CryptographicException("Invalid blob.", e);
             }
         }
 
-        static public DSA FromCapiPublicKeyBlobDSA(byte[] blob)
-        {
+        public static DSA FromCapiPublicKeyBlobDSA(byte[] blob) {
             return FromCapiPublicKeyBlobDSA(blob, 0);
         }
 
-        static public DSA FromCapiPublicKeyBlobDSA(byte[] blob, int offset)
-        {
-            if (blob == null)
+        public static DSA FromCapiPublicKeyBlobDSA(byte[] blob, int offset) {
+            if (blob == null) {
                 throw new ArgumentNullException("blob");
-            if (offset >= blob.Length)
+            }
+            if (offset >= blob.Length) {
                 throw new ArgumentException("blob is too small.");
+            }
 
-            try
-            {
-                if ((blob[offset] != 0x06) ||				// PUBLICKEYBLOB (0x06)
-                    (blob[offset + 1] != 0x02) ||			// Version (0x02)
-                    (blob[offset + 2] != 0x00) ||			// Reserved (word)
-                    (blob[offset + 3] != 0x00) ||
-                    (ToUInt32LE(blob, offset + 8) != 0x31535344))	// DWORD magic
+            try {
+                if ((blob[offset] != 0x06) || // PUBLICKEYBLOB (0x06)
+                    (blob[offset + 1] != 0x02) || // Version (0x02)
+                        (blob[offset + 2] != 0x00) || // Reserved (word)
+                            (blob[offset + 3] != 0x00) ||
+                                (ToUInt32LE(blob, offset + 8) != 0x31535344)) // DWORD magic
+                {
                     throw new CryptographicException("Invalid blob header");
+                }
 
                 int bitlen = ToInt32LE(blob, offset + 12);
-                DSAParameters dsap = new DSAParameters();
+                var dsap = new DSAParameters();
                 int bytelen = bitlen >> 3;
                 int pos = offset + 16;
 
@@ -503,33 +475,30 @@ namespace CoApp.Toolkit.Crypto
                 Array.Reverse(dsap.Seed);
                 pos += 20;
 
-                DSA dsa = (DSA)DSA.Create();
+                DSA dsa = DSA.Create();
                 dsa.ImportParameters(dsap);
                 return dsa;
-            }
-            catch (Exception e)
-            {
+            } catch (Exception e) {
                 throw new CryptographicException("Invalid blob.", e);
             }
         }
 
-        static public byte[] ToCapiPublicKeyBlob(RSA rsa)
-        {
+        public static byte[] ToCapiPublicKeyBlob(RSA rsa) {
             RSAParameters p = rsa.ExportParameters(false);
             int keyLength = p.Modulus.Length; // in bytes
-            byte[] blob = new byte[20 + keyLength];
+            var blob = new byte[20 + keyLength];
 
-            blob[0] = 0x06;	// Type - PUBLICKEYBLOB (0x06)
-            blob[1] = 0x02;	// Version - Always CUR_BLOB_VERSION (0x02)
+            blob[0] = 0x06; // Type - PUBLICKEYBLOB (0x06)
+            blob[1] = 0x02; // Version - Always CUR_BLOB_VERSION (0x02)
             // [2], [3]		// RESERVED - Always 0
-            blob[5] = 0x24;	// ALGID - Always 00 24 00 00 (for CALG_RSA_SIGN)
-            blob[8] = 0x52;	// Magic - RSA1 (ASCII in hex)
+            blob[5] = 0x24; // ALGID - Always 00 24 00 00 (for CALG_RSA_SIGN)
+            blob[8] = 0x52; // Magic - RSA1 (ASCII in hex)
             blob[9] = 0x53;
             blob[10] = 0x41;
             blob[11] = 0x31;
 
             byte[] bitlen = GetBytesLE(keyLength << 3);
-            blob[12] = bitlen[0];	// bitlen
+            blob[12] = bitlen[0]; // bitlen
             blob[13] = bitlen[1];
             blob[14] = bitlen[2];
             blob[15] = bitlen[3];
@@ -537,8 +506,9 @@ namespace CoApp.Toolkit.Crypto
             // public exponent (DWORD)
             int pos = 16;
             int n = p.Exponent.Length;
-            while (n > 0)
+            while (n > 0) {
                 blob[pos++] = p.Exponent[--n];
+            }
             // modulus
             pos = 20;
             byte[] part = p.Modulus;
@@ -549,19 +519,18 @@ namespace CoApp.Toolkit.Crypto
             return blob;
         }
 
-        static public byte[] ToCapiPublicKeyBlob(DSA dsa)
-        {
+        public static byte[] ToCapiPublicKeyBlob(DSA dsa) {
             DSAParameters p = dsa.ExportParameters(false);
             int keyLength = p.P.Length; // in bytes
 
             // header + P + Q + G + Y + count + seed
-            byte[] blob = new byte[16 + keyLength + 20 + keyLength + keyLength + 4 + 20];
+            var blob = new byte[16 + keyLength + 20 + keyLength + keyLength + 4 + 20];
 
-            blob[0] = 0x06;	// Type - PUBLICKEYBLOB (0x06)
-            blob[1] = 0x02;	// Version - Always CUR_BLOB_VERSION (0x02)
+            blob[0] = 0x06; // Type - PUBLICKEYBLOB (0x06)
+            blob[1] = 0x02; // Version - Always CUR_BLOB_VERSION (0x02)
             // [2], [3]		// RESERVED - Always 0
-            blob[5] = 0x22;	// ALGID
-            blob[8] = 0x44;	// Magic
+            blob[5] = 0x22; // ALGID
+            blob[8] = 0x44; // Magic
             blob[9] = 0x53;
             blob[10] = 0x53;
             blob[11] = 0x31;
@@ -607,25 +576,23 @@ namespace CoApp.Toolkit.Crypto
 
         // PRIVATEKEYBLOB
         // PUBLICKEYBLOB
-        static public RSA FromCapiKeyBlob(byte[] blob)
-        {
+        public static RSA FromCapiKeyBlob(byte[] blob) {
             return FromCapiKeyBlob(blob, 0);
         }
 
-        static public RSA FromCapiKeyBlob(byte[] blob, int offset)
-        {
-            if (blob == null)
+        public static RSA FromCapiKeyBlob(byte[] blob, int offset) {
+            if (blob == null) {
                 throw new ArgumentNullException("blob");
-            if (offset >= blob.Length)
+            }
+            if (offset >= blob.Length) {
                 throw new ArgumentException("blob is too small.");
+            }
 
-            switch (blob[offset])
-            {
+            switch (blob[offset]) {
                 case 0x00:
                     // this could be a public key inside an header
                     // like "sn -e" would produce
-                    if (blob[offset + 12] == 0x06)
-                    {
+                    if (blob[offset + 12] == 0x06) {
                         return FromCapiPublicKeyBlob(blob, offset + 12);
                     }
                     break;
@@ -637,20 +604,19 @@ namespace CoApp.Toolkit.Crypto
             throw new CryptographicException("Unknown blob format.");
         }
 
-        static public DSA FromCapiKeyBlobDSA(byte[] blob)
-        {
+        public static DSA FromCapiKeyBlobDSA(byte[] blob) {
             return FromCapiKeyBlobDSA(blob, 0);
         }
 
-        static public DSA FromCapiKeyBlobDSA(byte[] blob, int offset)
-        {
-            if (blob == null)
+        public static DSA FromCapiKeyBlobDSA(byte[] blob, int offset) {
+            if (blob == null) {
                 throw new ArgumentNullException("blob");
-            if (offset >= blob.Length)
+            }
+            if (offset >= blob.Length) {
                 throw new ArgumentException("blob is too small.");
+            }
 
-            switch (blob[offset])
-            {
+            switch (blob[offset]) {
                 case 0x06:
                     return FromCapiPublicKeyBlobDSA(blob, offset);
                 case 0x07:
@@ -659,78 +625,82 @@ namespace CoApp.Toolkit.Crypto
             throw new CryptographicException("Unknown blob format.");
         }
 
-        static public byte[] ToCapiKeyBlob(AsymmetricAlgorithm keypair, bool includePrivateKey)
-        {
-            if (keypair == null)
+        public static byte[] ToCapiKeyBlob(AsymmetricAlgorithm keypair, bool includePrivateKey) {
+            if (keypair == null) {
                 throw new ArgumentNullException("keypair");
+            }
 
             // check between RSA and DSA (and potentially others like DH)
-            if (keypair is RSA)
+            if (keypair is RSA) {
                 return ToCapiKeyBlob((RSA)keypair, includePrivateKey);
-            else if (keypair is DSA)
+            } else if (keypair is DSA) {
                 return ToCapiKeyBlob((DSA)keypair, includePrivateKey);
-            else
-                return null;	// TODO
+            } else {
+                return null; // TODO
+            }
         }
 
-        static public byte[] ToCapiKeyBlob(RSA rsa, bool includePrivateKey)
-        {
-            if (rsa == null)
+        public static byte[] ToCapiKeyBlob(RSA rsa, bool includePrivateKey) {
+            if (rsa == null) {
                 throw new ArgumentNullException("rsa");
+            }
 
-            if (includePrivateKey)
+            if (includePrivateKey) {
                 return ToCapiPrivateKeyBlob(rsa);
-            else
+            } else {
                 return ToCapiPublicKeyBlob(rsa);
+            }
         }
 
-        static public byte[] ToCapiKeyBlob(DSA dsa, bool includePrivateKey)
-        {
-            if (dsa == null)
+        public static byte[] ToCapiKeyBlob(DSA dsa, bool includePrivateKey) {
+            if (dsa == null) {
                 throw new ArgumentNullException("dsa");
+            }
 
-            if (includePrivateKey)
+            if (includePrivateKey) {
                 return ToCapiPrivateKeyBlob(dsa);
-            else
+            } else {
                 return ToCapiPublicKeyBlob(dsa);
+            }
         }
 
-        static public string ToHex(byte[] input)
-        {
-            if (input == null)
+        public static string ToHex(byte[] input) {
+            if (input == null) {
                 return null;
+            }
 
-            StringBuilder sb = new StringBuilder(input.Length * 2);
-            foreach (byte b in input)
-            {
+            var sb = new StringBuilder(input.Length*2);
+            foreach (var b in input) {
                 sb.Append(b.ToString("X2", CultureInfo.InvariantCulture));
             }
             return sb.ToString();
         }
 
-        static private byte FromHexChar(char c)
-        {
-            if ((c >= 'a') && (c <= 'f'))
+        private static byte FromHexChar(char c) {
+            if ((c >= 'a') && (c <= 'f')) {
                 return (byte)(c - 'a' + 10);
-            if ((c >= 'A') && (c <= 'F'))
+            }
+            if ((c >= 'A') && (c <= 'F')) {
                 return (byte)(c - 'A' + 10);
-            if ((c >= '0') && (c <= '9'))
+            }
+            if ((c >= '0') && (c <= '9')) {
                 return (byte)(c - '0');
+            }
             throw new ArgumentException("invalid hex char");
         }
 
-        static public byte[] FromHex(string hex)
-        {
-            if (hex == null)
+        public static byte[] FromHex(string hex) {
+            if (hex == null) {
                 return null;
-            if ((hex.Length & 0x1) == 0x1)
+            }
+            if ((hex.Length & 0x1) == 0x1) {
                 throw new ArgumentException("Length must be a multiple of 2");
+            }
 
-            byte[] result = new byte[hex.Length >> 1];
+            var result = new byte[hex.Length >> 1];
             int n = 0;
             int i = 0;
-            while (n < result.Length)
-            {
+            while (n < result.Length) {
                 result[n] = (byte)(FromHexChar(hex[i++]) << 4);
                 result[n++] += FromHexChar(hex[i++]);
             }

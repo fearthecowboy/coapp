@@ -19,9 +19,7 @@ namespace CoApp.Toolkit.Win32 {
         public IoReparseTag ReparseTag;
 
         /// <summary>
-        ///   Size, in bytes, of the data after the Reserved member. This can be calculated by:
-        ///   (4 * sizeof(ushort)) + SubstituteNameLength + PrintNameLength + 
-        ///   (namesAreNullTerminated ? 2 * sizeof(char) : 0);
+        ///   Size, in bytes, of the data after the Reserved member. This can be calculated by: (4 * sizeof(ushort)) + SubstituteNameLength + PrintNameLength + (namesAreNullTerminated ? 2 * sizeof(char) : 0);
         /// </summary>
         public ushort ReparseDataLength;
 
@@ -36,8 +34,7 @@ namespace CoApp.Toolkit.Win32 {
         public ushort SubstituteNameOffset;
 
         /// <summary>
-        ///   Length, in bytes, of the substitute name string. If this string is null-terminated,
-        ///   SubstituteNameLength does not include space for the null character.
+        ///   Length, in bytes, of the substitute name string. If this string is null-terminated, SubstituteNameLength does not include space for the null character.
         /// </summary>
         public ushort SubstituteNameLength;
 
@@ -47,8 +44,7 @@ namespace CoApp.Toolkit.Win32 {
         public ushort PrintNameOffset;
 
         /// <summary>
-        ///   Length, in bytes, of the print name string. If this string is null-terminated,
-        ///   PrintNameLength does not include space for the null character.
+        ///   Length, in bytes, of the print name string. If this string is null-terminated, PrintNameLength does not include space for the null character.
         /// </summary>
         public ushort PrintNameLength;
 

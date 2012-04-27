@@ -13,17 +13,14 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-namespace CoApp.Toolkit.ImpromptuInterface
-{
+namespace CoApp.Toolkit.ImpromptuInterface {
     /// <summary>
-    /// This interface can be used to access the original content of your emitted type;
+    ///   This interface can be used to access the original content of your emitted type;
     /// </summary>
-    public interface IActLikeProxy
-    {
+    public interface IActLikeProxy {
         ///<summary>
-        /// Returns the proxied object
+        ///  Returns the proxied object
         ///</summary>
         dynamic Original { get; }
-        
     }
 }

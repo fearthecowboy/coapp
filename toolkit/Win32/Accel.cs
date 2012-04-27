@@ -28,8 +28,7 @@ namespace CoApp.Toolkit.Win32 {
     using System.Runtime.InteropServices;
 
     /// <summary>
-    ///   Defines an accelerator key used in an accelerator table.
-    ///   http://msdn.microsoft.com/en-us/library/ms646340(VS.85).aspx
+    ///   Defines an accelerator key used in an accelerator table. http://msdn.microsoft.com/en-us/library/ms646340(VS.85).aspx
     /// </summary>
     [StructLayout(LayoutKind.Sequential, Pack = 2)]
     public struct Accel {

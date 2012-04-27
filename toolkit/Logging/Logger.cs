@@ -12,7 +12,8 @@
     using Packaging.Service;
     using Tasks;
 
-#endif 
+#endif
+
     public static class Logger {
         private static readonly EventLog EventLog;
         private static readonly string Source;

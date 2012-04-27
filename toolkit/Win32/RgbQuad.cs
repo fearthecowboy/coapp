@@ -28,8 +28,7 @@ namespace CoApp.Toolkit.Win32 {
     using System.Runtime.InteropServices;
 
     /// <summary>
-    ///   Store colors in a paletised icon (2, 4 or 8 bit).
-    ///   http://msdn.microsoft.com/en-us/library/ms997538.aspx
+    ///   Store colors in a paletised icon (2, 4 or 8 bit). http://msdn.microsoft.com/en-us/library/ms997538.aspx
     /// </summary>
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct RgbQuad {

@@ -25,8 +25,7 @@
 
 namespace CoApp.Toolkit.Win32 {
     /// <summary>
-    ///   Specifies one or more of the following predefined menu options that control the 
-    ///   appearance of the menu item.
+    ///   Specifies one or more of the following predefined menu options that control the appearance of the menu item.
     /// </summary>
     public enum MenuFlags : uint {
         /// <summary>
@@ -96,9 +95,7 @@ namespace CoApp.Toolkit.Win32 {
         MF_BITMAP = 0x00000004,
 
         /// <summary>
-        ///   Indicates that the owner window of the menu is responsible for drawing all visual 
-        ///   aspects of the menu item, including highlighted, selected, and inactive states. 
-        ///   This option is not valid for an item in a menu bar.
+        ///   Indicates that the owner window of the menu is responsible for drawing all visual aspects of the menu item, including highlighted, selected, and inactive states. This option is not valid for an item in a menu bar.
         /// </summary>
         MF_OWNERDRAW = 0x00000100,
 
@@ -108,8 +105,7 @@ namespace CoApp.Toolkit.Win32 {
         MF_POPUP = 0x00000010,
 
         /// <summary>
-        ///   Indicates that the menu item is placed in a new column. The old and new columns 
-        ///   are separated by a bar.
+        ///   Indicates that the menu item is placed in a new column. The old and new columns are separated by a bar.
         /// </summary>
         MF_MENUBARBREAK = 0x00000020,
 

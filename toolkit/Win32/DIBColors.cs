@@ -34,14 +34,12 @@ namespace CoApp.Toolkit.Win32 {
         DIB_RGB_COLORS = 0,
 
         /// <summary>
-        ///   The color table consists of an array of 16-bit indexes into the LogPalette 
-        ///   object that is currently defined in the playback device context.
+        ///   The color table consists of an array of 16-bit indexes into the LogPalette object that is currently defined in the playback device context.
         /// </summary>
         DIB_PAL_COLORS = 1,
 
         /// <summary>
-        ///   No color table exists. The pixels in the DIB are indices into the current logical 
-        ///   palette in the playback device context.
+        ///   No color table exists. The pixels in the DIB are indices into the current logical palette in the playback device context.
         /// </summary>
         DIB_PAL_INDICES = 2,
 

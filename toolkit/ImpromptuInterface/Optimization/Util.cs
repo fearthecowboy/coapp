@@ -13,8 +13,7 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-namespace CoApp.Toolkit.ImpromptuInterface.Optimization
-{
+namespace CoApp.Toolkit.ImpromptuInterface.Optimization {
     using System;
     using System.Collections.Generic;
     using System.ComponentModel;
@@ -27,50 +26,43 @@ namespace CoApp.Toolkit.ImpromptuInterface.Optimization
     using Microsoft.CSharp.RuntimeBinder;
 
     /// <summary>
-    /// Utility Class
+    ///   Utility Class
     /// </summary>
-    public static class Util
-    {
+    public static class Util {
         /// <summary>
-        /// Determines whether [is anonymous type] [the specified target].
+        ///   Determines whether [is anonymous type] [the specified target].
         /// </summary>
-        /// <param name="target">The target.</param>
-        /// <returns>
-        /// 	<c>true</c> if [is anonymous type] [the specified target]; otherwise, <c>false</c>.
-        /// </returns>
-        public static bool IsAnonymousType(object target)
-        {
-            if(target ==null)
+        /// <param name="target"> The target. </param>
+        /// <returns> <c>true</c> if [is anonymous type] [the specified target]; otherwise, <c>false</c> . </returns>
+        public static bool IsAnonymousType(object target) {
+            if (target == null) {
                 return false;
+            }
 
             var type = target as Type ?? target.GetType();
 
             return type.IsNotPublic
-                   && Attribute.IsDefined(
-                       type,
-                       typeof (CompilerGeneratedAttribute),
-                       false);
+                && Attribute.IsDefined(
+                    type,
+                    typeof (CompilerGeneratedAttribute),
+                    false);
         }
 
-        static Util()
-        {
+        static Util() {
             IsMono = Type.GetType("Mono.Runtime") != null;
-
         }
 
         /// <summary>
-        /// Names the args if necessary.
+        ///   Names the args if necessary.
         /// </summary>
-        /// <param name="callInfo">The call info.</param>
-        /// <param name="args">The args.</param>
-        /// <returns></returns>
-        public static object[] NameArgsIfNecessary(CallInfo callInfo, object[] args)
-        {
+        /// <param name="callInfo"> The call info. </param>
+        /// <param name="args"> The args. </param>
+        /// <returns> </returns>
+        public static object[] NameArgsIfNecessary(CallInfo callInfo, object[] args) {
             object[] tArgs;
-            if (callInfo.ArgumentNames.Count == 0)
+            if (callInfo.ArgumentNames.Count == 0) {
                 tArgs = args;
-            else
-            {
+            } else {
                 var tStop = callInfo.ArgumentCount - callInfo.ArgumentNames.Count;
                 tArgs = Enumerable.Repeat(default(string), tStop).Concat(callInfo.ArgumentNames).Zip(args, (n, v) => n == null ? v : new InvokeArg(n, v)).ToArray();
             }
@@ -78,18 +70,16 @@ namespace CoApp.Toolkit.ImpromptuInterface.Optimization
         }
 
         /// <summary>
-        /// Gets the target context.
+        ///   Gets the target context.
         /// </summary>
-        /// <param name="target">The target.</param>
-        /// <param name="context">The context.</param>
-        /// <param name="staticContext">if set to <c>true</c> [static context].</param>
-        /// <returns></returns>
-        public static object GetTargetContext(this object target, out Type context, out bool staticContext)
-        {
+        /// <param name="target"> The target. </param>
+        /// <param name="context"> The context. </param>
+        /// <param name="staticContext"> if set to <c>true</c> [static context]. </param>
+        /// <returns> </returns>
+        public static object GetTargetContext(this object target, out Type context, out bool staticContext) {
             var tInvokeContext = target as InvokeContext;
             staticContext = false;
-            if (tInvokeContext != null)
-            {
+            if (tInvokeContext != null) {
                 staticContext = tInvokeContext.StaticContext;
                 context = tInvokeContext.Context;
                 context = context.FixContext();
@@ -101,83 +91,61 @@ namespace CoApp.Toolkit.ImpromptuInterface.Optimization
             return target;
         }
 
-
         /// <summary>
-        /// Fixes the context.
+        ///   Fixes the context.
         /// </summary>
-        /// <param name="context">The context.</param>
-        /// <returns></returns>
-        public static Type FixContext(this Type context)
-        {
-            if (context.IsArray)
-            {
+        /// <param name="context"> The context. </param>
+        /// <returns> </returns>
+        public static Type FixContext(this Type context) {
+            if (context.IsArray) {
                 return typeof (object);
             }
             return context;
         }
 
-        internal static bool MassageResultBasedOnInterface(this ImpromptuObject target, string binderName, bool resultFound, ref object result)
-        {
+        internal static bool MassageResultBasedOnInterface(this ImpromptuObject target, string binderName, bool resultFound, ref object result) {
             if (result is ImpromptuForwarderAddRemove) //Don't massage AddRemove Proxies
-                return true;
-
-            Type tType;
-            var tTryType = target.TryTypeForName(binderName, out tType);
-            if (tTryType && tType == typeof(void))
             {
                 return true;
             }
 
-            if(resultFound){
-              if (result is IDictionary<string, object> && !(result is ImpromptuDictionaryBase)
-                    && (!tTryType || tType == typeof(object)))
-                {
-                    result = new ImpromptuDictionary((IDictionary<string, object>)result);
-                }
-                else if (tTryType)
-                {
-                    if (result != null && !tType.IsAssignableFrom(result.GetType()))
-                    {
+            Type tType;
+            var tTryType = target.TryTypeForName(binderName, out tType);
+            if (tTryType && tType == typeof (void)) {
+                return true;
+            }
 
-                        if (tType.IsInterface)
-                        {
-                            if (result is IDictionary<string, object> && !(result is ImpromptuDictionaryBase))
-                            {
+            if (resultFound) {
+                if (result is IDictionary<string, object> && !(result is ImpromptuDictionaryBase)
+                    && (!tTryType || tType == typeof (object))) {
+                    result = new ImpromptuDictionary((IDictionary<string, object>)result);
+                } else if (tTryType) {
+                    if (result != null && !tType.IsAssignableFrom(result.GetType())) {
+                        if (tType.IsInterface) {
+                            if (result is IDictionary<string, object> && !(result is ImpromptuDictionaryBase)) {
                                 result = new ImpromptuDictionary((IDictionary<string, object>)result);
-                            }else
-                            {
+                            } else {
                                 result = new ImpromptuGet(result);
                             }
 
-
                             result = Impromptu.DynamicActLike(result, tType);
-                        }
-                        else
-                        {
-                          
-                            try
-                            {
+                        } else {
+                            try {
                                 object tResult;
 
                                 tResult = Impromptu.InvokeConvert(target, tType, explict: true);
 
                                 result = tResult;
-                            }catch(RuntimeBinderException)
-                            {
+                            } catch (RuntimeBinderException) {
                                 Type tReducedType = tType;
-                                if (tType.IsGenericType && tType.GetGenericTypeDefinition().Equals(typeof (Nullable<>)))
-                                {
+                                if (tType.IsGenericType && tType.GetGenericTypeDefinition().Equals(typeof (Nullable<>))) {
                                     tReducedType = tType.GetGenericArguments().First();
                                 }
 
-
-                                if (result is IConvertible && typeof(IConvertible).IsAssignableFrom(tReducedType))
-                                {
-
+                                if (result is IConvertible && typeof (IConvertible).IsAssignableFrom(tReducedType)) {
                                     result = Convert.ChangeType(result, tReducedType, Thread.CurrentThread.CurrentCulture);
-
-                                }else
-                                {  //finally check type converter since it's the slowest.
+                                } else {
+                                    //finally check type converter since it's the slowest.
 
 #if !SILVERLIGHT
                                     var tConverter = TypeDescriptor.GetConverter(tType);
@@ -194,12 +162,11 @@ namespace CoApp.Toolkit.ImpromptuInterface.Optimization
 
                                   
 #endif
-                                    if (tConverter !=null && tConverter.CanConvertFrom(result.GetType()))
-                                    {
+                                    if (tConverter != null && tConverter.CanConvertFrom(result.GetType())) {
                                         result = tConverter.ConvertFrom(result);
-                                    } 
-                                    
- #if SILVERLIGHT                                   
+                                    }
+
+#if SILVERLIGHT                                   
                                     else if (result is string)
                                     {
 
@@ -226,56 +193,44 @@ namespace CoApp.Toolkit.ImpromptuInterface.Optimization
                                 }
                             }
                         }
-                    }
-                    else if (result == null && tType.IsValueType)
-                    {
+                    } else if (result == null && tType.IsValueType) {
                         result = Impromptu.InvokeConstructor(tType);
                     }
                 }
-            }
-            else
-            {
+            } else {
                 result = null;
-                if (!tTryType)
-                {
-
+                if (!tTryType) {
                     return false;
                 }
-                if (tType.IsValueType)
-                {
+                if (tType.IsValueType) {
                     result = Impromptu.InvokeConstructor(tType);
                 }
             }
             return true;
         }
 
-
-
 #if !SILVERLIGHT
         /// <summary>
-        /// Gets the value. Conveinence Ext method
+        ///   Gets the value. Conveinence Ext method
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="info">The info.</param>
-        /// <param name="name">The name.</param>
-        /// <returns></returns>
-        public static T GetValue<T>(this SerializationInfo info, string name)
-        {
-            return (T) info.GetValue(name, typeof (T));
+        /// <typeparam name="T"> </typeparam>
+        /// <param name="info"> The info. </param>
+        /// <param name="name"> The name. </param>
+        /// <returns> </returns>
+        public static T GetValue<T>(this SerializationInfo info, string name) {
+            return (T)info.GetValue(name, typeof (T));
         }
 #endif
-		
-	
-		
-		/// <summary>
-		/// Is Current Runtime Mono?
-		/// </summary>
-		public static readonly bool IsMono;
 
-        internal static object[] GetArgsAndNames(object[]args,out string[]argNames)
-        {
-            if (args == null)
-                args = new object[] { null };
+        /// <summary>
+        ///   Is Current Runtime Mono?
+        /// </summary>
+        public static readonly bool IsMono;
+
+        internal static object[] GetArgsAndNames(object[] args, out string[] argNames) {
+            if (args == null) {
+                args = new object[] {null};
+            }
 
             //Optimization: linq statement creates a slight overhead in this case
             // ReSharper disable LoopCanBeConvertedToQuery
@@ -284,19 +239,16 @@ namespace CoApp.Toolkit.ImpromptuInterface.Optimization
 
             var tArgSet = false;
             var tNewArgs = new object[args.Length];
-            for (int i = 0; i < args.Length; i++)
-            {
+            for (int i = 0; i < args.Length; i++) {
                 var tArg = args[i];
                 string tName = null;
 
-                if (tArg is InvokeArg)
-                {
+                if (tArg is InvokeArg) {
                     tName = ((InvokeArg)tArg).Name;
 
                     tNewArgs[i] = ((InvokeArg)tArg).Value;
                     tArgSet = true;
-                }else
-                {
+                } else {
                     tNewArgs[i] = tArg;
                 }
                 argNames[i] = tName;
@@ -304,8 +256,9 @@ namespace CoApp.Toolkit.ImpromptuInterface.Optimization
 
             // ReSharper restore ForCanBeConvertedToForeach
             // ReSharper restore LoopCanBeConvertedToQuery
-            if (!tArgSet)
+            if (!tArgSet) {
                 argNames = null;
+            }
             return tNewArgs;
         }
     }

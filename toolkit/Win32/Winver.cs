@@ -47,29 +47,22 @@ namespace CoApp.Toolkit.Win32 {
             VS_FF_PRERELEASE = 0x00000002,
 
             /// <summary>
-            ///   PThe file has been modified somehow and is not identical to the original file
-            ///   that shipped with the product.
+            ///   PThe file has been modified somehow and is not identical to the original file that shipped with the product.
             /// </summary>
             VS_FF_PATCHED = 0x00000004,
 
             /// <summary>
-            ///   The file was not built using standard release procedures. There should be data 
-            ///   in the file's "PrivateBuild" version information string.
+            ///   The file was not built using standard release procedures. There should be data in the file's "PrivateBuild" version information string.
             /// </summary>
             VS_FF_PRIVATEBUILD = 0x00000008,
 
             /// <summary>
-            ///   The version information in this structure was not found inside the file, 
-            ///   but instead was created when needed based on the best information available. 
-            ///   Therefore, this structure's information may differ slightly from what the "real"
-            ///   values are.
+            ///   The version information in this structure was not found inside the file, but instead was created when needed based on the best information available. Therefore, this structure's information may differ slightly from what the "real" values are.
             /// </summary>
             VS_FF_INFOINFERRED = 0x00000010,
 
             /// <summary>
-            ///   The file was built using standard release procedures, but is somehow different 
-            ///   from the normal file having the same version number. There should be data in the 
-            ///   file's "SpecialBuild" version information string.
+            ///   The file was built using standard release procedures, but is somehow different from the normal file having the same version number. There should be data in the file's "SpecialBuild" version information string.
             /// </summary>
             VS_FF_SPECIALBUILD = 0x00000020,
         }

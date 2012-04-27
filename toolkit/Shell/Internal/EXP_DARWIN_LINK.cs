@@ -43,14 +43,16 @@ namespace CoApp.Toolkit.Shell.Internal {
         ///   Sets the datablock header values for this sturcture.
         /// </summary>
         public void SetDataBlockHeader() {
-            this.dbh.cbSize = unchecked((UInt32) Marshal.SizeOf(typeof (EXP_DARWIN_LINK)));
+            this.dbh.cbSize = unchecked((UInt32)Marshal.SizeOf(typeof (EXP_DARWIN_LINK)));
             this.dbh.dwSignature = EXP_DARWIN_ID_SIG;
         }
 
         public DATABLOCK_HEADER dbh;
 
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)] public sbyte[] szDarwinID; // ANSI darwin ID associated with link
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
+        public sbyte[] szDarwinID; // ANSI darwin ID associated with link
 
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)] public char[] szwDarwinID; // UNICODE darwin ID associated with link
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
+        public char[] szwDarwinID; // UNICODE darwin ID associated with link
     }
 }

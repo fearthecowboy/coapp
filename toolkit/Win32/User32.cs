@@ -32,22 +32,13 @@ namespace CoApp.Toolkit.Win32 {
         public static extern int SendMessage(IntPtr hwnd, int wMsg, IntPtr wParam, IntPtr lParam);
 
         /// <summary>
-        ///   Sends the specified message to a window or windows. The function 
-        ///   calls the window procedure for the specified window and does not 
-        ///   return until the window procedure has processed the message.
+        ///   Sends the specified message to a window or windows. The function calls the window procedure for the specified window and does not return until the window procedure has processed the message.
         /// </summary>
-        /// <param name = "hWnd">
-        ///   Handle to the window whose window procedure will receive the 
-        ///   message.
-        /// </param>
-        /// <param name = "Msg">Specifies the message to be sent.</param>
-        /// <param name = "wParam">
-        ///   Specifies additional message-specific information.
-        /// </param>
-        /// <param name = "lParam">
-        ///   Specifies additional message-specific information.
-        /// </param>
-        /// <returns></returns>
+        /// <param name="hWnd"> Handle to the window whose window procedure will receive the message. </param>
+        /// <param name="Msg"> Specifies the message to be sent. </param>
+        /// <param name="wParam"> Specifies additional message-specific information. </param>
+        /// <param name="lParam"> Specifies additional message-specific information. </param>
+        /// <returns> </returns>
         [DllImport("user32", CharSet = CharSet.Auto, SetLastError = true)]
         public static extern int SendMessage(IntPtr hWnd, UInt32 Msg, int wParam, IntPtr lParam);
 
@@ -111,45 +102,33 @@ namespace CoApp.Toolkit.Win32 {
         /// <summary>
         ///   Retrieve a handle to a device context (DC) for the client area of a specified window or for the entire screen.
         /// </summary>
-        /// <param name = "hWnd">A handle to the window whose DC is to be retrieved. If this value is NULL, GetDC retrieves the DC for the entire screen.</param>
-        /// <returns>
-        ///   If the function succeeds, the return value is a handle to the DC for the specified window's client area. 
-        ///   If the function fails, the return value is NULL.
-        /// </returns>
+        /// <param name="hWnd"> A handle to the window whose DC is to be retrieved. If this value is NULL, GetDC retrieves the DC for the entire screen. </param>
+        /// <returns> If the function succeeds, the return value is a handle to the DC for the specified window's client area. If the function fails, the return value is NULL. </returns>
         [DllImport("user32.dll", SetLastError = true)]
         public static extern IntPtr GetDC(IntPtr hWnd);
 
         /// <summary>
         ///   Releases a device context (DC), freeing it for use by other applications.
         /// </summary>
-        /// <param name = "hWnd">A handle to the window whose DC is to be released.</param>
-        /// <param name = "hDC">A handle to the DC to be released.</param>
-        /// <returns>
-        ///   The return value indicates whether the DC was released. If the DC was released, the return value is 1.
-        ///   If the DC was not released, the return value is zero.
-        /// </returns>
+        /// <param name="hWnd"> A handle to the window whose DC is to be released. </param>
+        /// <param name="hDC"> A handle to the DC to be released. </param>
+        /// <returns> The return value indicates whether the DC was released. If the DC was released, the return value is 1. If the DC was not released, the return value is zero. </returns>
         [DllImport("user32.dll", SetLastError = true)]
         public static extern IntPtr ReleaseDC(IntPtr hWnd, IntPtr hDC);
 
         /// <summary>
         ///   Destroys an icon and frees any memory the icon occupied.
         /// </summary>
-        /// <param name = "hIcon">Handle to the icon to be destroyed.</param>
-        /// <returns>
-        ///   If the function succeeds, the return value is nonzero.
-        ///   If the function fails, the return value is zero.
-        /// </returns>
+        /// <param name="hIcon"> Handle to the icon to be destroyed. </param>
+        /// <returns> If the function succeeds, the return value is nonzero. If the function fails, the return value is zero. </returns>
         [DllImport("user32.dll", SetLastError = true)]
         public static extern int DestroyIcon(IntPtr hIcon);
 
         /// <summary>
         ///   Creates an icon or cursor from an ICONINFO structure.
         /// </summary>
-        /// <param name = "piconInfo">Pointer to an ICONINFO structure the function uses to create the icon or cursor.</param>
-        /// <returns>
-        ///   If the function succeeds, the return value is a handle to the icon or cursor that is created.
-        ///   If the function fails, the return value is NULL.
-        /// </returns>
+        /// <param name="piconInfo"> Pointer to an ICONINFO structure the function uses to create the icon or cursor. </param>
+        /// <returns> If the function succeeds, the return value is a handle to the icon or cursor that is created. If the function fails, the return value is NULL. </returns>
         [DllImport("user32,dll", SetLastError = true)]
         public static extern IntPtr CreateIconIndirect(ref Iconinfo piconInfo);
 #endif

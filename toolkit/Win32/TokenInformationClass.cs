@@ -10,9 +10,7 @@
 
 namespace CoApp.Toolkit.Win32 {
     /// <summary>
-    ///   The TOKEN_INFORMATION_CLASS enumeration type contains values that 
-    ///   specify the type of information being assigned to or retrieved from 
-    ///   an access token.
+    ///   The TOKEN_INFORMATION_CLASS enumeration type contains values that specify the type of information being assigned to or retrieved from an access token.
     /// </summary>
     public enum TokenInformationClass {
         TokenUser = 1,

@@ -13,8 +13,7 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-namespace CoApp.Toolkit.ImpromptuInterface.EmitProxy
-{
+namespace CoApp.Toolkit.ImpromptuInterface.EmitProxy {
     using System;
     using System.Collections.Generic;
     using System.Linq;
@@ -23,154 +22,149 @@ namespace CoApp.Toolkit.ImpromptuInterface.EmitProxy
     using Optimization;
 
     /// <summary>
-    /// This interface can be used to define your own custom proxy if you preload it.
+    ///   This interface can be used to define your own custom proxy if you preload it.
     /// </summary>
     /// <remarks>
-    /// Advanced usage only! This is required as well as <see cref="ActLikeProxyAttribute"></see>
+    ///   Advanced usage only! This is required as well as <see cref="ActLikeProxyAttribute"></see>
     /// </remarks>
-    public interface IActLikeProxyInitialize : IActLikeProxy
-    {
+    public interface IActLikeProxyInitialize : IActLikeProxy {
         ///<summary>
-        /// Method used to Initialize Proxy
+        ///  Method used to Initialize Proxy
         ///</summary>
-        ///<param name="original"></param>
-        ///<param name="interfaces"></param>
-        ///<param name="informalInterface"></param>
-        void Initialize(dynamic original, IEnumerable<Type> interfaces =null, IDictionary<string, Type> informalInterface = null);
+        ///<param name="original"> </param>
+        ///<param name="interfaces"> </param>
+        ///<param name="informalInterface"> </param>
+        void Initialize(dynamic original, IEnumerable<Type> interfaces = null, IDictionary<string, Type> informalInterface = null);
     }
 
-
     /// <summary>
-    /// Base class of Emited ProxiesC:\Documents and Settings\jayt\My Documents\Visual Studio 2010\Projects\impromptuinterface\ImpromptuInterface\Optimization\
+    ///   Base class of Emited ProxiesC:\Documents and Settings\jayt\My Documents\Visual Studio 2010\Projects\impromptuinterface\ImpromptuInterface\Optimization\
     /// </summary>
     [Serializable]
-    public abstract class ActLikeProxy : IActLikeProxyInitialize, ISerializable
-    {
+    public abstract class ActLikeProxy : IActLikeProxyInitialize, ISerializable {
         /// <summary>
-        /// Returns the proxied object
+        ///   Returns the proxied object
         /// </summary>
-        /// <value></value>
-        public dynamic Original{ get; private set;}
+        /// <value> </value>
+        public dynamic Original { get; private set; }
 
-        private bool _init = false;
+        private bool _init;
 
         /// <summary>
-        /// Method used to Initialize Proxy
+        ///   Method used to Initialize Proxy
         /// </summary>
-        /// <param name="original"></param>
-        /// <param name="interfaces"></param>
-        /// <param name="informalInterface"></param>
-        public virtual void Initialize(dynamic original, IEnumerable<Type> interfaces=null, IDictionary<string, Type> informalInterface =null)
-        {
-            if(original == null)
+        /// <param name="original"> </param>
+        /// <param name="interfaces"> </param>
+        /// <param name="informalInterface"> </param>
+        public virtual void Initialize(dynamic original, IEnumerable<Type> interfaces = null, IDictionary<string, Type> informalInterface = null) {
+            if (original == null) {
                 throw new ArgumentNullException("original", "Can't proxy a Null value");
+            }
 
-            if (_init)
+            if (_init) {
                 throw new MethodAccessException("Initialize should not be called twice!");
+            }
             _init = true;
             Original = original;
             var tKnowOriginal = Original as IDynamicKnowLike;
-            if (tKnowOriginal != null)
-            {
-                if(interfaces !=null)
+            if (tKnowOriginal != null) {
+                if (interfaces != null) {
                     tKnowOriginal.KnownInterfaces = interfaces;
-                if (informalInterface != null)
+                }
+                if (informalInterface != null) {
                     tKnowOriginal.KnownPropertySpec = informalInterface;
+                }
             }
-
-        }
-
-
-
-        /// <summary>
-        /// Determines whether the specified <see cref="System.Object"/> is equal to this instance.
-        /// </summary>
-        /// <param name="obj">The <see cref="System.Object"/> to compare with this instance.</param>
-        /// <returns>
-        /// 	<c>true</c> if the specified <see cref="System.Object"/> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (ReferenceEquals(Original, obj)) return true;
-            if (!(obj is ActLikeProxy)) return Original.Equals(obj);
-            return Equals((ActLikeProxy) obj);
         }
 
         /// <summary>
-        /// Actlike proxy should be equivalent to the objects they proxy
+        ///   Determines whether the specified <see cref="System.Object" /> is equal to this instance.
         /// </summary>
-        /// <param name="other">The other.</param>
-        /// <returns></returns>
-        public bool Equals(ActLikeProxy other)
-        {
-            if (ReferenceEquals(null, other)) return false;
-            if (ReferenceEquals(this, other)) return true;
-            if (ReferenceEquals(Original, other.Original)) return true;
+        /// <param name="obj"> The <see cref="System.Object" /> to compare with this instance. </param>
+        /// <returns> <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c> . </returns>
+        public override bool Equals(object obj) {
+            if (ReferenceEquals(null, obj)) {
+                return false;
+            }
+            if (ReferenceEquals(this, obj)) {
+                return true;
+            }
+            if (ReferenceEquals(Original, obj)) {
+                return true;
+            }
+            if (!(obj is ActLikeProxy)) {
+                return Original.Equals(obj);
+            }
+            return Equals((ActLikeProxy)obj);
+        }
+
+        /// <summary>
+        ///   Actlike proxy should be equivalent to the objects they proxy
+        /// </summary>
+        /// <param name="other"> The other. </param>
+        /// <returns> </returns>
+        public bool Equals(ActLikeProxy other) {
+            if (ReferenceEquals(null, other)) {
+                return false;
+            }
+            if (ReferenceEquals(this, other)) {
+                return true;
+            }
+            if (ReferenceEquals(Original, other.Original)) {
+                return true;
+            }
             return Equals(other.Original, Original);
         }
 
         /// <summary>
-        /// Returns a hash code for this instance.
+        ///   Returns a hash code for this instance.
         /// </summary>
-        /// <returns>
-        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
-        /// </returns>
-        public override int GetHashCode()
-        {
+        /// <returns> A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. </returns>
+        public override int GetHashCode() {
             return Original.GetHashCode();
         }
 
 #if !SILVERLIGHT
 
         /// <summary>
-        /// Populates a <see cref="T:System.Runtime.Serialization.SerializationInfo"/> with the data needed to serialize the target object.
+        ///   Populates a <see cref="T:System.Runtime.Serialization.SerializationInfo" /> with the data needed to serialize the target object.
         /// </summary>
-        /// <param name="info">The <see cref="T:System.Runtime.Serialization.SerializationInfo"/> to populate with data.</param>
-        /// <param name="context">The destination (see <see cref="T:System.Runtime.Serialization.StreamingContext"/>) for this serialization.</param>
-        /// <exception cref="T:System.Security.SecurityException">The caller does not have the required permission. </exception>
-        public void GetObjectData(SerializationInfo info, StreamingContext context)
-        {
-            info.SetType(typeof(ActLikeProxySerializationHelper));
-			
-		    var tCustomAttr =
+        /// <param name="info"> The <see cref="T:System.Runtime.Serialization.SerializationInfo" /> to populate with data. </param>
+        /// <param name="context"> The destination (see <see cref="T:System.Runtime.Serialization.StreamingContext" /> ) for this serialization. </param>
+        /// <exception cref="T:System.Security.SecurityException">The caller does not have the required permission.</exception>
+        public void GetObjectData(SerializationInfo info, StreamingContext context) {
+            info.SetType(typeof (ActLikeProxySerializationHelper));
+
+            var tCustomAttr =
                 GetType().GetCustomAttributes(typeof (ActLikeProxyAttribute), false).OfType<ActLikeProxyAttribute>().
                     FirstOrDefault();
-			
-				
-            info.AddValue("Context",
-                          tCustomAttr == null 
-                          ? null
-                          : tCustomAttr.Context,typeof(Type));
-			
-			
-			if(Util.IsMono){
-				info.AddValue("MonoInterfaces",
-                          tCustomAttr == null 
-                          ? null
-                          : tCustomAttr.Interfaces.Select(it=>it.AssemblyQualifiedName).ToArray(),typeof(string[]));
-			}else{
-            	info.AddValue("Interfaces",
-                          tCustomAttr == null 
-                          ? null
-                          : tCustomAttr.Interfaces,typeof(Type[]));
-			}
-		
-			
-            info.AddValue("Original", (object)Original);
 
+            info.AddValue("Context",
+                tCustomAttr == null
+                    ? null
+                    : tCustomAttr.Context, typeof (Type));
+
+            if (Util.IsMono) {
+                info.AddValue("MonoInterfaces",
+                    tCustomAttr == null
+                        ? null
+                        : tCustomAttr.Interfaces.Select(it => it.AssemblyQualifiedName).ToArray(), typeof (string[]));
+            } else {
+                info.AddValue("Interfaces",
+                    tCustomAttr == null
+                        ? null
+                        : tCustomAttr.Interfaces, typeof (Type[]));
+            }
+
+            info.AddValue("Original", (object)Original);
         }
 #endif
 
         /// <summary>
-        /// Returns a <see cref="System.String"/> that represents this instance.
+        ///   Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>
-        /// A <see cref="System.String"/> that represents this instance.
-        /// </returns>
-        public override string ToString()
-        {
+        /// <returns> A <see cref="System.String" /> that represents this instance. </returns>
+        public override string ToString() {
             return Original.ToString();
         }
     }

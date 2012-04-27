@@ -13,37 +13,35 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-namespace CoApp.Toolkit.ImpromptuInterface.EmitProxy
-{
+namespace CoApp.Toolkit.ImpromptuInterface.EmitProxy {
     using System;
 
     /// <summary>
-    /// Meta info describing proxy usage. Can be used to preload proxy.
+    ///   Meta info describing proxy usage. Can be used to preload proxy.
     /// </summary>
     [AttributeUsage(AttributeTargets.Class)]
-	[Serializable]
-    public class ActLikeProxyAttribute:Attribute
-    {
+    [Serializable]
+    public class ActLikeProxyAttribute : Attribute {
         /// <summary>
-        /// Initializes a new instance of the <see cref="ActLikeProxyAttribute"/> class.
+        ///   Initializes a new instance of the <see cref="ActLikeProxyAttribute" /> class.
         /// </summary>
-        /// <param name="interfaces">The interfaces.</param>
-        /// <param name="context">The context.</param>
-        public ActLikeProxyAttribute(Type[] interfaces, Type context)
-        {
+        /// <param name="interfaces"> The interfaces. </param>
+        /// <param name="context"> The context. </param>
+        public ActLikeProxyAttribute(Type[] interfaces, Type context) {
             Interfaces = interfaces;
             Context = context;
         }
 
         /// <summary>
-        /// Gets or sets the interfaces.
+        ///   Gets or sets the interfaces.
         /// </summary>
-        /// <value>The interfaces.</value>
+        /// <value> The interfaces. </value>
         public Type[] Interfaces { get; set; }
+
         /// <summary>
-        /// Gets or sets the context.
+        ///   Gets or sets the context.
         /// </summary>
-        /// <value>The context.</value>
+        /// <value> The context. </value>
         public Type Context { get; set; }
     }
 }

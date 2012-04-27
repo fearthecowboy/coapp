@@ -601,7 +601,7 @@ namespace CoApp.Packaging.Client.UI {
                             var taskNumber = index;
                             var v = canonicalVersions[index];
                             /*
-                            PackageManager.RemoteService.RemovePackage(
+                            RemoteCallDispatcher.RemoteService.RemovePackage(
                                 v, messages: new PackageManagerMessages {
                                     RemovingPackageProgress = (canonicalName, progress) => {
                                         Progress = (progress / taskCount) + taskNumber * 100 / taskCount;

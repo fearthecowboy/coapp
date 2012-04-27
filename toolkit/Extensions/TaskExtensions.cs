@@ -3,7 +3,6 @@
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading.Tasks;
-    using Exceptions;
     using Tasks;
 
     public static class TaskExtensions {
@@ -39,8 +38,6 @@
         public static void RethrowWhenFaulted(this IEnumerable<Task> antecedents) {
             antecedents.ToArrayEvenIfNull().RethrowWhenFaulted();
         }
-
-
 
         /// <summary>
         ///   Checks the collection of antecedent tasks for two conditions: if any are cancelled, throws an OperationCompletedBeforeResultException if any are faulted, throws an AggregateException containing all the exceptions from the tasks Warning: This function will Wait() for the all the antecendent tasks to complete.
@@ -82,7 +79,7 @@
         }
 
         public static Task<TResult> ContinueAlways<TResult, TAntecedentResult>(this Task<TAntecedentResult> antecedent, Func<Task<TAntecedentResult>, TResult> childFunction) {
-            return antecedent.ContinueWith( a => childFunction(a), TaskContinuationOptions.AttachedToParent);
+            return antecedent.ContinueWith(a => childFunction(a), TaskContinuationOptions.AttachedToParent);
         }
 
         /// <summary>
@@ -96,16 +93,18 @@
         public static Task<TResult> Continue<TResult, TAntecedentResult>(this Task<TAntecedentResult> antecedent, Func<TAntecedentResult, Task<TResult>> childTaskFunction) {
             return antecedent.ContinueWith(a => childTaskFunction(a.Result), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.AttachedToParent).Unwrap();
         }
+
         public static Task<TResult> ContinueOnFail<TResult, TAntecedentResult>(this Task<TAntecedentResult> antecedent, Func<Exception, Task<TResult>> childTaskFunction) {
             return antecedent.ContinueWith(a => childTaskFunction(a.Exception.Unwrap()), TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.AttachedToParent).Unwrap();
         }
+
         public static Task<TResult> ContinueOnCanceled<TResult, TAntecedentResult>(this Task<TAntecedentResult> antecedent, Func<Task<TResult>> childTaskFunction) {
             return antecedent.ContinueWith(a => childTaskFunction(), TaskContinuationOptions.OnlyOnCanceled | TaskContinuationOptions.AttachedToParent).Unwrap();
         }
-        public static Task<TResult> ContinueAlways<TResult, TAntecedentResult>(this Task<TAntecedentResult> antecedent, Func<Task<TAntecedentResult>, Task<TResult>> childTaskFunction) {
-            return antecedent.ContinueWith(a => childTaskFunction(a),  TaskContinuationOptions.AttachedToParent).Unwrap();
-        }
 
+        public static Task<TResult> ContinueAlways<TResult, TAntecedentResult>(this Task<TAntecedentResult> antecedent, Func<Task<TAntecedentResult>, Task<TResult>> childTaskFunction) {
+            return antecedent.ContinueWith(a => childTaskFunction(a), TaskContinuationOptions.AttachedToParent).Unwrap();
+        }
 
         /// <summary>
         ///   Performs a continuation (attached to parent) for a given task. Since the parent task isn't returing a result, the child task simply runs on success of the antecedent
@@ -115,16 +114,19 @@
         /// <param name="childFunction"> The function to run on completion of the antecedent Task </param>
         /// <returns> A Task <TResult>for the child function </returns>
         public static Task<TResult> Continue<TResult>(this Task antecedent, Func<TResult> childFunction) {
-            return antecedent.ContinueWith(a => childFunction() , TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.AttachedToParent);
+            return antecedent.ContinueWith(a => childFunction(), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.AttachedToParent);
         }
-        public static Task<TResult> ContinueOnFail<TResult>(this Task antecedent, Func<Exception,TResult> childFunction) {
+
+        public static Task<TResult> ContinueOnFail<TResult>(this Task antecedent, Func<Exception, TResult> childFunction) {
             return antecedent.ContinueWith(a => childFunction(a.Exception.Unwrap()), TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.AttachedToParent);
         }
+
         public static Task<TResult> ContinueOnCanceled<TResult>(this Task antecedent, Func<TResult> childFunction) {
-            return antecedent.ContinueWith( a => childFunction() , TaskContinuationOptions.OnlyOnCanceled | TaskContinuationOptions.AttachedToParent);
+            return antecedent.ContinueWith(a => childFunction(), TaskContinuationOptions.OnlyOnCanceled | TaskContinuationOptions.AttachedToParent);
         }
-        public static Task<TResult> ContinueAlways<TResult>(this Task antecedent, Func<Task,TResult> childFunction) {
-            return antecedent.ContinueWith(a =>childFunction(a) , TaskContinuationOptions.AttachedToParent);
+
+        public static Task<TResult> ContinueAlways<TResult>(this Task antecedent, Func<Task, TResult> childFunction) {
+            return antecedent.ContinueWith(a => childFunction(a), TaskContinuationOptions.AttachedToParent);
         }
 
         /// <summary>
@@ -137,14 +139,17 @@
         public static Task<TResult> Continue<TResult>(this Task antecedent, Func<Task<TResult>> childTaskFunction) {
             return antecedent.ContinueWith(a => childTaskFunction(), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.AttachedToParent).Unwrap();
         }
-        public static Task<TResult> ContinueOnFail<TResult>(this Task antecedent, Func<Exception,Task<TResult>> childTaskFunction) {
+
+        public static Task<TResult> ContinueOnFail<TResult>(this Task antecedent, Func<Exception, Task<TResult>> childTaskFunction) {
             return antecedent.ContinueWith(a => childTaskFunction(a.Exception.Unwrap()), TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.AttachedToParent).Unwrap();
         }
+
         public static Task<TResult> ContinueOnCanceled<TResult>(this Task antecedent, Func<Task<TResult>> childTaskFunction) {
-            return antecedent.ContinueWith(a => childTaskFunction() , TaskContinuationOptions.OnlyOnCanceled | TaskContinuationOptions.AttachedToParent).Unwrap();
+            return antecedent.ContinueWith(a => childTaskFunction(), TaskContinuationOptions.OnlyOnCanceled | TaskContinuationOptions.AttachedToParent).Unwrap();
         }
-        public static Task<TResult> ContinueAlways<TResult>(this Task antecedent, Func<Task,Task<TResult>> childTaskFunction) {
-            return antecedent.ContinueWith(a => childTaskFunction(a),TaskContinuationOptions.AttachedToParent).Unwrap();
+
+        public static Task<TResult> ContinueAlways<TResult>(this Task antecedent, Func<Task, Task<TResult>> childTaskFunction) {
+            return antecedent.ContinueWith(a => childTaskFunction(a), TaskContinuationOptions.AttachedToParent).Unwrap();
         }
 
         /// <summary>
@@ -157,12 +162,15 @@
         public static Task Continue<TAntecedentResult>(this Task<TAntecedentResult> antecedent, Action<TAntecedentResult> childAction) {
             return antecedent.ContinueWith(a => childAction(a.Result), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.AttachedToParent);
         }
+
         public static Task ContinueOnFail<TAntecedentResult>(this Task<TAntecedentResult> antecedent, Action<Exception> childAction) {
             return antecedent.ContinueWith(a => childAction(a.Exception.Unwrap()), TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.AttachedToParent);
         }
+
         public static Task ContinueOnCanceled<TAntecedentResult>(this Task<TAntecedentResult> antecedent, Action childAction) {
             return antecedent.ContinueWith(a => childAction(), TaskContinuationOptions.OnlyOnCanceled | TaskContinuationOptions.AttachedToParent);
         }
+
         public static Task ContinueAlways<TAntecedentResult>(this Task<TAntecedentResult> antecedent, Action<Task<TAntecedentResult>> childAction) {
             return antecedent.ContinueWith(a => childAction(a), TaskContinuationOptions.AttachedToParent);
         }
@@ -177,12 +185,15 @@
         public static Task Continue<TAntecedentResult>(this Task<TAntecedentResult> antecedent, Func<TAntecedentResult, Task> childActionTask) {
             return antecedent.ContinueWith(a => childActionTask(a.Result), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.AttachedToParent).Unwrap();
         }
+
         public static Task ContinueOnFail<TAntecedentResult>(this Task<TAntecedentResult> antecedent, Func<Exception, Task> childActionTask) {
             return antecedent.ContinueWith(a => childActionTask(a.Exception.Unwrap()), TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.AttachedToParent).Unwrap();
         }
+
         public static Task ContinueOnCanceled<TAntecedentResult>(this Task<TAntecedentResult> antecedent, Func<Task> childActionTask) {
-            return antecedent.ContinueWith(a => childActionTask(), TaskContinuationOptions.OnlyOnCanceled| TaskContinuationOptions.AttachedToParent).Unwrap();
+            return antecedent.ContinueWith(a => childActionTask(), TaskContinuationOptions.OnlyOnCanceled | TaskContinuationOptions.AttachedToParent).Unwrap();
         }
+
         public static Task ContinueAlways<TAntecedentResult>(this Task<TAntecedentResult> antecedent, Func<Task<TAntecedentResult>, Task> childActionTask) {
             return antecedent.ContinueWith(a => childActionTask(a), TaskContinuationOptions.AttachedToParent).Unwrap();
         }
@@ -196,12 +207,15 @@
         public static Task Continue(this Task antecedent, Action childAction) {
             return antecedent.ContinueWith(a => childAction(), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.AttachedToParent);
         }
+
         public static Task ContinueOnFail(this Task antecedent, Action<Exception> childAction) {
-            return antecedent.ContinueWith(a => childAction( a.Exception.Unwrap()), TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.AttachedToParent);
+            return antecedent.ContinueWith(a => childAction(a.Exception.Unwrap()), TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.AttachedToParent);
         }
+
         public static Task ContinueOnCanceled(this Task antecedent, Action childAction) {
             return antecedent.ContinueWith(a => childAction(), TaskContinuationOptions.OnlyOnCanceled | TaskContinuationOptions.AttachedToParent);
         }
+
         public static Task ContinueAlways(this Task antecedent, Action<Task> childAction) {
             return antecedent.ContinueWith(a => childAction(a), TaskContinuationOptions.AttachedToParent);
         }
@@ -215,13 +229,16 @@
         public static Task Continue(this Task antecedent, Func<Task> childActionTask) {
             return antecedent.ContinueWith(a => childActionTask(), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.AttachedToParent).Unwrap();
         }
-        public static Task ContinueOnFail(this Task antecedent, Func<Exception,Task> childActionTask) {
+
+        public static Task ContinueOnFail(this Task antecedent, Func<Exception, Task> childActionTask) {
             return antecedent.ContinueWith(a => childActionTask(a.Exception.Unwrap()), TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.AttachedToParent).Unwrap();
         }
+
         public static Task ContinueOnCanceled(this Task antecedent, Func<Task> childActionTask) {
             return antecedent.ContinueWith(a => childActionTask(), TaskContinuationOptions.OnlyOnCanceled | TaskContinuationOptions.AttachedToParent).Unwrap();
         }
-        public static Task ContinueAlways(this Task antecedent, Func<Task,Task> childActionTask) {
+
+        public static Task ContinueAlways(this Task antecedent, Func<Task, Task> childActionTask) {
             return antecedent.ContinueWith(a => childActionTask(a), TaskContinuationOptions.AttachedToParent).Unwrap();
         }
 
@@ -248,18 +265,18 @@
             var tcs = new TaskCompletionSource<TResult>();
             Task.Factory.ContinueWhenAll(
                 antes, aa => {
-                    if( aa.Any( each => each.IsCanceled || each.IsFaulted )) {
+                    if (aa.Any(each => each.IsCanceled || each.IsFaulted)) {
                         // there was a failure somewhere.
                         // don't do anything else.
                         tcs.SetCanceled();
                     }
-                    
+
                     try {
                         tcs.SetResult(childFunction(aa.Select(each => each.Result)));
-                    } catch( Exception e) {
+                    } catch (Exception e) {
                         tcs.SetException(e);
                     }
-                },  TaskContinuationOptions.AttachedToParent);
+                }, TaskContinuationOptions.AttachedToParent);
 
             return tcs.Task;
         }
@@ -281,12 +298,10 @@
                         var exception = new AggregateException(aa.Where(each => each.IsFaulted).Select(each => each.Exception));
                         try {
                             tcs.SetResult(childFunction(exception));
-                        }
-                        catch (Exception e) {
+                        } catch (Exception e) {
                             tcs.SetException(e);
                         }
-                    }
-                    else {
+                    } else {
                         tcs.SetCanceled();
                     }
                 }, TaskContinuationOptions.AttachedToParent);
@@ -310,12 +325,10 @@
                         // pass the fault to the exception handler.
                         try {
                             tcs.SetResult(childFunction());
-                        }
-                        catch (Exception e) {
+                        } catch (Exception e) {
                             tcs.SetException(e);
                         }
-                    }
-                    else {
+                    } else {
                         tcs.SetCanceled();
                     }
                 }, TaskContinuationOptions.AttachedToParent);
@@ -361,8 +374,7 @@
 
                     try {
                         tcs.SetResult(childTaskFunction(aa.Select(each => each.Result)));
-                    }
-                    catch (Exception e) {
+                    } catch (Exception e) {
                         tcs.SetException(e);
                     }
                 }, TaskContinuationOptions.AttachedToParent);
@@ -387,12 +399,10 @@
                         var exception = new AggregateException(aa.Where(each => each.IsFaulted).Select(each => each.Exception));
                         try {
                             tcs.SetResult(childFunction(exception));
-                        }
-                        catch (Exception e) {
+                        } catch (Exception e) {
                             tcs.SetException(e);
                         }
-                    }
-                    else {
+                    } else {
                         tcs.SetCanceled();
                     }
                 }, TaskContinuationOptions.AttachedToParent);
@@ -416,12 +426,10 @@
                         // pass the fault to the exception handler.
                         try {
                             tcs.SetResult(childFunction());
-                        }
-                        catch (Exception e) {
+                        } catch (Exception e) {
                             tcs.SetException(e);
                         }
-                    }
-                    else {
+                    } else {
                         tcs.SetCanceled();
                     }
                 }, TaskContinuationOptions.AttachedToParent);
@@ -439,8 +447,6 @@
 
             return Task.Factory.ContinueWhenAll(antes, aa => childFunction(aa), TaskContinuationOptions.AttachedToParent).Unwrap();
         }
-
-
 
         /// <summary>
         ///   Performs a continuation (attached to parent) for a collection of given tasks.
@@ -468,8 +474,7 @@
 
                     try {
                         tcs.SetResult(childFunction());
-                    }
-                    catch (Exception e) {
+                    } catch (Exception e) {
                         tcs.SetException(e);
                     }
                 }, TaskContinuationOptions.AttachedToParent);
@@ -494,12 +499,10 @@
                         var exception = new AggregateException(aa.Where(each => each.IsFaulted).Select(each => each.Exception));
                         try {
                             tcs.SetResult(childFunction(exception));
-                        }
-                        catch (Exception e) {
+                        } catch (Exception e) {
                             tcs.SetException(e);
                         }
-                    }
-                    else {
+                    } else {
                         tcs.SetCanceled();
                     }
                 }, TaskContinuationOptions.AttachedToParent);
@@ -523,12 +526,10 @@
                         // pass the fault to the exception handler.
                         try {
                             tcs.SetResult(childFunction());
-                        }
-                        catch (Exception e) {
+                        } catch (Exception e) {
                             tcs.SetException(e);
                         }
-                    }
-                    else {
+                    } else {
                         tcs.SetCanceled();
                     }
                 }, TaskContinuationOptions.AttachedToParent);
@@ -573,8 +574,7 @@
 
                     try {
                         tcs.SetResult(childTaskFunction());
-                    }
-                    catch (Exception e) {
+                    } catch (Exception e) {
                         tcs.SetException(e);
                     }
                 }, TaskContinuationOptions.AttachedToParent);
@@ -599,12 +599,10 @@
                         var exception = new AggregateException(aa.Where(each => each.IsFaulted).Select(each => each.Exception));
                         try {
                             tcs.SetResult(childTaskFunction(exception));
-                        }
-                        catch (Exception e) {
+                        } catch (Exception e) {
                             tcs.SetException(e);
                         }
-                    }
-                    else {
+                    } else {
                         tcs.SetCanceled();
                     }
                 }, TaskContinuationOptions.AttachedToParent);
@@ -628,12 +626,10 @@
                         // pass the fault to the exception handler.
                         try {
                             tcs.SetResult(childTaskFunction());
-                        }
-                        catch (Exception e) {
+                        } catch (Exception e) {
                             tcs.SetException(e);
                         }
-                    }
-                    else {
+                    } else {
                         tcs.SetCanceled();
                     }
                 }, TaskContinuationOptions.AttachedToParent);
@@ -650,7 +646,6 @@
 
             return Task.Factory.ContinueWhenAll(antes, aa => childTaskFunction(aa), TaskContinuationOptions.AttachedToParent).Unwrap();
         }
-
 
         /// <summary>
         ///   Performs a continuation (attached to parent) for a collection of given tasks. This collects the results of the antecedent functions and passes that as a collection to the child Action.
@@ -679,8 +674,7 @@
                     try {
                         childAction(aa.Select(each => each.Result));
                         tcs.SetResult(null);
-                    }
-                    catch (Exception e) {
+                    } catch (Exception e) {
                         tcs.SetException(e);
                     }
                 }, TaskContinuationOptions.AttachedToParent);
@@ -706,12 +700,10 @@
                         try {
                             childAction(exception);
                             tcs.SetResult(null);
-                        }
-                        catch (Exception e) {
+                        } catch (Exception e) {
                             tcs.SetException(e);
                         }
-                    }
-                    else {
+                    } else {
                         tcs.SetCanceled();
                     }
                 }, TaskContinuationOptions.AttachedToParent);
@@ -736,12 +728,10 @@
                         try {
                             childAction();
                             tcs.SetResult(null);
-                        }
-                        catch (Exception e) {
+                        } catch (Exception e) {
                             tcs.SetException(e);
                         }
-                    }
-                    else {
+                    } else {
                         tcs.SetCanceled();
                     }
                 }, TaskContinuationOptions.AttachedToParent);
@@ -767,7 +757,7 @@
         /// <param name="antecedents"> The colleciton of antecedent tasks. WARNING: This will call ToArray() on the collection, togenerate an immutable collection </param>
         /// <param name="childTaskAction"> The function to run when all the parents are complete returning a Task </param>
         /// <returns> An unwrapped task representing the child action </returns>
-        public static Task Continue<TAntecedentResults>(this IEnumerable<Task<TAntecedentResults>> antecedents, Func<IEnumerable<TAntecedentResults>,Task> childTaskAction) {
+        public static Task Continue<TAntecedentResults>(this IEnumerable<Task<TAntecedentResults>> antecedents, Func<IEnumerable<TAntecedentResults>, Task> childTaskAction) {
             var antes = antecedents.ToArrayEvenIfNull();
             // if the collection is empty, just start the new task.
             if (antes.IsNullOrEmpty()) {
@@ -785,8 +775,7 @@
 
                     try {
                         tcs.SetResult(childTaskAction(aa.Select(each => each.Result)));
-                    }
-                    catch (Exception e) {
+                    } catch (Exception e) {
                         tcs.SetException(e);
                     }
                 }, TaskContinuationOptions.AttachedToParent);
@@ -794,7 +783,7 @@
             return tcs.Task.Unwrap();
         }
 
-        public static Task ContinueOnFail<TAntecedentResults>(this IEnumerable<Task<TAntecedentResults>> antecedents, Func<Exception,Task> childAction) {
+        public static Task ContinueOnFail<TAntecedentResults>(this IEnumerable<Task<TAntecedentResults>> antecedents, Func<Exception, Task> childAction) {
             var antes = antecedents.ToArrayEvenIfNull();
 
             // if the collection is empty, there will be no fails.
@@ -811,12 +800,10 @@
                         var exception = new AggregateException(aa.Where(each => each.IsFaulted).Select(each => each.Exception));
                         try {
                             tcs.SetResult(childAction(exception));
-                        }
-                        catch (Exception e) {
+                        } catch (Exception e) {
                             tcs.SetException(e);
                         }
-                    }
-                    else {
+                    } else {
                         tcs.SetCanceled();
                     }
                 }, TaskContinuationOptions.AttachedToParent);
@@ -840,12 +827,10 @@
                         // pass the fault to the exception handler.
                         try {
                             tcs.SetResult(childAction());
-                        }
-                        catch (Exception e) {
+                        } catch (Exception e) {
                             tcs.SetException(e);
                         }
-                    }
-                    else {
+                    } else {
                         tcs.SetCanceled();
                     }
                 }, TaskContinuationOptions.AttachedToParent);
@@ -853,7 +838,7 @@
             return tcs.Task.Unwrap();
         }
 
-        public static Task ContinueAlways<TAntecedentResults>(this IEnumerable<Task<TAntecedentResults>> antecedents, Func<IEnumerable<Task<TAntecedentResults>>,Task> childFunction) {
+        public static Task ContinueAlways<TAntecedentResults>(this IEnumerable<Task<TAntecedentResults>> antecedents, Func<IEnumerable<Task<TAntecedentResults>>, Task> childFunction) {
             var antes = antecedents.ToArrayEvenIfNull();
 
             // if the collection is empty, just start the new task.
@@ -863,7 +848,6 @@
 
             return Task.Factory.ContinueWhenAll(antes, aa => childFunction(aa), TaskContinuationOptions.AttachedToParent).Unwrap();
         }
-
 
         /// <summary>
         ///   Performs a continuation (attached to parent) for a collection of given tasks.
@@ -891,8 +875,7 @@
                     try {
                         childAction();
                         tcs.SetResult(null);
-                    }
-                    catch (Exception e) {
+                    } catch (Exception e) {
                         tcs.SetException(e);
                     }
                 }, TaskContinuationOptions.AttachedToParent);
@@ -918,12 +901,10 @@
                         try {
                             childAction(exception);
                             tcs.SetResult(null);
-                        }
-                        catch (Exception e) {
+                        } catch (Exception e) {
                             tcs.SetException(e);
                         }
-                    }
-                    else {
+                    } else {
                         tcs.SetCanceled();
                     }
                 }, TaskContinuationOptions.AttachedToParent);
@@ -948,12 +929,10 @@
                         try {
                             childAction();
                             tcs.SetResult(null);
-                        }
-                        catch (Exception e) {
+                        } catch (Exception e) {
                             tcs.SetException(e);
                         }
-                    }
-                    else {
+                    } else {
                         tcs.SetCanceled();
                     }
                 }, TaskContinuationOptions.AttachedToParent);
@@ -977,7 +956,7 @@
         /// <param name="antecedents"> The colleciton of antecedent tasks. WARNING: This will call ToArray() on the collection, togenerate an immutable collection </param>
         /// <param name="childActionTask"> The function to run when all the parents are complete, which returns a Task </param>
         /// <returns> An unwrapped task representing the child action </returns>
-        public static Task Continue(this IEnumerable<Task> antecedents, Func< Task> childActionTask) {
+        public static Task Continue(this IEnumerable<Task> antecedents, Func<Task> childActionTask) {
             var antes = antecedents.ToArrayEvenIfNull();
 
             // if the collection is empty, just start the new task.
@@ -996,8 +975,7 @@
 
                     try {
                         tcs.SetResult(childActionTask());
-                    }
-                    catch (Exception e) {
+                    } catch (Exception e) {
                         tcs.SetException(e);
                     }
                 }, TaskContinuationOptions.AttachedToParent);
@@ -1022,12 +1000,10 @@
                         var exception = new AggregateException(aa.Where(each => each.IsFaulted).Select(each => each.Exception));
                         try {
                             tcs.SetResult(childAction(exception));
-                        }
-                        catch (Exception e) {
+                        } catch (Exception e) {
                             tcs.SetException(e);
                         }
-                    }
-                    else {
+                    } else {
                         tcs.SetCanceled();
                     }
                 }, TaskContinuationOptions.AttachedToParent);
@@ -1051,12 +1027,10 @@
                         // pass the fault to the exception handler.
                         try {
                             tcs.SetResult(childAction());
-                        }
-                        catch (Exception e) {
+                        } catch (Exception e) {
                             tcs.SetException(e);
                         }
-                    }
-                    else {
+                    } else {
                         tcs.SetCanceled();
                     }
                 }, TaskContinuationOptions.AttachedToParent);

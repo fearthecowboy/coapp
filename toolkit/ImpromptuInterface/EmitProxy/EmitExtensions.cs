@@ -13,12 +13,11 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-namespace CoApp.Toolkit.ImpromptuInterface.EmitProxy
-{
-    using System.Linq.Expressions;
+namespace CoApp.Toolkit.ImpromptuInterface.EmitProxy {
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Linq.Expressions;
     using System.Reflection;
     using System.Reflection.Emit;
     using System.Runtime.CompilerServices;
@@ -26,52 +25,46 @@ namespace CoApp.Toolkit.ImpromptuInterface.EmitProxy
     using Binder = Microsoft.CSharp.RuntimeBinder.Binder;
 
     ///<summary>
-    /// Extension Methods that make emiting code easier and easier to read
+    ///  Extension Methods that make emiting code easier and easier to read
     ///</summary>
-    public static class EmitExtensions
-    {
+    public static class EmitExtensions {
         ///<summary>
-        /// Used to automatically create label on dispose
+        ///  Used to automatically create label on dispose
         ///</summary>
-        public class BranchTrueOverBlock : IDisposable
-        {
+        public class BranchTrueOverBlock : IDisposable {
             private readonly ILGenerator _generator;
             private readonly Label _label;
 
             ///<summary>
-            /// Constructor
+            ///  Constructor
             ///</summary>
-            ///<param name="generator"></param>
-            public BranchTrueOverBlock(ILGenerator generator)
-            {
+            ///<param name="generator"> </param>
+            public BranchTrueOverBlock(ILGenerator generator) {
                 _generator = generator;
                 _label = generator.DefineLabel();
                 _generator.Emit(OpCodes.Brtrue, _label);
             }
 
             /// <summary>
-            /// Finishes block
+            ///   Finishes block
             /// </summary>
-            public void Dispose()
-            {
+            public void Dispose() {
                 //_generator.Emit(OpCodes.Br_S, _label);
                 _generator.MarkLabel(_label);
             }
         }
 
         /// <summary>
-        /// Gets the field info even if generic type parameter.
+        ///   Gets the field info even if generic type parameter.
         /// </summary>
-        /// <param name="type">The type.</param>
-        /// <param name="fieldName">Name of the field.</param>
-        /// <returns></returns>
-        public static FieldInfo GetFieldEvenIfGeneric(this Type type, string fieldName)
-        {
+        /// <param name="type"> The type. </param>
+        /// <param name="fieldName"> Name of the field. </param>
+        /// <returns> </returns>
+        public static FieldInfo GetFieldEvenIfGeneric(this Type type, string fieldName) {
             if (type is TypeBuilder
-			    || type.GetType().Name.Contains("TypeBuilder")
-			    || type.GetType().Name.Contains("MonoGenericClass")
-			    )
-            {
+                || type.GetType().Name.Contains("TypeBuilder")
+                    || type.GetType().Name.Contains("MonoGenericClass")
+                ) {
                 var tGenDef = type.GetGenericTypeDefinition();
                 var tField = tGenDef.GetField(fieldName);
                 return TypeBuilder.GetField(type, tField);
@@ -79,23 +72,18 @@ namespace CoApp.Toolkit.ImpromptuInterface.EmitProxy
             return type.GetField(fieldName);
         }
 
-
-
         /// <summary>
-        /// Gets the method info even if generic type parameter.
+        ///   Gets the method info even if generic type parameter.
         /// </summary>
-        /// <param name="type">The type.</param>
-        /// <param name="methodName">Name of the method.</param>
-        /// <param name="argTypes">The arg types.</param>
-        /// <returns></returns>
-        public static MethodInfo GetMethodEvenIfGeneric(this Type type, string methodName, Type[] argTypes)
-        {
+        /// <param name="type"> The type. </param>
+        /// <param name="methodName"> Name of the method. </param>
+        /// <param name="argTypes"> The arg types. </param>
+        /// <returns> </returns>
+        public static MethodInfo GetMethodEvenIfGeneric(this Type type, string methodName, Type[] argTypes) {
             if (type is TypeBuilder
-			    || type.GetType().Name.Contains("TypeBuilder")
-			    || type.GetType().Name.Contains("MonoGenericClass")
-
-			    )
-            {
+                || type.GetType().Name.Contains("TypeBuilder")
+                    || type.GetType().Name.Contains("MonoGenericClass")
+                ) {
                 var tGenDef = type.GetGenericTypeDefinition();
                 var tMethodInfo = tGenDef.GetMethod(methodName, argTypes);
                 return TypeBuilder.GetMethod(type, tMethodInfo);
@@ -103,22 +91,17 @@ namespace CoApp.Toolkit.ImpromptuInterface.EmitProxy
             return type.GetMethod(methodName, argTypes);
         }
 
-
-
         /// <summary>
-        /// Gets the method info even if generic type parameter.
+        ///   Gets the method info even if generic type parameter.
         /// </summary>
-        /// <param name="type">The type.</param>
-        /// <param name="methodName">Name of the method.</param>
-        /// <returns></returns>
-        public static MethodInfo GetMethodEvenIfGeneric(this Type type, string methodName)
-        {
-            if (type is TypeBuilder 
-			    || type.GetType().Name.Contains("TypeBuilder")
-			    || type.GetType().Name.Contains("MonoGenericClass")
-
-			    ) 
-            {
+        /// <param name="type"> The type. </param>
+        /// <param name="methodName"> Name of the method. </param>
+        /// <returns> </returns>
+        public static MethodInfo GetMethodEvenIfGeneric(this Type type, string methodName) {
+            if (type is TypeBuilder
+                || type.GetType().Name.Contains("TypeBuilder")
+                    || type.GetType().Name.Contains("MonoGenericClass")
+                ) {
                 var tGenDef = type.GetGenericTypeDefinition();
                 var tMethodInfo = tGenDef.GetMethod(methodName);
                 return TypeBuilder.GetMethod(type, tMethodInfo);
@@ -126,18 +109,15 @@ namespace CoApp.Toolkit.ImpromptuInterface.EmitProxy
             return type.GetMethod(methodName);
         }
 
-
-
         /// <summary>
-        /// Emits branch true. expects using keyword.
+        ///   Emits branch true. expects using keyword.
         /// </summary>
-        /// <param name="generator">The generator.</param>
-        /// <param name="condition">The condition.</param>
-        /// <returns></returns>
+        /// <param name="generator"> The generator. </param>
+        /// <param name="condition"> The condition. </param>
+        /// <returns> </returns>
         /// <example>
-        /// Using keyword allows you to set the emit code you are branching over and then automatically emits label when disposing
-        /// <code>
-        /// 		<![CDATA[
+        ///   Using keyword allows you to set the emit code you are branching over and then automatically emits label when disposing <code>
+        ///                                                                                                                            <![CDATA[
         /// using (tIlGen.EmitBranchTrue(g=>g.Emit(OpCodes.Ldsfld, tConvertField)))
         /// {
         /// tIlGen.EmitDynamicConvertBinder(CSharpBinderFlags.None, returnType, contextType);
@@ -145,76 +125,65 @@ namespace CoApp.Toolkit.ImpromptuInterface.EmitProxy
         /// tIlGen.Emit(OpCodes.Stsfld, tConvertField);
         /// }
         /// ]]>
-        /// 	</code>
+        ///                                                                                                                          </code>
         /// </example>
-        public static BranchTrueOverBlock EmitBranchTrue(this ILGenerator generator, Action<ILGenerator> condition)
-        {
+        public static BranchTrueOverBlock EmitBranchTrue(this ILGenerator generator, Action<ILGenerator> condition) {
             condition(generator);
             return new BranchTrueOverBlock(generator);
         }
 
         /// <summary>
-        /// Emits the call.
+        ///   Emits the call.
         /// </summary>
-        /// <param name="generator">The generator.</param>
-        /// <param name="target">The target.</param>
-        /// <param name="call">The call.</param>
-        /// <param name="parameters">The parameters.</param>
+        /// <param name="generator"> The generator. </param>
+        /// <param name="target"> The target. </param>
+        /// <param name="call"> The call. </param>
+        /// <param name="parameters"> The parameters. </param>
         public static void EmitInvocation(
-            this ILGenerator generator, 
-            Action<ILGenerator> target, 
+            this ILGenerator generator,
+            Action<ILGenerator> target,
             Action<ILGenerator> call,
             params Action<ILGenerator>[] parameters
-            )
-        {
+            ) {
             target(generator);
-            foreach (var tParameter in parameters)
-            {
+            foreach (var tParameter in parameters) {
                 tParameter(generator);
             }
             call(generator);
         }
 
-
-
         /// <summary>
-        /// Emits creating the callsite.
+        ///   Emits creating the callsite.
         /// </summary>
-        /// <param name="generator">The generator.</param>
-        /// <param name="funcType">Type of the func.</param>
-        public static void EmitCallsiteCreate(this ILGenerator generator, Type funcType)
-        {
-            generator.Emit(OpCodes.Call, typeof(CallSite<>).MakeGenericType(funcType).GetMethodEvenIfGeneric("Create", new[] { typeof(CallSiteBinder) }));
+        /// <param name="generator"> The generator. </param>
+        /// <param name="funcType"> Type of the func. </param>
+        public static void EmitCallsiteCreate(this ILGenerator generator, Type funcType) {
+            generator.Emit(OpCodes.Call, typeof (CallSite<>).MakeGenericType(funcType).GetMethodEvenIfGeneric("Create", new[] {typeof (CallSiteBinder)}));
         }
 
-
-
         /// <summary>
-        /// Emits the call invoke delegate.
+        ///   Emits the call invoke delegate.
         /// </summary>
-        /// <param name="generator">The generator.</param>
-        /// <param name="funcType">Type of the func.</param>
-        /// <param name="isAction">if set to <c>true</c> [is action].</param>
-        public static void EmitCallInvokeFunc(this ILGenerator generator, Type funcType, bool isAction = false)
-        {
+        /// <param name="generator"> The generator. </param>
+        /// <param name="funcType"> Type of the func. </param>
+        /// <param name="isAction"> if set to <c>true</c> [is action]. </param>
+        public static void EmitCallInvokeFunc(this ILGenerator generator, Type funcType, bool isAction = false) {
             generator.Emit(OpCodes.Callvirt, funcType.GetMethodEvenIfGeneric("Invoke"));
         }
 
         /// <summary>
-        /// Emits an array.
+        ///   Emits an array.
         /// </summary>
-        /// <param name="generator">The generator.</param>
-        /// <param name="arrayType">Type of the array.</param>
-        /// <param name="emitElements">The emit elements.</param>
-        public static void EmitArray(this ILGenerator generator, Type arrayType, IList<Action<ILGenerator>> emitElements)
-        {
+        /// <param name="generator"> The generator. </param>
+        /// <param name="arrayType"> Type of the array. </param>
+        /// <param name="emitElements"> The emit elements. </param>
+        public static void EmitArray(this ILGenerator generator, Type arrayType, IList<Action<ILGenerator>> emitElements) {
             var tLocal = generator.DeclareLocal(arrayType.MakeArrayType());
             generator.Emit(OpCodes.Ldc_I4, emitElements.Count);
             generator.Emit(OpCodes.Newarr, arrayType);
             generator.EmitStoreLocation(tLocal.LocalIndex);
 
-            for (var i = 0; i < emitElements.Count; i++)
-            {
+            for (var i = 0; i < emitElements.Count; i++) {
                 generator.EmitLoadLocation(tLocal.LocalIndex);
                 generator.Emit(OpCodes.Ldc_I4, i);
                 emitElements[i](generator);
@@ -224,14 +193,12 @@ namespace CoApp.Toolkit.ImpromptuInterface.EmitProxy
         }
 
         /// <summary>
-        /// Emits the store location.
+        ///   Emits the store location.
         /// </summary>
-        /// <param name="generator">The generator.</param>
-        /// <param name="location">The location.</param>
-        public static void EmitStoreLocation(this ILGenerator generator, int location)
-        {
-            switch (location)
-            {
+        /// <param name="generator"> The generator. </param>
+        /// <param name="location"> The location. </param>
+        public static void EmitStoreLocation(this ILGenerator generator, int location) {
+            switch (location) {
                 case 0:
                     generator.Emit(OpCodes.Stloc_0);
                     return;
@@ -250,16 +217,13 @@ namespace CoApp.Toolkit.ImpromptuInterface.EmitProxy
             }
         }
 
-
         /// <summary>
-        /// Emits the load argument.
+        ///   Emits the load argument.
         /// </summary>
-        /// <param name="generator">The generator.</param>
-        /// <param name="location">The location.</param>
-        public static void EmitLoadArgument(this ILGenerator generator, int location)
-        {
-            switch (location)
-            {
+        /// <param name="generator"> The generator. </param>
+        /// <param name="location"> The location. </param>
+        public static void EmitLoadArgument(this ILGenerator generator, int location) {
+            switch (location) {
                 case 0:
                     generator.Emit(OpCodes.Ldarg_0);
                     return;
@@ -279,14 +243,12 @@ namespace CoApp.Toolkit.ImpromptuInterface.EmitProxy
         }
 
         /// <summary>
-        /// Emits the load location.
+        ///   Emits the load location.
         /// </summary>
-        /// <param name="generator">The generator.</param>
-        /// <param name="location">The location.</param>
-        public static void EmitLoadLocation(this ILGenerator generator, int location)
-        {
-            switch (location)
-            {
+        /// <param name="generator"> The generator. </param>
+        /// <param name="location"> The location. </param>
+        public static void EmitLoadLocation(this ILGenerator generator, int location) {
+            switch (location) {
                 case 0:
                     generator.Emit(OpCodes.Ldloc_0);
                     return;
@@ -305,227 +267,200 @@ namespace CoApp.Toolkit.ImpromptuInterface.EmitProxy
             }
         }
 
-
         /// <summary>
-        /// Emits the dynamic method invoke binder.
+        ///   Emits the dynamic method invoke binder.
         /// </summary>
-        /// <param name="generator">The generator.</param>
-        /// <param name="flag">The binding flags.</param>
-        /// <param name="name">The name.</param>
-        /// <param name="context">The context.</param>
-        /// <param name="argInfo">The arg info.</param>
-        /// <param name="argNames">The arg names.</param>
-        public static void EmitDynamicMethodInvokeBinder(this ILGenerator generator, CSharpBinderFlags flag, string name, Type context, ParameterInfo[] argInfo, IEnumerable<string> argNames)
-        {
+        /// <param name="generator"> The generator. </param>
+        /// <param name="flag"> The binding flags. </param>
+        /// <param name="name"> The name. </param>
+        /// <param name="context"> The context. </param>
+        /// <param name="argInfo"> The arg info. </param>
+        /// <param name="argNames"> The arg names. </param>
+        public static void EmitDynamicMethodInvokeBinder(this ILGenerator generator, CSharpBinderFlags flag, string name, Type context, ParameterInfo[] argInfo, IEnumerable<string> argNames) {
             generator.Emit(OpCodes.Ldc_I4, (int)flag);
             generator.Emit(OpCodes.Ldstr, name);
             generator.Emit(OpCodes.Ldnull);
             generator.EmitTypeOf(context);
-            var tList = new List<Action<ILGenerator>> { gen => gen.EmitCreateCSharpArgumentInfo(CSharpArgumentInfoFlags.None) };
+            var tList = new List<Action<ILGenerator>> {gen => gen.EmitCreateCSharpArgumentInfo(CSharpArgumentInfoFlags.None)};
 
-           
+            tList.AddRange(argInfo.Zip(argNames, (p, n) => new {p, n}).Select(arg => (Action<ILGenerator>)(gen => {
+                var tStart = CSharpArgumentInfoFlags.
+                    UseCompileTimeType;
 
-            tList.AddRange(argInfo.Zip(argNames,(p,n)=>new{p,n}).Select(arg => (Action<ILGenerator>)(gen =>
-                                                                            {
-                                                                                var tStart = CSharpArgumentInfoFlags.
-                                                                                    UseCompileTimeType;
+                if (arg.p.IsDefined(typeof (DynamicAttribute), true)) {
+                    tStart = CSharpArgumentInfoFlags.None;
+                }
 
-                                                                                if (arg.p.IsDefined(typeof(DynamicAttribute), true))
-                                                                                {
-                                                                                    tStart = CSharpArgumentInfoFlags.None;
-                                                                                }
+                if (arg.p.IsOut) {
+                    tStart |=
+                        CSharpArgumentInfoFlags.IsOut;
+                } else if (arg.p.ParameterType.IsByRef) {
+                    tStart |=
+                        CSharpArgumentInfoFlags.IsRef;
+                }
 
-                                                                                if (arg.p.IsOut)
-                                                                                {
-                                                                                    tStart |=
-                                                                                        CSharpArgumentInfoFlags.IsOut;
-                                                                                }
-                                                                                else if(arg.p.ParameterType.IsByRef)
-                                                                                {
-                                                                                    tStart |=
-                                                                                       CSharpArgumentInfoFlags.IsRef;
-                                                                                }
+                if (!String.IsNullOrEmpty(arg.n)) {
+                    tStart |=
+                        CSharpArgumentInfoFlags.NamedArgument;
+                }
 
-                                                                                if (!String.IsNullOrEmpty(arg.n))
-                                                                                {
-                                                                                    tStart |=
-                                                                                     CSharpArgumentInfoFlags.NamedArgument;
-                                                                                }
-
-                                                                                gen.EmitCreateCSharpArgumentInfo(tStart, arg.n);
-                                                                                return;
-                                                                            })));
-            generator.EmitArray(typeof(CSharpArgumentInfo), tList);
-            generator.Emit(OpCodes.Call, typeof(Binder).GetMethod("InvokeMember", new[] { typeof(CSharpBinderFlags), typeof(string), typeof(IEnumerable<Type>), typeof(Type), typeof(CSharpArgumentInfo[]) }));
+                gen.EmitCreateCSharpArgumentInfo(tStart, arg.n);
+                return;
+            })));
+            generator.EmitArray(typeof (CSharpArgumentInfo), tList);
+            generator.Emit(OpCodes.Call, typeof (Binder).GetMethod("InvokeMember", new[] {typeof (CSharpBinderFlags), typeof (string), typeof (IEnumerable<Type>), typeof (Type), typeof (CSharpArgumentInfo[])}));
         }
 
-
-
         /// <summary>
-        /// Emits the dynamic set binder.
+        ///   Emits the dynamic set binder.
         /// </summary>
-        /// <param name="generator">The generator.</param>
-        /// <param name="flag">The binding flags.</param>
-        /// <param name="name">The name.</param>
-        /// <param name="context">The context.</param>
-        /// <param name="argTypes">The arg types.</param>
-        public static void EmitDynamicSetBinder(this ILGenerator generator, CSharpBinderFlags flag, string name, Type context, params Type[] argTypes)
-        {
+        /// <param name="generator"> The generator. </param>
+        /// <param name="flag"> The binding flags. </param>
+        /// <param name="name"> The name. </param>
+        /// <param name="context"> The context. </param>
+        /// <param name="argTypes"> The arg types. </param>
+        public static void EmitDynamicSetBinder(this ILGenerator generator, CSharpBinderFlags flag, string name, Type context, params Type[] argTypes) {
             generator.Emit(OpCodes.Ldc_I4, (int)flag);
-            if (argTypes.Length == 1)
+            if (argTypes.Length == 1) {
                 generator.Emit(OpCodes.Ldstr, name);
+            }
             generator.EmitTypeOf(context);
-            var tList = new List<Action<ILGenerator>> { gen => gen.EmitCreateCSharpArgumentInfo(CSharpArgumentInfoFlags.None) };
+            var tList = new List<Action<ILGenerator>> {gen => gen.EmitCreateCSharpArgumentInfo(CSharpArgumentInfoFlags.None)};
             tList.AddRange(argTypes.Select(tArg => (Action<ILGenerator>)(gen => gen.EmitCreateCSharpArgumentInfo(CSharpArgumentInfoFlags.UseCompileTimeType))));
-            generator.EmitArray(typeof(CSharpArgumentInfo), tList);
+            generator.EmitArray(typeof (CSharpArgumentInfo), tList);
 
-            if (argTypes.Length == 1)
-                generator.Emit(OpCodes.Call, typeof(Binder).GetMethod("SetMember", new[] { typeof(CSharpBinderFlags), typeof(string), typeof(Type), typeof(CSharpArgumentInfo[]) }));
-            else
-                generator.Emit(OpCodes.Call, typeof(Binder).GetMethod("SetIndex", new[] { typeof(CSharpBinderFlags), typeof(Type), typeof(CSharpArgumentInfo[]) }));
-
-
+            if (argTypes.Length == 1) {
+                generator.Emit(OpCodes.Call, typeof (Binder).GetMethod("SetMember", new[] {typeof (CSharpBinderFlags), typeof (string), typeof (Type), typeof (CSharpArgumentInfo[])}));
+            } else {
+                generator.Emit(OpCodes.Call, typeof (Binder).GetMethod("SetIndex", new[] {typeof (CSharpBinderFlags), typeof (Type), typeof (CSharpArgumentInfo[])}));
+            }
         }
 
         /// <summary>
-        /// Emits the dynamic set binder dynamic params.
+        ///   Emits the dynamic set binder dynamic params.
         /// </summary>
-        /// <param name="generator">The generator.</param>
-        /// <param name="flag">The flag.</param>
-        /// <param name="name">The name.</param>
-        /// <param name="context">The context.</param>
-        /// <param name="argTypes">The arg types.</param>
-        public static void EmitDynamicSetBinderDynamicParams(this ILGenerator generator, CSharpBinderFlags flag, string name, Type context, params Type[] argTypes)
-        {
+        /// <param name="generator"> The generator. </param>
+        /// <param name="flag"> The flag. </param>
+        /// <param name="name"> The name. </param>
+        /// <param name="context"> The context. </param>
+        /// <param name="argTypes"> The arg types. </param>
+        public static void EmitDynamicSetBinderDynamicParams(this ILGenerator generator, CSharpBinderFlags flag, string name, Type context, params Type[] argTypes) {
             generator.Emit(OpCodes.Ldc_I4, (int)flag);
-            if (argTypes.Length == 1)
+            if (argTypes.Length == 1) {
                 generator.Emit(OpCodes.Ldstr, name);
+            }
             generator.EmitTypeOf(context);
-            var tList = new List<Action<ILGenerator>> { gen => gen.EmitCreateCSharpArgumentInfo(CSharpArgumentInfoFlags.None) };
+            var tList = new List<Action<ILGenerator>> {gen => gen.EmitCreateCSharpArgumentInfo(CSharpArgumentInfoFlags.None)};
             tList.AddRange(argTypes.Select(tArg => (Action<ILGenerator>)(gen => gen.EmitCreateCSharpArgumentInfo(CSharpArgumentInfoFlags.None))));
-            generator.EmitArray(typeof(CSharpArgumentInfo), tList);
+            generator.EmitArray(typeof (CSharpArgumentInfo), tList);
 
-            if (argTypes.Length == 1)
-                generator.Emit(OpCodes.Call, typeof(Binder).GetMethod("SetMember", new[] { typeof(CSharpBinderFlags), typeof(string), typeof(Type), typeof(CSharpArgumentInfo[]) }));
-            else
-                generator.Emit(OpCodes.Call, typeof(Binder).GetMethod("SetIndex", new[] { typeof(CSharpBinderFlags), typeof(Type), typeof(CSharpArgumentInfo[]) }));
-
-
+            if (argTypes.Length == 1) {
+                generator.Emit(OpCodes.Call, typeof (Binder).GetMethod("SetMember", new[] {typeof (CSharpBinderFlags), typeof (string), typeof (Type), typeof (CSharpArgumentInfo[])}));
+            } else {
+                generator.Emit(OpCodes.Call, typeof (Binder).GetMethod("SetIndex", new[] {typeof (CSharpBinderFlags), typeof (Type), typeof (CSharpArgumentInfo[])}));
+            }
         }
 
         /// <summary>
-        /// Emits the dynamic binary op binder.
+        ///   Emits the dynamic binary op binder.
         /// </summary>
-        /// <param name="generator">The generator.</param>
-        /// <param name="flag">The flag.</param>
-        /// <param name="exprType">Type of the expr.</param>
-        /// <param name="context">The context.</param>
-        /// <param name="argTypes">The arg types.</param>
+        /// <param name="generator"> The generator. </param>
+        /// <param name="flag"> The flag. </param>
+        /// <param name="exprType"> Type of the expr. </param>
+        /// <param name="context"> The context. </param>
+        /// <param name="argTypes"> The arg types. </param>
         public static void EmitDynamicBinaryOpBinder(this ILGenerator generator, CSharpBinderFlags flag, ExpressionType
- exprType, Type context, params Type[] argTypes)
-        {
+            exprType, Type context, params Type[] argTypes) {
             generator.Emit(OpCodes.Ldc_I4, (int)flag);
             generator.Emit(OpCodes.Ldc_I4, (int)exprType);
             generator.EmitTypeOf(context);
-            var tList = new List<Action<ILGenerator>> { gen => gen.EmitCreateCSharpArgumentInfo(CSharpArgumentInfoFlags.None) };
+            var tList = new List<Action<ILGenerator>> {gen => gen.EmitCreateCSharpArgumentInfo(CSharpArgumentInfoFlags.None)};
             tList.AddRange(argTypes.Select(tArg => (Action<ILGenerator>)(gen => gen.EmitCreateCSharpArgumentInfo(CSharpArgumentInfoFlags.UseCompileTimeType))));
-            generator.EmitArray(typeof(CSharpArgumentInfo), tList);
+            generator.EmitArray(typeof (CSharpArgumentInfo), tList);
 
-            generator.Emit(OpCodes.Call, typeof(Binder).GetMethod("BinaryOperation", new[] { typeof(CSharpBinderFlags), typeof(ExpressionType), typeof(Type), typeof(CSharpArgumentInfo[]) }));
-            
+            generator.Emit(OpCodes.Call, typeof (Binder).GetMethod("BinaryOperation", new[] {typeof (CSharpBinderFlags), typeof (ExpressionType), typeof (Type), typeof (CSharpArgumentInfo[])}));
         }
 
         /// <summary>
-        /// Emits the dynamic get binder.
+        ///   Emits the dynamic get binder.
         /// </summary>
-        /// <param name="generator">The generator.</param>
-        /// <param name="flag">The binding flags.</param>
-        /// <param name="name">The name.</param>
-        /// <param name="context">The context.</param>
-        /// <param name="argTypes">The arg types.</param>
-        public static void EmitDynamicGetBinder(this ILGenerator generator, CSharpBinderFlags flag, string name, Type context, params Type[] argTypes)
-        {
+        /// <param name="generator"> The generator. </param>
+        /// <param name="flag"> The binding flags. </param>
+        /// <param name="name"> The name. </param>
+        /// <param name="context"> The context. </param>
+        /// <param name="argTypes"> The arg types. </param>
+        public static void EmitDynamicGetBinder(this ILGenerator generator, CSharpBinderFlags flag, string name, Type context, params Type[] argTypes) {
             generator.Emit(OpCodes.Ldc_I4, (int)flag);
-            if (!argTypes.Any())
+            if (!argTypes.Any()) {
                 generator.Emit(OpCodes.Ldstr, name);
+            }
             generator.EmitTypeOf(context);
-            var tList = new List<Action<ILGenerator>> { gen => gen.EmitCreateCSharpArgumentInfo(CSharpArgumentInfoFlags.None) };
+            var tList = new List<Action<ILGenerator>> {gen => gen.EmitCreateCSharpArgumentInfo(CSharpArgumentInfoFlags.None)};
             tList.AddRange(argTypes.Select(tArg => (Action<ILGenerator>)(gen => gen.EmitCreateCSharpArgumentInfo(CSharpArgumentInfoFlags.UseCompileTimeType))));
-            generator.EmitArray(typeof(CSharpArgumentInfo), tList);
-            if (!argTypes.Any())
-                generator.Emit(OpCodes.Call, typeof(Binder).GetMethod("GetMember", new[] { typeof(CSharpBinderFlags), typeof(string), typeof(Type), typeof(CSharpArgumentInfo[]) }));
-            else
-                generator.Emit(OpCodes.Call, typeof(Binder).GetMethod("GetIndex", new[] { typeof(CSharpBinderFlags), typeof(Type), typeof(CSharpArgumentInfo[]) }));
+            generator.EmitArray(typeof (CSharpArgumentInfo), tList);
+            if (!argTypes.Any()) {
+                generator.Emit(OpCodes.Call, typeof (Binder).GetMethod("GetMember", new[] {typeof (CSharpBinderFlags), typeof (string), typeof (Type), typeof (CSharpArgumentInfo[])}));
+            } else {
+                generator.Emit(OpCodes.Call, typeof (Binder).GetMethod("GetIndex", new[] {typeof (CSharpBinderFlags), typeof (Type), typeof (CSharpArgumentInfo[])}));
+            }
         }
 
-
-
         /// <summary>
-        /// Emits creating the <see cref="CSharpArgumentInfo"></see>
+        ///   Emits creating the <see cref="CSharpArgumentInfo"></see>
         /// </summary>
-        /// <param name="generator">The generator.</param>
-        /// <param name="flag">The flag.</param>
-        /// <param name="name">The name.</param>
-        public static void EmitCreateCSharpArgumentInfo(this ILGenerator generator, CSharpArgumentInfoFlags flag, string name = null)
-        {
+        /// <param name="generator"> The generator. </param>
+        /// <param name="flag"> The flag. </param>
+        /// <param name="name"> The name. </param>
+        public static void EmitCreateCSharpArgumentInfo(this ILGenerator generator, CSharpArgumentInfoFlags flag, string name = null) {
             generator.Emit(OpCodes.Ldc_I4, (int)flag);
-            if (String.IsNullOrEmpty(name))
+            if (String.IsNullOrEmpty(name)) {
                 generator.Emit(OpCodes.Ldnull);
-            else
+            } else {
                 generator.Emit(OpCodes.Ldstr, name);
-            generator.Emit(OpCodes.Call, typeof(CSharpArgumentInfo).GetMethod("Create", new[] { typeof(CSharpArgumentInfoFlags), typeof(string) }));
+            }
+            generator.Emit(OpCodes.Call, typeof (CSharpArgumentInfo).GetMethod("Create", new[] {typeof (CSharpArgumentInfoFlags), typeof (string)}));
         }
 
-
         /// <summary>
-        /// Emits the dynamic convert binder.
+        ///   Emits the dynamic convert binder.
         /// </summary>
-        /// <param name="generator">The generator.</param>
-        /// <param name="flag">The binding flag.</param>
-        /// <param name="returnType">Type of the return.</param>
-        /// <param name="context">The context.</param>
-        public static void EmitDynamicConvertBinder(this ILGenerator generator, CSharpBinderFlags flag, Type returnType, Type context)
-        {
+        /// <param name="generator"> The generator. </param>
+        /// <param name="flag"> The binding flag. </param>
+        /// <param name="returnType"> Type of the return. </param>
+        /// <param name="context"> The context. </param>
+        public static void EmitDynamicConvertBinder(this ILGenerator generator, CSharpBinderFlags flag, Type returnType, Type context) {
             generator.Emit(OpCodes.Ldc_I4, (int)flag);
             generator.EmitTypeOf(returnType);
             generator.EmitTypeOf(context);
-            generator.Emit(OpCodes.Call, typeof(Binder).GetMethod("Convert", new[] { typeof(CSharpBinderFlags), typeof(Type), typeof(Type) }));
+            generator.Emit(OpCodes.Call, typeof (Binder).GetMethod("Convert", new[] {typeof (CSharpBinderFlags), typeof (Type), typeof (Type)}));
         }
 
-
-        public static void EmitDynamicIsEventBinder(this ILGenerator generator, CSharpBinderFlags flag, string name, Type context)
-        {
+        public static void EmitDynamicIsEventBinder(this ILGenerator generator, CSharpBinderFlags flag, string name, Type context) {
             generator.Emit(OpCodes.Ldc_I4, (int)flag);
             generator.Emit(OpCodes.Ldstr, name);
             generator.EmitTypeOf(context);
-            generator.Emit(OpCodes.Call, typeof(Binder).GetMethod("IsEvent", new[] { typeof(CSharpBinderFlags), typeof(string), typeof(Type) }));
+            generator.Emit(OpCodes.Call, typeof (Binder).GetMethod("IsEvent", new[] {typeof (CSharpBinderFlags), typeof (string), typeof (Type)}));
         }
 
-
         /// <summary>
-        /// Emits the typeof(Type)
+        ///   Emits the typeof(Type)
         /// </summary>
-        /// <param name="generator">The generator.</param>
-        /// <param name="type">The type.</param>
-        public static void EmitTypeOf(this ILGenerator generator, Type type)
-        {
-
+        /// <param name="generator"> The generator. </param>
+        /// <param name="type"> The type. </param>
+        public static void EmitTypeOf(this ILGenerator generator, Type type) {
             generator.Emit(OpCodes.Ldtoken, type);
-            var tTypeMeth = typeof(Type).GetMethod("GetTypeFromHandle", new[] { typeof(RuntimeTypeHandle) });
+            var tTypeMeth = typeof (Type).GetMethod("GetTypeFromHandle", new[] {typeof (RuntimeTypeHandle)});
             generator.Emit(OpCodes.Call, tTypeMeth);
         }
 
-
         /// <summary>
-        /// Emits the typeof(Type)
+        ///   Emits the typeof(Type)
         /// </summary>
-        /// <param name="generator">The generator.</param>
-        /// <param name="type">The type.</param>
-        public static void EmitTypeOf(this ILGenerator generator, TypeToken type)
-        {
-
+        /// <param name="generator"> The generator. </param>
+        /// <param name="type"> The type. </param>
+        public static void EmitTypeOf(this ILGenerator generator, TypeToken type) {
             generator.Emit(OpCodes.Ldtoken, type.Token);
-            var tTypeMeth = typeof(Type).GetMethod("GetTypeFromHandle", new[] { typeof(RuntimeTypeHandle) });
+            var tTypeMeth = typeof (Type).GetMethod("GetTypeFromHandle", new[] {typeof (RuntimeTypeHandle)});
             generator.Emit(OpCodes.Call, tTypeMeth);
         }
     }

@@ -1,15 +1,12 @@
-﻿namespace CoApp.Toolkit.ImpromptuInterface.Dynamic
-{
-    class ImpromptuForwarderAddRemove
-    {
+﻿namespace CoApp.Toolkit.ImpromptuInterface.Dynamic {
+    internal class ImpromptuForwarderAddRemove {
         /// <summary>
-        /// Implements the operator +.
+        ///   Implements the operator +.
         /// </summary>
-        /// <param name="left">The left.</param>
-        /// <param name="right">The right.</param>
-        /// <returns>The result of the operator.</returns>
-        public static ImpromptuForwarderAddRemove operator +(ImpromptuForwarderAddRemove left, object right)
-        {
+        /// <param name="left"> The left. </param>
+        /// <param name="right"> The right. </param>
+        /// <returns> The result of the operator. </returns>
+        public static ImpromptuForwarderAddRemove operator +(ImpromptuForwarderAddRemove left, object right) {
             left.Delegate = right;
             left.IsAdding = true;
 
@@ -17,13 +14,12 @@
         }
 
         /// <summary>
-        /// Implements the operator -.
+        ///   Implements the operator -.
         /// </summary>
-        /// <param name="left">The left.</param>
-        /// <param name="right">The right.</param>
-        /// <returns>The result of the operator.</returns>
-        public static ImpromptuForwarderAddRemove operator -(ImpromptuForwarderAddRemove left, object right)
-        {
+        /// <param name="left"> The left. </param>
+        /// <param name="right"> The right. </param>
+        /// <returns> The result of the operator. </returns>
+        public static ImpromptuForwarderAddRemove operator -(ImpromptuForwarderAddRemove left, object right) {
             left.Delegate = right;
             left.IsAdding = false;
 
@@ -31,16 +27,15 @@
         }
 
         /// <summary>
-        /// Gets or sets the delegate.
+        ///   Gets or sets the delegate.
         /// </summary>
-        /// <value>The delegate.</value>
+        /// <value> The delegate. </value>
         public object Delegate { get; protected set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether this instance is adding.
+        ///   Gets or sets a value indicating whether this instance is adding.
         /// </summary>
-        /// <value><c>true</c> if this instance is adding; otherwise, <c>false</c>.</value>
+        /// <value> <c>true</c> if this instance is adding; otherwise, <c>false</c> . </value>
         public bool IsAdding { get; protected set; }
-
     }
 }

@@ -29,8 +29,7 @@ namespace CoApp.Toolkit.Win32 {
     using System.Runtime.InteropServices;
 
     /// <summary>
-    ///   A bitmap info header.
-    ///   See http://msdn.microsoft.com/en-us/library/ms532290.aspx for more information.
+    ///   A bitmap info header. See http://msdn.microsoft.com/en-us/library/ms532290.aspx for more information.
     /// </summary>
     [StructLayout(LayoutKind.Sequential, Pack = 2)]
     public struct BitmapInfoHeader {
@@ -91,7 +90,9 @@ namespace CoApp.Toolkit.Win32 {
         ///   Returns the current bitmap compression.
         /// </summary>
         public BitmapCompression BitmapCompression {
-            get { return (BitmapCompression) biCompression; }
+            get {
+                return (BitmapCompression)biCompression;
+            }
         }
 
         /// <summary>

@@ -25,8 +25,7 @@
 
 namespace CoApp.Toolkit.Win32 {
     /// <summary>
-    ///   Edit control styles.
-    ///   http://msdn.microsoft.com/en-us/library/bb775464(VS.85).aspx
+    ///   Edit control styles. http://msdn.microsoft.com/en-us/library/bb775464(VS.85).aspx
     /// </summary>
     public enum EditControlStyles : uint {
         /// <summary>
@@ -35,14 +34,12 @@ namespace CoApp.Toolkit.Win32 {
         ES_LEFT = 0x0000,
 
         /// <summary>
-        ///   Windows 98/Me, Windows 2000/XP: Centers text in a single-line or multiline edit control.
-        ///   Windows 95, Windows NT 4.0 and earlier: Centers text in a multiline edit control.
+        ///   Windows 98/Me, Windows 2000/XP: Centers text in a single-line or multiline edit control. Windows 95, Windows NT 4.0 and earlier: Centers text in a multiline edit control.
         /// </summary>
         ES_CENTER = 0x0001,
 
         /// <summary>
-        ///   Windows 98/Me, Windows 2000/XP: Right-aligns text in a single-line or multiline edit control.
-        ///   Windows 95, Windows NT 4.0 and earlier: Right aligns text in a multiline edit control.
+        ///   Windows 98/Me, Windows 2000/XP: Right-aligns text in a single-line or multiline edit control. Windows 95, Windows NT 4.0 and earlier: Right aligns text in a multiline edit control.
         /// </summary>
         ES_RIGHT = 0x0002,
 
@@ -62,21 +59,17 @@ namespace CoApp.Toolkit.Win32 {
         ES_LOWERCASE = 0x0010,
 
         /// <summary>
-        ///   Displays an asterisk (*) for each character typed into the edit control. 
-        ///   This style is valid only for single-line edit controls.
+        ///   Displays an asterisk (*) for each character typed into the edit control. This style is valid only for single-line edit controls.
         /// </summary>
         ES_PASSWORD = 0x0020,
 
         /// <summary>
-        ///   Automatically scrolls text up one page when the user presses the ENTER key on 
-        ///   the last line.
+        ///   Automatically scrolls text up one page when the user presses the ENTER key on the last line.
         /// </summary>
         ES_AUTOVSCROLL = 0x0040,
 
         /// <summary>
-        ///   Automatically scrolls text to the right by 10 characters when the user types
-        ///   a character at the end of the line. When the user presses the ENTER key, 
-        ///   the control scrolls all text back to position zero.
+        ///   Automatically scrolls text to the right by 10 characters when the user types a character at the end of the line. When the user presses the ENTER key, the control scrolls all text back to position zero.
         /// </summary>
         ES_AUTOHSCROLL = 0x0080,
 
@@ -96,11 +89,7 @@ namespace CoApp.Toolkit.Win32 {
         ES_READONLY = 0x0800,
 
         /// <summary>
-        ///   Specifies that a carriage return be inserted when the user presses the 
-        ///   ENTER key while entering text into a multiline edit control in a dialog box. 
-        ///   If you do not specify this style, pressing the ENTER key has the same effect
-        ///   as pressing the dialog box's default push button. This style has no effect 
-        ///   on a single-line edit control.
+        ///   Specifies that a carriage return be inserted when the user presses the ENTER key while entering text into a multiline edit control in a dialog box. If you do not specify this style, pressing the ENTER key has the same effect as pressing the dialog box's default push button. This style has no effect on a single-line edit control.
         /// </summary>
         ES_WANTRETURN = 0x1000,
 

@@ -23,7 +23,6 @@
 // </license>
 //-----------------------------------------------------------------------
 
-
 namespace CoApp.Toolkit.Win32 {
     using System;
     using System.Runtime.InteropServices;
@@ -51,7 +50,7 @@ namespace CoApp.Toolkit.Win32 {
         /// <summary>
         ///   A new resource header of a given length.
         /// </summary>
-        /// <param name = "valueLength"></param>
+        /// <param name="valueLength"> </param>
         public ResourceHeader(UInt16 valueLength) {
             wLength = 0;
             wValueLength = valueLength;

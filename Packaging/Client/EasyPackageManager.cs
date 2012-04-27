@@ -25,7 +25,7 @@ namespace CoApp.Packaging.Client {
     using Toolkit.Win32;
 
     public class EasyPackageManager {
-        private static readonly IPackageManager PM = PackageManager.RemoteService;
+        private static readonly IPackageManager PM = RemoteCallDispatcher.RemoteService;
 
         #region FlexibleGetPackages
 

@@ -8,41 +8,37 @@
 // </license>
 //-----------------------------------------------------------------------
 
-namespace CoApp.Toolkit.Crypto
-{
+namespace CoApp.Toolkit.Crypto {
     using System;
+    using System.Collections.Generic;
     using System.IO;
     using System.Runtime.InteropServices;
     using System.Security.Cryptography.X509Certificates;
-    using System.Collections.Generic;
 
-    public static class PfxStoreLoader
-    {
+    public static class PfxStoreLoader {
+        public static readonly List<string> TimestampServers = new List<string> {
+            "http://timestamp.verisign.com/scripts/timstamp.dll",
+            "http://tsa.starfieldtech.com",
+            "http://timestamp.comodoca.com/authenticode"
+        };
 
-        public static readonly List<string> TimestampServers = new List<string>() {
-            "http://timestamp.verisign.com/scripts/timstamp.dll", 
-            "http://tsa.starfieldtech.com", 
-            "http://timestamp.comodoca.com/authenticode"};
-
-
-        public static X509Store Load(string file, string password)
-        {
-            if (file == null || password == null)
+        public static X509Store Load(string file, string password) {
+            if (file == null || password == null) {
                 return null;
+            }
 
-            if (!File.Exists(file))
+            if (!File.Exists(file)) {
                 throw new FileNotFoundException("", file);
+            }
 
             var fileContents = File.ReadAllBytes(file);
             var ptr = Marshal.AllocHGlobal(fileContents.Length);
             Marshal.Copy(fileContents, 0, ptr, fileContents.Length);
-            var cryptBlob = new CRYPT_DATA_BLOB() { cbData = (uint)fileContents.Length, pbData = ptr };
-            if (!PFXIsPFXBlob(ref cryptBlob))
-            {
+            var cryptBlob = new CRYPT_DATA_BLOB {cbData = (uint)fileContents.Length, pbData = ptr};
+            if (!PFXIsPFXBlob(ref cryptBlob)) {
                 return null;
             }
-            if (!PFXVerifyPassword(ref cryptBlob, password))
-            {
+            if (!PFXVerifyPassword(ref cryptBlob, password)) {
                 return null;
             }
 
@@ -51,7 +47,6 @@ namespace CoApp.Toolkit.Crypto
             store = new X509Store(storePtr);
             Marshal.FreeHGlobal(ptr);
             return store;
-
         }
 
         [DllImport("crypt32.dll", SetLastError = true)]
@@ -61,21 +56,21 @@ namespace CoApp.Toolkit.Crypto
             uint dwFlags = 0);
 
         [StructLayout(LayoutKind.Sequential)]
-        internal struct CRYPT_DATA_BLOB
-        {
+        internal struct CRYPT_DATA_BLOB {
             [MarshalAs(UnmanagedType.U4)]
             public uint cbData;
+
             public IntPtr pbData;
         }
 
-       [DllImport("crypt32.dll")]
-       private static extern bool PFXIsPFXBlob(
-                    ref CRYPT_DATA_BLOB pPfx);
-       
-       [DllImport("crypt32.dll")]
-       private static extern bool PFXVerifyPassword(
-           ref CRYPT_DATA_BLOB pPfx,
-           [MarshalAs(UnmanagedType.LPWStr)] String szPassword,
+        [DllImport("crypt32.dll")]
+        private static extern bool PFXIsPFXBlob(
+            ref CRYPT_DATA_BLOB pPfx);
+
+        [DllImport("crypt32.dll")]
+        private static extern bool PFXVerifyPassword(
+            ref CRYPT_DATA_BLOB pPfx,
+            [MarshalAs(UnmanagedType.LPWStr)] String szPassword,
             uint dwFlags = 0);
     }
 }

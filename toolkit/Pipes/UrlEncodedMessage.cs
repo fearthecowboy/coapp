@@ -18,80 +18,77 @@ namespace CoApp.Toolkit.Pipes {
     using Extensions;
 
     /// <summary>
-    /// Helper class to create/read UrlEncodedMessages
-    /// 
-    /// 
+    ///   Helper class to create/read UrlEncodedMessages
     /// </summary>
     /// <remarks>
-    /// NOTE: EXPLICITLY IGNORE, NOT READY FOR TESTING.
+    ///   NOTE: EXPLICITLY IGNORE, NOT READY FOR TESTING.
     /// </remarks>
     public class UrlEncodedMessage : IEnumerable<string> {
         /// <summary>
-        /// 
         /// </summary>
         private static readonly char[] _query = new[] {
             '?'
         };
 
         /// <summary>
-        /// 
         /// </summary>
         private static readonly char[] _separator = new[] {
             '&'
         };
 
         /// <summary>
-        /// 
         /// </summary>
         private static readonly char[] _equals = new[] {
             '='
         };
 
         /// <summary>
-        /// 
         /// </summary>
         public string Command;
 
         /// <summary>
-        /// 
         /// </summary>
         internal IDictionary<string, string> Data;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="UrlEncodedMessage"/> class.
+        ///   Initializes a new instance of the <see cref="UrlEncodedMessage" /> class.
         /// </summary>
-        /// <param name="rawMessage">The raw message.</param>
-        /// <remarks></remarks>
+        /// <param name="rawMessage"> The raw message. </param>
+        /// <remarks>
+        /// </remarks>
         public UrlEncodedMessage(string rawMessage) {
             var parts = rawMessage.Split(_query, StringSplitOptions.RemoveEmptyEntries);
-            Command = (parts.FirstOrDefault() ?? "" ).UrlDecode();
+            Command = (parts.FirstOrDefault() ?? "").UrlDecode();
             Data = (parts.Skip(1).FirstOrDefault() ?? "").Split(_separator, StringSplitOptions.RemoveEmptyEntries).Select(
                 p => p.Split(_equals, StringSplitOptions.RemoveEmptyEntries)).ToDictionary(
                     s => s[0].UrlDecode(),
                     s => s.Length > 1 ? s[1].UrlDecode() : String.Empty);
-            
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="UrlEncodedMessage"/> class.
+        ///   Initializes a new instance of the <see cref="UrlEncodedMessage" /> class.
         /// </summary>
-        /// <param name="command">The command.</param>
-        /// <param name="data">The data.</param>
-        /// <remarks></remarks>
-        public UrlEncodedMessage( string command, IDictionary<string, string> data ) {
+        /// <param name="command"> The command. </param>
+        /// <param name="data"> The data. </param>
+        /// <remarks>
+        /// </remarks>
+        public UrlEncodedMessage(string command, IDictionary<string, string> data) {
             Command = command;
             Data = data;
         }
-        
-        public string this[string key] {
-            get { return GetValueAsString(key); } 
-            set { Add(key, value);}
-        }
-        
 
-        public object GetValueAsArray( string collectionName, Type elementType) {
+        public string this[string key] {
+            get {
+                return GetValueAsString(key);
+            }
+            set {
+                Add(key, value);
+            }
+        }
+
+        public object GetValueAsArray(string collectionName, Type elementType) {
             var rx = new Regex(@"^{0}\[\d*\]$".format(Regex.Escape(collectionName)));
-            if (elementType == typeof(string)) {
+            if (elementType == typeof (string)) {
                 return (from k in Data.Keys where rx.IsMatch(k) select Data[k]).ToArray();
             }
 
@@ -101,13 +98,13 @@ namespace CoApp.Toolkit.Pipes {
             throw new CoAppException("Unsupported Array type '{0}' (must support tryparse)".format(elementType.Name));
         }
 
-        public object GetValueAsIEnumerable(string collectionName, Type elementType ) {
+        public object GetValueAsIEnumerable(string collectionName, Type elementType) {
             var rx = new Regex(@"^{0}\[\d*\]$".format(Regex.Escape(collectionName)));
-            if (elementType == typeof(string)) {
+            if (elementType == typeof (string)) {
                 return from k in Data.Keys where rx.IsMatch(k) select Data[k];
             }
 
-            if (elementType.IsParsable() ) {
+            if (elementType.IsParsable()) {
                 return from k in Data.Keys where rx.IsMatch(k) select elementType.ParseString(Data[k]);
             }
             throw new CoAppException("Unsupported IEnumerable type '{0}' (must support tryparse)".format(elementType.Name));
@@ -117,13 +114,13 @@ namespace CoApp.Toolkit.Pipes {
             var rx = new Regex(@"^{0}\[(.*)\]$".format(Regex.Escape(collectionName)));
             var keys = from k in Data.Keys let match = rx.Match(k) where match.Success select match.Groups[1].Captures[0].Value.UrlDecode();
 
-            if (keyType == typeof(string) && valueType == typeof(string)) {
+            if (keyType == typeof (string) && valueType == typeof (string)) {
                 return keys.ToDictionary(key => key, key => Data[key]);
             }
-            if (keyType == typeof(string) && valueType.IsParsable()) {
+            if (keyType == typeof (string) && valueType.IsParsable()) {
                 return keys.ToDictionary(key => key, key => valueType.ParseString(Data[key]));
             }
-            if (keyType.IsParsable() && valueType == typeof(string) ) {
+            if (keyType.IsParsable() && valueType == typeof (string)) {
                 return keys.ToDictionary(key => keyType.ParseString(key), key => Data[key]);
             }
             if (keyType.IsParsable() && valueType.IsParsable()) {
@@ -133,23 +130,24 @@ namespace CoApp.Toolkit.Pipes {
             throw new CoAppException("Unsupported Dictionary type '{0}/{1}' (keys and values must support tryparse)".format(keyType.Name, valueType.Name));
         }
 
-        public string GetValueAsString( string key ) {
+        public string GetValueAsString(string key) {
             return Data.ContainsKey(key) ? Data[key] : string.Empty;
         }
 
-        public object GetValueAsPrimitive( string key, Type primitiveType ) {
+        public object GetValueAsPrimitive(string key, Type primitiveType) {
             return primitiveType.ParseString(Data.ContainsKey(key) ? Data[key] : null);
         }
 
-        public object GetValueAsNullable( string key, Type primitiveType ) {
-            return Data.ContainsKey(key) ?  primitiveType.ParseString(Data[key]) : null;
+        public object GetValueAsNullable(string key, Type primitiveType) {
+            return Data.ContainsKey(key) ? primitiveType.ParseString(Data[key]) : null;
         }
 
         /// <summary>
-        /// Returns a <see cref="System.String"/> that represents this instance.
+        ///   Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>A <see cref="System.String"/> that represents this instance.</returns>
-        /// <remarks></remarks>
+        /// <returns> A <see cref="System.String" /> that represents this instance. </returns>
+        /// <remarks>
+        /// </remarks>
         public override string ToString() {
             return Data.Any()
                 ? Data.Keys.Aggregate(Command.UrlEncode() + "?", (current, k) => current + (!string.IsNullOrEmpty(Data[k]) ? (k.UrlEncode() + "=" + Data[k].UrlEncode() + "&") : string.Empty))
@@ -163,70 +161,71 @@ namespace CoApp.Toolkit.Pipes {
         }
 
         /// <summary>
-        /// Returns an enumerator that iterates through a collection.
+        ///   Returns an enumerator that iterates through a collection.
         /// </summary>
-        /// <returns>An <see cref="T:System.Collections.IEnumerator"/> object that can be used to iterate through the collection.</returns>
-        /// <remarks></remarks>
+        /// <returns> An <see cref="T:System.Collections.IEnumerator" /> object that can be used to iterate through the collection. </returns>
+        /// <remarks>
+        /// </remarks>
         IEnumerator IEnumerable.GetEnumerator() {
             return GetEnumerator();
         }
 
         /// <summary>
-        /// Adds the specified key.
+        ///   Adds the specified key.
         /// </summary>
-        /// <param name="key">The key.</param>
-        /// <param name="value">The value.</param>
-        /// <remarks></remarks>
+        /// <param name="key"> The key. </param>
+        /// <param name="value"> The value. </param>
+        /// <remarks>
+        /// </remarks>
         public void Add(string key, string value) {
             if (!string.IsNullOrEmpty(value)) {
                 if (Data.ContainsKey(key)) {
                     Data[key] = value;
-                }
-                else {
+                } else {
                     Data.Add(key, value);
                 }
             }
         }
 
         /// <summary>
-        /// Adds the specified key.
+        ///   Adds the specified key.
         /// </summary>
-        /// <param name="key">The key.</param>
-        /// <param name="value">The value.</param>
-        /// <remarks></remarks>
+        /// <param name="key"> The key. </param>
+        /// <param name="value"> The value. </param>
+        /// <remarks>
+        /// </remarks>
         public void Add(string key, bool? value) {
             if (value != null) {
                 if (Data.ContainsKey(key)) {
                     Data[key] = value.ToString();
-                }
-                else {
+                } else {
                     Data.Add(key, value.ToString());
                 }
             }
         }
 
         /// <summary>
-        /// Adds the specified key.
+        ///   Adds the specified key.
         /// </summary>
-        /// <param name="key">The key.</param>
-        /// <param name="value">The value.</param>
-        /// <remarks></remarks>
+        /// <param name="key"> The key. </param>
+        /// <param name="value"> The value. </param>
+        /// <remarks>
+        /// </remarks>
         public void Add(string key, int? value) {
             if (value != null) {
                 if (Data.ContainsKey(key)) {
                     Data[key] = value.ToString();
-                }
-                else {
+                } else {
                     Data.Add(key, value.ToString());
                 }
             }
         }
 
-        public void AddKeyValuePair( string key, string elementName, string elementValue) {
+        public void AddKeyValuePair(string key, string elementName, string elementValue) {
             Add("{0}[{1}]".format(key, elementName.UrlEncode()), elementValue);
         }
 
-        public void AddKeyValueCollection( string key, IEnumerable<KeyValuePair<string, string>> collection ) {
+        public void AddKeyValueCollection(string key, IEnumerable<KeyValuePair<string, string>> collection) {
             foreach (var each in collection) {
                 AddKeyValuePair(key, each.Key, each.Value);
             }
@@ -234,11 +233,11 @@ namespace CoApp.Toolkit.Pipes {
 
         public void AddDictionary(string key, IDictionary collection) {
             foreach (var each in collection.Keys) {
-                AddKeyValuePair(key, each.ToString() , collection[each].ToString());
+                AddKeyValuePair(key, each.ToString(), collection[each].ToString());
             }
         }
 
-        public void AddCollection( string key, IEnumerable<string>  values ) {
+        public void AddCollection(string key, IEnumerable<string> values) {
             if (!values.IsNullOrEmpty()) {
                 var index = 0;
                 foreach (var s in values.Where(s => !string.IsNullOrEmpty(s))) {
@@ -248,43 +247,46 @@ namespace CoApp.Toolkit.Pipes {
         }
 
         public void AddCollection(string key, IEnumerable values) {
-            if (values != null ) {
+            if (values != null) {
                 var index = 0;
-                for (var enmerator = values.GetEnumerator(); enmerator.MoveNext();  ) {
+                for (var enmerator = values.GetEnumerator(); enmerator.MoveNext();) {
                     Add("{0}[{1}]".format(key, index++), enmerator.Current.ToString());
                 }
             }
         }
 
         /// <summary>
-        /// Returns an enumerator that iterates through the collection.
+        ///   Returns an enumerator that iterates through the collection.
         /// </summary>
-        /// <returns>A <see cref="T:System.Collections.Generic.IEnumerator`1"/> that can be used to iterate through the collection.</returns>
-        /// <remarks></remarks>
+        /// <returns> A <see cref="T:System.Collections.Generic.IEnumerator`1" /> that can be used to iterate through the collection. </returns>
+        /// <remarks>
+        /// </remarks>
         public IEnumerator<string> GetEnumerator() {
             return Data.Keys.GetEnumerator();
         }
 
         /// <summary>
-        /// Gets the collection.
+        ///   Gets the collection.
         /// </summary>
-        /// <param name="collectionName">The key for the collection.</param>
-        /// <returns></returns>
-        /// <remarks></remarks>
+        /// <param name="collectionName"> The key for the collection. </param>
+        /// <returns> </returns>
+        /// <remarks>
+        /// </remarks>
         public IEnumerable<string> GetCollection(string collectionName) {
             var rx = new Regex(@"^{0}\[\d*\]$".format(Regex.Escape(collectionName)));
             return from k in Data.Keys where rx.IsMatch(k) select Data[k];
         }
 
         /// <summary>
-        /// Gets the collection.
+        ///   Gets the collection.
         /// </summary>
-        /// <param name="collectionName">The key for the collection.</param>
-        /// <returns></returns>
-        /// <remarks></remarks>
-        public IEnumerable<KeyValuePair<string,string>> GetKeyValuePairs(string collectionName) {
+        /// <param name="collectionName"> The key for the collection. </param>
+        /// <returns> </returns>
+        /// <remarks>
+        /// </remarks>
+        public IEnumerable<KeyValuePair<string, string>> GetKeyValuePairs(string collectionName) {
             var rx = new Regex(@"^{0}\[(.*)\]$".format(Regex.Escape(collectionName)));
-            return from k in Data.Keys let match = rx.Match(k) where match.Success select new KeyValuePair<string,string> (match.Groups[1].Captures[0].Value.UrlDecode(), Data[k]);
+            return from k in Data.Keys let match = rx.Match(k) where match.Success select new KeyValuePair<string, string>(match.Groups[1].Captures[0].Value.UrlDecode(), Data[k]);
         }
 
         public static implicit operator string(UrlEncodedMessage value) {

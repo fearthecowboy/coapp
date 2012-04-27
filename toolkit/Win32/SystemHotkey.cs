@@ -36,7 +36,9 @@ namespace CoApp.Toolkit.Win32 {
         public bool IsRegistered { set; get; }
 
         public Keys Shortcut {
-            get { return hotKey; }
+            get {
+                return hotKey;
+            }
             set {
                 if (DesignMode) {
                     return; //Don't register in Designmode
@@ -75,8 +77,8 @@ namespace CoApp.Toolkit.Win32 {
         }
 
         protected void MessageEvent(object sender, ref Message m, ref bool handled) {
-            if ((m.Msg == (int) Win32Msgs.WM_HOTKEY)) {
-                if ((m.WParam == (IntPtr) code)) {
+            if ((m.Msg == (int)Win32Msgs.WM_HOTKEY)) {
+                if ((m.WParam == (IntPtr)code)) {
                     handled = true;
 
                     if (Pressed != null) {
@@ -99,8 +101,8 @@ namespace CoApp.Toolkit.Win32 {
             var win32Key = key & ~(Keys.Alt | Keys.Control | Keys.Shift);
             var mod = ((key & Keys.Alt) != Keys.None ? KeyModifiers.MOD_ALT : 0) | ((key & Keys.Shift) != Keys.None ? KeyModifiers.MOD_SHIFT : 0) |
                 ((key & Keys.Control) != Keys.None ? KeyModifiers.MOD_CONTROL : 0);
-            code = ((int) mod << 16) + (int) win32Key;
-            IsRegistered = User32.RegisterHotKey(NativeWindowWithEvent.Instance.Handle, code, (int) mod, (int) win32Key);
+            code = ((int)mod << 16) + (int)win32Key;
+            IsRegistered = User32.RegisterHotKey(NativeWindowWithEvent.Instance.Handle, code, (int)mod, (int)win32Key);
 
             return IsRegistered;
         }

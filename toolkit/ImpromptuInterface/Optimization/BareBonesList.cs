@@ -13,121 +13,103 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-namespace CoApp.Toolkit.ImpromptuInterface.Optimization
-{
+namespace CoApp.Toolkit.ImpromptuInterface.Optimization {
     using System;
     using System.Collections;
     using System.Collections.Generic;
 
-    internal class BareBonesList<T>: ICollection<T>
-    {
+    internal class BareBonesList<T> : ICollection<T> {
         private T[] _list;
         private int _addIndex;
-   
+
         private int _length;
 
-
         /// <summary>
-        /// Initializes a new instance of the <see cref="BareBonesList&lt;T&gt;"/> class.
+        ///   Initializes a new instance of the <see cref="BareBonesList&lt;T&gt;" /> class.
         /// </summary>
-        /// <param name="length">The max length that the list cannot grow beyound</param>
-        public BareBonesList(int length)
-        {
+        /// <param name="length"> The max length that the list cannot grow beyound </param>
+        public BareBonesList(int length) {
             _list = new T[length];
             _length = length;
         }
 
-        public void Add(T item)
-        {
+        public void Add(T item) {
             _list[_addIndex++] = item;
         }
 
-        public void Clear()
-        {
+        public void Clear() {
             throw new NotSupportedException();
         }
 
-        public bool Contains(T item)
-        {
+        public bool Contains(T item) {
             throw new NotSupportedException();
         }
 
-        public void CopyTo(T[] array, int arrayIndex)
-        {
-            Array.Copy(_list,arrayIndex,array,0,_length);
+        public void CopyTo(T[] array, int arrayIndex) {
+            Array.Copy(_list, arrayIndex, array, 0, _length);
         }
 
-        public bool Remove(T item)
-        {
+        public bool Remove(T item) {
             throw new NotSupportedException();
         }
 
-        public int Count
-        {
-            get { return _length; }
+        public int Count {
+            get {
+                return _length;
+            }
         }
 
-        public bool IsReadOnly
-        {
-            get { return false; }
+        public bool IsReadOnly {
+            get {
+                return false;
+            }
         }
 
         /// <summary>
-        /// Gets the enumerator. with bare bones this is good only once
+        ///   Gets the enumerator. with bare bones this is good only once
         /// </summary>
-        /// <returns></returns>
-        public IEnumerator<T> GetEnumerator()
-        {
-            return new BareBonesEnumerator(_list,_addIndex);
+        /// <returns> </returns>
+        public IEnumerator<T> GetEnumerator() {
+            return new BareBonesEnumerator(_list, _addIndex);
         }
 
-        IEnumerator IEnumerable.GetEnumerator()
-        {
+        IEnumerator IEnumerable.GetEnumerator() {
             return GetEnumerator();
         }
 
-
-        internal class BareBonesEnumerator : IEnumerator<T>
-
-        {
+        internal class BareBonesEnumerator : IEnumerator<T> {
             private T[] _list;
             private int _enumerateInex = -1;
             private int _length;
 
-            public BareBonesEnumerator(T[] list, int length)
-            {
+            public BareBonesEnumerator(T[] list, int length) {
                 _list = list;
                 _length = length;
             }
 
-            public void Dispose()
-            {
-
+            public void Dispose() {
             }
 
-            public bool MoveNext()
-            {
+            public bool MoveNext() {
                 _enumerateInex++;
                 return _enumerateInex < _length;
             }
 
-            public void Reset()
-            {
+            public void Reset() {
                 _enumerateInex = 0;
             }
 
-            public T Current
-            {
-                get { return _list[_enumerateInex]; }
+            public T Current {
+                get {
+                    return _list[_enumerateInex];
+                }
             }
 
-            object IEnumerator.Current
-            {
-                get { return Current; }
+            object IEnumerator.Current {
+                get {
+                    return Current;
+                }
             }
         }
-    
     }
-
- 
 }

@@ -50,12 +50,10 @@ namespace CoApp.Toolkit.Win32 {
         #region ISymlink Members
 
         /// <summary>
-        ///   Creates a symlink for the given file path.
-        /// 
-        ///   If the symlink already exists, it is updated.
+        ///   Creates a symlink for the given file path. If the symlink already exists, it is updated.
         /// </summary>
-        /// <param name = "linkPath">The link path.</param>
-        /// <param name = "actualFilePath">The actual file path.</param>
+        /// <param name="linkPath"> The link path. </param>
+        /// <param name="actualFilePath"> The actual file path. </param>
         /// <remarks>
         /// </remarks>
         public void MakeFileLink(string linkPath, string actualFilePath) {
@@ -83,12 +81,10 @@ namespace CoApp.Toolkit.Win32 {
         }
 
         /// <summary>
-        ///   Creates a symlink for a directory.
-        /// 
-        ///   If it already exists, it is updated.
+        ///   Creates a symlink for a directory. If it already exists, it is updated.
         /// </summary>
-        /// <param name = "linkPath">The link path.</param>
-        /// <param name = "actualFolderPath">The actual folder path.</param>
+        /// <param name="linkPath"> The link path. </param>
+        /// <param name="actualFolderPath"> The actual folder path. </param>
         /// <remarks>
         /// </remarks>
         public void MakeDirectoryLink(string linkPath, string actualFolderPath) {
@@ -114,8 +110,8 @@ namespace CoApp.Toolkit.Win32 {
         /// <summary>
         ///   Changes an existing link target to a new path.
         /// </summary>
-        /// <param name = "linkPath">The link path.</param>
-        /// <param name = "newActualPath">The new actual path.</param>
+        /// <param name="linkPath"> The link path. </param>
+        /// <param name="newActualPath"> The new actual path. </param>
         /// <remarks>
         /// </remarks>
         public void ChangeLinkTarget(string linkPath, string newActualPath) {
@@ -132,12 +128,10 @@ namespace CoApp.Toolkit.Win32 {
 
             if (Directory.Exists(linkPath)) {
                 ReparsePoint.ChangeReparsePointTarget(linkPath, newActualPath);
-            }
-            else if (File.Exists(linkPath)) {
+            } else if (File.Exists(linkPath)) {
                 DeleteSymlink(linkPath);
                 MakeFileLink(linkPath, newActualPath);
-            }
-            else {
+            } else {
                 throw new DirectoryNotFoundException("Target directory not found");
             }
         }
@@ -145,7 +139,7 @@ namespace CoApp.Toolkit.Win32 {
         /// <summary>
         ///   Deletes the symlink.
         /// </summary>
-        /// <param name = "linkPath">The link path.</param>
+        /// <param name="linkPath"> The link path. </param>
         /// <remarks>
         /// </remarks>
         public void DeleteSymlink(string linkPath) {
@@ -160,12 +154,10 @@ namespace CoApp.Toolkit.Win32 {
                     var alternates = GetAlternateStreamData(linkPath, out canonicalFilePath).ToList();
                     linkPath.TryHardToDelete();
                     SetAlternateStreamData(canonicalFilePath, alternates);
-                }
-                else if (Directory.Exists(linkPath)) {
+                } else if (Directory.Exists(linkPath)) {
                     linkPath.TryHardToDelete();
                 }
-            }
-            else {
+            } else {
                 throw new IOException("Path is not a link.");
             }
         }
@@ -173,8 +165,8 @@ namespace CoApp.Toolkit.Win32 {
         /// <summary>
         ///   Determines whether the specified link path is symlink.
         /// </summary>
-        /// <param name = "linkPath">The link path.</param>
-        /// <returns><c>true</c> if the specified link path is symlink; otherwise, <c>false</c>.</returns>
+        /// <param name="linkPath"> The link path. </param>
+        /// <returns> <c>true</c> if the specified link path is symlink; otherwise, <c>false</c> . </returns>
         /// <remarks>
         /// </remarks>
         public bool IsSymlink(string linkPath) {
@@ -188,8 +180,7 @@ namespace CoApp.Toolkit.Win32 {
                         if (result && !alternates.Contains(linkPath)) {
                             AddSymlinkToAlternateStream(canonicalFilePath, linkPath);
                         }
-                    }
-                    catch {
+                    } catch {
                         // just trying to clean-as-we-go
                     }
 
@@ -200,8 +191,7 @@ namespace CoApp.Toolkit.Win32 {
                     if (s.Exists) {
                         s.Delete();
                     }
-                }
-                catch {
+                } catch {
                     // just try to clean as we go...
                 }
                 return false;
@@ -215,8 +205,8 @@ namespace CoApp.Toolkit.Win32 {
         /// <summary>
         ///   Gets the actual path.
         /// </summary>
-        /// <param name = "linkPath">The link path.</param>
-        /// <returns></returns>
+        /// <param name="linkPath"> The link path. </param>
+        /// <returns> </returns>
         /// <remarks>
         /// </remarks>
         public string GetActualPath(string linkPath) {
@@ -237,8 +227,8 @@ namespace CoApp.Toolkit.Win32 {
         /// <summary>
         ///   Adds the symlink to alternate stream.
         /// </summary>
-        /// <param name = "originalPath">The original path.</param>
-        /// <param name = "filename">The filename.</param>
+        /// <param name="originalPath"> The original path. </param>
+        /// <param name="filename"> The filename. </param>
         /// <remarks>
         /// </remarks>
         private static void AddSymlinkToAlternateStream(string originalPath, string filename) {
@@ -249,12 +239,10 @@ namespace CoApp.Toolkit.Win32 {
         }
 
         /// <summary>
-        ///   Sets the alternate stream data.
-        /// 
-        ///   This writes out the symlink data to the synthetic symlink file.
+        ///   Sets the alternate stream data. This writes out the symlink data to the synthetic symlink file.
         /// </summary>
-        /// <param name = "filename">The filename.</param>
-        /// <param name = "linkPaths">The link paths.</param>
+        /// <param name="filename"> The filename. </param>
+        /// <param name="linkPaths"> The link paths. </param>
         /// <remarks>
         /// </remarks>
         private static void SetAlternateStreamData(string filename, IEnumerable<string> linkPaths) {
@@ -281,8 +269,7 @@ namespace CoApp.Toolkit.Win32 {
                     }
                     fstream.Close();
                 }
-            }
-            else {
+            } else {
                 var s = new FileInfo(filename).GetAlternateDataStream(legacySymlinkInfo);
                 if (s.Exists) {
                     s.Delete();
@@ -293,9 +280,9 @@ namespace CoApp.Toolkit.Win32 {
         /// <summary>
         ///   Reads the alternate stream data.
         /// </summary>
-        /// <param name = "filename">The filename.</param>
-        /// <param name = "canonicalFilePath">The canonical file path.</param>
-        /// <returns></returns>
+        /// <param name="filename"> The filename. </param>
+        /// <param name="canonicalFilePath"> The canonical file path. </param>
+        /// <returns> </returns>
         /// <remarks>
         /// </remarks>
         private static IEnumerable<string> GetAlternateStreamData(string filename, out string canonicalFilePath) {
@@ -347,7 +334,7 @@ namespace CoApp.Toolkit.Win32 {
         /// <summary>
         ///   Scans the folder.
         /// </summary>
-        /// <param name = "path">The path.</param>
+        /// <param name="path"> The path. </param>
         /// <remarks>
         /// </remarks>
         public void ScanFolder(string path) {
@@ -364,8 +351,8 @@ namespace CoApp.Toolkit.Win32 {
         /// <summary>
         ///   Gets the file info.
         /// </summary>
-        /// <param name = "filename">The filename.</param>
-        /// <returns></returns>
+        /// <param name="filename"> The filename. </param>
+        /// <returns> </returns>
         /// <remarks>
         /// </remarks>
         private static ByHandleFileInformation GetFileInfo(string filename) {

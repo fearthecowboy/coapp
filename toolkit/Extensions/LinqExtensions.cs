@@ -17,14 +17,13 @@ namespace CoApp.Toolkit.Extensions {
     using System.Linq;
 
     public static class LinqExtensions {
-
         /// <summary>
-        /// Traverses a recursive collection producing a flattened collection.
+        ///   Traverses a recursive collection producing a flattened collection.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="source"></param>
-        /// <param name="recurseFunction"></param>
-        /// <returns></returns>
+        /// <typeparam name="T"> </typeparam>
+        /// <param name="source"> </param>
+        /// <param name="recurseFunction"> </param>
+        /// <returns> </returns>
         public static IEnumerable<T> Traverse<T>(this IEnumerable<T> source, Func<T, IEnumerable<T>> recurseFunction) {
             foreach (var item in source) {
                 yield return item;
@@ -37,17 +36,19 @@ namespace CoApp.Toolkit.Extensions {
                 }
             }
         }
+
         /// <summary>
-        /// Returns the element of a given collection which is highest value based on the function provided.
+        ///   Returns the element of a given collection which is highest value based on the function provided.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <typeparam name="U"></typeparam>
-        /// <param name="source"></param>
-        /// <param name="selector"></param>
-        /// <returns></returns>
+        /// <typeparam name="T"> </typeparam>
+        /// <typeparam name="U"> </typeparam>
+        /// <param name="source"> </param>
+        /// <param name="selector"> </param>
+        /// <returns> </returns>
         public static T MaxElement<T, U>(this IEnumerable<T> source, Func<T, U> selector) where U : IComparable<U> {
-            if (source == null)
+            if (source == null) {
                 throw new ArgumentNullException("source");
+            }
             bool first = true;
             T maxObj = default(T);
             U maxKey = default(U);
@@ -56,8 +57,7 @@ namespace CoApp.Toolkit.Extensions {
                     maxObj = item;
                     maxKey = selector(maxObj);
                     first = false;
-                }
-                else {
+                } else {
                     U currentKey = selector(item);
                     if (currentKey.CompareTo(maxKey) > 0) {
                         maxKey = currentKey;
@@ -69,57 +69,54 @@ namespace CoApp.Toolkit.Extensions {
         }
 
         /// <summary>
-        /// Creates an enumerable consisting of a single element.
+        ///   Creates an enumerable consisting of a single element.
         /// </summary>
-        /// <typeparam name="T">The type of <paramref name="source"/></typeparam>
-        /// <param name="source">The sole element in the return IEnumerable</param>
-        /// <returns>An <see cref="IEnumerable{T}"/> with <paramref name="source"/> as it's only element.</returns>
+        /// <typeparam name="T"> The type of <paramref name="source" /> </typeparam>
+        /// <param name="source"> The sole element in the return IEnumerable </param>
+        /// <returns> An <see cref="IEnumerable{T}" /> with <paramref name="source" /> as it's only element. </returns>
         public static IEnumerable<T> SingleItemAsEnumerable<T>(this T source) {
-            return source as object == null ? Enumerable.Empty<T>() : new[] { source };
+            return source as object == null ? Enumerable.Empty<T>() : new[] {source};
         }
 
         /// <summary>
-        /// Returns all the contiguous elements from sequence except for a specified number from the end.
+        ///   Returns all the contiguous elements from sequence except for a specified number from the end.
         /// </summary>
-        /// <typeparam name="T">The type of the elements of <paramref name="source"/></typeparam>
-        /// <param name="source">The sequence to return elements from.</param>
-        /// <param name="count">The number of elements to not return from the end.</param>
-        /// <returns>An <see cref="System.Collections.Generic.IEnumerable{T}"/> consisting of all the elements of <paramref name="source"/> 
-        /// except for the last <paramref name="count"/> elements.</returns>
+        /// <typeparam name="T"> The type of the elements of <paramref name="source" /> </typeparam>
+        /// <param name="source"> The sequence to return elements from. </param>
+        /// <param name="count"> The number of elements to not return from the end. </param>
+        /// <returns> An <see cref="System.Collections.Generic.IEnumerable{T}" /> consisting of all the elements of <paramref
+        ///    name="source" /> except for the last <paramref name="count" /> elements. </returns>
         public static IEnumerable<T> TakeAllBut<T>(this IEnumerable<T> source, int count) {
             return source.Reverse().Skip(count).Reverse();
         }
 
         /// <summary>
-        /// Returns the given number of elements from the end of the sequence.
+        ///   Returns the given number of elements from the end of the sequence.
         /// </summary>
-        /// <typeparam name="T">The type of the elements of <paramref name="source"/>.</typeparam>
-        /// <param name="source">The sequence to return elements from.</param>
-        /// <param name="count">The number of elements to return from the end of the array.</param>
-        /// <returns>An <see cref="System.Collections.Generic.IEnumerable{T}"/> consisting of the last <paramref name="count"/>
-        /// elements of <paramref name="source"/>.</returns>
+        /// <typeparam name="T"> The type of the elements of <paramref name="source" /> . </typeparam>
+        /// <param name="source"> The sequence to return elements from. </param>
+        /// <param name="count"> The number of elements to return from the end of the array. </param>
+        /// <returns> An <see cref="System.Collections.Generic.IEnumerable{T}" /> consisting of the last <paramref name="count" /> elements of <paramref
+        ///    name="source" /> . </returns>
         public static IEnumerable<T> TakeFromEnd<T>(this IEnumerable<T> source, int count) {
             return source.Reverse().Take(count).Reverse();
         }
 
         /// <summary>
-        /// Returns a new collection including the given item.
-        /// 
-        /// DOES NOT MODIFY THE ORIGINAL COLLECTION.
+        ///   Returns a new collection including the given item. DOES NOT MODIFY THE ORIGINAL COLLECTION.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="collection"></param>
-        /// <param name="newItem"></param>
-        /// <returns></returns>
+        /// <typeparam name="T"> </typeparam>
+        /// <param name="collection"> </param>
+        /// <param name="newItem"> </param>
+        /// <returns> </returns>
         public static IEnumerable<T> UnionSingleItem<T>(this IEnumerable<T> collection, T newItem) {
-            return collection.Union(new[] { newItem });
+            return collection.Union(new[] {newItem});
         }
 
-
-#region Don't test this crap.
+        #region Don't test this crap.
 
         /// <summary>
-        /// Don
+        ///   Don
         /// </summary>
         private class IndexedEnumerator : IEnumerator<int> {
             private int _max;
@@ -140,10 +137,7 @@ namespace CoApp.Toolkit.Extensions {
                 Current = -1;
             }
 
-            public int Current {
-                get;
-                private set;
-            }
+            public int Current { get; private set; }
 
             object IEnumerator.Current {
                 get {
@@ -154,9 +148,11 @@ namespace CoApp.Toolkit.Extensions {
 
         private class ListIndex : IEnumerable<int> {
             private int _max;
+
             internal ListIndex(int i) {
                 _max = i;
             }
+
             public IEnumerator<int> GetEnumerator() {
                 return new IndexedEnumerator(_max);
             }
@@ -170,7 +166,6 @@ namespace CoApp.Toolkit.Extensions {
             return new ListIndex(lst.Count);
         }
 
-
         public static CompareResult<T, T> Compare<T>(this IEnumerable<T> left, IEnumerable<T> right) {
             return Compare(left, right, (x, y) => x.Equals(y));
         }
@@ -180,7 +175,6 @@ namespace CoApp.Toolkit.Extensions {
         }
 
         public static CompareResult<TLeft, TRight> Compare<TLeft, TRight>(this IEnumerable<TLeft> leftList, IEnumerable<TRight> rightList, Func<TLeft, TRight, bool> isEqual, Func<TLeft, TRight, bool> isSame) {
-
             var results = new CompareResult<TLeft, TRight>();
 
             results.Removed.AddRange(leftList.Where(x => rightList.Any(y => isSame(x, y)) == false));
@@ -189,28 +183,32 @@ namespace CoApp.Toolkit.Extensions {
             foreach (var left in leftList) {
                 var right = rightList.FirstOrDefault(x => isSame(left, x));
 
-                if (right == null)
+                if (right == null) {
                     continue;
+                }
 
-                if (!isEqual(left, right))
+                if (!isEqual(left, right)) {
                     results.Different.Add(left, right);
-                else
+                } else {
                     results.Equal.Add(left, right);
+                }
             }
             return results;
         }
-
     }
-
 
     public class CompareResult<TLeft, TRight> {
         #region Fields
+
         private List<TLeft> _onlyInLeftList = new List<TLeft>();
         private List<TRight> _onlyInRightList = new List<TRight>();
         private Dictionary<TLeft, TRight> _different = new Dictionary<TLeft, TRight>();
         private Dictionary<TLeft, TRight> _equal = new Dictionary<TLeft, TRight>();
+
         #endregion
+
         #region Properties
+
         public Dictionary<TLeft, TRight> Equal {
             get {
                 return _equal;
@@ -224,7 +222,7 @@ namespace CoApp.Toolkit.Extensions {
         }
 
         /// <summary>
-        /// Items in the left list no also in the right list
+        ///   Items in the left list no also in the right list
         /// </summary>
         public List<TLeft> Removed {
             get {
@@ -233,7 +231,7 @@ namespace CoApp.Toolkit.Extensions {
         }
 
         /// <summary>
-        /// Items in the right list not in the left list
+        ///   Items in the right list not in the left list
         /// </summary>
         public List<TRight> Added {
             get {
@@ -252,15 +250,13 @@ namespace CoApp.Toolkit.Extensions {
                 return _onlyInLeftList.Count + _onlyInRightList.Count + _different.Count;
             }
         }
-        #endregion
-        #region Constructor
-        public CompareResult() {
 
-        }
+        #endregion
+
+        #region Constructor
+
         #endregion
     }
 
-#endregion
-    
+    #endregion
 }
-

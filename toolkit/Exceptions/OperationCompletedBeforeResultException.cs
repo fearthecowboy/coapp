@@ -9,8 +9,6 @@
 //-----------------------------------------------------------------------
 
 namespace CoApp.Toolkit.Exceptions {
-    using System;
-
     public class OperationCompletedBeforeResultException : CoAppException {
     }
 }

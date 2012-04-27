@@ -13,17 +13,13 @@ namespace CoApp.Toolkit.Collections {
     using System.Collections.Generic;
 
     /// <summary>
-    /// This behaves like a regular dictionary, except:
-    ///     add operations will silently replace existing values
-    ///     the inedexer [] will silently add values
-    ///     Getting values will return default(TValue) instead of throwing on no element.
-    ///     setting a value to null removes the key
-    /// 
+    ///   This behaves like a regular dictionary, except: add operations will silently replace existing values the inedexer [] will silently add values Getting values will return default(TValue) instead of throwing on no element. setting a value to null removes the key
     /// </summary>
-    /// <typeparam name="TKey"></typeparam>
-    /// <typeparam name="TValue"></typeparam>
+    /// <typeparam name="TKey"> </typeparam>
+    /// <typeparam name="TValue"> </typeparam>
     public class EasyDictionary<TKey, TValue> : IDictionary<TKey, TValue> {
         private readonly IDictionary<TKey, TValue> _dictionary;
+
         public EasyDictionary() {
             _dictionary = new Dictionary<TKey, TValue>();
         }
@@ -33,18 +29,19 @@ namespace CoApp.Toolkit.Collections {
         }
 
         public void Add(TKey key, TValue value) {
-
             // ReSharper disable HeuristicUnreachableCode
-            if (value as object == null) { // what if value is already null, eh? 
+            if (value == null) {
+                // what if value is already null, eh? 
                 _dictionary.Remove(key);
                 return;
             }
             // ReSharper restore HeuristicUnreachableCode
 
-            if (_dictionary.ContainsKey(key))
+            if (_dictionary.ContainsKey(key)) {
                 _dictionary[key] = value;
-            else
+            } else {
                 _dictionary.Add(key, value);
+            }
         }
 
         public bool ContainsKey(TKey key) {

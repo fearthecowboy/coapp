@@ -29,7 +29,7 @@ namespace CoApp.Packaging.Client {
     using Toolkit.Pipes;
     using Toolkit.Tasks;
 
-    public class PackageManager : OutgoingCallDispatcher {
+    public class RemoteCallDispatcher : OutgoingCallDispatcher {
         internal class ManualEventQueue : Queue<UrlEncodedMessage>, IDisposable {
             internal static readonly Dictionary<int, ManualEventQueue> EventQueues = new Dictionary<int, ManualEventQueue>();
             internal readonly ManualResetEvent ResetEvent = new ManualResetEvent(true);
@@ -76,7 +76,7 @@ namespace CoApp.Packaging.Client {
         }
 
         public static IPackageManager RemoteService;
-        private static PackageManager _instance = new PackageManager();
+        private static RemoteCallDispatcher _instance = new RemoteCallDispatcher();
         private static readonly ManualResetEvent IsBufferReady = new ManualResetEvent(false);
 
         private static NamedPipeClientStream _pipe;
@@ -100,7 +100,7 @@ namespace CoApp.Packaging.Client {
             }
         }
 
-        private PackageManager() : base(WriteAsync) {
+        private RemoteCallDispatcher() : base(WriteAsync) {
             RemoteService = this.ActLike();
         }
 
@@ -168,7 +168,7 @@ namespace CoApp.Packaging.Client {
                 return "Completed".AsResultTask();
             }
 
-            lock (typeof (PackageManager)) {
+            lock (typeof (RemoteCallDispatcher)) {
                 if (_connectingTask == null) {
                     IsBufferReady.Reset();
 
@@ -257,7 +257,7 @@ namespace CoApp.Packaging.Client {
         }
 
         public static void Disconnect() {
-            lock (typeof (PackageManager)) {
+            lock (typeof (RemoteCallDispatcher)) {
                 _connectingTask = null;
 
                 try {

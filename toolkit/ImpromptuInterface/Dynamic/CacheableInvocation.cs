@@ -1,5 +1,4 @@
-﻿namespace CoApp.Toolkit.ImpromptuInterface.Dynamic
-{
+﻿namespace CoApp.Toolkit.ImpromptuInterface.Dynamic {
     using System;
     using System.Dynamic;
     using System.Linq;
@@ -8,32 +7,29 @@
     using Optimization;
 
     /// <summary>
-    /// Cacheable representation of an invocation without the target or arguments  also by default only does public methods to make it easier to cache.
-    ///  /// </summary>
+    ///   Cacheable representation of an invocation without the target or arguments also by default only does public methods to make it easier to cache. ///
+    /// </summary>
     [Serializable]
-    public class CacheableInvocation:Invocation
-    {
+    public class CacheableInvocation : Invocation {
         /// <summary>
-        /// Creates the cacheable convert call.
+        ///   Creates the cacheable convert call.
         /// </summary>
-        /// <param name="convertType">Type of the convert.</param>
-        /// <param name="convertExplict">if set to <c>true</c> [convert explict].</param>
-        /// <returns></returns>
-        public static CacheableInvocation CreateConvert(Type convertType, bool convertExplict=false)
-        {
+        /// <param name="convertType"> Type of the convert. </param>
+        /// <param name="convertExplict"> if set to <c>true</c> [convert explict]. </param>
+        /// <returns> </returns>
+        public static CacheableInvocation CreateConvert(Type convertType, bool convertExplict = false) {
             return new CacheableInvocation(InvocationKind.Convert, convertType: convertType, convertExplict: convertExplict);
         }
 
         /// <summary>
-        /// Creates the cacheable method or indexer or property call.
+        ///   Creates the cacheable method or indexer or property call.
         /// </summary>
-        /// <param name="kind">The kind.</param>
-        /// <param name="name">The name.</param>
-        /// <param name="callinfo">The callinfo.</param>
-        /// <param name="context">The context.</param>
-        /// <returns></returns>
-        public static CacheableInvocation CreateCall(InvocationKind kind, String_OR_InvokeMemberName name = null, CallInfo callinfo = null,object context = null)
-        {
+        /// <param name="kind"> The kind. </param>
+        /// <param name="name"> The name. </param>
+        /// <param name="callinfo"> The callinfo. </param>
+        /// <param name="context"> The context. </param>
+        /// <returns> </returns>
+        public static CacheableInvocation CreateCall(InvocationKind kind, String_OR_InvokeMemberName name = null, CallInfo callinfo = null, object context = null) {
             var tArgCount = callinfo != null ? callinfo.ArgumentCount : 0;
             var tArgNames = callinfo != null ? callinfo.ArgumentNames.ToArray() : null;
 
@@ -51,42 +47,36 @@
         private bool _convertExplict;
         private Type _convertType;
 
-     
-
         /// <summary>
-        /// Initializes a new instance of the <see cref="CacheableInvocation"/> class.
+        ///   Initializes a new instance of the <see cref="CacheableInvocation" /> class.
         /// </summary>
-        /// <param name="kind">The kind.</param>
-        /// <param name="name">The name.</param>
-        /// <param name="argCount">The arg count.</param>
-        /// <param name="argNames">The arg names.</param>
-        /// <param name="context">The context.</param>
-        /// <param name="convertType">Type of the convert.</param>
-        /// <param name="convertExplict">if set to <c>true</c> [convert explict].</param>
-        /// <param name="storedArgs">The stored args.</param>
+        /// <param name="kind"> The kind. </param>
+        /// <param name="name"> The name. </param>
+        /// <param name="argCount"> The arg count. </param>
+        /// <param name="argNames"> The arg names. </param>
+        /// <param name="context"> The context. </param>
+        /// <param name="convertType"> Type of the convert. </param>
+        /// <param name="convertExplict"> if set to <c>true</c> [convert explict]. </param>
+        /// <param name="storedArgs"> The stored args. </param>
         public CacheableInvocation(InvocationKind kind,
-                                   String_OR_InvokeMemberName name=null,
-                                   int argCount =0,
-                                   string[] argNames =null,
-                                   object context = null,
-                                   Type convertType = null,
-                                   bool convertExplict = false, 
-                                   object[] storedArgs = null)
-            : base(kind, name, storedArgs)
-        {
-
+            String_OR_InvokeMemberName name = null,
+            int argCount = 0,
+            string[] argNames = null,
+            object context = null,
+            Type convertType = null,
+            bool convertExplict = false,
+            object[] storedArgs = null)
+            : base(kind, name, storedArgs) {
             _convertType = convertType;
             _convertExplict = convertExplict;
 
             _argNames = argNames ?? new string[] {};
 
-            if (storedArgs != null)
-            {
+            if (storedArgs != null) {
                 _argCount = storedArgs.Length;
                 string[] tArgNames;
                 Args = Util.GetArgsAndNames(storedArgs, out tArgNames);
-                if (_argNames.Length < tArgNames.Length)
-                {
+                if (_argNames.Length < tArgNames.Length) {
                     _argNames = tArgNames;
                 }
             }
@@ -94,23 +84,22 @@
             switch (kind) //Set required argcount values
             {
                 case InvocationKind.GetIndex:
-                    if (argCount < 1)
-                    {
+                    if (argCount < 1) {
                         throw new ArgumentException("Arg Count must be at least 1 for a GetIndex", "argCount");
                     }
                     _argCount = argCount;
                     break;
                 case InvocationKind.SetIndex:
-                    if (argCount < 2)
-                    {
+                    if (argCount < 2) {
                         throw new ArgumentException("Arg Count Must be at least 2 for a SetIndex", "argCount");
                     }
                     _argCount = argCount;
                     break;
                 case InvocationKind.Convert:
                     _argCount = 0;
-                    if(convertType==null)
-                        throw new ArgumentNullException("convertType"," Convert Requires Convert Type ");
+                    if (convertType == null) {
+                        throw new ArgumentNullException("convertType", " Convert Requires Convert Type ");
+                    }
                     break;
                 case InvocationKind.SubtractAssign:
                 case InvocationKind.AddAssign:
@@ -126,60 +115,59 @@
                     break;
             }
 
-            if (_argCount > 0)//setup argname array
+            if (_argCount > 0) //setup argname array
             {
                 var tBlank = new string[_argCount];
-                if (_argNames.Length != 0)
+                if (_argNames.Length != 0) {
                     Array.Copy(_argNames, 0, tBlank, tBlank.Length - _argNames.Length, tBlank.Length);
-                else
+                } else {
                     tBlank = null;
+                }
                 _argNames = tBlank;
             }
 
-
-            if (context != null)
-            {
+            if (context != null) {
 #pragma warning disable 168
                 var tDummy = context.GetTargetContext(out _context, out _staticContext);
 #pragma warning restore 168
-            }
-            else
-            {
+            } else {
                 _context = typeof (object);
             }
-
-
         }
 
         /// <summary>
-        /// Equalses the specified other.
+        ///   Equalses the specified other.
         /// </summary>
-        /// <param name="other">The other.</param>
-        /// <returns></returns>
-        public bool Equals(CacheableInvocation other)
-        {
-            if (ReferenceEquals(null, other)) return false;
-            if (ReferenceEquals(this, other)) return true;
-            return base.Equals(other) 
-                && other._argCount == _argCount 
-                && Equals(other._argNames, _argNames) 
-                && other._staticContext.Equals(_staticContext)
-                && Equals(other._context, _context) 
-                && other._convertExplict.Equals(_convertExplict)
-                && Equals(other._convertType, _convertType);
+        /// <param name="other"> The other. </param>
+        /// <returns> </returns>
+        public bool Equals(CacheableInvocation other) {
+            if (ReferenceEquals(null, other)) {
+                return false;
+            }
+            if (ReferenceEquals(this, other)) {
+                return true;
+            }
+            return base.Equals(other)
+                && other._argCount == _argCount
+                    && Equals(other._argNames, _argNames)
+                        && other._staticContext.Equals(_staticContext)
+                            && Equals(other._context, _context)
+                                && other._convertExplict.Equals(_convertExplict)
+                                    && Equals(other._convertType, _convertType);
         }
 
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
+        public override bool Equals(object obj) {
+            if (ReferenceEquals(null, obj)) {
+                return false;
+            }
+            if (ReferenceEquals(this, obj)) {
+                return true;
+            }
             return Equals(obj as CacheableInvocation);
         }
 
-        public override int GetHashCode()
-        {
-            unchecked
-            {
+        public override int GetHashCode() {
+            unchecked {
                 int result = base.GetHashCode();
                 result = (result*397) ^ _argCount;
                 result = (result*397) ^ (_argNames != null ? _argNames.GetHashCode() : 0);
@@ -190,55 +178,48 @@
                 return result;
             }
         }
-      
 
-        public override object Invoke(object target, params object[] args)
-        {
+        public override object Invoke(object target, params object[] args) {
             var tIContext = target as InvokeContext;
-            if (tIContext !=null)
-            {
+            if (tIContext != null) {
                 target = tIContext.Target;
             }
 
-            if (args == null)
-            {
-                args = new object[]{null};
+            if (args == null) {
+                args = new object[] {null};
             }
-           
 
-            if (args.Length != _argCount)
-            {
-                switch (Kind)
-                {
+            if (args.Length != _argCount) {
+                switch (Kind) {
                     case InvocationKind.Convert:
-                        if (args.Length > 0)
-                        {
-                            if (!Equals(args[0], _convertType))
+                        if (args.Length > 0) {
+                            if (!Equals(args[0], _convertType)) {
                                 throw new ArgumentException("CacheableInvocation can't change conversion type on invoke.", "args");
+                            }
                         }
-                        if (args.Length > 1)
-                        {
-                            if(!Equals(args[1], _convertExplict))
+                        if (args.Length > 1) {
+                            if (!Equals(args[1], _convertExplict)) {
                                 throw new ArgumentException("CacheableInvocation can't change explict/implict conversion on invoke.", "args");
+                            }
                         }
 
-                        if(args.Length > 2)
+                        if (args.Length > 2) {
                             goto default;
+                        }
                         break;
                     default:
                         throw new ArgumentException("args", string.Format("Incorrect number of Arguments for CachedInvocation, Expected:{0}", _argCount));
                 }
             }
 
-            switch (Kind)
-            {
+            switch (Kind) {
                 case InvocationKind.Constructor:
-                    var tTarget = (Type) target;
+                    var tTarget = (Type)target;
                     return InvokeHelper.InvokeConstructorCallSite(tTarget, tTarget.IsValueType, args, _argNames, _context,
-                                                                  ref _callSite);
+                        ref _callSite);
                 case InvocationKind.Convert:
                     return InvokeHelper.InvokeConvertCallSite(target, _convertExplict, _convertType, _context,
-                                                              ref _callSite);
+                        ref _callSite);
                 case InvocationKind.Get:
                     return InvokeHelper.InvokeGetCallSite(target, Name.Name, _context, _staticContext, ref _callSite);
                 case InvocationKind.Set:
@@ -254,44 +235,31 @@
                 case InvocationKind.InvokeMemberAction:
                     InvokeHelper.InvokeMemberActionCallSite(target, Name, args, _argNames, _context, _staticContext, ref _callSite);
                     return null;
-                case InvocationKind.InvokeMemberUnknown:
-                    {
-                       
-                            try
-                            {
-                                var tObj = InvokeHelper.InvokeMemberCallSite(target, Name, args, _argNames, _context, _staticContext, ref _callSite);
-                                return tObj;
-                            }
-                            catch (RuntimeBinderException)
-                            {
-                               InvokeHelper.InvokeMemberActionCallSite(target, Name, args, _argNames, _context, _staticContext, ref _callSite2);
-                            return null;
-
-                            }
-                          
+                case InvocationKind.InvokeMemberUnknown: {
+                    try {
+                        var tObj = InvokeHelper.InvokeMemberCallSite(target, Name, args, _argNames, _context, _staticContext, ref _callSite);
+                        return tObj;
+                    } catch (RuntimeBinderException) {
+                        InvokeHelper.InvokeMemberActionCallSite(target, Name, args, _argNames, _context, _staticContext, ref _callSite2);
+                        return null;
                     }
+                }
                 case InvocationKind.Invoke:
                     return InvokeHelper.InvokeDirectCallSite(target, args, _argNames, _context, _staticContext, ref _callSite);
                 case InvocationKind.InvokeAction:
                     InvokeHelper.InvokeDirectActionCallSite(target, args, _argNames, _context, _staticContext, ref _callSite);
                     return null;
-                case InvocationKind.InvokeUnknown:
-                    {
-
-                        try
-                        {
-                            var tObj = InvokeHelper.InvokeDirectCallSite(target, args, _argNames, _context, _staticContext, ref _callSite);
-                            return tObj;
-                        }
-                        catch (RuntimeBinderException)
-                        {
-                            InvokeHelper.InvokeDirectActionCallSite(target, args, _argNames, _context, _staticContext, ref _callSite2);
-                            return null;
-
-                        }
+                case InvocationKind.InvokeUnknown: {
+                    try {
+                        var tObj = InvokeHelper.InvokeDirectCallSite(target, args, _argNames, _context, _staticContext, ref _callSite);
+                        return tObj;
+                    } catch (RuntimeBinderException) {
+                        InvokeHelper.InvokeDirectActionCallSite(target, args, _argNames, _context, _staticContext, ref _callSite2);
+                        return null;
                     }
+                }
                 case InvocationKind.AddAssign:
-                    InvokeHelper.InvokeAddAssignCallSite(target, Name.Name, args, _argNames, _context, _staticContext,ref _callSite,ref  _callSite2,ref _callSite3, ref _callSite4);
+                    InvokeHelper.InvokeAddAssignCallSite(target, Name.Name, args, _argNames, _context, _staticContext, ref _callSite, ref _callSite2, ref _callSite3, ref _callSite4);
                     return null;
                 case InvocationKind.SubtractAssign:
                     InvokeHelper.InvokeSubtractAssignCallSite(target, Name.Name, args, _argNames, _context, _staticContext, ref _callSite, ref _callSite2, ref _callSite3, ref _callSite4);
@@ -302,7 +270,5 @@
                     throw new InvalidOperationException("Unknown Invocation Kind: " + Kind);
             }
         }
-
-       
     }
 }

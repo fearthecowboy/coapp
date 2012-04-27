@@ -13,16 +13,13 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-namespace CoApp.Toolkit.ImpromptuInterface.Dynamic
-{
+namespace CoApp.Toolkit.ImpromptuInterface.Dynamic {
     using System;
 
     /// <summary>
-    /// Attribute for Methods and Parameters on Custom Interfaces designed to be used with a dynamic implementation
+    ///   Attribute for Methods and Parameters on Custom Interfaces designed to be used with a dynamic implementation
     /// </summary>
-    [AttributeUsage(System.AttributeTargets.Method |System.AttributeTargets.Parameter | AttributeTargets.Interface | AttributeTargets.Class)]
-    public class UseNamedArgumentAttribute : Attribute
-    {
-
+    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Parameter | AttributeTargets.Interface | AttributeTargets.Class)]
+    public class UseNamedArgumentAttribute : Attribute {
     }
 }

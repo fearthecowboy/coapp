@@ -22,11 +22,10 @@ namespace CoApp.Toolkit.Shell {
     using Internal;
 
     /// <summary>
-    ///   A coordinate.  Values are limited to UInt16.MinValue and UInt16.MaxValue
+    ///   A coordinate. Values are limited to UInt16.MinValue and UInt16.MaxValue
     /// </summary>
     /// <remarks>
-    ///   This structure maps to the native COORD data strcture.  The values used here are ints so
-    ///   this class is CLS compliant.
+    ///   This structure maps to the native COORD data strcture. The values used here are ints so this class is CLS compliant.
     /// </remarks>
     public struct Coordinate : IEquatable<Coordinate> {
         private int x;
@@ -73,15 +72,15 @@ namespace CoApp.Toolkit.Shell {
         internal COORD AsCOORD() {
             unchecked {
                 COORD coord;
-                coord.X = (Int16) this.X;
-                coord.Y = (Int16) this.Y;
+                coord.X = (Int16)this.X;
+                coord.Y = (Int16)this.Y;
                 return coord;
             }
         }
 
         public override bool Equals(object obj) {
             if (obj is Coordinate) {
-                var other = (Coordinate) obj;
+                var other = (Coordinate)obj;
                 return this.Equals(other);
             }
             return false;
@@ -105,7 +104,9 @@ namespace CoApp.Toolkit.Shell {
         ///   Gets and sets the coordinates X value
         /// </summary>
         public int X {
-            get { return x; }
+            get {
+                return x;
+            }
             set {
                 if (value > UInt16.MaxValue) {
                     string msg = string.Format("value for X must be <= {0}", UInt16.MaxValue);
@@ -123,7 +124,9 @@ namespace CoApp.Toolkit.Shell {
         ///   Gets and sets the coordinates Y value
         /// </summary>
         public int Y {
-            get { return y; }
+            get {
+                return y;
+            }
             set {
                 if (value > UInt16.MaxValue) {
                     string msg = string.Format("value for Y must be <= {0}", UInt16.MaxValue);

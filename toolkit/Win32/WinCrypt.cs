@@ -8,12 +8,11 @@
 // </license>
 //-----------------------------------------------------------------------
 
-
 namespace CoApp.Toolkit.Win32 {
     using System;
     using System.Runtime.InteropServices;
 
-    static class WinCrypt {
+    internal static class WinCrypt {
         [StructLayout(LayoutKind.Sequential)]
         public struct BLOB {
             public int cbData;
@@ -23,7 +22,7 @@ namespace CoApp.Toolkit.Win32 {
         [StructLayout(LayoutKind.Sequential)]
         public struct CRYPT_ALGORITHM_IDENTIFIER {
             public String pszObjId;
-            BLOB Parameters;
+            private BLOB Parameters;
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -32,13 +31,13 @@ namespace CoApp.Toolkit.Win32 {
             public BLOB IssuerSerialNumberOrKeyIdOrHashId;
         }
 
-        [StructLayoutAttribute(LayoutKind.Sequential)]
+        [StructLayout(LayoutKind.Sequential)]
         public struct SIGNER_SUBJECT_INFO {
             /// DWORD->unsigned int
             public uint cbSize;
 
             /// DWORD*
-            public System.IntPtr pdwIndex;
+            public IntPtr pdwIndex;
 
             /// DWORD->unsigned int
             public uint dwSubjectChoice;
@@ -47,21 +46,21 @@ namespace CoApp.Toolkit.Win32 {
             public SubjectChoiceUnion Union1;
         }
 
-        [StructLayoutAttribute(LayoutKind.Explicit)]
+        [StructLayout(LayoutKind.Explicit)]
         public struct SubjectChoiceUnion {
-
             /// SIGNER_FILE_INFO*
-            [FieldOffsetAttribute(0)]
-            public System.IntPtr pSignerFileInfo;
+            [FieldOffset(0)]
+            public IntPtr pSignerFileInfo;
 
             /// SIGNER_BLOB_INFO*
-            [FieldOffsetAttribute(0)]
-            public System.IntPtr pSignerBlobInfo;
+            [FieldOffset(0)]
+            public IntPtr pSignerBlobInfo;
         }
 
         [StructLayout(LayoutKind.Sequential)]
         public struct CERT_NAME_BLOB {
             public uint cbData;
+
             [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 0)]
             public byte[] pbData;
         }
@@ -75,6 +74,7 @@ namespace CoApp.Toolkit.Win32 {
         [StructLayout(LayoutKind.Sequential)]
         public struct CRYPT_ATTR_BLOB {
             public uint cbData;
+
             [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 0)]
             public byte[] pbData;
         }
@@ -83,7 +83,9 @@ namespace CoApp.Toolkit.Win32 {
         public struct CRYPT_ATTRIBUTE {
             [MarshalAs(UnmanagedType.LPStr)]
             public string pszObjId;
+
             public uint cValue;
+
             [MarshalAs(UnmanagedType.LPStruct)]
             public CRYPT_ATTR_BLOB rgValue;
         }
@@ -92,12 +94,12 @@ namespace CoApp.Toolkit.Win32 {
         public struct CMSG_SIGNER_INFO {
             public int dwVersion;
             private CERT_NAME_BLOB Issuer;
-            CRYPT_INTEGER_BLOB SerialNumber;
-            CRYPT_ALGORITHM_IDENTIFIER HashAlgorithm;
-            CRYPT_ALGORITHM_IDENTIFIER HashEncryptionAlgorithm;
-            BLOB EncryptedHash;
-            CRYPT_ATTRIBUTE[] AuthAttrs;
-            CRYPT_ATTRIBUTE[] UnauthAttrs;
+            private CRYPT_INTEGER_BLOB SerialNumber;
+            private CRYPT_ALGORITHM_IDENTIFIER HashAlgorithm;
+            private CRYPT_ALGORITHM_IDENTIFIER HashEncryptionAlgorithm;
+            private BLOB EncryptedHash;
+            private CRYPT_ATTRIBUTE[] AuthAttrs;
+            private CRYPT_ATTRIBUTE[] UnauthAttrs;
         }
 
         [DllImport("crypt32.dll", CharSet = CharSet.Auto, SetLastError = true)]
@@ -114,7 +116,6 @@ namespace CoApp.Toolkit.Win32 {
             ref IntPtr phMsg,
             ref IntPtr ppvContext);
 
-
         [DllImport("crypt32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         public static extern Boolean CryptMsgGetParam(
             IntPtr hCryptMsg,
@@ -122,7 +123,7 @@ namespace CoApp.Toolkit.Win32 {
             int dwIndex,
             IntPtr pvData,
             ref int pcbData
-        );
+            );
 
         [DllImport("crypt32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         public static extern Boolean CryptMsgGetParam(
@@ -131,19 +132,18 @@ namespace CoApp.Toolkit.Win32 {
             int dwIndex,
             [In, Out] byte[] vData,
             ref int pcbData
-        );
+            );
 
         [DllImport("crypt32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool CryptDecodeObject(
-          uint CertEncodingType,
-          UIntPtr lpszStructType,
-          byte[] pbEncoded,
-          uint cbEncoded,
-          uint flags,
-          [In, Out] byte[] pvStructInfo,
-          ref uint cbStructInfo);
-
+            uint CertEncodingType,
+            UIntPtr lpszStructType,
+            byte[] pbEncoded,
+            uint cbEncoded,
+            uint flags,
+            [In, Out] byte[] pvStructInfo,
+            ref uint cbStructInfo);
 
         public const int CRYPT_ASN_ENCODING = 0x00000001;
         public const int CRYPT_NDR_ENCODING = 0x00000002;
@@ -196,7 +196,6 @@ namespace CoApp.Toolkit.Win32 {
         public const int CMSG_UNPROTECTED_ATTR_PARAM = 37;
         public const int CMSG_SIGNER_CERT_ID_PARAM = 38;
         public const int CMSG_CMS_SIGNER_INFO_PARAM = 39;
-
 
         //-------------------------------------------------------------------------
         //dwObjectType for CryptQueryObject
@@ -279,18 +278,18 @@ namespace CoApp.Toolkit.Win32 {
         //content can be any type
         public const int CERT_QUERY_CONTENT_FLAG_ALL =
             CERT_QUERY_CONTENT_FLAG_CERT |
-            CERT_QUERY_CONTENT_FLAG_CTL |
-            CERT_QUERY_CONTENT_FLAG_CRL |
-            CERT_QUERY_CONTENT_FLAG_SERIALIZED_STORE |
-            CERT_QUERY_CONTENT_FLAG_SERIALIZED_CERT |
-            CERT_QUERY_CONTENT_FLAG_SERIALIZED_CTL |
-            CERT_QUERY_CONTENT_FLAG_SERIALIZED_CRL |
-            CERT_QUERY_CONTENT_FLAG_PKCS7_SIGNED |
-            CERT_QUERY_CONTENT_FLAG_PKCS7_UNSIGNED |
-            CERT_QUERY_CONTENT_FLAG_PKCS7_SIGNED_EMBED |
-            CERT_QUERY_CONTENT_FLAG_PKCS10 |
-            CERT_QUERY_CONTENT_FLAG_PFX |
-            CERT_QUERY_CONTENT_FLAG_CERT_PAIR;
+                CERT_QUERY_CONTENT_FLAG_CTL |
+                    CERT_QUERY_CONTENT_FLAG_CRL |
+                        CERT_QUERY_CONTENT_FLAG_SERIALIZED_STORE |
+                            CERT_QUERY_CONTENT_FLAG_SERIALIZED_CERT |
+                                CERT_QUERY_CONTENT_FLAG_SERIALIZED_CTL |
+                                    CERT_QUERY_CONTENT_FLAG_SERIALIZED_CRL |
+                                        CERT_QUERY_CONTENT_FLAG_PKCS7_SIGNED |
+                                            CERT_QUERY_CONTENT_FLAG_PKCS7_UNSIGNED |
+                                                CERT_QUERY_CONTENT_FLAG_PKCS7_SIGNED_EMBED |
+                                                    CERT_QUERY_CONTENT_FLAG_PKCS10 |
+                                                        CERT_QUERY_CONTENT_FLAG_PFX |
+                                                            CERT_QUERY_CONTENT_FLAG_CERT_PAIR;
 
         //-------------------------------------------------------------------------
         //dwFormatType for CryptQueryObject
@@ -319,8 +318,7 @@ namespace CoApp.Toolkit.Win32 {
         //the content can be of any format
         public const int CERT_QUERY_FORMAT_FLAG_ALL =
             CERT_QUERY_FORMAT_FLAG_BINARY |
-            CERT_QUERY_FORMAT_FLAG_BASE64_ENCODED |
-            CERT_QUERY_FORMAT_FLAG_ASN_ASCII_HEX_ENCODED;
-
+                CERT_QUERY_FORMAT_FLAG_BASE64_ENCODED |
+                    CERT_QUERY_FORMAT_FLAG_ASN_ASCII_HEX_ENCODED;
     }
 }

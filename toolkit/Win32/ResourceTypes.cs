@@ -23,15 +23,13 @@
 // </license>
 //-----------------------------------------------------------------------
 
-
 namespace CoApp.Toolkit.Win32 {
     /// <summary>
     ///   Predefined resource types.
     /// </summary>
     public enum ResourceTypes {
-
         /// <summary>
-        /// For resource types not covered by the standard integer types. (binres?)
+        ///   For resource types not covered by the standard integer types. (binres?)
         /// </summary>
         RT_OTHER = 0,
 

@@ -332,11 +332,10 @@ namespace CoApp.Toolkit.TaskService {
             ttype = triggerType;
             unboundValues = new Dictionary<string, object>();
 
-            v1TriggerData.TriggerSize = (ushort) Marshal.SizeOf(typeof (TaskTrigger));
+            v1TriggerData.TriggerSize = (ushort)Marshal.SizeOf(typeof (TaskTrigger));
             try {
                 v1TriggerData.Type = ConvertToV1TriggerType(ttype);
-            }
-            catch {
+            } catch {
             }
 
             StartBoundary = DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Local);
@@ -356,18 +355,15 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Trigger != null) {
                     v2Trigger.Enabled = value;
-                }
-                else {
+                } else {
                     if (!value) {
                         v1TriggerData.Flags |= TaskTriggerFlags.Disabled;
-                    }
-                    else {
+                    } else {
                         v1TriggerData.Flags &= ~TaskTriggerFlags.Disabled;
                     }
                     if (v1Trigger != null) {
                         SetV1TriggerData();
-                    }
-                    else {
+                    } else {
                         unboundValues["Enabled"] = value;
                     }
                 }
@@ -384,19 +380,17 @@ namespace CoApp.Toolkit.TaskService {
                     return string.IsNullOrEmpty(v2Trigger.EndBoundary) ? DateTime.MaxValue : DateTime.Parse(v2Trigger.EndBoundary);
                 }
                 return (unboundValues != null && unboundValues.ContainsKey("EndBoundary"))
-                    ? (DateTime) unboundValues["EndBoundary"]
+                    ? (DateTime)unboundValues["EndBoundary"]
                     : v1TriggerData.EndDate;
             }
             set {
                 if (v2Trigger != null) {
                     v2Trigger.EndBoundary = value == DateTime.MaxValue ? null : value.ToString(V2BoundaryDateFormat);
-                }
-                else {
+                } else {
                     v1TriggerData.EndDate = value;
                     if (v1Trigger != null) {
                         SetV1TriggerData();
-                    }
-                    else {
+                    } else {
                         unboundValues["EndBoundary"] = value;
                     }
                 }
@@ -416,17 +410,15 @@ namespace CoApp.Toolkit.TaskService {
                     throw new NotV1SupportedException();
                 }
                 return ((unboundValues != null && unboundValues.ContainsKey("ExecutionTimeLimit"))
-                    ? (TimeSpan) unboundValues["ExecutionTimeLimit"]
+                    ? (TimeSpan)unboundValues["ExecutionTimeLimit"]
                     : TimeSpan.Zero);
             }
             set {
                 if (v2Trigger != null) {
                     v2Trigger.ExecutionTimeLimit = Task.TimeSpanToString(value);
-                }
-                else if (v1Trigger != null) {
+                } else if (v1Trigger != null) {
                     throw new NotV1SupportedException();
-                }
-                else {
+                } else {
                     unboundValues["ExecutionTimeLimit"] = value;
                 }
             }
@@ -444,16 +436,14 @@ namespace CoApp.Toolkit.TaskService {
                 if (v1Trigger != null) {
                     throw new NotV1SupportedException();
                 }
-                return (unboundValues.ContainsKey("Id") ? (string) unboundValues["Id"] : null);
+                return (unboundValues.ContainsKey("Id") ? (string)unboundValues["Id"] : null);
             }
             set {
                 if (v2Trigger != null) {
                     v2Trigger.Id = value;
-                }
-                else if (v1Trigger != null) {
+                } else if (v1Trigger != null) {
                     throw new NotV1SupportedException();
-                }
-                else {
+                } else {
                     unboundValues["Id"] = value;
                 }
             }
@@ -480,19 +470,17 @@ namespace CoApp.Toolkit.TaskService {
                     return string.IsNullOrEmpty(v2Trigger.StartBoundary) ? DateTime.MinValue : DateTime.Parse(v2Trigger.StartBoundary);
                 }
                 return (unboundValues != null && unboundValues.ContainsKey("StartBoundary"))
-                    ? (DateTime) unboundValues["StartBoundary"]
+                    ? (DateTime)unboundValues["StartBoundary"]
                     : v1TriggerData.BeginDate;
             }
             set {
                 if (v2Trigger != null) {
                     v2Trigger.StartBoundary = value == DateTime.MinValue ? null : value.ToString(V2BoundaryDateFormat);
-                }
-                else {
+                } else {
                     v1TriggerData.BeginDate = value;
                     if (v1Trigger != null) {
                         SetV1TriggerData();
-                    }
-                    else {
+                    } else {
                         unboundValues["StartBoundary"] = value;
                     }
                 }
@@ -504,7 +492,9 @@ namespace CoApp.Toolkit.TaskService {
         /// </summary>
         /// <value> The <see cref="TaskTriggerType" /> of the trigger. </value>
         public TaskTriggerType TriggerType {
-            get { return ttype; }
+            get {
+                return ttype;
+            }
         }
 
         /// <summary>
@@ -539,8 +529,7 @@ namespace CoApp.Toolkit.TaskService {
             EndBoundary = sourceTrigger.EndBoundary;
             try {
                 ExecutionTimeLimit = sourceTrigger.ExecutionTimeLimit;
-            }
-            catch {
+            } catch {
             }
             Repetition.Duration = sourceTrigger.Repetition.Duration;
             Repetition.Interval = sourceTrigger.Repetition.Interval;
@@ -548,16 +537,14 @@ namespace CoApp.Toolkit.TaskService {
             StartBoundary = sourceTrigger.StartBoundary;
             if (sourceTrigger is ITriggerDelay && this is ITriggerDelay) {
                 try {
-                    ((ITriggerDelay) this).Delay = ((ITriggerDelay) sourceTrigger).Delay;
-                }
-                catch {
+                    ((ITriggerDelay)this).Delay = ((ITriggerDelay)sourceTrigger).Delay;
+                } catch {
                 }
             }
             if (sourceTrigger is ITriggerUserId && this is ITriggerUserId) {
                 try {
-                    ((ITriggerUserId) this).UserId = ((ITriggerUserId) sourceTrigger).UserId;
-                }
-                catch {
+                    ((ITriggerUserId)this).UserId = ((ITriggerUserId)sourceTrigger).UserId;
+                } catch {
                 }
             }
         }
@@ -597,22 +584,22 @@ namespace CoApp.Toolkit.TaskService {
         }
 
         internal static TaskTriggerType ConvertFromV1TriggerType(V1.TaskTriggerType v1Type) {
-            var v2tt = (int) v1Type + 1;
+            var v2tt = (int)v1Type + 1;
             if (v2tt > 6) {
                 v2tt++;
             }
-            return (TaskTriggerType) v2tt;
+            return (TaskTriggerType)v2tt;
         }
 
         internal static V1.TaskTriggerType ConvertToV1TriggerType(TaskTriggerType type) {
             if (type == TaskTriggerType.Registration || type == TaskTriggerType.Event || type == TaskTriggerType.SessionStateChange) {
                 throw new NotV1SupportedException();
             }
-            var v1tt = (int) type - 1;
+            var v1tt = (int)type - 1;
             if (v1tt >= 7) {
                 v1tt--;
             }
-            return (V1.TaskTriggerType) v1tt;
+            return (V1.TaskTriggerType)v1tt;
         }
 
         internal static Trigger CreateTrigger(ITaskTrigger trigger) {
@@ -735,11 +722,9 @@ namespace CoApp.Toolkit.TaskService {
                     var o = unboundValues[key];
                     CheckBindValue(key, ref o);
                     v2Trigger.GetType().InvokeMember(key, BindingFlags.SetProperty, null, v2Trigger, new[] {o});
-                }
-                catch (TargetInvocationException tie) {
+                } catch (TargetInvocationException tie) {
                     throw tie.InnerException;
-                }
-                catch {
+                } catch {
                 }
             }
             unboundValues.Clear();
@@ -756,15 +741,14 @@ namespace CoApp.Toolkit.TaskService {
         /// <param name="o"> The value. </param>
         internal virtual void CheckBindValue(string key, ref object o) {
             if (o is TimeSpan) {
-                o = Task.TimeSpanToString((TimeSpan) o);
+                o = Task.TimeSpanToString((TimeSpan)o);
             }
             if (o is DateTime) {
-                if ((key == "EndBoundary" && ((DateTime) o) == DateTime.MaxValue) ||
-                    (key == "StartBoundary" && ((DateTime) o) == DateTime.MinValue)) {
+                if ((key == "EndBoundary" && ((DateTime)o) == DateTime.MaxValue) ||
+                    (key == "StartBoundary" && ((DateTime)o) == DateTime.MinValue)) {
                     o = null;
-                }
-                else {
-                    o = ((DateTime) o).ToString(V2BoundaryDateFormat);
+                } else {
+                    o = ((DateTime)o).ToString(V2BoundaryDateFormat);
                 }
             }
         }
@@ -797,8 +781,7 @@ namespace CoApp.Toolkit.TaskService {
                 var sduration = string.Empty;
                 if (Repetition.Duration == TimeSpan.Zero) {
                     sduration = Resources.TriggerDuration0;
-                }
-                else {
+                } else {
                     sduration = string.Format(Resources.TriggerDurationNot0, GetBestTimeSpanString(Repetition.Duration));
                 }
                 ret.AppendFormat(Resources.TriggerRepetition, GetBestTimeSpanString(Repetition.Interval), sduration);
@@ -831,8 +814,7 @@ namespace CoApp.Toolkit.TaskService {
                             foundTimeSpan2 = true;
                         }
                     }
-                }
-                catch {
+                } catch {
                 }
             }
 
@@ -849,8 +831,7 @@ namespace CoApp.Toolkit.TaskService {
                             }
                         }
                     }
-                }
-                catch {
+                } catch {
                 }
             }
 
@@ -870,7 +851,7 @@ namespace CoApp.Toolkit.TaskService {
         }
 
         internal BootTrigger(ITaskTrigger iTrigger)
-            : base(iTrigger, (V1.TaskTriggerType) V1.TaskTriggerType.OnSystemStart) {
+            : base(iTrigger, V1.TaskTriggerType.OnSystemStart) {
         }
 
         internal BootTrigger(ITrigger iTrigger)
@@ -884,21 +865,19 @@ namespace CoApp.Toolkit.TaskService {
         public TimeSpan Delay {
             get {
                 if (v2Trigger != null) {
-                    return Task.StringToTimeSpan(((IBootTrigger) v2Trigger).Delay);
+                    return Task.StringToTimeSpan(((IBootTrigger)v2Trigger).Delay);
                 }
                 if (v1Trigger != null) {
                     throw new NotV1SupportedException();
                 }
-                return (unboundValues.ContainsKey("Delay") ? (TimeSpan) unboundValues["Delay"] : TimeSpan.Zero);
+                return (unboundValues.ContainsKey("Delay") ? (TimeSpan)unboundValues["Delay"] : TimeSpan.Zero);
             }
             set {
                 if (v2Trigger != null) {
-                    ((IBootTrigger) v2Trigger).Delay = Task.TimeSpanToString(value);
-                }
-                else if (v1Trigger != null) {
+                    ((IBootTrigger)v2Trigger).Delay = Task.TimeSpanToString(value);
+                } else if (v1Trigger != null) {
                     throw new NotV1SupportedException();
-                }
-                else {
+                } else {
                     unboundValues["Delay"] = value;
                 }
             }
@@ -927,7 +906,7 @@ namespace CoApp.Toolkit.TaskService {
         }
 
         internal DailyTrigger(ITaskTrigger iTrigger)
-            : base(iTrigger, (V1.TaskTriggerType) V1.TaskTriggerType.RunDaily) {
+            : base(iTrigger, V1.TaskTriggerType.RunDaily) {
         }
 
         internal DailyTrigger(ITrigger iTrigger)
@@ -941,20 +920,18 @@ namespace CoApp.Toolkit.TaskService {
         public short DaysInterval {
             get {
                 if (v2Trigger != null) {
-                    return ((IDailyTrigger) v2Trigger).DaysInterval;
+                    return ((IDailyTrigger)v2Trigger).DaysInterval;
                 }
-                return (short) v1TriggerData.Data.daily.DaysInterval;
+                return (short)v1TriggerData.Data.daily.DaysInterval;
             }
             set {
                 if (v2Trigger != null) {
-                    ((IDailyTrigger) v2Trigger).DaysInterval = value;
-                }
-                else {
-                    v1TriggerData.Data.daily.DaysInterval = (ushort) value;
+                    ((IDailyTrigger)v2Trigger).DaysInterval = value;
+                } else {
+                    v1TriggerData.Data.daily.DaysInterval = (ushort)value;
                     if (v1Trigger != null) {
                         SetV1TriggerData();
-                    }
-                    else {
+                    } else {
                         unboundValues["DaysInterval"] = value;
                     }
                 }
@@ -968,21 +945,19 @@ namespace CoApp.Toolkit.TaskService {
         public TimeSpan RandomDelay {
             get {
                 if (v2Trigger != null) {
-                    return Task.StringToTimeSpan(((IDailyTrigger) v2Trigger).RandomDelay);
+                    return Task.StringToTimeSpan(((IDailyTrigger)v2Trigger).RandomDelay);
                 }
                 if (v1Trigger != null) {
                     throw new NotV1SupportedException();
                 }
-                return (unboundValues.ContainsKey("RandomDelay") ? (TimeSpan) unboundValues["RandomDelay"] : TimeSpan.Zero);
+                return (unboundValues.ContainsKey("RandomDelay") ? (TimeSpan)unboundValues["RandomDelay"] : TimeSpan.Zero);
             }
             set {
                 if (v2Trigger != null) {
-                    ((IDailyTrigger) v2Trigger).RandomDelay = Task.TimeSpanToString(value);
-                }
-                else if (v1Trigger != null) {
+                    ((IDailyTrigger)v2Trigger).RandomDelay = Task.TimeSpanToString(value);
+                } else if (v1Trigger != null) {
                     throw new NotV1SupportedException();
-                }
-                else {
+                } else {
                     unboundValues["RandomDelay"] = value;
                 }
             }
@@ -993,8 +968,12 @@ namespace CoApp.Toolkit.TaskService {
         /// </summary>
         /// <value> The delay duration. </value>
         TimeSpan ITriggerDelay.Delay {
-            get { return RandomDelay; }
-            set { RandomDelay = value; }
+            get {
+                return RandomDelay;
+            }
+            set {
+                RandomDelay = value;
+            }
         }
 
         /// <summary>
@@ -1005,7 +984,7 @@ namespace CoApp.Toolkit.TaskService {
         public override void CopyProperties(Trigger sourceTrigger) {
             base.CopyProperties(sourceTrigger);
             if (sourceTrigger.GetType() == GetType()) {
-                DaysInterval = ((DailyTrigger) sourceTrigger).DaysInterval;
+                DaysInterval = ((DailyTrigger)sourceTrigger).DaysInterval;
             }
         }
 
@@ -1055,15 +1034,14 @@ namespace CoApp.Toolkit.TaskService {
         public TimeSpan Delay {
             get {
                 if (v2Trigger != null) {
-                    return Task.StringToTimeSpan(((IEventTrigger) v2Trigger).Delay);
+                    return Task.StringToTimeSpan(((IEventTrigger)v2Trigger).Delay);
                 }
-                return (unboundValues.ContainsKey("Delay") ? (TimeSpan) unboundValues["Delay"] : TimeSpan.Zero);
+                return (unboundValues.ContainsKey("Delay") ? (TimeSpan)unboundValues["Delay"] : TimeSpan.Zero);
             }
             set {
                 if (v2Trigger != null) {
-                    ((IEventTrigger) v2Trigger).Delay = Task.TimeSpanToString(value);
-                }
-                else {
+                    ((IEventTrigger)v2Trigger).Delay = Task.TimeSpanToString(value);
+                } else {
                     unboundValues["Delay"] = value;
                 }
             }
@@ -1072,19 +1050,18 @@ namespace CoApp.Toolkit.TaskService {
         /// <summary>
         ///   Gets or sets the XPath query string that identifies the event that fires the trigger.
         /// </summary>
-        [DefaultValue((string) null)]
+        [DefaultValue((string)null)]
         public string Subscription {
             get {
                 if (v2Trigger != null) {
-                    return ((IEventTrigger) v2Trigger).Subscription;
+                    return ((IEventTrigger)v2Trigger).Subscription;
                 }
-                return (unboundValues.ContainsKey("Subscription") ? (string) unboundValues["Subscription"] : null);
+                return (unboundValues.ContainsKey("Subscription") ? (string)unboundValues["Subscription"] : null);
             }
             set {
                 if (v2Trigger != null) {
-                    ((IEventTrigger) v2Trigger).Subscription = value;
-                }
-                else {
+                    ((IEventTrigger)v2Trigger).Subscription = value;
+                } else {
                     unboundValues["Subscription"] = value;
                 }
             }
@@ -1099,9 +1076,8 @@ namespace CoApp.Toolkit.TaskService {
                 if (nvc == null) {
                     if (v2Trigger == null) {
                         nvc = new NamedValueCollection();
-                    }
-                    else {
-                        nvc = new NamedValueCollection(((IEventTrigger) v2Trigger).ValueQueries);
+                    } else {
+                        nvc = new NamedValueCollection(((IEventTrigger)v2Trigger).ValueQueries);
                     }
                 }
                 return nvc;
@@ -1116,8 +1092,8 @@ namespace CoApp.Toolkit.TaskService {
         public override void CopyProperties(Trigger sourceTrigger) {
             base.CopyProperties(sourceTrigger);
             if (sourceTrigger.GetType() == GetType()) {
-                Subscription = ((EventTrigger) sourceTrigger).Subscription;
-                ((EventTrigger) sourceTrigger).ValueQueries.CopyTo(ValueQueries);
+                Subscription = ((EventTrigger)sourceTrigger).Subscription;
+                ((EventTrigger)sourceTrigger).ValueQueries.CopyTo(ValueQueries);
             }
         }
 
@@ -1200,7 +1176,7 @@ namespace CoApp.Toolkit.TaskService {
         internal override void Bind(ITaskDefinition iTaskDef) {
             base.Bind(iTaskDef);
             if (nvc != null) {
-                nvc.Bind(((IEventTrigger) v2Trigger).ValueQueries);
+                nvc.Bind(((IEventTrigger)v2Trigger).ValueQueries);
             }
         }
 
@@ -1238,7 +1214,7 @@ namespace CoApp.Toolkit.TaskService {
         }
 
         internal IdleTrigger(ITaskTrigger iTrigger)
-            : base(iTrigger, (V1.TaskTriggerType) V1.TaskTriggerType.OnIdle) {
+            : base(iTrigger, V1.TaskTriggerType.OnIdle) {
         }
 
         internal IdleTrigger(ITrigger iTrigger)
@@ -1266,7 +1242,7 @@ namespace CoApp.Toolkit.TaskService {
         }
 
         internal LogonTrigger(ITaskTrigger iTrigger)
-            : base(iTrigger, (V1.TaskTriggerType)V1.TaskTriggerType.OnLogon) {
+            : base(iTrigger, V1.TaskTriggerType.OnLogon) {
         }
 
         internal LogonTrigger(ITrigger iTrigger)
@@ -1280,21 +1256,19 @@ namespace CoApp.Toolkit.TaskService {
         public TimeSpan Delay {
             get {
                 if (v2Trigger != null) {
-                    return Task.StringToTimeSpan(((ILogonTrigger) v2Trigger).Delay);
+                    return Task.StringToTimeSpan(((ILogonTrigger)v2Trigger).Delay);
                 }
                 if (v1Trigger != null) {
                     throw new NotV1SupportedException();
                 }
-                return (unboundValues.ContainsKey("Delay") ? (TimeSpan) unboundValues["Delay"] : TimeSpan.Zero);
+                return (unboundValues.ContainsKey("Delay") ? (TimeSpan)unboundValues["Delay"] : TimeSpan.Zero);
             }
             set {
                 if (v2Trigger != null) {
-                    ((ILogonTrigger) v2Trigger).Delay = Task.TimeSpanToString(value);
-                }
-                else if (v1Trigger != null) {
+                    ((ILogonTrigger)v2Trigger).Delay = Task.TimeSpanToString(value);
+                } else if (v1Trigger != null) {
                     throw new NotV1SupportedException();
-                }
-                else {
+                } else {
                     unboundValues["Delay"] = value;
                 }
             }
@@ -1306,25 +1280,23 @@ namespace CoApp.Toolkit.TaskService {
         /// <remarks>
         ///   If you want a task to be triggered when any member of a group logs on to the computer rather than when a specific user logs on, then do not assign a value to the LogonTrigger.UserId property. Instead, create a logon trigger with an empty LogonTrigger.UserId property and assign a value to the principal for the task using the Principal.GroupId property.
         /// </remarks>
-        [DefaultValue((string) null)]
+        [DefaultValue((string)null)]
         public string UserId {
             get {
                 if (v2Trigger != null) {
-                    return ((ILogonTrigger) v2Trigger).UserId;
+                    return ((ILogonTrigger)v2Trigger).UserId;
                 }
                 if (v1Trigger != null) {
                     throw new NotV1SupportedException();
                 }
-                return (unboundValues.ContainsKey("UserId") ? (string) unboundValues["UserId"] : null);
+                return (unboundValues.ContainsKey("UserId") ? (string)unboundValues["UserId"] : null);
             }
             set {
                 if (v2Trigger != null) {
-                    ((ILogonTrigger) v2Trigger).UserId = value;
-                }
-                else if (v1Trigger != null) {
+                    ((ILogonTrigger)v2Trigger).UserId = value;
+                } else if (v1Trigger != null) {
                     throw new NotV1SupportedException();
-                }
-                else {
+                } else {
                     unboundValues["UserId"] = value;
                 }
             }
@@ -1359,7 +1331,7 @@ namespace CoApp.Toolkit.TaskService {
         }
 
         internal MonthlyDOWTrigger(ITaskTrigger iTrigger)
-            : base(iTrigger, (V1.TaskTriggerType)V1.TaskTriggerType.RunMonthlyDOW) {
+            : base(iTrigger, V1.TaskTriggerType.RunMonthlyDOW) {
         }
 
         internal MonthlyDOWTrigger(ITrigger iTrigger)
@@ -1373,21 +1345,19 @@ namespace CoApp.Toolkit.TaskService {
         public DaysOfTheWeek DaysOfWeek {
             get {
                 if (v2Trigger != null) {
-                    return (DaysOfTheWeek) ((IMonthlyDOWTrigger) v2Trigger).DaysOfWeek;
+                    return (DaysOfTheWeek)((IMonthlyDOWTrigger)v2Trigger).DaysOfWeek;
                 }
                 return v1TriggerData.Data.monthlyDOW.DaysOfTheWeek;
             }
             set {
                 if (v2Trigger != null) {
-                    ((IMonthlyDOWTrigger) v2Trigger).DaysOfWeek = (short) value;
-                }
-                else {
+                    ((IMonthlyDOWTrigger)v2Trigger).DaysOfWeek = (short)value;
+                } else {
                     v1TriggerData.Data.monthlyDOW.DaysOfTheWeek = value;
                     if (v1Trigger != null) {
                         SetV1TriggerData();
-                    }
-                    else {
-                        unboundValues["DaysOfWeek"] = (short) value;
+                    } else {
+                        unboundValues["DaysOfWeek"] = (short)value;
                     }
                 }
             }
@@ -1400,21 +1370,19 @@ namespace CoApp.Toolkit.TaskService {
         public MonthsOfTheYear MonthsOfYear {
             get {
                 if (v2Trigger != null) {
-                    return (MonthsOfTheYear) ((IMonthlyDOWTrigger) v2Trigger).MonthsOfYear;
+                    return (MonthsOfTheYear)((IMonthlyDOWTrigger)v2Trigger).MonthsOfYear;
                 }
                 return v1TriggerData.Data.monthlyDOW.Months;
             }
             set {
                 if (v2Trigger != null) {
-                    ((IMonthlyDOWTrigger) v2Trigger).MonthsOfYear = (short) value;
-                }
-                else {
+                    ((IMonthlyDOWTrigger)v2Trigger).MonthsOfYear = (short)value;
+                } else {
                     v1TriggerData.Data.monthlyDOW.Months = value;
                     if (v1Trigger != null) {
                         SetV1TriggerData();
-                    }
-                    else {
-                        unboundValues["MonthsOfYear"] = (short) value;
+                    } else {
+                        unboundValues["MonthsOfYear"] = (short)value;
                     }
                 }
             }
@@ -1427,21 +1395,19 @@ namespace CoApp.Toolkit.TaskService {
         public TimeSpan RandomDelay {
             get {
                 if (v2Trigger != null) {
-                    return Task.StringToTimeSpan(((IMonthlyDOWTrigger) v2Trigger).RandomDelay);
+                    return Task.StringToTimeSpan(((IMonthlyDOWTrigger)v2Trigger).RandomDelay);
                 }
                 if (v1Trigger != null) {
                     throw new NotV1SupportedException();
                 }
-                return (unboundValues.ContainsKey("RandomDelay") ? (TimeSpan) unboundValues["RandomDelay"] : TimeSpan.Zero);
+                return (unboundValues.ContainsKey("RandomDelay") ? (TimeSpan)unboundValues["RandomDelay"] : TimeSpan.Zero);
             }
             set {
                 if (v2Trigger != null) {
-                    ((IMonthlyDOWTrigger) v2Trigger).RandomDelay = Task.TimeSpanToString(value);
-                }
-                else if (v1Trigger != null) {
+                    ((IMonthlyDOWTrigger)v2Trigger).RandomDelay = Task.TimeSpanToString(value);
+                } else if (v1Trigger != null) {
                     throw new NotV1SupportedException();
-                }
-                else {
+                } else {
                     unboundValues["RandomDelay"] = value;
                 }
             }
@@ -1454,23 +1420,19 @@ namespace CoApp.Toolkit.TaskService {
         public bool RunOnLastWeekOfMonth {
             get {
                 if (v2Trigger != null) {
-                    return ((IMonthlyDOWTrigger) v2Trigger).RunOnLastWeekOfMonth;
-                }
-                else if (v1Trigger != null) {
+                    return ((IMonthlyDOWTrigger)v2Trigger).RunOnLastWeekOfMonth;
+                } else if (v1Trigger != null) {
                     throw new NotV1SupportedException();
-                }
-                else {
-                    return (unboundValues.ContainsKey("RunOnLastWeekOfMonth") ? (bool) unboundValues["RunOnLastWeekOfMonth"] : false);
+                } else {
+                    return (unboundValues.ContainsKey("RunOnLastWeekOfMonth") ? (bool)unboundValues["RunOnLastWeekOfMonth"] : false);
                 }
             }
             set {
                 if (v2Trigger != null) {
-                    ((IMonthlyDOWTrigger) v2Trigger).RunOnLastWeekOfMonth = value;
-                }
-                else if (v1Trigger != null) {
+                    ((IMonthlyDOWTrigger)v2Trigger).RunOnLastWeekOfMonth = value;
+                } else if (v1Trigger != null) {
                     throw new NotV1SupportedException();
-                }
-                else {
+                } else {
                     unboundValues["RunOnLastWeekOfMonth"] = value;
                 }
             }
@@ -1483,31 +1445,27 @@ namespace CoApp.Toolkit.TaskService {
         public WhichWeek WeeksOfMonth {
             get {
                 if (v2Trigger != null) {
-                    var ww = (WhichWeek) ((IMonthlyDOWTrigger) v2Trigger).WeeksOfMonth;
+                    var ww = (WhichWeek)((IMonthlyDOWTrigger)v2Trigger).WeeksOfMonth;
                     // Following addition give accurate results for confusing RunOnLastWeekOfMonth property (thanks kbergeron)
-                    if (((IMonthlyDOWTrigger) v2Trigger).RunOnLastWeekOfMonth) {
+                    if (((IMonthlyDOWTrigger)v2Trigger).RunOnLastWeekOfMonth) {
                         ww |= WhichWeek.LastWeek;
                     }
                     return ww;
-                }
-                else if (v1Trigger != null) {
+                } else if (v1Trigger != null) {
                     return v1TriggerData.Data.monthlyDOW.V2WhichWeek;
-                }
-                else {
-                    return (unboundValues.ContainsKey("WeeksOfMonth") ? (WhichWeek) unboundValues["WeeksOfMonth"] : WhichWeek.FirstWeek);
+                } else {
+                    return (unboundValues.ContainsKey("WeeksOfMonth") ? (WhichWeek)unboundValues["WeeksOfMonth"] : WhichWeek.FirstWeek);
                 }
             }
             set {
                 if (v2Trigger != null) {
-                    ((IMonthlyDOWTrigger) v2Trigger).WeeksOfMonth = (short) value;
-                }
-                else {
+                    ((IMonthlyDOWTrigger)v2Trigger).WeeksOfMonth = (short)value;
+                } else {
                     if (v1Trigger != null) {
                         v1TriggerData.Data.monthlyDOW.V2WhichWeek = value;
                         SetV1TriggerData();
-                    }
-                    else {
-                        unboundValues["WeeksOfMonth"] = (short) value;
+                    } else {
+                        unboundValues["WeeksOfMonth"] = (short)value;
                     }
                 }
             }
@@ -1518,8 +1476,12 @@ namespace CoApp.Toolkit.TaskService {
         /// </summary>
         /// <value> The delay duration. </value>
         TimeSpan ITriggerDelay.Delay {
-            get { return RandomDelay; }
-            set { RandomDelay = value; }
+            get {
+                return RandomDelay;
+            }
+            set {
+                RandomDelay = value;
+            }
         }
 
         /// <summary>
@@ -1530,14 +1492,13 @@ namespace CoApp.Toolkit.TaskService {
         public override void CopyProperties(Trigger sourceTrigger) {
             base.CopyProperties(sourceTrigger);
             if (sourceTrigger.GetType() == GetType()) {
-                DaysOfWeek = ((MonthlyDOWTrigger) sourceTrigger).DaysOfWeek;
-                MonthsOfYear = ((MonthlyDOWTrigger) sourceTrigger).MonthsOfYear;
+                DaysOfWeek = ((MonthlyDOWTrigger)sourceTrigger).DaysOfWeek;
+                MonthsOfYear = ((MonthlyDOWTrigger)sourceTrigger).MonthsOfYear;
                 try {
-                    RunOnLastWeekOfMonth = ((MonthlyDOWTrigger) sourceTrigger).RunOnLastWeekOfMonth;
+                    RunOnLastWeekOfMonth = ((MonthlyDOWTrigger)sourceTrigger).RunOnLastWeekOfMonth;
+                } catch {
                 }
-                catch {
-                }
-                WeeksOfMonth = ((MonthlyDOWTrigger) sourceTrigger).WeeksOfMonth;
+                WeeksOfMonth = ((MonthlyDOWTrigger)sourceTrigger).WeeksOfMonth;
             }
         }
 
@@ -1569,7 +1530,7 @@ namespace CoApp.Toolkit.TaskService {
         }
 
         internal MonthlyTrigger(ITaskTrigger iTrigger)
-            : base(iTrigger, (V1.TaskTriggerType)V1.TaskTriggerType.RunMonthly) {
+            : base(iTrigger, V1.TaskTriggerType.RunMonthly) {
         }
 
         internal MonthlyTrigger(ITrigger iTrigger)
@@ -1582,21 +1543,19 @@ namespace CoApp.Toolkit.TaskService {
         public int[] DaysOfMonth {
             get {
                 if (v2Trigger != null) {
-                    return MaskToIndices(((IMonthlyTrigger) v2Trigger).DaysOfMonth);
+                    return MaskToIndices(((IMonthlyTrigger)v2Trigger).DaysOfMonth);
                 }
-                return MaskToIndices((int) v1TriggerData.Data.monthlyDate.Days);
+                return MaskToIndices((int)v1TriggerData.Data.monthlyDate.Days);
             }
             set {
                 var mask = IndicesToMask(value);
                 if (v2Trigger != null) {
-                    ((IMonthlyTrigger) v2Trigger).DaysOfMonth = mask;
-                }
-                else {
-                    v1TriggerData.Data.monthlyDate.Days = (uint) mask;
+                    ((IMonthlyTrigger)v2Trigger).DaysOfMonth = mask;
+                } else {
+                    v1TriggerData.Data.monthlyDate.Days = (uint)mask;
                     if (v1Trigger != null) {
                         SetV1TriggerData();
-                    }
-                    else {
+                    } else {
                         unboundValues["DaysOfMonth"] = mask;
                     }
                 }
@@ -1610,21 +1569,19 @@ namespace CoApp.Toolkit.TaskService {
         public MonthsOfTheYear MonthsOfYear {
             get {
                 if (v2Trigger != null) {
-                    return (MonthsOfTheYear) ((IMonthlyTrigger) v2Trigger).MonthsOfYear;
+                    return (MonthsOfTheYear)((IMonthlyTrigger)v2Trigger).MonthsOfYear;
                 }
                 return v1TriggerData.Data.monthlyDOW.Months;
             }
             set {
                 if (v2Trigger != null) {
-                    ((IMonthlyTrigger) v2Trigger).MonthsOfYear = (short) value;
-                }
-                else {
+                    ((IMonthlyTrigger)v2Trigger).MonthsOfYear = (short)value;
+                } else {
                     v1TriggerData.Data.monthlyDOW.Months = value;
                     if (v1Trigger != null) {
                         SetV1TriggerData();
-                    }
-                    else {
-                        unboundValues["MonthsOfYear"] = (short) value;
+                    } else {
+                        unboundValues["MonthsOfYear"] = (short)value;
                     }
                 }
             }
@@ -1637,21 +1594,19 @@ namespace CoApp.Toolkit.TaskService {
         public TimeSpan RandomDelay {
             get {
                 if (v2Trigger != null) {
-                    return Task.StringToTimeSpan(((IMonthlyTrigger) v2Trigger).RandomDelay);
+                    return Task.StringToTimeSpan(((IMonthlyTrigger)v2Trigger).RandomDelay);
                 }
                 if (v1Trigger != null) {
                     throw new NotV1SupportedException();
                 }
-                return (unboundValues.ContainsKey("RandomDelay") ? (TimeSpan) unboundValues["RandomDelay"] : TimeSpan.Zero);
+                return (unboundValues.ContainsKey("RandomDelay") ? (TimeSpan)unboundValues["RandomDelay"] : TimeSpan.Zero);
             }
             set {
                 if (v2Trigger != null) {
-                    ((IMonthlyTrigger) v2Trigger).RandomDelay = Task.TimeSpanToString(value);
-                }
-                else if (v1Trigger != null) {
+                    ((IMonthlyTrigger)v2Trigger).RandomDelay = Task.TimeSpanToString(value);
+                } else if (v1Trigger != null) {
                     throw new NotV1SupportedException();
-                }
-                else {
+                } else {
                     unboundValues["RandomDelay"] = value;
                 }
             }
@@ -1664,21 +1619,19 @@ namespace CoApp.Toolkit.TaskService {
         public bool RunOnLastDayOfMonth {
             get {
                 if (v2Trigger != null) {
-                    return ((IMonthlyTrigger) v2Trigger).RunOnLastDayOfMonth;
+                    return ((IMonthlyTrigger)v2Trigger).RunOnLastDayOfMonth;
                 }
                 if (v1Trigger != null) {
                     throw new NotV1SupportedException();
                 }
-                return (unboundValues.ContainsKey("RunOnLastDayOfMonth") ? (bool) unboundValues["RunOnLastDayOfMonth"] : false);
+                return (unboundValues.ContainsKey("RunOnLastDayOfMonth") ? (bool)unboundValues["RunOnLastDayOfMonth"] : false);
             }
             set {
                 if (v2Trigger != null) {
-                    ((IMonthlyTrigger) v2Trigger).RunOnLastDayOfMonth = value;
-                }
-                else if (v1Trigger != null) {
+                    ((IMonthlyTrigger)v2Trigger).RunOnLastDayOfMonth = value;
+                } else if (v1Trigger != null) {
                     throw new NotV1SupportedException();
-                }
-                else {
+                } else {
                     unboundValues["RunOnLastDayOfMonth"] = value;
                 }
             }
@@ -1689,8 +1642,12 @@ namespace CoApp.Toolkit.TaskService {
         /// </summary>
         /// <value> The delay duration. </value>
         TimeSpan ITriggerDelay.Delay {
-            get { return RandomDelay; }
-            set { RandomDelay = value; }
+            get {
+                return RandomDelay;
+            }
+            set {
+                RandomDelay = value;
+            }
         }
 
         /// <summary>
@@ -1701,12 +1658,11 @@ namespace CoApp.Toolkit.TaskService {
         public override void CopyProperties(Trigger sourceTrigger) {
             base.CopyProperties(sourceTrigger);
             if (sourceTrigger.GetType() == GetType()) {
-                DaysOfMonth = ((MonthlyTrigger) sourceTrigger).DaysOfMonth;
-                MonthsOfYear = ((MonthlyTrigger) sourceTrigger).MonthsOfYear;
+                DaysOfMonth = ((MonthlyTrigger)sourceTrigger).DaysOfMonth;
+                MonthsOfYear = ((MonthlyTrigger)sourceTrigger).MonthsOfYear;
                 try {
-                    RunOnLastDayOfMonth = ((MonthlyTrigger) sourceTrigger).RunOnLastDayOfMonth;
-                }
-                catch {
+                    RunOnLastDayOfMonth = ((MonthlyTrigger)sourceTrigger).RunOnLastDayOfMonth;
+                } catch {
                 }
             }
         }
@@ -1755,7 +1711,9 @@ namespace CoApp.Toolkit.TaskService {
         /// </summary>
         /// <returns> String describing the trigger. </returns>
         protected override string V2GetTriggerString() {
-            var days = string.Join(Resources.ListSeparator, Array.ConvertAll(DaysOfMonth, delegate(int i) { return i.ToString(); }));
+            var days = string.Join(Resources.ListSeparator, Array.ConvertAll(DaysOfMonth, delegate(int i) {
+                return i.ToString();
+            }));
             var months = TaskEnumGlobalizer.GetString(MonthsOfYear);
             return string.Format(Resources.TriggerMonthly1, StartBoundary, days, months);
         }
@@ -1783,21 +1741,19 @@ namespace CoApp.Toolkit.TaskService {
         public TimeSpan Delay {
             get {
                 if (v2Trigger != null) {
-                    return Task.StringToTimeSpan(((IRegistrationTrigger) v2Trigger).Delay);
+                    return Task.StringToTimeSpan(((IRegistrationTrigger)v2Trigger).Delay);
                 }
                 if (v1Trigger != null) {
                     throw new NotV1SupportedException();
                 }
-                return (unboundValues.ContainsKey("Delay") ? (TimeSpan) unboundValues["Delay"] : TimeSpan.Zero);
+                return (unboundValues.ContainsKey("Delay") ? (TimeSpan)unboundValues["Delay"] : TimeSpan.Zero);
             }
             set {
                 if (v2Trigger != null) {
-                    ((IRegistrationTrigger) v2Trigger).Delay = Task.TimeSpanToString(value);
-                }
-                else if (v1Trigger != null) {
+                    ((IRegistrationTrigger)v2Trigger).Delay = Task.TimeSpanToString(value);
+                } else if (v1Trigger != null) {
                     throw new NotV1SupportedException();
-                }
-                else {
+                } else {
                     unboundValues["Delay"] = value;
                 }
             }
@@ -1840,9 +1796,8 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Pattern != null) {
                     v2Pattern.Duration = Task.TimeSpanToString(value);
-                }
-                else {
-                    pTrigger.v1TriggerData.MinutesDuration = (uint) value.TotalMinutes;
+                } else {
+                    pTrigger.v1TriggerData.MinutesDuration = (uint)value.TotalMinutes;
                     Bind();
                 }
             }
@@ -1862,9 +1817,8 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Pattern != null) {
                     v2Pattern.Interval = Task.TimeSpanToString(value);
-                }
-                else {
-                    pTrigger.v1TriggerData.MinutesInterval = (uint) value.TotalMinutes;
+                } else {
+                    pTrigger.v1TriggerData.MinutesInterval = (uint)value.TotalMinutes;
                     Bind();
                 }
             }
@@ -1884,12 +1838,10 @@ namespace CoApp.Toolkit.TaskService {
             set {
                 if (v2Pattern != null) {
                     v2Pattern.StopAtDurationEnd = value;
-                }
-                else {
+                } else {
                     if (value) {
                         pTrigger.v1TriggerData.Flags |= TaskTriggerFlags.KillAtDurationEnd;
-                    }
-                    else {
+                    } else {
                         pTrigger.v1TriggerData.Flags &= ~TaskTriggerFlags.KillAtDurationEnd;
                     }
                     Bind();
@@ -1909,8 +1861,7 @@ namespace CoApp.Toolkit.TaskService {
         internal void Bind() {
             if (pTrigger.v1Trigger != null) {
                 pTrigger.v1Trigger.SetTrigger(ref pTrigger.v1TriggerData);
-            }
-            else if (pTrigger.v2Trigger != null) {
+            } else if (pTrigger.v2Trigger != null) {
                 if (pTrigger.v1TriggerData.MinutesInterval != 0) {
                     v2Pattern.Interval = string.Format("PT{0}M", pTrigger.v1TriggerData.MinutesInterval);
                 }
@@ -1953,15 +1904,14 @@ namespace CoApp.Toolkit.TaskService {
         public TimeSpan Delay {
             get {
                 if (v2Trigger != null) {
-                    return Task.StringToTimeSpan(((ISessionStateChangeTrigger) v2Trigger).Delay);
+                    return Task.StringToTimeSpan(((ISessionStateChangeTrigger)v2Trigger).Delay);
                 }
-                return (unboundValues.ContainsKey("Delay") ? (TimeSpan) unboundValues["Delay"] : TimeSpan.Zero);
+                return (unboundValues.ContainsKey("Delay") ? (TimeSpan)unboundValues["Delay"] : TimeSpan.Zero);
             }
             set {
                 if (v2Trigger != null) {
-                    ((ISessionStateChangeTrigger) v2Trigger).Delay = Task.TimeSpanToString(value);
-                }
-                else {
+                    ((ISessionStateChangeTrigger)v2Trigger).Delay = Task.TimeSpanToString(value);
+                } else {
                     unboundValues["Delay"] = value;
                 }
             }
@@ -1974,17 +1924,16 @@ namespace CoApp.Toolkit.TaskService {
         public TaskSessionStateChangeType StateChange {
             get {
                 if (v2Trigger != null) {
-                    return ((ISessionStateChangeTrigger) v2Trigger).StateChange;
+                    return ((ISessionStateChangeTrigger)v2Trigger).StateChange;
                 }
                 return (unboundValues.ContainsKey("StateChange")
-                    ? (TaskSessionStateChangeType) unboundValues["StateChange"]
+                    ? (TaskSessionStateChangeType)unboundValues["StateChange"]
                     : TaskSessionStateChangeType.ConsoleConnect);
             }
             set {
                 if (v2Trigger != null) {
-                    ((ISessionStateChangeTrigger) v2Trigger).StateChange = value;
-                }
-                else {
+                    ((ISessionStateChangeTrigger)v2Trigger).StateChange = value;
+                } else {
                     unboundValues["StateChange"] = value;
                 }
             }
@@ -1993,19 +1942,18 @@ namespace CoApp.Toolkit.TaskService {
         /// <summary>
         ///   Gets or sets the user for the Terminal Server session. When a session state change is detected for this user, a task is started.
         /// </summary>
-        [DefaultValue((string) null)]
+        [DefaultValue((string)null)]
         public string UserId {
             get {
                 if (v2Trigger != null) {
-                    return ((ISessionStateChangeTrigger) v2Trigger).UserId;
+                    return ((ISessionStateChangeTrigger)v2Trigger).UserId;
                 }
-                return (unboundValues.ContainsKey("UserId") ? (string) unboundValues["UserId"] : null);
+                return (unboundValues.ContainsKey("UserId") ? (string)unboundValues["UserId"] : null);
             }
             set {
                 if (v2Trigger != null) {
-                    ((ISessionStateChangeTrigger) v2Trigger).UserId = value;
-                }
-                else {
+                    ((ISessionStateChangeTrigger)v2Trigger).UserId = value;
+                } else {
                     unboundValues["UserId"] = value;
                 }
             }
@@ -2019,7 +1967,7 @@ namespace CoApp.Toolkit.TaskService {
         public override void CopyProperties(Trigger sourceTrigger) {
             base.CopyProperties(sourceTrigger);
             if (sourceTrigger.GetType() == GetType()) {
-                StateChange = ((SessionStateChangeTrigger) sourceTrigger).StateChange;
+                StateChange = ((SessionStateChangeTrigger)sourceTrigger).StateChange;
             }
         }
 
@@ -2058,7 +2006,7 @@ namespace CoApp.Toolkit.TaskService {
         }
 
         internal TimeTrigger(ITaskTrigger iTrigger)
-            : base(iTrigger, (V1.TaskTriggerType)V1.TaskTriggerType.RunOnce) {
+            : base(iTrigger, V1.TaskTriggerType.RunOnce) {
         }
 
         internal TimeTrigger(ITrigger iTrigger)
@@ -2072,21 +2020,19 @@ namespace CoApp.Toolkit.TaskService {
         public TimeSpan RandomDelay {
             get {
                 if (v2Trigger != null) {
-                    return Task.StringToTimeSpan(((ITimeTrigger) v2Trigger).RandomDelay);
+                    return Task.StringToTimeSpan(((ITimeTrigger)v2Trigger).RandomDelay);
                 }
                 if (v1Trigger != null) {
                     throw new NotV1SupportedException();
                 }
-                return (unboundValues.ContainsKey("RandomDelay") ? (TimeSpan) unboundValues["RandomDelay"] : TimeSpan.Zero);
+                return (unboundValues.ContainsKey("RandomDelay") ? (TimeSpan)unboundValues["RandomDelay"] : TimeSpan.Zero);
             }
             set {
                 if (v2Trigger != null) {
-                    ((ITimeTrigger) v2Trigger).RandomDelay = Task.TimeSpanToString(value);
-                }
-                else if (v1Trigger != null) {
+                    ((ITimeTrigger)v2Trigger).RandomDelay = Task.TimeSpanToString(value);
+                } else if (v1Trigger != null) {
                     throw new NotV1SupportedException();
-                }
-                else {
+                } else {
                     unboundValues["RandomDelay"] = value;
                 }
             }
@@ -2097,8 +2043,12 @@ namespace CoApp.Toolkit.TaskService {
         /// </summary>
         /// <value> The delay duration. </value>
         TimeSpan ITriggerDelay.Delay {
-            get { return RandomDelay; }
-            set { RandomDelay = value; }
+            get {
+                return RandomDelay;
+            }
+            set {
+                RandomDelay = value;
+            }
         }
 
         /// <summary>
@@ -2126,7 +2076,7 @@ namespace CoApp.Toolkit.TaskService {
         }
 
         internal WeeklyTrigger(ITaskTrigger iTrigger)
-            : base(iTrigger, (V1.TaskTriggerType)V1.TaskTriggerType.RunWeekly) {
+            : base(iTrigger, V1.TaskTriggerType.RunWeekly) {
         }
 
         internal WeeklyTrigger(ITrigger iTrigger)
@@ -2140,21 +2090,19 @@ namespace CoApp.Toolkit.TaskService {
         public DaysOfTheWeek DaysOfWeek {
             get {
                 if (v2Trigger != null) {
-                    return (DaysOfTheWeek) ((IWeeklyTrigger) v2Trigger).DaysOfWeek;
+                    return (DaysOfTheWeek)((IWeeklyTrigger)v2Trigger).DaysOfWeek;
                 }
                 return v1TriggerData.Data.weekly.DaysOfTheWeek;
             }
             set {
                 if (v2Trigger != null) {
-                    ((IWeeklyTrigger) v2Trigger).DaysOfWeek = (short) value;
-                }
-                else {
+                    ((IWeeklyTrigger)v2Trigger).DaysOfWeek = (short)value;
+                } else {
                     v1TriggerData.Data.weekly.DaysOfTheWeek = value;
                     if (v1Trigger != null) {
                         SetV1TriggerData();
-                    }
-                    else {
-                        unboundValues["DaysOfWeek"] = (short) value;
+                    } else {
+                        unboundValues["DaysOfWeek"] = (short)value;
                     }
                 }
             }
@@ -2167,21 +2115,19 @@ namespace CoApp.Toolkit.TaskService {
         public TimeSpan RandomDelay {
             get {
                 if (v2Trigger != null) {
-                    return Task.StringToTimeSpan(((IWeeklyTrigger) v2Trigger).RandomDelay);
+                    return Task.StringToTimeSpan(((IWeeklyTrigger)v2Trigger).RandomDelay);
                 }
                 if (v1Trigger != null) {
                     throw new NotV1SupportedException();
                 }
-                return (unboundValues.ContainsKey("RandomDelay") ? (TimeSpan) unboundValues["RandomDelay"] : TimeSpan.Zero);
+                return (unboundValues.ContainsKey("RandomDelay") ? (TimeSpan)unboundValues["RandomDelay"] : TimeSpan.Zero);
             }
             set {
                 if (v2Trigger != null) {
-                    ((IWeeklyTrigger) v2Trigger).RandomDelay = Task.TimeSpanToString(value);
-                }
-                else if (v1Trigger != null) {
+                    ((IWeeklyTrigger)v2Trigger).RandomDelay = Task.TimeSpanToString(value);
+                } else if (v1Trigger != null) {
                     throw new NotV1SupportedException();
-                }
-                else {
+                } else {
                     unboundValues["RandomDelay"] = value;
                 }
             }
@@ -2194,20 +2140,18 @@ namespace CoApp.Toolkit.TaskService {
         public short WeeksInterval {
             get {
                 if (v2Trigger != null) {
-                    return ((IWeeklyTrigger) v2Trigger).WeeksInterval;
+                    return ((IWeeklyTrigger)v2Trigger).WeeksInterval;
                 }
-                return (short) v1TriggerData.Data.weekly.WeeksInterval;
+                return (short)v1TriggerData.Data.weekly.WeeksInterval;
             }
             set {
                 if (v2Trigger != null) {
-                    ((IWeeklyTrigger) v2Trigger).WeeksInterval = value;
-                }
-                else {
-                    v1TriggerData.Data.weekly.WeeksInterval = (ushort) value;
+                    ((IWeeklyTrigger)v2Trigger).WeeksInterval = value;
+                } else {
+                    v1TriggerData.Data.weekly.WeeksInterval = (ushort)value;
                     if (v1Trigger != null) {
                         SetV1TriggerData();
-                    }
-                    else {
+                    } else {
                         unboundValues["WeeksInterval"] = value;
                     }
                 }
@@ -2219,8 +2163,12 @@ namespace CoApp.Toolkit.TaskService {
         /// </summary>
         /// <value> The delay duration. </value>
         TimeSpan ITriggerDelay.Delay {
-            get { return RandomDelay; }
-            set { RandomDelay = value; }
+            get {
+                return RandomDelay;
+            }
+            set {
+                RandomDelay = value;
+            }
         }
 
         /// <summary>
@@ -2231,8 +2179,8 @@ namespace CoApp.Toolkit.TaskService {
         public override void CopyProperties(Trigger sourceTrigger) {
             base.CopyProperties(sourceTrigger);
             if (sourceTrigger.GetType() == GetType()) {
-                DaysOfWeek = ((WeeklyTrigger) sourceTrigger).DaysOfWeek;
-                WeeksInterval = ((WeeklyTrigger) sourceTrigger).WeeksInterval;
+                DaysOfWeek = ((WeeklyTrigger)sourceTrigger).DaysOfWeek;
+                WeeksInterval = ((WeeklyTrigger)sourceTrigger).WeeksInterval;
             }
         }
 

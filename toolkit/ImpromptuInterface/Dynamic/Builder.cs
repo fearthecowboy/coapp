@@ -13,45 +13,36 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-namespace CoApp.Toolkit.ImpromptuInterface.Dynamic
-{
+namespace CoApp.Toolkit.ImpromptuInterface.Dynamic {
     using System;
     using System.Linq;
 
     /// <summary>
-    /// Builds Objects with a Fluent Syntax
+    ///   Builds Objects with a Fluent Syntax
     /// </summary>
-    public static class Builder
-    {
+    public static class Builder {
         /// <summary>
-        /// New Builder
+        ///   New Builder
         /// </summary>
-        /// <returns></returns>
-        public static IImpromptuBuilder New()
-        {
+        /// <returns> </returns>
+        public static IImpromptuBuilder New() {
             return new ImpromptuBuilder<ImpromptuChainableDictionary>();
         }
 
-       
-
         /// <summary>
-        /// New Builder
+        ///   New Builder
         /// </summary>
-        /// <typeparam name="TObjectPrototype">The type of the object prototype.</typeparam>
-        /// <returns></returns>
-        public static IImpromptuBuilder New<TObjectPrototype>() where TObjectPrototype : new()
-        {
+        /// <typeparam name="TObjectPrototype"> The type of the object prototype. </typeparam>
+        /// <returns> </returns>
+        public static IImpromptuBuilder New<TObjectPrototype>() where TObjectPrototype : new() {
             return new ImpromptuBuilder<TObjectPrototype>();
         }
-
-        
     }
 
     /// <summary>
-    /// Syntax for a quick new inline prototype object
+    ///   Syntax for a quick new inline prototype object
     /// </summary>
-    public static class Build
-    {
+    public static class Build {
         private static readonly dynamic _objectBuilder = new ImpromptuBuilder<ImpromptuChainableDictionary>().Object;
 
         private static readonly dynamic _listBuilder =
@@ -59,172 +50,150 @@ namespace CoApp.Toolkit.ImpromptuInterface.Dynamic
                 List();
 
         /// <summary>
-        /// Gets the new object builder.
+        ///   Gets the new object builder.
         /// </summary>
-        /// <value>The new object.</value>
-        public static dynamic NewObject
-        {
-            get
-            {
+        /// <value> The new object. </value>
+        public static dynamic NewObject {
+            get {
                 return _objectBuilder;
             }
         }
 
         /// <summary>
-        /// Gets the new list builder.
+        ///   Gets the new list builder.
         /// </summary>
-        /// <value>The new list.</value>
-        public static dynamic NewList
-        {
-            get
-            {
+        /// <value> The new list. </value>
+        public static dynamic NewList {
+            get {
                 return _listBuilder;
             }
         }
     }
 
     /// <summary>
-    /// Syntax for a quick inline object property setup
+    ///   Syntax for a quick inline object property setup
     /// </summary>
-    /// <typeparam name="TObjectPrototype">The type of the object prototype.</typeparam>
-    public static class Build<TObjectPrototype> where TObjectPrototype : new()
-    {
-// ReSharper disable StaticFieldInGenericType
+    /// <typeparam name="TObjectPrototype"> The type of the object prototype. </typeparam>
+    public static class Build<TObjectPrototype> where TObjectPrototype : new() {
+        // ReSharper disable StaticFieldInGenericType
         private static readonly dynamic _typedBuilder = new ImpromptuBuilder<TObjectPrototype>().Object;
-// ReSharper restore StaticFieldInGenericType
+        // ReSharper restore StaticFieldInGenericType
 
-// ReSharper disable StaticFieldInGenericType
+        // ReSharper disable StaticFieldInGenericType
         private static readonly dynamic _typedListBuilder = Impromptu.Curry(new ImpromptuBuilder<TObjectPrototype>().ListSetup<TObjectPrototype>()).List();
-// ReSharper restore StaticFieldInGenericType
+        // ReSharper restore StaticFieldInGenericType
 
         /// <summary>
-        /// Gets the new object builder.
+        ///   Gets the new object builder.
         /// </summary>
-        /// <value>The new.</value>
-        public static dynamic NewObject
-        {
-            get
-            {
+        /// <value> The new. </value>
+        public static dynamic NewObject {
+            get {
                 return _typedBuilder;
             }
         }
 
         /// <summary>
-        /// Gets the new list builder.
+        ///   Gets the new list builder.
         /// </summary>
-        /// <value>The new list.</value>
-        public static dynamic NewList
-        {
-            get { return _typedListBuilder; }
+        /// <value> The new list. </value>
+        public static dynamic NewList {
+            get {
+                return _typedListBuilder;
+            }
         }
     }
 
     /// <summary>
-    /// Encapsulates an Activator
+    ///   Encapsulates an Activator
     /// </summary>
-    public class Activate
-    {
+    public class Activate {
         /// <summary>
-        /// Initializes a new instance of the <see cref="Activate"/> class.
+        ///   Initializes a new instance of the <see cref="Activate" /> class.
         /// </summary>
-        /// <param name="type">The type.</param>
-        /// <param name="args">The args.</param>
-        public Activate(Type type, params object[] args)
-        {
+        /// <param name="type"> The type. </param>
+        /// <param name="args"> The args. </param>
+        public Activate(Type type, params object[] args) {
             Type = type;
 
             var tArg = args.OfType<Func<object[]>>().SingleOrDefault();
-            if (tArg != null)
+            if (tArg != null) {
                 Arguments = tArg;
-            else
+            } else {
                 Arguments = () => args;
-            
+            }
         }
 
-
         /// <summary>
-        /// Initializes a new instance of the <see cref="Activate"/> class. With Factory Function
+        ///   Initializes a new instance of the <see cref="Activate" /> class. With Factory Function
         /// </summary>
-        /// <param name="type">The type.</param>
-        /// <param name="args">The args.</param>
-        public Activate(Type type, Func<object[]> args)
-        {
+        /// <param name="type"> The type. </param>
+        /// <param name="args"> The args. </param>
+        public Activate(Type type, Func<object[]> args) {
             Type = type;
             Arguments = args;
         }
+
         /// <summary>
-        /// Gets or sets the constructor type.
+        ///   Gets or sets the constructor type.
         /// </summary>
-        /// <value>The type.</value>
+        /// <value> The type. </value>
         public virtual Type Type { get; private set; }
 
         /// <summary>
-        /// Gets or sets the constructor arguments.
+        ///   Gets or sets the constructor arguments.
         /// </summary>
-        /// <value>The arguments.</value>
-        public virtual Func<object[]> Arguments
-        {
-            get; private set;
-        }
+        /// <value> The arguments. </value>
+        public virtual Func<object[]> Arguments { get; private set; }
 
         /// <summary>
-        /// Creates this instance.
+        ///   Creates this instance.
         /// </summary>
-        /// <returns></returns>
-        public virtual dynamic Create()
-        {
+        /// <returns> </returns>
+        public virtual dynamic Create() {
             object[] tArgs = Arguments();
             return Impromptu.InvokeConstructor(Type, tArgs);
         }
     }
 
     /// <summary>
-    /// Encapsulates an Activator
+    ///   Encapsulates an Activator
     /// </summary>
-    /// <typeparam name="TObjectPrototype">The type of the object prototype.</typeparam>
-    public class Activate<TObjectPrototype> : Activate
-    {
+    /// <typeparam name="TObjectPrototype"> The type of the object prototype. </typeparam>
+    public class Activate<TObjectPrototype> : Activate {
         /// <summary>
-        /// Initializes a new instance of the <see cref="Activate&lt;TObjectPrototype&gt;"/> class.
+        ///   Initializes a new instance of the <see cref="Activate&lt;TObjectPrototype&gt;" /> class.
         /// </summary>
-        /// <param name="args">The args.</param>
-        public Activate(params object[] args) : base(typeof(TObjectPrototype), args)
-        {
+        /// <param name="args"> The args. </param>
+        public Activate(params object[] args) : base(typeof (TObjectPrototype), args) {
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Activate&lt;TObjectPrototype&gt;"/> class. With Factory Function
+        ///   Initializes a new instance of the <see cref="Activate&lt;TObjectPrototype&gt;" /> class. With Factory Function
         /// </summary>
-        /// <param name="args">The args.</param>
+        /// <param name="args"> The args. </param>
         public Activate(Func<object[]> args)
-            : base(typeof(TObjectPrototype), args)
-        {
+            : base(typeof (TObjectPrototype), args) {
         }
 
         /// <summary>
-        /// Creates this instance.
+        ///   Creates this instance.
         /// </summary>
-        /// <returns></returns>
-        public override dynamic Create()
-        {
+        /// <returns> </returns>
+        public override dynamic Create() {
             var tArgs = Arguments();
 
-            if(tArgs.Any())
+            if (tArgs.Any()) {
                 return base.Create();
-
+            }
 
             TObjectPrototype tObjectPrototype;
-            try
-            {
-                tObjectPrototype = Activator.CreateInstance<TObjectPrototype>();//Try first because it's really fast, but won't work with optional parameters
-            }
-            catch (MissingMethodException)
-            {
-                tObjectPrototype = Impromptu.InvokeConstructor(typeof(TObjectPrototype));
+            try {
+                tObjectPrototype = Activator.CreateInstance<TObjectPrototype>(); //Try first because it's really fast, but won't work with optional parameters
+            } catch (MissingMethodException) {
+                tObjectPrototype = Impromptu.InvokeConstructor(typeof (TObjectPrototype));
             }
             return tObjectPrototype;
         }
     }
-
-
 }

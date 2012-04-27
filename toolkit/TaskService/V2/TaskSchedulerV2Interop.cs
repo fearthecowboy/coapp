@@ -30,7 +30,6 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR 
 // OTHER DEALINGS IN THE SOFTWARE.
 
-
 namespace CoApp.Toolkit.TaskService.V2 {
     using System;
     using System.Collections;
@@ -45,7 +44,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         Hidden = 1
     }
 
-    [ComImport, Guid("BAE54997-48B1-4CBE-9965-D6BE263EBEA4"), TypeLibType((short) 0x10c0), SuppressUnmanagedCodeSecurity]
+    [ComImport, Guid("BAE54997-48B1-4CBE-9965-D6BE263EBEA4"), TypeLibType((short)0x10c0), SuppressUnmanagedCodeSecurity]
     internal interface IAction {
         [DispId(1)]
         string Id { [return: MarshalAs(UnmanagedType.BStr)]
@@ -59,7 +58,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         get; }
     }
 
-    [ComImport, Guid("02820E19-7B98-4ED2-B2E8-FDCCCEFF619B"), TypeLibType((short) 0x10c0), SuppressUnmanagedCodeSecurity]
+    [ComImport, Guid("02820E19-7B98-4ED2-B2E8-FDCCCEFF619B"), TypeLibType((short)0x10c0), SuppressUnmanagedCodeSecurity]
     internal interface IActionCollection : IEnumerable {
         [DispId(1)]
         int Count { [MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime), DispId(1)]
@@ -99,7 +98,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         set; }
     }
 
-    [ComImport, Guid("2A9C35DA-D357-41F4-BBC1-207AC1B1F3CB"), TypeLibType((short) 0x10c0), SuppressUnmanagedCodeSecurity]
+    [ComImport, Guid("2A9C35DA-D357-41F4-BBC1-207AC1B1F3CB"), TypeLibType((short)0x10c0), SuppressUnmanagedCodeSecurity]
     internal interface IBootTrigger : ITrigger {
         [DispId(1)]
         new TaskTriggerType Type { [MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime), DispId(1)]
@@ -154,7 +153,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         set; }
     }
 
-    [ComImport, Guid("6D2FD252-75C5-4F66-90BA-2A7D8CC3039F"), TypeLibType((short) 0x10c0), SuppressUnmanagedCodeSecurity]
+    [ComImport, Guid("6D2FD252-75C5-4F66-90BA-2A7D8CC3039F"), TypeLibType((short)0x10c0), SuppressUnmanagedCodeSecurity]
     internal interface IComHandlerAction : IAction {
         [DispId(1)]
         new string Id { [return: MarshalAs(UnmanagedType.BStr)]
@@ -182,7 +181,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         set; }
     }
 
-    [ComImport, TypeLibType((short) 0x10c0), Guid("126C5CD8-B288-41D5-8DBF-E491446ADC5C"), SuppressUnmanagedCodeSecurity]
+    [ComImport, TypeLibType((short)0x10c0), Guid("126C5CD8-B288-41D5-8DBF-E491446ADC5C"), SuppressUnmanagedCodeSecurity]
     internal interface IDailyTrigger : ITrigger {
         [DispId(1)]
         new TaskTriggerType Type { [MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime), DispId(1)]
@@ -243,7 +242,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         set; }
     }
 
-    [ComImport, Guid("10F62C64-7E16-4314-A0C2-0C3683F99D40"), TypeLibType((short) 0x10c0), SuppressUnmanagedCodeSecurity]
+    [ComImport, Guid("10F62C64-7E16-4314-A0C2-0C3683F99D40"), TypeLibType((short)0x10c0), SuppressUnmanagedCodeSecurity]
     internal interface IEmailAction : IAction {
         [DispId(1)]
         new string Id { [return: MarshalAs(UnmanagedType.BStr)]
@@ -327,7 +326,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         set; }
     }
 
-    [ComImport, TypeLibType((short) 0x10c0), Guid("D45B0167-9653-4EEF-B94F-0732CA7AF251"), SuppressUnmanagedCodeSecurity]
+    [ComImport, TypeLibType((short)0x10c0), Guid("D45B0167-9653-4EEF-B94F-0732CA7AF251"), SuppressUnmanagedCodeSecurity]
     internal interface IEventTrigger : ITrigger {
         [DispId(1)]
         new TaskTriggerType Type { [MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime), DispId(1)]
@@ -396,7 +395,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         set; }
     }
 
-    [ComImport, Guid("4C3D624D-FD6B-49A3-B9B7-09CB3CD3F047"), TypeLibType((short) 0x10c0), SuppressUnmanagedCodeSecurity]
+    [ComImport, Guid("4C3D624D-FD6B-49A3-B9B7-09CB3CD3F047"), TypeLibType((short)0x10c0), SuppressUnmanagedCodeSecurity]
     internal interface IExecAction : IAction {
         [DispId(1)]
         new string Id { [return: MarshalAs(UnmanagedType.BStr)]
@@ -431,7 +430,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         set; }
     }
 
-    [ComImport, TypeLibType((short) 0x10c0), Guid("84594461-0053-4342-A8FD-088FABF11F32"), SuppressUnmanagedCodeSecurity]
+    [ComImport, TypeLibType((short)0x10c0), Guid("84594461-0053-4342-A8FD-088FABF11F32"), SuppressUnmanagedCodeSecurity]
     internal interface IIdleSettings {
         [DispId(1)]
         string IdleDuration { [return: MarshalAs(UnmanagedType.BStr)]
@@ -460,7 +459,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         set; }
     }
 
-    [ComImport, Guid("D537D2B0-9FB3-4D34-9739-1FF5CE7B1EF3"), TypeLibType((short) 0x10c0), SuppressUnmanagedCodeSecurity]
+    [ComImport, Guid("D537D2B0-9FB3-4D34-9739-1FF5CE7B1EF3"), TypeLibType((short)0x10c0), SuppressUnmanagedCodeSecurity]
     internal interface IIdleTrigger : ITrigger {
         [DispId(1)]
         new TaskTriggerType Type { [MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime), DispId(1)]
@@ -508,7 +507,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         set; }
     }
 
-    [ComImport, Guid("72DADE38-FAE4-4B3E-BAF4-5D009AF02B1C"), TypeLibType((short) 0x10c0), SuppressUnmanagedCodeSecurity]
+    [ComImport, Guid("72DADE38-FAE4-4B3E-BAF4-5D009AF02B1C"), TypeLibType((short)0x10c0), SuppressUnmanagedCodeSecurity]
     internal interface ILogonTrigger : ITrigger {
         [DispId(1)]
         new TaskTriggerType Type { [MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime), DispId(1)]
@@ -570,7 +569,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         set; }
     }
 
-    [ComImport, TypeLibType((short) 0x10c0), Guid("77D025A3-90FA-43AA-B52E-CDA5499B946A"), SuppressUnmanagedCodeSecurity]
+    [ComImport, TypeLibType((short)0x10c0), Guid("77D025A3-90FA-43AA-B52E-CDA5499B946A"), SuppressUnmanagedCodeSecurity]
     internal interface IMonthlyDOWTrigger : ITrigger {
         [DispId(1)]
         new TaskTriggerType Type { [MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime), DispId(1)]
@@ -649,7 +648,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         set; }
     }
 
-    [ComImport, Guid("97C45EF1-6B02-4A1A-9C0E-1EBFBA1500AC"), TypeLibType((short) 0x10c0), SuppressUnmanagedCodeSecurity]
+    [ComImport, Guid("97C45EF1-6B02-4A1A-9C0E-1EBFBA1500AC"), TypeLibType((short)0x10c0), SuppressUnmanagedCodeSecurity]
     internal interface IMonthlyTrigger : ITrigger {
         [DispId(1)]
         new TaskTriggerType Type { [MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime), DispId(1)]
@@ -722,7 +721,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         set; }
     }
 
-    [ComImport, TypeLibType((short) 0x10c0), Guid("9F7DEA84-C30B-4245-80B6-00E9F646F1B4"), SuppressUnmanagedCodeSecurity]
+    [ComImport, TypeLibType((short)0x10c0), Guid("9F7DEA84-C30B-4245-80B6-00E9F646F1B4"), SuppressUnmanagedCodeSecurity]
     internal interface INetworkSettings {
         [DispId(1)]
         string Name { [return: MarshalAs(UnmanagedType.BStr)]
@@ -739,7 +738,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         set; }
     }
 
-    [ComImport, TypeLibType((short) 0x10c0), Guid("D98D51E5-C9B4-496A-A9C1-18980261CF0F"), SuppressUnmanagedCodeSecurity]
+    [ComImport, TypeLibType((short)0x10c0), Guid("D98D51E5-C9B4-496A-A9C1-18980261CF0F"), SuppressUnmanagedCodeSecurity]
     internal interface IPrincipal {
         [DispId(1)]
         string Id { [return: MarshalAs(UnmanagedType.BStr)]
@@ -782,7 +781,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         set; }
     }
 
-    [ComImport, TypeLibType((short) 0x10c0), Guid("248919AE-E345-4A6D-8AEB-E0D3165C904E"), SuppressUnmanagedCodeSecurity]
+    [ComImport, TypeLibType((short)0x10c0), Guid("248919AE-E345-4A6D-8AEB-E0D3165C904E"), SuppressUnmanagedCodeSecurity]
     internal interface IPrincipal2 {
         [DispId(7)]
         TaskProcessTokenSidType ProcessTokenSidType { [MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime), DispId(1)]
@@ -801,7 +800,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         void AddRequiredPrivilege([In, MarshalAs(UnmanagedType.BStr)] string privilege);
     }
 
-    [ComImport, TypeLibType((short) 0x10c0), Guid("9C86F320-DEE3-4DD1-B972-A303F26B061E"), ComConversionLoss, DefaultMember("Path"),
+    [ComImport, TypeLibType((short)0x10c0), Guid("9C86F320-DEE3-4DD1-B972-A303F26B061E"), ComConversionLoss, DefaultMember("Path"),
      SuppressUnmanagedCodeSecurity]
     internal interface IRegisteredTask {
         [DispId(1)]
@@ -872,11 +871,11 @@ namespace CoApp.Toolkit.TaskService.V2 {
         [MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime), DispId(0x11)]
         void Stop(int flags);
 
-        [MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime), TypeLibFunc((short) 0x41), DispId(0x60020011)]
+        [MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime), TypeLibFunc((short)0x41), DispId(0x60020011)]
         void GetRunTimes([In] ref SystemTime pstStart, [In] ref SystemTime pstEnd, [In, Out] ref uint pCount, [In, Out] ref IntPtr pRunTimes);
     }
 
-    [ComImport, Guid("86627EB4-42A7-41E4-A4D9-AC33A72F2D52"), TypeLibType((short) 0x10c0), SuppressUnmanagedCodeSecurity]
+    [ComImport, Guid("86627EB4-42A7-41E4-A4D9-AC33A72F2D52"), TypeLibType((short)0x10c0), SuppressUnmanagedCodeSecurity]
     internal interface IRegisteredTaskCollection : IEnumerable {
         [DispId(0x60020000)]
         int Count { [MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime), DispId(0x60020000)]
@@ -892,7 +891,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         new IEnumerator GetEnumerator();
     }
 
-    [ComImport, TypeLibType((short) 0x10c0), Guid("416D8B73-CB41-4EA1-805C-9BE9A5AC4A74"), SuppressUnmanagedCodeSecurity]
+    [ComImport, TypeLibType((short)0x10c0), Guid("416D8B73-CB41-4EA1-805C-9BE9A5AC4A74"), SuppressUnmanagedCodeSecurity]
     internal interface IRegistrationInfo {
         [DispId(1)]
         string Description { [return: MarshalAs(UnmanagedType.BStr)]
@@ -958,7 +957,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         set; }
     }
 
-    [ComImport, Guid("4C8FEC3A-C218-4E0C-B23D-629024DB91A2"), TypeLibType((short) 0x10c0), SuppressUnmanagedCodeSecurity]
+    [ComImport, Guid("4C8FEC3A-C218-4E0C-B23D-629024DB91A2"), TypeLibType((short)0x10c0), SuppressUnmanagedCodeSecurity]
     internal interface IRegistrationTrigger : ITrigger {
         [DispId(1)]
         new TaskTriggerType Type { [MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime), DispId(1)]
@@ -1013,7 +1012,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         set; }
     }
 
-    [ComImport, Guid("7FB9ACF1-26BE-400E-85B5-294B9C75DFD6"), TypeLibType((short) 0x10c0), SuppressUnmanagedCodeSecurity]
+    [ComImport, Guid("7FB9ACF1-26BE-400E-85B5-294B9C75DFD6"), TypeLibType((short)0x10c0), SuppressUnmanagedCodeSecurity]
     internal interface IRepetitionPattern {
         [DispId(1)]
         string Interval { [return: MarshalAs(UnmanagedType.BStr)]
@@ -1036,7 +1035,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         set; }
     }
 
-    [ComImport, TypeLibType((short) 0x10c0), DefaultMember("InstanceGuid"), Guid("653758FB-7B9A-4F1E-A471-BEEB8E9B834E"),
+    [ComImport, TypeLibType((short)0x10c0), DefaultMember("InstanceGuid"), Guid("653758FB-7B9A-4F1E-A471-BEEB8E9B834E"),
      SuppressUnmanagedCodeSecurity]
     internal interface IRunningTask {
         [DispId(1)]
@@ -1074,7 +1073,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         get; }
     }
 
-    [ComImport, Guid("6A67614B-6828-4FEC-AA54-6D52E8F1F2DB"), TypeLibType((short) 0x10c0), SuppressUnmanagedCodeSecurity]
+    [ComImport, Guid("6A67614B-6828-4FEC-AA54-6D52E8F1F2DB"), TypeLibType((short)0x10c0), SuppressUnmanagedCodeSecurity]
     internal interface IRunningTaskCollection : IEnumerable {
         [DispId(1)]
         int Count { [MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime), DispId(1)]
@@ -1090,7 +1089,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         new IEnumerator GetEnumerator();
     }
 
-    [ComImport, TypeLibType((short) 0x10c0), Guid("754DA71B-4385-4475-9DD9-598294FA3641"), SuppressUnmanagedCodeSecurity]
+    [ComImport, TypeLibType((short)0x10c0), Guid("754DA71B-4385-4475-9DD9-598294FA3641"), SuppressUnmanagedCodeSecurity]
     internal interface ISessionStateChangeTrigger : ITrigger {
         [DispId(1)]
         new TaskTriggerType Type { [MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime), DispId(1)]
@@ -1158,7 +1157,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         set; }
     }
 
-    [ComImport, Guid("505E9E68-AF89-46B8-A30F-56162A83D537"), TypeLibType((short) 0x10c0), SuppressUnmanagedCodeSecurity]
+    [ComImport, Guid("505E9E68-AF89-46B8-A30F-56162A83D537"), TypeLibType((short)0x10c0), SuppressUnmanagedCodeSecurity]
     internal interface IShowMessageAction : IAction {
         [DispId(1)]
         new string Id { [return: MarshalAs(UnmanagedType.BStr)]
@@ -1186,7 +1185,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         set; }
     }
 
-    [ComImport, Guid("F5BC8FC5-536D-4F77-B852-FBC1356FDEB6"), TypeLibType((short) 0x10c0), SuppressUnmanagedCodeSecurity]
+    [ComImport, Guid("F5BC8FC5-536D-4F77-B852-FBC1356FDEB6"), TypeLibType((short)0x10c0), SuppressUnmanagedCodeSecurity]
     internal interface ITaskDefinition {
         [DispId(1)]
         IRegistrationInfo RegistrationInfo { [return: MarshalAs(UnmanagedType.Interface)]
@@ -1238,7 +1237,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         set; }
     }
 
-    [ComImport, Guid("8CFAC062-A080-4C15-9A88-AA7C2AF80DFC"), DefaultMember("Path"), TypeLibType((short) 0x10c0),
+    [ComImport, Guid("8CFAC062-A080-4C15-9A88-AA7C2AF80DFC"), DefaultMember("Path"), TypeLibType((short)0x10c0),
      SuppressUnmanagedCodeSecurity]
     internal interface ITaskFolder {
         [DispId(1)]
@@ -1299,7 +1298,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         void SetSecurityDescriptor([In, MarshalAs(UnmanagedType.BStr)] string sddl, [In] int flags);
     }
 
-    [ComImport, TypeLibType((short) 0x10c0), Guid("79184A66-8664-423F-97F1-637356A5D812"), SuppressUnmanagedCodeSecurity]
+    [ComImport, TypeLibType((short)0x10c0), Guid("79184A66-8664-423F-97F1-637356A5D812"), SuppressUnmanagedCodeSecurity]
     internal interface ITaskFolderCollection : IEnumerable {
         [DispId(0x60020000)]
         int Count { [MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime), DispId(0x60020000)]
@@ -1315,7 +1314,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         new IEnumerator GetEnumerator();
     }
 
-    [ComImport, TypeLibType((short) 0x10c0), Guid("B4EF826B-63C3-46E4-A504-EF69E4F7EA4D"), SuppressUnmanagedCodeSecurity]
+    [ComImport, TypeLibType((short)0x10c0), Guid("B4EF826B-63C3-46E4-A504-EF69E4F7EA4D"), SuppressUnmanagedCodeSecurity]
     internal interface ITaskNamedValueCollection : IEnumerable {
         [DispId(1)]
         int Count { [MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime), DispId(1)]
@@ -1341,7 +1340,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         void Clear();
     }
 
-    [ComImport, TypeLibType((short) 0x10c0), Guid("39038068-2B46-4AFD-8662-7BB6F868D221"), DefaultMember("Name"),
+    [ComImport, TypeLibType((short)0x10c0), Guid("39038068-2B46-4AFD-8662-7BB6F868D221"), DefaultMember("Name"),
      SuppressUnmanagedCodeSecurity]
     internal interface ITaskNamedValuePair {
         [DispId(0)]
@@ -1359,7 +1358,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         set; }
     }
 
-    [ComImport, TypeLibType((short) 0x10c0), DefaultMember("TargetServer"), Guid("2FABA4C7-4DA9-4013-9697-20CC3FD40F85"),
+    [ComImport, TypeLibType((short)0x10c0), DefaultMember("TargetServer"), Guid("2FABA4C7-4DA9-4013-9697-20CC3FD40F85"),
      SuppressUnmanagedCodeSecurity]
     internal interface ITaskService {
         [return: MarshalAs(UnmanagedType.Interface)]
@@ -1407,8 +1406,8 @@ namespace CoApp.Toolkit.TaskService.V2 {
     internal interface TaskScheduler : ITaskService {
     }
 
-    [ComImport, DefaultMember("TargetServer"), Guid("0F87369F-A4E5-4CFC-BD3E-73E6154572DD"), TypeLibType((short) 2),
-     ClassInterface((short) 0), SuppressUnmanagedCodeSecurity]
+    [ComImport, DefaultMember("TargetServer"), Guid("0F87369F-A4E5-4CFC-BD3E-73E6154572DD"), TypeLibType((short)2),
+     ClassInterface((short)0), SuppressUnmanagedCodeSecurity]
     internal class TaskSchedulerClass : TaskScheduler {
         // Methods
         [MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime), DispId(4)]
@@ -1453,7 +1452,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         get; }
     }
 
-    [ComImport, TypeLibType((short) 0x10c0), Guid("8FD4711D-2D02-4C8C-87E3-EFF699DE127E"), SuppressUnmanagedCodeSecurity]
+    [ComImport, TypeLibType((short)0x10c0), Guid("8FD4711D-2D02-4C8C-87E3-EFF699DE127E"), SuppressUnmanagedCodeSecurity]
     internal interface ITaskSettings {
         [DispId(3)]
         bool AllowDemandStart { [MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime), DispId(3)]
@@ -1582,7 +1581,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         set; }
     }
 
-    [ComImport, TypeLibType((short) 0x10c0), Guid("2C05C3F0-6EED-4c05-A15F-ED7D7A98A369"), SuppressUnmanagedCodeSecurity]
+    [ComImport, TypeLibType((short)0x10c0), Guid("2C05C3F0-6EED-4c05-A15F-ED7D7A98A369"), SuppressUnmanagedCodeSecurity]
     internal interface ITaskSettings2 {
         [DispId(30)]
         bool DisallowStartOnRemoteAppSession { [MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime), DispId(30)]
@@ -1597,7 +1596,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         set; }
     }
 
-    [ComImport, Guid("3E4C9351-D966-4B8B-BB87-CEBA68BB0107"), InterfaceType((short) 1), SuppressUnmanagedCodeSecurity]
+    [ComImport, Guid("3E4C9351-D966-4B8B-BB87-CEBA68BB0107"), InterfaceType((short)1), SuppressUnmanagedCodeSecurity]
     internal interface ITaskVariables {
         [return: MarshalAs(UnmanagedType.BStr)]
         [MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
@@ -1611,7 +1610,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         string GetContext();
     }
 
-    [ComImport, TypeLibType((short) 0x10c0), Guid("B45747E0-EBA7-4276-9F29-85C5BB300006"), SuppressUnmanagedCodeSecurity]
+    [ComImport, TypeLibType((short)0x10c0), Guid("B45747E0-EBA7-4276-9F29-85C5BB300006"), SuppressUnmanagedCodeSecurity]
     internal interface ITimeTrigger : ITrigger {
         [DispId(1)]
         new TaskTriggerType Type { [MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime), DispId(1)]
@@ -1666,7 +1665,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         set; }
     }
 
-    [ComImport, Guid("09941815-EA89-4B5B-89E0-2A773801FAC3"), TypeLibType((short) 0x10c0), SuppressUnmanagedCodeSecurity]
+    [ComImport, Guid("09941815-EA89-4B5B-89E0-2A773801FAC3"), TypeLibType((short)0x10c0), SuppressUnmanagedCodeSecurity]
     internal interface ITrigger {
         [DispId(1)]
         TaskTriggerType Type { [MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime), DispId(1)]
@@ -1714,7 +1713,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         set; }
     }
 
-    [ComImport, Guid("85DF5081-1B24-4F32-878A-D9D14DF4CB77"), TypeLibType((short) 0x10c0), SuppressUnmanagedCodeSecurity]
+    [ComImport, Guid("85DF5081-1B24-4F32-878A-D9D14DF4CB77"), TypeLibType((short)0x10c0), SuppressUnmanagedCodeSecurity]
     internal interface ITriggerCollection : IEnumerable {
         [DispId(1)]
         int Count { [MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime), DispId(1)]
@@ -1740,7 +1739,7 @@ namespace CoApp.Toolkit.TaskService.V2 {
         void Clear();
     }
 
-    [ComImport, TypeLibType((short) 0x10c0), Guid("5038FC98-82FF-436D-8728-A512A57C9DC1"), SuppressUnmanagedCodeSecurity]
+    [ComImport, TypeLibType((short)0x10c0), Guid("5038FC98-82FF-436D-8728-A512A57C9DC1"), SuppressUnmanagedCodeSecurity]
     internal interface IWeeklyTrigger : ITrigger {
         [DispId(1)]
         new TaskTriggerType Type { [MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime), DispId(1)]
@@ -1807,4 +1806,3 @@ namespace CoApp.Toolkit.TaskService.V2 {
         set; }
     }
 }
-

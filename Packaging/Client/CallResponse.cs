@@ -27,7 +27,7 @@ namespace CoApp.Packaging.Client {
     using Toolkit.Win32;
 
     public class CallResponse : IPackageManagerResponse {
-        private static readonly IPackageManager PM = PackageManager.RemoteService;
+        private static readonly IPackageManager PM = RemoteCallDispatcher.RemoteService;
 
         private readonly Lazy<List<Package>> _packages = new Lazy<List<Package>>(() => new List<Package>());
         private readonly Lazy<List<Feed>> _feeds = new Lazy<List<Feed>>(() => new List<Feed>());

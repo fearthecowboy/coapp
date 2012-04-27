@@ -33,8 +33,7 @@ namespace CoApp.Toolkit.Win32 {
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
     public struct FontDirEntry {
         /// <summary>
-        ///   Specifies a user-defined version number for the resource data that tools can 
-        ///   use to read and write resource files.
+        ///   Specifies a user-defined version number for the resource data that tools can use to read and write resource files.
         /// </summary>
         public UInt16 dfVersion;
 
@@ -70,14 +69,12 @@ namespace CoApp.Toolkit.Win32 {
         public UInt16 dfHorizRes;
 
         /// <summary>
-        ///   Specifies the distance from the top of a character definition cell to the baseline of the 
-        ///   typographical font.
+        ///   Specifies the distance from the top of a character definition cell to the baseline of the typographical font.
         /// </summary>
         public UInt16 dfAscent;
 
         /// <summary>
-        ///   Specifies the amount of leading inside the bounds set by the dfPixHeight member. Accent marks and 
-        ///   other diacritical characters can occur in this area.
+        ///   Specifies the amount of leading inside the bounds set by the dfPixHeight member. Accent marks and other diacritical characters can occur in this area.
         /// </summary>
         public UInt16 dfInternalLeading;
 
@@ -102,8 +99,7 @@ namespace CoApp.Toolkit.Win32 {
         public byte dfStrikeOut;
 
         /// <summary>
-        ///   Specifies the weight of the font in the range 0 through 1000. For example, 400 is roman and 
-        ///   700 is bold. If this value is zero, a default weight is used.
+        ///   Specifies the weight of the font in the range 0 through 1000. For example, 400 is roman and 700 is bold. If this value is zero, a default weight is used.
         /// </summary>
         public UInt16 dfWeight;
 
@@ -113,15 +109,12 @@ namespace CoApp.Toolkit.Win32 {
         public byte dfCharSet;
 
         /// <summary>
-        ///   Specifies the width of the grid on which a vector font was digitized. For raster fonts, 
-        ///   if the member is not equal to zero, it represents the width for all the characters in the 
-        ///   bitmap. If the member is equal to zero, the font has variable-width characters.
+        ///   Specifies the width of the grid on which a vector font was digitized. For raster fonts, if the member is not equal to zero, it represents the width for all the characters in the bitmap. If the member is equal to zero, the font has variable-width characters.
         /// </summary>
         public UInt16 dfPixWidth;
 
         /// <summary>
-        ///   Specifies the height of the character bitmap for raster fonts or the height of the grid 
-        ///   on which a vector font was digitized.
+        ///   Specifies the height of the character bitmap for raster fonts or the height of the grid on which a vector font was digitized.
         /// </summary>
         public UInt16 dfPixHeight;
 
@@ -131,8 +124,7 @@ namespace CoApp.Toolkit.Win32 {
         public byte dfPitchAndFamily;
 
         /// <summary>
-        ///   Specifies the average width of characters in the font (generally defined as the width of 
-        ///   the letter x). This value does not include the overhang required for bold or italic characters.
+        ///   Specifies the average width of characters in the font (generally defined as the width of the letter x). This value does not include the overhang required for bold or italic characters.
         /// </summary>
         public UInt16 dfAvgWidth;
 
@@ -162,14 +154,12 @@ namespace CoApp.Toolkit.Win32 {
         public byte dfBreakChar;
 
         /// <summary>
-        ///   Specifies the number of bytes in each row of the bitmap. This value is always even so 
-        ///   that the rows start on word boundaries. For vector fonts, this member has no meaning.
+        ///   Specifies the number of bytes in each row of the bitmap. This value is always even so that the rows start on word boundaries. For vector fonts, this member has no meaning.
         /// </summary>
         public UInt16 dfWidthBytes;
 
         /// <summary>
-        ///   Specifies the offset in the file to a null-terminated string that specifies a device name. 
-        ///   For a generic font, this value is zero.
+        ///   Specifies the offset in the file to a null-terminated string that specifies a device name. For a generic font, this value is zero.
         /// </summary>
         public UInt32 dfDevice;
 

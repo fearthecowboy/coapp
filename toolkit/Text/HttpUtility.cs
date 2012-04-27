@@ -48,8 +48,8 @@ namespace CoApp.Toolkit.Text {
 
         private static Hashtable Entities {
             get {
-                lock(lock_) {
-                    if(entities == null) {
+                lock (lock_) {
+                    if (entities == null) {
                         InitEntities();
                     }
 
@@ -327,26 +327,26 @@ namespace CoApp.Toolkit.Text {
         }
 
         public static string HtmlAttributeEncode(string s) {
-            if(null == s) {
+            if (null == s) {
                 return null;
             }
 
             var needEncode = false;
-            for(var i = 0; i < s.Length; i++) {
-                if(s[i] == '&' || s[i] == '"' || s[i] == '<') {
+            for (var i = 0; i < s.Length; i++) {
+                if (s[i] == '&' || s[i] == '"' || s[i] == '<') {
                     needEncode = true;
                     break;
                 }
             }
 
-            if(!needEncode) {
+            if (!needEncode) {
                 return s;
             }
 
             var output = new StringBuilder();
             var len = s.Length;
-            for(var i = 0; i < len; i++)
-                switch(s[i]) {
+            for (var i = 0; i < len; i++) {
+                switch (s[i]) {
                     case '&':
                         output.Append("&amp;");
                         break;
@@ -360,6 +360,7 @@ namespace CoApp.Toolkit.Text {
                         output.Append(s[i]);
                         break;
                 }
+            }
 
             return output.ToString();
         }
@@ -369,29 +370,29 @@ namespace CoApp.Toolkit.Text {
         }
 
         private static char[] GetChars(MemoryStream b, Encoding e) {
-            return e.GetChars(b.GetBuffer(), 0, (int) b.Length);
+            return e.GetChars(b.GetBuffer(), 0, (int)b.Length);
         }
 
         private static void WriteCharBytes(IList buf, char ch, Encoding e) {
-            if(ch > 255) {
-                foreach(byte b in e.GetBytes(new[] {ch}))
+            if (ch > 255) {
+                foreach (var b in e.GetBytes(new[] {ch})) {
                     buf.Add(b);
-            }
-            else {
-                buf.Add((byte) ch);
+                }
+            } else {
+                buf.Add((byte)ch);
             }
         }
 
         public static string UrlDecode(string s, Encoding e) {
-            if(null == s) {
+            if (null == s) {
                 return null;
             }
 
-            if(s.IndexOf('%') == -1 && s.IndexOf('+') == -1) {
+            if (s.IndexOf('%') == -1 && s.IndexOf('+') == -1) {
                 return s;
             }
 
-            if(e == null) {
+            if (e == null) {
                 e = Encoding.UTF8;
             }
 
@@ -400,34 +401,30 @@ namespace CoApp.Toolkit.Text {
             int xchar;
             char ch;
 
-            for(var i = 0; i < len; i++) {
+            for (var i = 0; i < len; i++) {
                 ch = s[i];
-                if(ch == '%' && i + 2 < len && s[i + 1] != '%') {
-                    if(s[i + 1] == 'u' && i + 5 < len) {
+                if (ch == '%' && i + 2 < len && s[i + 1] != '%') {
+                    if (s[i + 1] == 'u' && i + 5 < len) {
                         // unicode hex sequence
                         xchar = GetChar(s, i + 2, 4);
-                        if(xchar != -1) {
-                            WriteCharBytes(bytes, (char) xchar, e);
+                        if (xchar != -1) {
+                            WriteCharBytes(bytes, (char)xchar, e);
                             i += 5;
-                        }
-                        else {
+                        } else {
                             WriteCharBytes(bytes, '%', e);
                         }
-                    }
-                    else if((xchar = GetChar(s, i + 1, 2)) != -1) {
-                        WriteCharBytes(bytes, (char) xchar, e);
+                    } else if ((xchar = GetChar(s, i + 1, 2)) != -1) {
+                        WriteCharBytes(bytes, (char)xchar, e);
                         i += 2;
-                    }
-                    else {
+                    } else {
                         WriteCharBytes(bytes, '%', e);
                     }
                     continue;
                 }
 
-                if(ch == '+') {
+                if (ch == '+') {
                     WriteCharBytes(bytes, ' ', e);
-                }
-                else {
+                } else {
                     WriteCharBytes(bytes, ch, e);
                 }
             }
@@ -438,7 +435,7 @@ namespace CoApp.Toolkit.Text {
         }
 
         public static string UrlDecode(byte[] bytes, Encoding e) {
-            if(bytes == null) {
+            if (bytes == null) {
                 return null;
             }
 
@@ -446,16 +443,16 @@ namespace CoApp.Toolkit.Text {
         }
 
         private static int GetInt(byte b) {
-            var c = (char) b;
-            if(c >= '0' && c <= '9') {
+            var c = (char)b;
+            if (c >= '0' && c <= '9') {
                 return c - '0';
             }
 
-            if(c >= 'a' && c <= 'f') {
+            if (c >= 'a' && c <= 'f') {
                 return c - 'a' + 10;
             }
 
-            if(c >= 'A' && c <= 'F') {
+            if (c >= 'A' && c <= 'F') {
                 return c - 'A' + 10;
             }
 
@@ -465,9 +462,9 @@ namespace CoApp.Toolkit.Text {
         private static int GetChar(byte[] bytes, int offset, int length) {
             var value = 0;
             var end = length + offset;
-            for(var i = offset; i < end; i++) {
+            for (var i = offset; i < end; i++) {
                 var current = GetInt(bytes[i]);
-                if(current == -1) {
+                if (current == -1) {
                     return -1;
                 }
                 value = (value << 4) + current;
@@ -479,14 +476,14 @@ namespace CoApp.Toolkit.Text {
         private static int GetChar(string str, int offset, int length) {
             var val = 0;
             var end = length + offset;
-            for(var i = offset; i < end; i++) {
+            for (var i = offset; i < end; i++) {
                 var c = str[i];
-                if(c > 127) {
+                if (c > 127) {
                     return -1;
                 }
 
-                var current = GetInt((byte) c);
-                if(current == -1) {
+                var current = GetInt((byte)c);
+                if (current == -1) {
                     return -1;
                 }
                 val = (val << 4) + current;
@@ -496,22 +493,22 @@ namespace CoApp.Toolkit.Text {
         }
 
         public static string UrlDecode(byte[] bytes, int offset, int count, Encoding e) {
-            if(bytes == null) {
+            if (bytes == null) {
                 return null;
             }
-            if(count == 0) {
+            if (count == 0) {
                 return String.Empty;
             }
 
-            if(bytes == null) {
+            if (bytes == null) {
                 throw new ArgumentNullException("bytes");
             }
 
-            if(offset < 0 || offset > bytes.Length) {
+            if (offset < 0 || offset > bytes.Length) {
                 throw new ArgumentOutOfRangeException("offset");
             }
 
-            if(count < 0 || offset + count > bytes.Length) {
+            if (count < 0 || offset + count > bytes.Length) {
                 throw new ArgumentOutOfRangeException("count");
             }
 
@@ -520,41 +517,39 @@ namespace CoApp.Toolkit.Text {
 
             var end = count + offset;
             int xchar;
-            for(var i = offset; i < end; i++) {
-                if(bytes[i] == '%' && i + 2 < count && bytes[i + 1] != '%') {
-                    if(bytes[i + 1] == (byte) 'u' && i + 5 < end) {
-                        if(acc.Length > 0) {
+            for (var i = offset; i < end; i++) {
+                if (bytes[i] == '%' && i + 2 < count && bytes[i + 1] != '%') {
+                    if (bytes[i + 1] == (byte)'u' && i + 5 < end) {
+                        if (acc.Length > 0) {
                             output.Append(GetChars(acc, e));
                             acc.SetLength(0);
                         }
                         xchar = GetChar(bytes, i + 2, 4);
-                        if(xchar != -1) {
-                            output.Append((char) xchar);
+                        if (xchar != -1) {
+                            output.Append((char)xchar);
                             i += 5;
                             continue;
                         }
-                    }
-                    else if((xchar = GetChar(bytes, i + 1, 2)) != -1) {
-                        acc.WriteByte((byte) xchar);
+                    } else if ((xchar = GetChar(bytes, i + 1, 2)) != -1) {
+                        acc.WriteByte((byte)xchar);
                         i += 2;
                         continue;
                     }
                 }
 
-                if(acc.Length > 0) {
+                if (acc.Length > 0) {
                     output.Append(GetChars(acc, e));
                     acc.SetLength(0);
                 }
 
-                if(bytes[i] == '+') {
+                if (bytes[i] == '+') {
                     output.Append(' ');
-                }
-                else {
-                    output.Append((char) bytes[i]);
+                } else {
+                    output.Append((char)bytes[i]);
                 }
             }
 
-            if(acc.Length > 0) {
+            if (acc.Length > 0) {
                 output.Append(GetChars(acc, e));
             }
 
@@ -563,7 +558,7 @@ namespace CoApp.Toolkit.Text {
         }
 
         public static byte[] UrlDecodeToBytes(byte[] bytes) {
-            if(bytes == null) {
+            if (bytes == null) {
                 return null;
             }
 
@@ -575,11 +570,11 @@ namespace CoApp.Toolkit.Text {
         }
 
         public static byte[] UrlDecodeToBytes(string str, Encoding e) {
-            if(str == null) {
+            if (str == null) {
                 return null;
             }
 
-            if(e == null) {
+            if (e == null) {
                 throw new ArgumentNullException("e");
             }
 
@@ -587,37 +582,36 @@ namespace CoApp.Toolkit.Text {
         }
 
         public static byte[] UrlDecodeToBytes(byte[] bytes, int offset, int count) {
-            if(bytes == null) {
+            if (bytes == null) {
                 return null;
             }
-            if(count == 0) {
+            if (count == 0) {
                 return new byte[0];
             }
 
             var len = bytes.Length;
-            if(offset < 0 || offset >= len) {
+            if (offset < 0 || offset >= len) {
                 throw new ArgumentOutOfRangeException("offset");
             }
 
-            if(count < 0 || offset > len - count) {
+            if (count < 0 || offset > len - count) {
                 throw new ArgumentOutOfRangeException("count");
             }
 
             var result = new MemoryStream();
             var end = offset + count;
-            for(var i = offset; i < end; i++) {
-                var c = (char) bytes[i];
-                if(c == '+') {
+            for (var i = offset; i < end; i++) {
+                var c = (char)bytes[i];
+                if (c == '+') {
                     c = ' ';
-                }
-                else if(c == '%' && i < end - 2) {
+                } else if (c == '%' && i < end - 2) {
                     var xchar = GetChar(bytes, i + 1, 2);
-                    if(xchar != -1) {
-                        c = (char) xchar;
+                    if (xchar != -1) {
+                        c = (char)xchar;
                         i += 2;
                     }
                 }
-                result.WriteByte((byte) c);
+                result.WriteByte((byte)c);
             }
 
             return result.ToArray();
@@ -628,20 +622,20 @@ namespace CoApp.Toolkit.Text {
         }
 
         public static string UrlEncode(string s, Encoding Enc) {
-            if(s == null) {
+            if (s == null) {
                 return null;
             }
 
-            if(s == "") {
+            if (s == "") {
                 return "";
             }
 
             var needEncode = false;
             var len = s.Length;
-            for(var i = 0; i < len; i++) {
+            for (var i = 0; i < len; i++) {
                 var c = s[i];
-                if((c < '0') || (c < 'A' && c > '9') || (c > 'Z' && c < 'a') || (c > 'z')) {
-                    if(NotEncoded(c)) {
+                if ((c < '0') || (c < 'A' && c > '9') || (c > 'Z' && c < 'a') || (c > 'z')) {
+                    if (NotEncoded(c)) {
                         continue;
                     }
 
@@ -650,7 +644,7 @@ namespace CoApp.Toolkit.Text {
                 }
             }
 
-            if(!needEncode) {
+            if (!needEncode) {
                 return s;
             }
 
@@ -661,11 +655,11 @@ namespace CoApp.Toolkit.Text {
         }
 
         public static string UrlEncode(byte[] bytes) {
-            if(bytes == null) {
+            if (bytes == null) {
                 return null;
             }
 
-            if(bytes.Length == 0) {
+            if (bytes.Length == 0) {
                 return "";
             }
 
@@ -673,11 +667,11 @@ namespace CoApp.Toolkit.Text {
         }
 
         public static string UrlEncode(byte[] bytes, int offset, int count) {
-            if(bytes == null) {
+            if (bytes == null) {
                 return null;
             }
 
-            if(bytes.Length == 0) {
+            if (bytes.Length == 0) {
                 return "";
             }
 
@@ -689,11 +683,11 @@ namespace CoApp.Toolkit.Text {
         }
 
         public static byte[] UrlEncodeToBytes(string str, Encoding e) {
-            if(str == null) {
+            if (str == null) {
                 return null;
             }
 
-            if(str == "") {
+            if (str == "") {
                 return new byte[0];
             }
 
@@ -702,11 +696,11 @@ namespace CoApp.Toolkit.Text {
         }
 
         public static byte[] UrlEncodeToBytes(byte[] bytes) {
-            if(bytes == null) {
+            if (bytes == null) {
                 return null;
             }
 
-            if(bytes.Length == 0) {
+            if (bytes.Length == 0) {
                 return new byte[0];
             }
 
@@ -720,86 +714,85 @@ namespace CoApp.Toolkit.Text {
         }
 
         private static void UrlEncodeChar(char c, Stream result, bool isUnicode) {
-            if(c > 255) {
+            if (c > 255) {
                 //FIXME: what happens when there is an internal error?
                 //if (!isUnicode)
                 //	throw new ArgumentOutOfRangeException ("c", c, "c must be less than 256");
                 int idx;
                 int i = c;
 
-                result.WriteByte((byte) '%');
-                result.WriteByte((byte) 'u');
+                result.WriteByte((byte)'%');
+                result.WriteByte((byte)'u');
                 idx = i >> 12;
-                result.WriteByte((byte) hexChars[idx]);
+                result.WriteByte((byte)hexChars[idx]);
                 idx = (i >> 8) & 0x0F;
-                result.WriteByte((byte) hexChars[idx]);
+                result.WriteByte((byte)hexChars[idx]);
                 idx = (i >> 4) & 0x0F;
-                result.WriteByte((byte) hexChars[idx]);
+                result.WriteByte((byte)hexChars[idx]);
                 idx = i & 0x0F;
-                result.WriteByte((byte) hexChars[idx]);
+                result.WriteByte((byte)hexChars[idx]);
                 return;
             }
 
-            if(c > ' ' && NotEncoded(c)) {
-                result.WriteByte((byte) c);
+            if (c > ' ' && NotEncoded(c)) {
+                result.WriteByte((byte)c);
                 return;
             }
-            if(c == ' ') {
-                result.WriteByte((byte) '+');
+            if (c == ' ') {
+                result.WriteByte((byte)'+');
                 return;
             }
-            if((c < '0') ||
-               (c < 'A' && c > '9') ||
-               (c > 'Z' && c < 'a') ||
-               (c > 'z')) {
-                if(isUnicode && c > 127) {
-                    result.WriteByte((byte) '%');
-                    result.WriteByte((byte) 'u');
-                    result.WriteByte((byte) '0');
-                    result.WriteByte((byte) '0');
-                }
-                else {
-                    result.WriteByte((byte) '%');
+            if ((c < '0') ||
+                (c < 'A' && c > '9') ||
+                    (c > 'Z' && c < 'a') ||
+                        (c > 'z')) {
+                if (isUnicode && c > 127) {
+                    result.WriteByte((byte)'%');
+                    result.WriteByte((byte)'u');
+                    result.WriteByte((byte)'0');
+                    result.WriteByte((byte)'0');
+                } else {
+                    result.WriteByte((byte)'%');
                 }
 
                 var idx = (c) >> 4;
-                result.WriteByte((byte) hexChars[idx]);
+                result.WriteByte((byte)hexChars[idx]);
                 idx = (c) & 0x0F;
-                result.WriteByte((byte) hexChars[idx]);
-            }
-            else {
-                result.WriteByte((byte) c);
+                result.WriteByte((byte)hexChars[idx]);
+            } else {
+                result.WriteByte((byte)c);
             }
         }
 
         public static byte[] UrlEncodeToBytes(byte[] bytes, int offset, int count) {
-            if(bytes == null) {
+            if (bytes == null) {
                 return null;
             }
 
             var len = bytes.Length;
-            if(len == 0) {
+            if (len == 0) {
                 return new byte[0];
             }
 
-            if(offset < 0 || offset >= len) {
+            if (offset < 0 || offset >= len) {
                 throw new ArgumentOutOfRangeException("offset");
             }
 
-            if(count < 0 || count > len - offset) {
+            if (count < 0 || count > len - offset) {
                 throw new ArgumentOutOfRangeException("count");
             }
 
             var result = new MemoryStream(count);
             var end = offset + count;
-            for(var i = offset; i < end; i++)
-                UrlEncodeChar((char) bytes[i], result, false);
+            for (var i = offset; i < end; i++) {
+                UrlEncodeChar((char)bytes[i], result, false);
+            }
 
             return result.ToArray();
         }
 
         public static string UrlEncodeUnicode(string str) {
-            if(str == null) {
+            if (str == null) {
                 return null;
             }
 
@@ -807,16 +800,16 @@ namespace CoApp.Toolkit.Text {
         }
 
         public static byte[] UrlEncodeUnicodeToBytes(string str) {
-            if(str == null) {
+            if (str == null) {
                 return null;
             }
 
-            if(str == "") {
+            if (str == "") {
                 return new byte[0];
             }
 
             var result = new MemoryStream(str.Length);
-            foreach(char c in str) {
+            foreach (var c in str) {
                 UrlEncodeChar(c, result, true);
             }
             return result.ToArray();
@@ -825,14 +818,14 @@ namespace CoApp.Toolkit.Text {
         /// <summary>
         ///   Decodes an HTML-encoded string and returns the decoded string.
         /// </summary>
-        /// <param name = "s">The HTML string to decode. </param>
-        /// <returns>The decoded text.</returns>
+        /// <param name="s"> The HTML string to decode. </param>
+        /// <returns> The decoded text. </returns>
         public static string HtmlDecode(string s) {
-            if(s == null) {
+            if (s == null) {
                 throw new ArgumentNullException("s");
             }
 
-            if(s.IndexOf('&') == -1) {
+            if (s.IndexOf('&') == -1) {
                 return s;
             }
 
@@ -847,22 +840,21 @@ namespace CoApp.Toolkit.Text {
             var number = 0;
             var have_trailing_digits = false;
 
-            for(var i = 0; i < len; i++) {
+            for (var i = 0; i < len; i++) {
                 var c = s[i];
-                if(state == 0) {
-                    if(c == '&') {
+                if (state == 0) {
+                    if (c == '&') {
                         entity.Append(c);
                         state = 1;
-                    }
-                    else {
+                    } else {
                         output.Append(c);
                     }
                     continue;
                 }
 
-                if(c == '&') {
+                if (c == '&') {
                     state = 1;
-                    if(have_trailing_digits) {
+                    if (have_trailing_digits) {
                         entity.Append(number.ToString(CultureInfo.InvariantCulture));
                         have_trailing_digits = false;
                     }
@@ -873,29 +865,26 @@ namespace CoApp.Toolkit.Text {
                     continue;
                 }
 
-                if(state == 1) {
-                    if(c == ';') {
+                if (state == 1) {
+                    if (c == ';') {
                         state = 0;
                         output.Append(entity.ToString());
                         output.Append(c);
                         entity.Length = 0;
-                    }
-                    else {
+                    } else {
                         number = 0;
-                        if(c != '#') {
+                        if (c != '#') {
                             state = 2;
-                        }
-                        else {
+                        } else {
                             state = 3;
                         }
                         entity.Append(c);
                     }
-                }
-                else if(state == 2) {
+                } else if (state == 2) {
                     entity.Append(c);
-                    if(c == ';') {
+                    if (c == ';') {
                         var key = entity.ToString();
-                        if(key.Length > 1 && Entities.ContainsKey(key.Substring(1, key.Length - 2))) {
+                        if (key.Length > 1 && Entities.ContainsKey(key.Substring(1, key.Length - 2))) {
                             key = Entities[key.Substring(1, key.Length - 2)].ToString();
                         }
 
@@ -903,28 +892,24 @@ namespace CoApp.Toolkit.Text {
                         state = 0;
                         entity.Length = 0;
                     }
-                }
-                else if(state == 3) {
-                    if(c == ';') {
-                        if(number > 65535) {
+                } else if (state == 3) {
+                    if (c == ';') {
+                        if (number > 65535) {
                             output.Append("&#");
                             output.Append(number.ToString(CultureInfo.InvariantCulture));
                             output.Append(";");
-                        }
-                        else {
-                            output.Append((char) number);
+                        } else {
+                            output.Append((char)number);
                         }
                         state = 0;
                         entity.Length = 0;
                         have_trailing_digits = false;
-                    }
-                    else if(Char.IsDigit(c)) {
+                    } else if (Char.IsDigit(c)) {
                         number = number*10 + (c - '0');
                         have_trailing_digits = true;
-                    }
-                    else {
+                    } else {
                         state = 2;
-                        if(have_trailing_digits) {
+                        if (have_trailing_digits) {
                             entity.Append(number.ToString(CultureInfo.InvariantCulture));
                             have_trailing_digits = false;
                         }
@@ -933,10 +918,9 @@ namespace CoApp.Toolkit.Text {
                 }
             }
 
-            if(entity.Length > 0) {
+            if (entity.Length > 0) {
                 output.Append(entity.ToString());
-            }
-            else if(have_trailing_digits) {
+            } else if (have_trailing_digits) {
                 output.Append(number.ToString(CultureInfo.InvariantCulture));
             }
             return output.ToString();
@@ -945,10 +929,10 @@ namespace CoApp.Toolkit.Text {
         /// <summary>
         ///   Decodes an HTML-encoded string and sends the resulting output to a TextWriter output stream.
         /// </summary>
-        /// <param name = "s">The HTML string to decode</param>
-        /// <param name = "output">The TextWriter output stream containing the decoded string. </param>
+        /// <param name="s"> The HTML string to decode </param>
+        /// <param name="output"> The TextWriter output stream containing the decoded string. </param>
         public static void HtmlDecode(string s, TextWriter output) {
-            if(s != null) {
+            if (s != null) {
                 output.Write(HtmlDecode(s));
             }
         }
@@ -956,31 +940,31 @@ namespace CoApp.Toolkit.Text {
         /// <summary>
         ///   HTML-encodes a string and returns the encoded string.
         /// </summary>
-        /// <param name = "s">The text string to encode. </param>
-        /// <returns>The HTML-encoded text.</returns>
+        /// <param name="s"> The text string to encode. </param>
+        /// <returns> The HTML-encoded text. </returns>
         public static string HtmlEncode(string s) {
-            if(s == null) {
+            if (s == null) {
                 return null;
             }
 
             var needEncode = false;
-            for(var i = 0; i < s.Length; i++) {
+            for (var i = 0; i < s.Length; i++) {
                 var c = s[i];
-                if(c == '&' || c == '"' || c == '<' || c == '>' || c > 159) {
+                if (c == '&' || c == '"' || c == '<' || c == '>' || c > 159) {
                     needEncode = true;
                     break;
                 }
             }
 
-            if(!needEncode) {
+            if (!needEncode) {
                 return s;
             }
 
             var output = new StringBuilder();
 
             var len = s.Length;
-            for(var i = 0; i < len; i++)
-                switch(s[i]) {
+            for (var i = 0; i < len; i++) {
+                switch (s[i]) {
                     case '&':
                         output.Append("&amp;");
                         break;
@@ -997,76 +981,74 @@ namespace CoApp.Toolkit.Text {
                         // MS starts encoding with &# from 160 and stops at 255.
                         // We don't do that. One reason is the 65308/65310 unicode
                         // characters that look like '<' and '>'.
-                        if(s[i] > 159) {
+                        if (s[i] > 159) {
                             output.Append("&#");
-                            output.Append(((int) s[i]).ToString(CultureInfo.InvariantCulture));
+                            output.Append(((int)s[i]).ToString(CultureInfo.InvariantCulture));
                             output.Append(";");
-                        }
-                        else {
+                        } else {
                             output.Append(s[i]);
                         }
                         break;
                 }
+            }
             return output.ToString();
         }
 
         /// <summary>
         ///   HTML-encodes a string and sends the resulting output to a TextWriter output stream.
         /// </summary>
-        /// <param name = "s">The string to encode. </param>
-        /// <param name = "output">The TextWriter output stream containing the encoded string. </param>
+        /// <param name="s"> The string to encode. </param>
+        /// <param name="output"> The TextWriter output stream containing the encoded string. </param>
         public static void HtmlEncode(string s, TextWriter output) {
-            if(s != null) {
+            if (s != null) {
                 output.Write(HtmlEncode(s));
             }
         }
 
         public static string UrlPathEncode(string s) {
-            if(s == null || s.Length == 0) {
+            if (s == null || s.Length == 0) {
                 return s;
             }
 
             var result = new MemoryStream();
             var length = s.Length;
-            for(var i = 0; i < length; i++) {
+            for (var i = 0; i < length; i++) {
                 UrlPathEncodeChar(s[i], result);
             }
             return Encoding.ASCII.GetString(result.ToArray());
         }
 
         private static void UrlPathEncodeChar(char c, Stream result) {
-            if(c < 33 || c > 126) {
+            if (c < 33 || c > 126) {
                 var bIn = Encoding.UTF8.GetBytes(c.ToString());
-                for(var i = 0; i < bIn.Length; i++) {
-                    result.WriteByte((byte) '%');
+                for (var i = 0; i < bIn.Length; i++) {
+                    result.WriteByte((byte)'%');
                     var idx = (bIn[i]) >> 4;
-                    result.WriteByte((byte) hexChars[idx]);
+                    result.WriteByte((byte)hexChars[idx]);
                     idx = (bIn[i]) & 0x0F;
-                    result.WriteByte((byte) hexChars[idx]);
+                    result.WriteByte((byte)hexChars[idx]);
                 }
-            }
-            else if(c == ' ') {
-                result.WriteByte((byte) '%');
-                result.WriteByte((byte) '2');
-                result.WriteByte((byte) '0');
-            }
-            else {
-                result.WriteByte((byte) c);
+            } else if (c == ' ') {
+                result.WriteByte((byte)'%');
+                result.WriteByte((byte)'2');
+                result.WriteByte((byte)'0');
+            } else {
+                result.WriteByte((byte)c);
             }
         }
 
         private class HttpQSCollection : NameValueCollection {
             public override string ToString() {
                 var count = Count;
-                if(count == 0) {
+                if (count == 0) {
                     return "";
                 }
                 var sb = new StringBuilder();
                 var keys = AllKeys;
-                for(var i = 0; i < count; i++) {
+                for (var i = 0; i < count; i++) {
                     sb.AppendFormat("{0}={1}&", keys[i], this[keys[i]]);
                 }
-                if(sb.Length > 0) {
+                if (sb.Length > 0) {
                     sb.Length--;
                 }
                 return sb.ToString();
@@ -1078,16 +1060,16 @@ namespace CoApp.Toolkit.Text {
         }
 
         public static NameValueCollection ParseQueryString(string query, Encoding encoding) {
-            if(query == null) {
+            if (query == null) {
                 throw new ArgumentNullException("query");
             }
-            if(encoding == null) {
+            if (encoding == null) {
                 throw new ArgumentNullException("encoding");
             }
-            if(query.Length == 0 || (query.Length == 1 && query[0] == '?')) {
+            if (query.Length == 0 || (query.Length == 1 && query[0] == '?')) {
                 return new NameValueCollection();
             }
-            if(query[0] == '?') {
+            if (query[0] == '?') {
                 query = query.Substring(1);
             }
 
@@ -1097,7 +1079,7 @@ namespace CoApp.Toolkit.Text {
         }
 
         internal static void ParseQueryString(string query, Encoding encoding, NameValueCollection result) {
-            if(query.Length == 0) {
+            if (query.Length == 0) {
                 return;
             }
 
@@ -1105,44 +1087,41 @@ namespace CoApp.Toolkit.Text {
             var decodedLength = decoded.Length;
             var namePos = 0;
             var first = true;
-            while(namePos <= decodedLength) {
+            while (namePos <= decodedLength) {
                 int valuePos = -1, valueEnd = -1;
-                for(var q = namePos; q < decodedLength; q++) {
-                    if(valuePos == -1 && decoded[q] == '=') {
+                for (var q = namePos; q < decodedLength; q++) {
+                    if (valuePos == -1 && decoded[q] == '=') {
                         valuePos = q + 1;
-                    }
-                    else if(decoded[q] == '&') {
+                    } else if (decoded[q] == '&') {
                         valueEnd = q;
                         break;
                     }
                 }
 
-                if(first) {
+                if (first) {
                     first = false;
-                    if(decoded[namePos] == '?') {
+                    if (decoded[namePos] == '?') {
                         namePos++;
                     }
                 }
 
                 string name, value;
-                if(valuePos == -1) {
+                if (valuePos == -1) {
                     name = null;
                     valuePos = namePos;
-                }
-                else {
+                } else {
                     name = UrlDecode(decoded.Substring(namePos, valuePos - namePos - 1), encoding);
                 }
-                if(valueEnd < 0) {
+                if (valueEnd < 0) {
                     namePos = -1;
                     valueEnd = decoded.Length;
-                }
-                else {
+                } else {
                     namePos = valueEnd + 1;
                 }
                 value = UrlDecode(decoded.Substring(valuePos, valueEnd - valuePos), encoding);
 
                 result.Add(name, value);
-                if(namePos == -1) {
+                if (namePos == -1) {
                     break;
                 }
             }
