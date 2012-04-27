@@ -101,7 +101,6 @@
     <Compile Include="Toolkit\Crypto\PfxStoreLoader.cs" />
     <Compile Include="Toolkit\Crypto\Verifier.cs" />
     <Compile Include="Toolkit\Exceptions\ConflictingFileOrFolderException.cs" />
-    <Compile Include="Toolkit\Exceptions\FailedPackageRemoveException.cs" />
     <Compile Include="Toolkit\Exceptions\PathIsNotFileUriException.cs" />
     <Compile Include="Toolkit\Exceptions\PathIsNotSymlinkException.cs" />
     <Compile Include="Toolkit\Extensions\AssemblyExtensions.cs" />
