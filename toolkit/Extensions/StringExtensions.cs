@@ -20,22 +20,18 @@
 
 namespace CoApp.Toolkit.Extensions {
     using System;
-    using System.Collections;
     using System.Collections.Generic;
     using System.Globalization;
     using System.IO;
     using System.Linq;
     using System.Net;
-    using System.Reflection;
     using System.Runtime.Remoting.Metadata.W3cXsd2001;
     using System.Security.Cryptography;
     using System.Text;
     using System.Text.RegularExpressions;
     using Compression;
     using Text;
-#if!COAPP_ENGINE_CORE
 
-#endif
     //using Text;
 
     /// <summary>
@@ -101,17 +97,6 @@ namespace CoApp.Toolkit.Extensions {
         }
 
         // ReSharper restore InconsistentNaming
-
-        /// <summary>
-        ///   Prints the specified format string.
-        /// </summary>
-        /// <param name="formatString"> The format string. </param>
-        /// <param name="args"> The args. </param>
-        /// <remarks>
-        /// </remarks>
-        public static void Print(this string formatString, params object[] args) {
-            Console.WriteLine(formatString, args);
-        }
 
         /// <summary>
         ///   Errors the specified format string.
@@ -994,65 +979,6 @@ namespace CoApp.Toolkit.Extensions {
 
         public static string IfNullOrEmpty(this string text, string defaultText) {
             return string.IsNullOrEmpty(text) ? defaultText : text;
-        }
-    }
-
-    public static class TypeExtensions {
-        private static readonly Dictionary<Type, MethodInfo> TryParsers = new Dictionary<Type, MethodInfo>();
-        private static readonly Dictionary<Type, ConstructorInfo> TryStrings = new Dictionary<Type, ConstructorInfo>();
-
-        private static MethodInfo GetTryParse(Type parsableType) {
-            if (!TryParsers.ContainsKey(parsableType)) {
-                if( parsableType.GetConstructor(new Type[] { }) == null) { 
-                    // if they don't have a default constructor, 
-                    // it's not going to be 'parsable'
-                    TryParsers.Add(parsableType, null);
-                } else {
-                    TryParsers.Add(parsableType, parsableType.GetMethod("TryParse", new[] {typeof (string), parsableType.MakeByRefType()}));
-                }
-            }
-            return TryParsers[parsableType];
-        }
-
-        private static ConstructorInfo GetStringConstructor(Type parsableType) {
-            if (!TryStrings.ContainsKey(parsableType)) {
-                TryStrings.Add(parsableType, parsableType.GetConstructor(new Type[] {typeof(string) }));
-            }
-            return TryStrings[parsableType];
-        }
-
-        public static bool IsConstructableFromString(this Type stringableType) {
-            return GetStringConstructor(stringableType) != null;
-        }
-
-        public static bool IsParsable(this Type parsableType) {
-            return GetTryParse(parsableType) != null || IsConstructableFromString(parsableType);
-        }
-
-        public static object ParseString(this Type primitiveType, string value) {
-            if( primitiveType == typeof(string)) {
-                return value;
-            }
-
-            if (primitiveType.IsPrimitive || primitiveType.GetConstructor(new Type[] { }) != null) {
-                if (!string.IsNullOrEmpty(value)) {
-                    var pz = new[] {value, Activator.CreateInstance(primitiveType)};
-                    // returns the default value if it's not successful.
-                    GetTryParse(primitiveType).Invoke(null, pz);
-                    return pz[1];
-                }
-                return Activator.CreateInstance(primitiveType);
-            }
-
-            return value == null ? null : GetStringConstructor(primitiveType).Invoke(new object[] {value});
-        }
-
-        public static bool IsDictionary(this Type dictionaryType) {
-            return typeof (IDictionary).IsAssignableFrom(dictionaryType);
-        }
-
-        public static bool IsIEnumerable(this Type ienumerableType) {
-            return typeof (IDictionary).IsAssignableFrom(ienumerableType);
         }
     }
 }

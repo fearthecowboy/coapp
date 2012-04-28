@@ -881,8 +881,10 @@ namespace CoApp.Toolkit.Extensions {
                 return path;
             }
             try {
-                path = Path.GetFullPath(path.Trim('"'));
-                FullPathCache.Add(path);
+                if( path.IndexOfAny(Path.GetInvalidFileNameChars()) == -1 ) {
+                    path = Path.GetFullPath(path.Trim('"'));
+                    FullPathCache.Add(path);    
+                }
             } catch {
             }
             return path;

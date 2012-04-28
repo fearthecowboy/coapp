@@ -287,9 +287,7 @@ namespace CoApp.Packaging.Client {
             if (IsConnected) {
                 try {
                     message.Add("rqid", Event<GetCurrentRequestId>.RaiseFirst());
-                    _pipe.WriteLineAsync(message.ToString()).ContinueWith(antecedent => {
-                        Console.WriteLine("Async Write Fail!? (1)");
-                    },
+                    _pipe.WriteLineAsync(message.ToString()).ContinueWith(antecedent => Logger.Error("Async Write Fail!? (1)"),
                         TaskContinuationOptions.OnlyOnFaulted);
                 } catch /* (Exception e) */ {
                 }

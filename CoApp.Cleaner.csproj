@@ -134,8 +134,6 @@
     </Compile>
     <Compile Include="Toolkit\Extensions\XmlExtensions.cs" />
     <Compile Include="Toolkit\Logging\Logger.cs" />
-    <Compile Include="Toolkit\Pipes\AsyncPipeExtensions.cs" />
-    <Compile Include="Toolkit\Pipes\UrlEncodedMessage.cs" />
     <Compile Include="Toolkit\Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -348,6 +346,9 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
       <SubType>Designer</SubType>
     </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Toolkit\Pipes\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

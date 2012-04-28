@@ -13,6 +13,7 @@ namespace CoApp.Toolkit.Pipes {
     using System.Collections;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Reflection;
     using System.Text.RegularExpressions;
     using Exceptions;
     using Extensions;
@@ -86,28 +87,36 @@ namespace CoApp.Toolkit.Pipes {
             }
         }
 
-        public object GetValueAsArray(string collectionName, Type elementType) {
+        public object GetValueAsArray(string collectionName, Type elementType, Type arrayType) {
             var rx = new Regex(@"^{0}\[\d*\]$".format(Regex.Escape(collectionName)));
             if (elementType == typeof (string)) {
                 return (from k in Data.Keys where rx.IsMatch(k) select Data[k]).ToArray();
             }
-
+            
             if (elementType.IsParsable()) {
-                return (from k in Data.Keys where rx.IsMatch(k) select elementType.ParseString(Data[k])).ToArray();
+                return _toArrayMethods.GetOrAdd(elementType, () => ToArrayMethod.MakeGenericMethod(elementType)).Invoke(null, new object[] {
+                    _castMethods.GetOrAdd(elementType, () => CastMethod.MakeGenericMethod(elementType))
+                    .Invoke(null, new object[] { (from k in Data.Keys where rx.IsMatch(k) select elementType.ParseString(Data[k])) })});
             }
             throw new CoAppException("Unsupported Array type '{0}' (must support tryparse)".format(elementType.Name));
         }
 
-        public object GetValueAsIEnumerable(string collectionName, Type elementType) {
+        private static MethodInfo CastMethod = typeof(Enumerable).GetMethod("Cast");
+        private static MethodInfo ToArrayMethod = typeof(Enumerable).GetMethod("ToArray");
+        private static Dictionary<Type, MethodInfo> _castMethods = new Dictionary<Type, MethodInfo>();
+        private static Dictionary<Type, MethodInfo> _toArrayMethods = new Dictionary<Type, MethodInfo>();
+
+        public object GetValueAsIEnumerable(string collectionName, Type elementType, Type collectionType) {
             var rx = new Regex(@"^{0}\[\d*\]$".format(Regex.Escape(collectionName)));
             if (elementType == typeof (string)) {
                 return from k in Data.Keys where rx.IsMatch(k) select Data[k];
             }
 
             if (elementType.IsParsable()) {
-                return from k in Data.Keys where rx.IsMatch(k) select elementType.ParseString(Data[k]);
+                return _castMethods.GetOrAdd(elementType, () => CastMethod.MakeGenericMethod(elementType)).Invoke(null, new object[] { (from k in Data.Keys where rx.IsMatch(k) select elementType.ParseString(Data[k])) });
             }
-            throw new CoAppException("Unsupported IEnumerable type '{0}' (must support tryparse)".format(elementType.Name));
+
+            throw new CoAppException("Unsupported IEnumerable type '{0}' (must support tryparse or string constructor)".format(elementType.Name));
         }
 
         public object GetValueAsDictionary(string collectionName, Type keyType, Type valueType) {
@@ -117,16 +126,27 @@ namespace CoApp.Toolkit.Pipes {
             if (keyType == typeof (string) && valueType == typeof (string)) {
                 return keys.ToDictionary(key => key, key => Data[key]);
             }
+
+            dynamic result = Activator.CreateInstance(typeof(Dictionary<,>).MakeGenericType(keyType, valueType));
+            foreach (var key in keys) {
+                result.Add(keyType.ParseString(key), keyType.ParseString(Data[key]));
+            }
+            return result;
+            /*
             if (keyType == typeof (string) && valueType.IsParsable()) {
                 return keys.ToDictionary(key => key, key => valueType.ParseString(Data[key]));
             }
             if (keyType.IsParsable() && valueType == typeof (string)) {
-                return keys.ToDictionary(key => keyType.ParseString(key), key => Data[key]);
+                dynamic result = Activator.CreateInstance(typeof (Dictionary<,>).MakeGenericType(keyType, valueType));
+                foreach( var key in keys ) {
+                    result.Add(keyType.ParseString(key), Data[key]);
+                }
+                // return keys.ToDictionary(key => keyType.ParseString(key), key => Data[key]);
             }
             if (keyType.IsParsable() && valueType.IsParsable()) {
                 return keys.ToDictionary(key => keyType.ParseString(key), key => valueType.ParseString(Data[key]));
             }
-
+            */
             throw new CoAppException("Unsupported Dictionary type '{0}/{1}' (keys and values must support tryparse)".format(keyType.Name, valueType.Name));
         }
 

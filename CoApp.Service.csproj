@@ -284,6 +284,7 @@
     <Compile Include="Toolkit\Extensions\EnumExtensions.cs" />
     <Compile Include="Toolkit\Extensions\ExceptionExtensions.cs" />
     <Compile Include="Toolkit\Extensions\TaskExtensions.cs" />
+    <Compile Include="Toolkit\Extensions\TypeExtensions.cs" />
     <Compile Include="Toolkit\ImpromptuInterface\ActLikeCaster.cs" />
     <Compile Include="Toolkit\ImpromptuInterface\Dynamic\Builder.cs" />
     <Compile Include="Toolkit\ImpromptuInterface\Dynamic\CacheableInvocation.cs" />

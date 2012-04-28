@@ -251,6 +251,20 @@ CoApp.Cleaner [options]
                     // it's ok.
                 }
 
+                // try to gracefully kill coapp.service ( new )
+                try {
+                    var psi = new ProcessStartInfo {
+                        FileName = "sc.exe",
+                        Arguments = @"stop  ""CoApp""",
+                        WindowStyle = ProcessWindowStyle.Hidden
+                    };
+                    var p = Process.Start(psi);
+                    p.WaitForExit();
+                }
+                catch {
+                    // it's ok.
+                }
+
                 // let's just kill the processes if they exist
                 var serviceProcs = Process.GetProcessesByName("CoApp.Service");
                 if (serviceProcs.Any()) {
@@ -279,6 +293,19 @@ CoApp.Cleaner [options]
                     // it's ok.
                 }
 
+                try {
+                    var psi = new ProcessStartInfo {
+                        FileName = "sc.exe",
+                        Arguments = @"delete  ""CoApp""",
+                        WindowStyle = ProcessWindowStyle.Hidden
+                    };
+                    var p = Process.Start(psi);
+                    p.WaitForExit();
+                }
+                catch {
+                    // it's ok.
+                }
+
                 MsiSetInternalUI(2, IntPtr.Zero);
                 MsiSetExternalUI((context, messageType, message) => 1, 0x400, IntPtr.Zero);
 
@@ -303,7 +330,7 @@ CoApp.Cleaner [options]
                         OverallProgress++;
                         OnPropertyChanged();
 
-                        MsiInstallProduct(pkg.Path, @"REMOVE=ALL ALLUSERS=1 COAPP_INSTALLED=1 REBOOT=REALLYSUPPRESS");
+                        MsiInstallProduct(pkg.Path, @"REMOVE=ALL ALLUSERS=1 COAPP=1 REBOOT=REALLYSUPPRESS");
                     }
                 }
 
@@ -320,7 +347,7 @@ CoApp.Cleaner [options]
                             OverallProgress += eachProgress;
                             OnPropertyChanged();
 
-                            MsiInstallProduct(pkg.Path, @"REMOVE=ALL ALLUSERS=1 COAPP_INSTALLED=1 REBOOT=REALLYSUPPRESS");
+                            MsiInstallProduct(pkg.Path, @"REMOVE=ALL ALLUSERS=1 COAPP=1 REBOOT=REALLYSUPPRESS");
                         }
                     }
                 }
@@ -410,7 +437,7 @@ CoApp.Cleaner [options]
         }
 
         private void Remove(string file) {
-            MsiInstallProduct(file, @"REMOVE=ALL ALLUSERS=1 COAPP_INSTALLED=1 REBOOT=REALLYSUPPRESS");
+            MsiInstallProduct(file, @"REMOVE=ALL ALLUSERS=1 COAPP=1 REBOOT=REALLYSUPPRESS");
         }
 
 

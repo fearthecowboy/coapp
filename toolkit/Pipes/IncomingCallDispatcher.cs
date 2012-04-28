@@ -61,6 +61,7 @@ namespace CoApp.Toolkit.Pipes {
 
                     case "IEnumerable":
                         ParameterType = ParameterType.Enumerable;
+                        Type = t;
                         CollectionType = genericArguments[0];
                         break;
 
@@ -79,6 +80,9 @@ namespace CoApp.Toolkit.Pipes {
                 // an array of soemthing.
                 ParameterType = ParameterType.Array;
                 CollectionType = t.GetElementType();
+                Type = t;
+            } else {
+                throw new CoAppException("Unsupported Type: '{0}'".format(t.Name));
             }
         }
 
@@ -95,14 +99,7 @@ namespace CoApp.Toolkit.Pipes {
             }
         }
 
-        internal Type CollectionType {
-            get {
-                return Type;
-            }
-            set {
-                Type = value;
-            }
-        }
+        internal Type CollectionType { get; set; }
 
         internal Type DictionaryKeyType {
             get {
@@ -127,10 +124,10 @@ namespace CoApp.Toolkit.Pipes {
                     return message.GetValueAsNullable(key, Type);
 
                 case ParameterType.Enumerable:
-                    return message.GetValueAsIEnumerable(key, Type);
+                    return message.GetValueAsIEnumerable(key, CollectionType,Type);
 
                 case ParameterType.Array:
-                    return message.GetValueAsArray(key, Type);
+                    return message.GetValueAsArray(key, CollectionType,Type);
 
                 case ParameterType.Dictionary:
                     return message.GetValueAsDictionary(key, DictionaryKeyType, DictionaryValueType);

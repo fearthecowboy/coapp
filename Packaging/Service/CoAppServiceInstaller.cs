@@ -11,20 +11,20 @@
 //-----------------------------------------------------------------------
 
 namespace CoApp.Packaging.Service {
-    using System.IO;
+    using System;
     using System.ComponentModel;
     using System.Configuration.Install;
+    using System.IO;
     using System.ServiceProcess;
-    using CoApp.Packaging.Common;
+    using Common;
 
     [RunInstaller(true)]
     public class CoAppServiceInstaller : Installer {
-        
         private readonly ServiceProcessInstaller _serviceProcessInstaller = new ServiceProcessInstaller();
         private readonly ServiceInstaller _serviceInstaller = new ServiceInstaller();
 
         public CoAppServiceInstaller() : this(false) {
-            System.Environment.CurrentDirectory = System.Environment.GetEnvironmentVariable("tmp") ?? Path.Combine(System.Environment.GetEnvironmentVariable("systemroot"),"temp");
+            Environment.CurrentDirectory = Environment.GetEnvironmentVariable("tmp") ?? Path.Combine(Environment.GetEnvironmentVariable("systemroot"), "temp");
         }
 
         public CoAppServiceInstaller(bool useUserAccount) {
@@ -37,7 +37,7 @@ namespace CoApp.Packaging.Service {
 
             _serviceInstaller.StartType = ServiceStartMode.Automatic;
 
-            Installers.AddRange(new Installer[] {_serviceProcessInstaller,_serviceInstaller});
+            Installers.AddRange(new Installer[] {_serviceProcessInstaller, _serviceInstaller});
         }
     }
 }

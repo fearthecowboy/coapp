@@ -119,6 +119,7 @@
     <Compile Include="Toolkit\Extensions\ObjectExtensions.cs" />
     <Compile Include="Toolkit\Extensions\PropertySheetExtensions.cs" />
     <Compile Include="Toolkit\Extensions\TaskExtensions.cs" />
+    <Compile Include="Toolkit\Extensions\TypeExtensions.cs" />
     <Compile Include="Toolkit\Extensions\WebRequestExtensions.cs" />
     <Compile Include="Toolkit\Extensions\X509Certificate2Extensions.cs" />
     <Compile Include="Toolkit\Extensions\X509StoreExtensions.cs" />

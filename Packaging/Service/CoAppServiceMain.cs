@@ -281,7 +281,7 @@ CoApp.Service [options]
 
         private static int Help() {
             Logo();
-            help.Print();
+            Console.WriteLine(help);
             return 0;
         }
 

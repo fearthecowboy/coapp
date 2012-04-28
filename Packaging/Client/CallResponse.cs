@@ -27,7 +27,7 @@ namespace CoApp.Packaging.Client {
     using Toolkit.Win32;
 
     public class CallResponse : IPackageManagerResponse {
-        private static readonly IPackageManager PM = RemoteCallDispatcher.RemoteService;
+        private static readonly IPackageManager Remote = RemoteCallDispatcher.RemoteService;
 
         private readonly Lazy<List<Package>> _packages = new Lazy<List<Package>>(() => new List<Package>());
         private readonly Lazy<List<Feed>> _feeds = new Lazy<List<Feed>>(() => new List<Feed>());
@@ -200,7 +200,7 @@ namespace CoApp.Packaging.Client {
                     CurrentDownloads[requestReference].Continue(() => {
                         if (File.Exists(targetFilename)) {
                             Event<DownloadCompleted>.Raise(requestReference, targetFilename);
-                            PM.RecognizeFile(requestReference, targetFilename, remoteLocations.FirstOrDefault());
+                            Remote.RecognizeFile(requestReference, targetFilename, remoteLocations.FirstOrDefault());
                         }
                     });
                     return;
@@ -218,7 +218,7 @@ namespace CoApp.Packaging.Client {
 
                                 // if this fails, we'll just move down the line.
                                 File.Copy(remoteFile, targetFilename);
-                                PM.RecognizeFile(requestReference, targetFilename, uri.AbsoluteUri);
+                                Remote.RecognizeFile(requestReference, targetFilename, uri.AbsoluteUri);
                                 return;
                             }
 
@@ -227,7 +227,7 @@ namespace CoApp.Packaging.Client {
                             var success = false;
                             var rf = new RemoteFile(uri, targetFilename,
                                 itemUri => {
-                                    PM.RecognizeFile(requestReference, targetFilename, uri.AbsoluteUri);
+                                    Remote.RecognizeFile(requestReference, targetFilename, uri.AbsoluteUri);
                                     Event<DownloadCompleted>.Raise(requestReference, targetFilename);
                                     // remove it from the list of current downloads
                                     CurrentDownloads.Remove(requestReference);
@@ -239,7 +239,7 @@ namespace CoApp.Packaging.Client {
                                 (itemUri, percent) => {
                                     if (progressTask == null) {
                                         // report progress to the engine
-                                        progressTask = PM.DownloadProgress(requestReference, percent);
+                                        progressTask = Remote.DownloadProgress(requestReference, percent);
                                         progressTask.Continue(() => {
                                             progressTask = null;
                                         });
@@ -265,14 +265,14 @@ namespace CoApp.Packaging.Client {
                     // was there a file there from before?
                     if (File.Exists(targetFilename)) {
                         Event<DownloadCompleted>.Raise(requestReference, targetFilename);
-                        PM.RecognizeFile(requestReference, targetFilename, remoteLocations.FirstOrDefault());
+                        Remote.RecognizeFile(requestReference, targetFilename, remoteLocations.FirstOrDefault());
                     }
 
                     // remove it from the list of current downloads
                     CurrentDownloads.Remove(requestReference);
 
                     // if we got here, that means we couldn't get the file. too bad, so sad.
-                    PM.UnableToAcquire(requestReference);
+                    Remote.UnableToAcquire(requestReference);
                 }, TaskCreationOptions.AttachedToParent);
 
                 CurrentDownloads.Add(targetFilename, task);

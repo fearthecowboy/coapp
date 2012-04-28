@@ -28,8 +28,8 @@ namespace CoApp.Packaging.Common {
     using TimeoutException = System.TimeoutException;
 
     public static class EngineServiceManager {
-        public const string CoAppServiceName = "CoApp Package Installer Service";
-        public const string CoAppDisplayName = "CoApp Package Installer Service";
+        public const string CoAppServiceName = "CoApp";
+        public const string CoAppDisplayName = "CoApp";
 
         public static bool IsServiceInstalled {
             get {

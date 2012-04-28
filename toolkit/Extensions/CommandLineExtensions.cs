@@ -229,7 +229,7 @@ namespace CoApp.Toolkit.Extensions {
 #if !COAPP_ENGINE_CORE
         public static void ListBugTrackers() {
             using (new ConsoleColors(ConsoleColor.Cyan, ConsoleColor.Black)) {
-                Assembly.GetEntryAssembly().Logo().Print();
+                Console.WriteLine(Assembly.GetEntryAssembly().Logo());
             }
             Assembly.GetEntryAssembly().SetLogo("");
             using (new ConsoleColors(ConsoleColor.White, ConsoleColor.Black)) {
@@ -309,7 +309,7 @@ namespace CoApp.Toolkit.Extensions {
                         arg = arg.Substring(0, pos).ToLower();
 
                         if (string.IsNullOrEmpty(param) || string.IsNullOrEmpty(arg)) {
-                            "Invalid Option in config file [{0}]: {1}".Print(file, line.Trim());
+                            Console.WriteLine("Invalid Option in config file [{0}]: {1}", file, line.Trim());
                             _switches.Add("help", new List<string>());
                             return;
                         }
@@ -322,7 +322,7 @@ namespace CoApp.Toolkit.Extensions {
                     ((List<string>)_switches[arg]).Add(param);
                 }
             } else {
-                "Unable to find configuration file [{0}]".Print(param);
+                Console.WriteLine("Unable to find configuration file [{0}]", param);
             }
         }
 

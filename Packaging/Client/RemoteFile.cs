@@ -360,19 +360,19 @@ namespace CoApp.Packaging.Client {
                     foreach (var ex in ee.InnerExceptions) {
                         var wex = ex as WebException;
                         if (wex != null) {
-                            Console.WriteLine("Status:" + wex.Status);
-                            Console.WriteLine("Response:" + wex.Response);
-                            Console.WriteLine("Response:" + ((HttpWebResponse)wex.Response).StatusCode);
+                            // Console.WriteLine("Status:" + wex.Status);
+                            // Console.WriteLine("Response:" + wex.Response);
+                            // Console.WriteLine("Response:" + ((HttpWebResponse)wex.Response).StatusCode);
                         }
 
-                        Console.WriteLine(ex.GetType());
-                        Console.WriteLine(ex.Message);
-                        Console.WriteLine(ex.StackTrace);
+                        // Console.WriteLine(ex.GetType());
+                        // Console.WriteLine(ex.Message);
+                        // Console.WriteLine(ex.StackTrace);
                     }
                 } catch (Exception e) {
-                    Console.WriteLine(e.GetType());
-                    Console.WriteLine(e.Message);
-                    Console.WriteLine(e.StackTrace);
+                    // Console.WriteLine(e.GetType());
+                    // Console.WriteLine(e.Message);
+                    // Console.WriteLine(e.StackTrace);
                 }
             }, TaskContinuationOptions.AttachedToParent);
         }

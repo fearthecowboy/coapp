@@ -100,7 +100,7 @@ namespace CoApp.Toolkit.Console {
         protected int Help() {
             Logo();
             using (new ConsoleColors(ConsoleColor.White, ConsoleColor.Black)) {
-                Res.GetString("HelpText").Print();
+                Console.WriteLine(Res.GetString("HelpText"));
             }
 
             return 0;
@@ -111,7 +111,7 @@ namespace CoApp.Toolkit.Console {
         /// </summary>
         protected void Logo() {
             using (new ConsoleColors(ConsoleColor.Cyan, ConsoleColor.Black)) {
-                this.Assembly().Logo().Print();
+                Console.WriteLine(this.Assembly().Logo());
             }
 
             this.Assembly().SetLogo(string.Empty);
