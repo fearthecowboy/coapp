@@ -157,6 +157,9 @@ namespace CoApp.Packaging.Common {
         }
 
         public static implicit operator string(CanonicalName canonicalName) {
+            if( ReferenceEquals(canonicalName,null)) {
+                return null;
+            }
             return canonicalName.ToString();
         }
 

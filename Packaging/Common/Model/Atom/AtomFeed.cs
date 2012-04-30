@@ -156,10 +156,16 @@ namespace CoApp.Packaging.Common.Model.Atom {
         
         public IEnumerable<Package> Packages {
             get {
+
                 return Items.Select(each => {
                     var atomItem = each as AtomItem;
                     return atomItem != null ? atomItem.Package : null;
-                });
+                }).Where(each => each != null && null != each.CanonicalName);
+                /*
+                return Items.Select(each => {
+                    var atomItem = each as AtomItem;
+                    return atomItem != null ? atomItem.Package : null;
+                });*/
             }
         } 
 

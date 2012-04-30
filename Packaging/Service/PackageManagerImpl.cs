@@ -62,7 +62,7 @@ namespace CoApp.Packaging.Service {
                 }
                 // defaults to the installed packages feed 
                 // and the default coapp feed.
-                return "http://coapp.org/feed".SingleItemAsEnumerable();
+                return "http://coapp.org/current".SingleItemAsEnumerable();
             }
         }
 

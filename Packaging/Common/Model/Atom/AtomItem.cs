@@ -246,6 +246,10 @@ namespace CoApp.Packaging.Common.Model.Atom {
         /// </summary>
         public Package Package {
             get {
+                if( string.IsNullOrEmpty(Model.CanonicalName) ) {
+                    return null;
+                }
+
                 var package = Package.GetPackage(Model.CanonicalName);
 
                 // lets copy what details we have into that package.

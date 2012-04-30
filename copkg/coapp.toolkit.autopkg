@@ -22,10 +22,10 @@ The goal of the CoApp project is to create a community of developers dedicated t
     
     author-version : "1.2 PRE-RC";
     bug-tracker: "https://github.com/organizations/coapp/dashboard/issues";
-    stability : "-100";
-    tags : {
+    stability : "0";
+    /* tags : {
         green, red
-    };
+    }; */
 
 }
 

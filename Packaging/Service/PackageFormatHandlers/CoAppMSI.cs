@@ -94,7 +94,7 @@ namespace CoApp.Packaging.Service.PackageFormatHandlers {
             var canonicalName = packageProperties["CanonicalName"];
 
             var feed = AtomFeed.Load(atomFeedText);
-            var result = feed.Packages.FirstOrDefault(each => each.CanonicalName == canonicalName);
+            var result = feed.Packages.FirstOrDefault(each => each != null && each.CanonicalName == canonicalName);
 
             if (result == null) {
                 throw new InvalidPackageException(InvalidReason.MalformedCoAppMSI, localPackagePath);
