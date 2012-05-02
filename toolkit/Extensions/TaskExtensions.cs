@@ -3,6 +3,7 @@
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading.Tasks;
+    using Exceptions;
     using Tasks;
 
     public static class TaskExtensions {
@@ -18,6 +19,9 @@
             if (antecedent.IsFaulted) {
                 throw antecedent.Exception.Unwrap();
             }
+
+            if (antecedent.IsCanceled)
+                throw new OperationCompletedBeforeResultException();
         }
 
         /// <summary>
@@ -33,6 +37,9 @@
             if (!exceptions.IsNullOrEmpty()) {
                 throw new AggregateException(exceptions);
             }
+
+            if (antecedents.Any(each => each.IsCompleted))
+                throw new OperationCompletedBeforeResultException();
         }
 
         public static void RethrowWhenFaulted(this IEnumerable<Task> antecedents) {
@@ -52,6 +59,9 @@
             if (!exceptions.IsNullOrEmpty()) {
                 throw new AggregateException(exceptions);
             }
+
+            if (antecedents.Any(each => each.IsCompleted))
+                throw new OperationCompletedBeforeResultException();
         }
 
         public static void RethrowWhenFaulted<T>(this IEnumerable<Task<T>> antecedents) {
