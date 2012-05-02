@@ -29,7 +29,7 @@ namespace CoApp.Packaging.Common {
 
     public static class EngineServiceManager {
         public const string CoAppServiceName = "CoApp";
-        public const string CoAppDisplayName = "CoApp";
+        public const string CoAppDisplayName = "CoApp Service";
 
         public static bool IsServiceInstalled {
             get {

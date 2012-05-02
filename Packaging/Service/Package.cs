@@ -41,7 +41,7 @@ namespace CoApp.Packaging.Service {
 
         internal string PackageDirectory {
             get {
-                return Path.Combine(TargetDirectory, Vendor.MakeSafeFileName(), CanonicalName);
+                return Path.Combine(TargetDirectory, Vendor.MakeSafeFileName(), CanonicalName.PackageName);
             }
         }
 
@@ -81,18 +81,19 @@ namespace CoApp.Packaging.Service {
 
         public bool IsInstalled {
             get {
-                return _isInstalled ?? (_isInstalled = ((Func<bool>)(() => {
-                    try {
-                        Changed();
-                        if (PackageHandler != null) {
-                            return PackageHandler.IsInstalled(CanonicalName);
+                if (!_isInstalled.HasValue) {
+                    lock (this) {
+                        try {
+                            Changed();
+                            if (PackageHandler != null) {
+                                return true == (_isInstalled = PackageHandler.IsInstalled(CanonicalName));
+                            }
+                        } catch {
                         }
-
-                        return false;
-                    } catch {
+                        _isInstalled = false;
                     }
-                    return false;
-                }))()).Value;
+                }
+                return _isInstalled.Value;
             }
             set {
                 if (_isInstalled != value) {
@@ -149,6 +150,7 @@ namespace CoApp.Packaging.Service {
 
             // if we didn't find it by looking at the packages in memory, and seeing if it matches a known path.
             // try package handlers to see if we can find one that will return a valid package for it.
+
             pkg = pkg ?? CoAppMSI.GetCoAppPackageFileInformation(filename);
 
             // pkg = pkg ?? NugetPackageHandler.GetCoAppPackageFileInformation(filename);

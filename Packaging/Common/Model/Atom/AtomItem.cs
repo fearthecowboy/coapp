@@ -251,39 +251,39 @@ namespace CoApp.Packaging.Common.Model.Atom {
                 }
 
                 var package = Package.GetPackage(Model.CanonicalName);
+                lock (package) {
+                    // lets copy what details we have into that package.
+                    package.DisplayName = Model.DisplayName;
+                    package.Vendor = Model.Vendor;
 
-                // lets copy what details we have into that package.
-                package.DisplayName = Model.DisplayName;
-                package.Vendor = Model.Vendor;
-
-                package.InternalPackageData.PolicyMinimumVersion = Model.BindingPolicyMinVersion;
-                package.InternalPackageData.PolicyMaximumVersion = Model.BindingPolicyMaxVersion;
-                if (package.InternalPackageData.Roles.IsNullOrEmpty()) {
-                    package.InternalPackageData.Roles.AddRange(Model.Roles);
-                }
-                if (package.InternalPackageData.Dependencies.IsNullOrEmpty()) {
-                    package.InternalPackageData.Dependencies.AddRange(Model.PackageDependencies.Select(each => Package.GetPackage(each)));
-                }
-                if (package.InternalPackageData.Features.IsNullOrEmpty() && !Model.Features.IsNullOrEmpty()) {
-                    package.InternalPackageData.Features.AddRange( Model.Features );
-                }
-                if (package.InternalPackageData.RequiredFeatures.IsNullOrEmpty() && !Model.RequiredFeatures.IsNullOrEmpty()) {
-                    package.InternalPackageData.RequiredFeatures.AddRange(Model.RequiredFeatures);
-                }
-                if(!Model.Feeds.IsNullOrEmpty()) {
-                    foreach( var feed in Model.Feeds ) {
-                        package.InternalPackageData.FeedLocation = feed.AbsoluteUri;
+                    package.InternalPackageData.PolicyMinimumVersion = Model.BindingPolicyMinVersion;
+                    package.InternalPackageData.PolicyMaximumVersion = Model.BindingPolicyMaxVersion;
+                    if (package.InternalPackageData.Roles.IsNullOrEmpty()) {
+                        package.InternalPackageData.Roles.AddRange(Model.Roles);
                     }
-                }
-                if (!Model.Locations.IsNullOrEmpty()) {
-                    foreach (var location in Model.Locations) {
-                        package.InternalPackageData.RemoteLocation = location.AbsoluteUri;
+                    if (package.InternalPackageData.Dependencies.IsNullOrEmpty()) {
+                        package.InternalPackageData.Dependencies.AddRange(Model.PackageDependencies.Select(each => Package.GetPackage(each)));
                     }
+                    if (package.InternalPackageData.Features.IsNullOrEmpty() && !Model.Features.IsNullOrEmpty()) {
+                        package.InternalPackageData.Features.AddRange(Model.Features);
+                    }
+                    if (package.InternalPackageData.RequiredFeatures.IsNullOrEmpty() && !Model.RequiredFeatures.IsNullOrEmpty()) {
+                        package.InternalPackageData.RequiredFeatures.AddRange(Model.RequiredFeatures);
+                    }
+                    if (!Model.Feeds.IsNullOrEmpty()) {
+                        foreach (var feed in Model.Feeds) {
+                            package.InternalPackageData.FeedLocation = feed.AbsoluteUri;
+                        }
+                    }
+                    if (!Model.Locations.IsNullOrEmpty()) {
+                        foreach (var location in Model.Locations) {
+                            package.InternalPackageData.RemoteLocation = location.AbsoluteUri;
+                        }
+                    }
+
+                    // store the place to get the cosmetic package details later 
+                    Cache<PackageDetails>.Value.Insert(package.CanonicalName, unusedCanonicalFileName => GetPackageDetails(package, Model));
                 }
-
-                // store the place to get the cosmetic package details later 
-                Cache<PackageDetails>.Value.Insert(package.CanonicalName, unusedCanonicalFileName => GetPackageDetails(package, Model));
-
                 return package;
             }
         }

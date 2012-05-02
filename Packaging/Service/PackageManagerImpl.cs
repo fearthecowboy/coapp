@@ -144,6 +144,8 @@ namespace CoApp.Packaging.Service {
                 return FinishedSynchronously;
             }
 
+            canonicalName = canonicalName ?? CanonicalName.CoAppPackages;
+
             if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.EnumeratePackages)) {
                 UpdateIsRequestedFlags();
 
@@ -285,6 +287,16 @@ namespace CoApp.Packaging.Service {
                 return FinishedSynchronously;
             }
 
+            var AA = package.PackageDetails.IconLocations;
+            var BB = package.PackageDetails.Licenses.ToDictionary(each => each.Name, each => each.Text);
+            var CC = package.InternalPackageData.Roles.ToDictionary(each => each.Name, each => each.PackageRole.ToString());
+            var DD = package.PackageDetails.Tags;
+            var EE = package.PackageDetails.Contributors.ToDictionary(each => each.Name, each => each.Location.AbsoluteUri);
+            var FF = package.PackageDetails.Contributors.ToDictionary(each => each.Name, each => each.Email);
+            
+
+
+
             response.PackageDetails(package.CanonicalName, new Dictionary<string, string> {
                 {"description", package.PackageDetails.Description},
                 {"summary", package.PackageDetails.SummaryDescription},
@@ -292,12 +304,12 @@ namespace CoApp.Packaging.Service {
                 {"copyright", package.PackageDetails.CopyrightStatement},
                 {"author-version", package.PackageDetails.AuthorVersion},
             },
-                package.PackageDetails.IconLocations,
-                package.PackageDetails.Licenses.ToDictionary(each => each.Name, each => each.Text),
-                package.InternalPackageData.Roles.ToDictionary(each => each.Name, each => each.PackageRole.ToString()),
-                package.PackageDetails.Tags,
-                package.PackageDetails.Contributors.ToDictionary(each => each.Name, each => each.Location.AbsoluteUri),
-                package.PackageDetails.Contributors.ToDictionary(each => each.Name, each => each.Email));
+               AA,// package.PackageDetails.IconLocations,
+               BB,// package.PackageDetails.Licenses.ToDictionary(each => each.Name, each => each.Text),
+               CC,// package.InternalPackageData.Roles.ToDictionary(each => each.Name, each => each.PackageRole.ToString()),
+               DD,// package.PackageDetails.Tags,
+               EE,// package.PackageDetails.Contributors.ToDictionary(each => each.Name, each => each.Location.AbsoluteUri),
+               FF );// package.PackageDetails.Contributors.ToDictionary(each => each.Name, each => each.Email));
             return FinishedSynchronously;
         }
 
@@ -1395,7 +1407,7 @@ namespace CoApp.Packaging.Service {
 
         public Task GetPolicy(string policyName) {
             var response = Event<GetResponseInterface>.RaiseFirst();
-            var policies = PermissionPolicy.AllPolicies.Where(each => each.Name.IsWildcardMatch(policyName)).ToArray();
+            var policies = PermissionPolicy.AllPolicies.Where(each => each.Name.NewIsWildcardMatch(policyName)).ToArray();
 
             foreach (var policy in policies) {
                 response.PolicyInformation(policy.Name, policy.Description, policy.Accounts);

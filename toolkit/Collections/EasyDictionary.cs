@@ -17,7 +17,7 @@ namespace CoApp.Toolkit.Collections {
     /// </summary>
     /// <typeparam name="TKey"> </typeparam>
     /// <typeparam name="TValue"> </typeparam>
-    public class EasyDictionary<TKey, TValue> : IDictionary<TKey, TValue> {
+    public class EasyDictionary<TKey, TValue> : IDictionary<TKey, TValue> where TKey : class where TValue : class {
         private readonly IDictionary<TKey, TValue> _dictionary;
 
         public EasyDictionary() {
@@ -26,6 +26,10 @@ namespace CoApp.Toolkit.Collections {
 
         public EasyDictionary(IDictionary<TKey, TValue> dictionary) {
             _dictionary = dictionary;
+        }
+
+        public void AddPair(object key, object value) {
+            Add( key as TKey, value as TValue);
         }
 
         public void Add(TKey key, TValue value) {

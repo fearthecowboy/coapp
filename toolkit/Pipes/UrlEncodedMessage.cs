@@ -15,6 +15,7 @@ namespace CoApp.Toolkit.Pipes {
     using System.Linq;
     using System.Reflection;
     using System.Text.RegularExpressions;
+    using Collections;
     using Exceptions;
     using Extensions;
 
@@ -119,17 +120,33 @@ namespace CoApp.Toolkit.Pipes {
             throw new CoAppException("Unsupported IEnumerable type '{0}' (must support tryparse or string constructor)".format(elementType.Name));
         }
 
-        public object GetValueAsDictionary(string collectionName, Type keyType, Type valueType) {
-            var rx = new Regex(@"^{0}\[(.*)\]$".format(Regex.Escape(collectionName)));
-            var keys = from k in Data.Keys let match = rx.Match(k) where match.Success select match.Groups[1].Captures[0].Value.UrlDecode();
-
-            if (keyType == typeof (string) && valueType == typeof (string)) {
-                return keys.ToDictionary(key => key, key => Data[key]);
+        public object GetValueAsEnum( string key, Type enumerationType) {
+            var v = GetValueAsString(key);
+            if( string.IsNullOrEmpty(v)) {
+                return null;
             }
+            return Enum.Parse(enumerationType, v);
+        }
 
-            dynamic result = Activator.CreateInstance(typeof(Dictionary<,>).MakeGenericType(keyType, valueType));
-            foreach (var key in keys) {
-                result.Add(keyType.ParseString(key), keyType.ParseString(Data[key]));
+        public object GetValueAsDictionary(string collectionName, Type keyType, Type valueType, Type dictionaryType) {
+            var rx = new Regex(@"^{0}\[(.*)\]$".format(Regex.Escape(collectionName)));
+            var pairs = from k in Data.Keys let match = rx.Match(k) where match.Success select new { key = match.Groups[1].Captures[0].Value.UrlDecode(), value = Data[k]};
+            dynamic result;
+
+            if ((dictionaryType.Name.IndexOf("IDictionary") > -1) || (dictionaryType.Name.IndexOf("EasyDictionary") > -1)) {
+                result = Activator.CreateInstance(typeof(EasyDictionary<,>).MakeGenericType(keyType, valueType));
+            } else {
+                result = Activator.CreateInstance(typeof(Dictionary<,>).MakeGenericType(keyType, valueType));    
+            }
+            
+            
+            foreach (var each in pairs) {
+                try {
+                    result.AddPair(keyType.ParseString(each.key), keyType.ParseString(each.value));
+                } catch (Exception e ) {
+                    Console.WriteLine(e.Message);
+                    Console.WriteLine(e.StackTrace);
+                }
             }
             return result;
             /*
@@ -253,7 +270,8 @@ namespace CoApp.Toolkit.Pipes {
 
         public void AddDictionary(string key, IDictionary collection) {
             foreach (var each in collection.Keys) {
-                AddKeyValuePair(key, each.ToString(), collection[each].ToString());
+                var val = collection[each] ?? "";
+                AddKeyValuePair(key, each.ToString(), val.ToString());
             }
         }
 

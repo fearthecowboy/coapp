@@ -12,9 +12,12 @@
 
 namespace CoApp.Packaging.Service {
     using System;
+    using System.Collections.Generic;
     using System.ComponentModel;
     using System.Configuration.Install;
+    using System.Diagnostics;
     using System.IO;
+    using System.Linq;
     using System.ServiceProcess;
     using Common;
 
@@ -31,13 +34,32 @@ namespace CoApp.Packaging.Service {
             _serviceProcessInstaller.Account = useUserAccount ? ServiceAccount.User : ServiceAccount.LocalSystem;
             _serviceProcessInstaller.Password = null;
             _serviceProcessInstaller.Username = null;
-
+            
             _serviceInstaller.ServiceName = EngineServiceManager.CoAppServiceName;
             _serviceInstaller.DisplayName = EngineServiceManager.CoAppDisplayName;
 
             _serviceInstaller.StartType = ServiceStartMode.Automatic;
 
             Installers.AddRange(new Installer[] {_serviceProcessInstaller, _serviceInstaller});
+
+            // works around a goofy bug in the installer stack.
+            int n = 0;
+            foreach( var eli in FindInstaller(Installers) ) {
+                eli.Source = "CoAppLog"+(++n);
+            }
+        }
+
+        private IEnumerable<EventLogInstaller> FindInstaller(InstallerCollection installers) {
+            foreach (Installer installer in installers) {
+                var eventLogInstaller = installer as EventLogInstaller;
+                if (eventLogInstaller != null) {
+                    yield return eventLogInstaller;
+                }
+
+                foreach (var i in FindInstaller(installer.Installers).Where(i => i != null)) {
+                    yield return i;
+                }
+            }
         }
     }
 }

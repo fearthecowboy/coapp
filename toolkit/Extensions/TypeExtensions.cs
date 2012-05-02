@@ -46,13 +46,18 @@ namespace CoApp.Toolkit.Extensions {
         }
 
         public static bool IsParsable(this Type parsableType) {
-            return GetTryParse(parsableType) != null || IsConstructableFromString(parsableType);
+            return parsableType.IsEnum || GetTryParse(parsableType) != null || IsConstructableFromString(parsableType);
         }
 
         public static object ParseString(this Type parsableType, string value) {
+            if (parsableType.IsEnum) {
+                return Enum.Parse(parsableType, value);
+            }
+
             if( parsableType == typeof(string)) {
                 return value;
             }
+
             var tryParse = GetTryParse(parsableType);
 
             if (tryParse != null) {
@@ -74,7 +79,7 @@ namespace CoApp.Toolkit.Extensions {
         }
 
         public static bool IsIEnumerable(this Type ienumerableType) {
-            return typeof (IDictionary).IsAssignableFrom(ienumerableType);
+            return typeof (IEnumerable).IsAssignableFrom(ienumerableType);
         }
     }
 }

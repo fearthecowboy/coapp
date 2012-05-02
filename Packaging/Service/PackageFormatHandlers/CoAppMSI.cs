@@ -96,13 +96,11 @@ namespace CoApp.Packaging.Service.PackageFormatHandlers {
             var feed = AtomFeed.Load(atomFeedText);
             var result = feed.Packages.FirstOrDefault(each => each != null && each.CanonicalName == canonicalName);
 
-            if (result == null) {
-                throw new InvalidPackageException(InvalidReason.MalformedCoAppMSI, localPackagePath);
+            if (result != null) {
+                // set things that only we can do here...
+                result.InternalPackageData.LocalLocation = localPackagePath;
+                result.PackageHandler = Instance;
             }
-
-            // set things that only we can do here...
-            result.InternalPackageData.LocalLocation = localPackagePath;
-            result.PackageHandler = Instance;
 
             return result;
         }

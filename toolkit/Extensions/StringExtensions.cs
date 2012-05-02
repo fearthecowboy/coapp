@@ -242,7 +242,7 @@ namespace CoApp.Toolkit.Extensions {
         /// <returns> <c>true</c> if [is wildcard match] [the specified text]; otherwise, <c>false</c> . </returns>
         /// <remarks>
         /// </remarks>
-        public static bool IsWildcardMatch(this string text, string wildcardMask, string ignorePrefix = null, bool escapePrefix = true) {
+        public static bool _IsWildcardMatch(this string text, string wildcardMask, string ignorePrefix = null, bool escapePrefix = true) {
             //find out if the wildcard is rooted?
             if (Path.GetPathRoot(wildcardMask) == String.Empty) {
                 ignorePrefix = String.IsNullOrEmpty(ignorePrefix) ? (text.Contains("\\") ? @".*\\?" : string.Empty) : escapePrefix ? Regex.Escape(ignorePrefix) : ignorePrefix;
@@ -358,7 +358,7 @@ namespace CoApp.Toolkit.Extensions {
         /// </remarks>
         public static bool HasWildcardMatch(this IEnumerable<string> source, string value, string ignorePrefix = null,
             bool escapePrefix = true) {
-            return source.Any(wildcard => value.IsWildcardMatch(wildcard, wildcard.Contains(@"\\") ? ignorePrefix : null, escapePrefix));
+            return source.Any(wildcard => value._IsWildcardMatch(wildcard, wildcard.Contains(@"\\") ? ignorePrefix : null, escapePrefix));
         }
 
         /// <summary>

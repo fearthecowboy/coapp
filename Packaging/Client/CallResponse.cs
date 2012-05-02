@@ -136,7 +136,7 @@ namespace CoApp.Packaging.Client {
             _packages.Value.Add(result);
         }
 
-        public void PackageDetails(CanonicalName canonicalName, Dictionary<string, string> metadata, IEnumerable<string> iconLocations, Dictionary<string, string> licenses, Dictionary<string, string> roles, IEnumerable<string> tags,
+        public void PackageDetails(CanonicalName canonicalName, IDictionary<string, string> metadata, IEnumerable<string> iconLocations, IDictionary<string, string> licenses, IDictionary<string, string> roles, IEnumerable<string> tags,
             IDictionary<string, string> contributorUrls, IDictionary<string, string> contributorEmails) {
             var result = Package.GetPackage(canonicalName);
             result.Icon = iconLocations.FirstOrDefault();
@@ -144,7 +144,6 @@ namespace CoApp.Packaging.Client {
             result.Tags = tags;
             // licenses not done yet.
             result.Description = metadata["description"];
-            result.Summary = metadata["summary"];
             result.Summary = metadata["summary"];
             result.DisplayName = metadata["display-name"];
             result.Copyright = metadata["copyright"];

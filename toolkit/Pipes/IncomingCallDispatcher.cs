@@ -17,6 +17,7 @@ namespace CoApp.Toolkit.Pipes {
     using System.Dynamic;
     using System.Linq;
     using System.Reflection;
+    using System.Runtime.Serialization;
     using System.Threading.Tasks;
     using Collections;
     using Exceptions;
@@ -34,7 +35,9 @@ namespace CoApp.Toolkit.Pipes {
         Enumerable,
         Dictionary,
         Nullable,
-        String
+        String,
+        Enumeration
+
     }
 
     internal class CachedParameter {
@@ -42,7 +45,10 @@ namespace CoApp.Toolkit.Pipes {
             Name = parameterInfo.Name;
 
             var t = parameterInfo.ParameterType;
-            if (t == typeof (string)) {
+            if (t.IsEnum) {
+                ParameterType = ParameterType.Enumeration;
+                Type = t;
+            } else if (t == typeof(string)) {
                 // can be converted to a string I guess.
                 ParameterType = ParameterType.String;
                 Type = t;
@@ -69,6 +75,7 @@ namespace CoApp.Toolkit.Pipes {
                     case "IDictionary":
                     case "EasyDictionary":
                         ParameterType = ParameterType.Dictionary;
+                        Type = t;
                         DictionaryKeyType = genericArguments[0];
                         DictionaryValueType = genericArguments[1];
                         break;
@@ -76,12 +83,14 @@ namespace CoApp.Toolkit.Pipes {
                     default:
                         throw new CoAppException("Unsupported Generic Type");
                 }
-            } else if (t.IsArray) {
+            }
+            else if (t.IsArray) {
                 // an array of soemthing.
                 ParameterType = ParameterType.Array;
                 CollectionType = t.GetElementType();
                 Type = t;
-            } else {
+            }
+            else {
                 throw new CoAppException("Unsupported Type: '{0}'".format(t.Name));
             }
         }
@@ -100,16 +109,7 @@ namespace CoApp.Toolkit.Pipes {
         }
 
         internal Type CollectionType { get; set; }
-
-        internal Type DictionaryKeyType {
-            get {
-                return Type;
-            }
-            set {
-                Type = value;
-            }
-        }
-
+        internal Type DictionaryKeyType { get; set; }
         internal Type DictionaryValueType { get; set; }
 
         internal object FromString(UrlEncodedMessage message, string key) {
@@ -130,7 +130,10 @@ namespace CoApp.Toolkit.Pipes {
                     return message.GetValueAsArray(key, CollectionType,Type);
 
                 case ParameterType.Dictionary:
-                    return message.GetValueAsDictionary(key, DictionaryKeyType, DictionaryValueType);
+                    return message.GetValueAsDictionary(key, DictionaryKeyType, DictionaryValueType, Type);
+                
+                case ParameterType.Enumeration:
+                    return message.GetValueAsEnum(key, Type);
             }
             return null;
         }
@@ -199,7 +202,7 @@ namespace CoApp.Toolkit.Pipes {
                 var argName = binder.CallInfo.ArgumentNames[i];
                 if (arg != null) {
                     var argType = arg.GetType();
-                    if (argType == typeof (string) || argType.IsParsable()) {
+                    if (argType == typeof (string) || argType.IsEnum || argType.IsParsable()) {
                         msg.Add(argName, arg.ToString());
                     } else if (argType.IsDictionary()) {
                         msg.AddDictionary(argName, (IDictionary)arg);
@@ -207,6 +210,8 @@ namespace CoApp.Toolkit.Pipes {
                         msg.AddCollection(argName, ((object[])arg).Select(each => each.ToString()));
                     } else if (argType.IsIEnumerable()) {
                         msg.AddCollection(argName, ((IEnumerable)arg));
+                    } else {
+                        throw new CoAppException("Unable to serialize output parameter '{0}' as '{1}'.".format(argName, argType.Name));
                     }
                 }
             }

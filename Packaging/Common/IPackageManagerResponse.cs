@@ -24,8 +24,8 @@ namespace CoApp.Packaging.Common {
             bool blocked, bool required, bool clientRequired, bool active, bool dependent, FourPartVersion minPolicy, FourPartVersion maxPolicy, IEnumerable<string> remoteLocations,
             IEnumerable<CanonicalName> dependencies, IEnumerable<CanonicalName> supercedentPackages);
 
-        void PackageDetails(CanonicalName canonicalName, Dictionary<string, string> metadata,
-            IEnumerable<string> iconLocations, Dictionary<string, string> licenses, Dictionary<string, string> roles,
+        void PackageDetails(CanonicalName canonicalName, IDictionary<string, string> metadata,
+            IEnumerable<string> iconLocations, IDictionary<string, string> licenses, IDictionary<string, string> roles,
             IEnumerable<string> tags, IDictionary<string, string> contributorUrls, IDictionary<string, string> contributorEmails);
 
         void FeedDetails(string location, DateTime lastScanned, bool session, bool suppressed, bool validated, string state);

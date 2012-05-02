@@ -59,9 +59,39 @@ namespace CoApp.Packaging.Common {
         }
 
         public bool IsWildcardMatch(FlavorString flavor) {
-            if ((flavor._string.Contains("*") || flavor._string.Contains("?")) && _string.IsWildcardMatch(flavor._string)) {
-                return true;
+            if ((flavor._string.Contains("*") || flavor._string.Contains("?")) ) {
+                // manually see if the flavors match.
+                var wildcardFlavorsMatched = new List<string>();
+                if( !_strings.Any() && flavor._string == "[*]") {
+                    return true;
+                }
+
+                var matched = false;
+                foreach( var s in _strings) {
+                    matched = false;
+                    foreach( var w in flavor._strings) {
+                        if( s.NewIsWildcardMatch(w)) {
+                            if( !wildcardFlavorsMatched.Contains(w)) {
+                                // mark this wildcard as matched
+                                wildcardFlavorsMatched.Add(w);
+                            }
+                            matched = true;
+                            break;
+                        }
+                    }
+                    if( !matched ) {
+                        break;
+                    }
+                } 
+
+                if( matched ) {
+                    // check to see that we hit all of the stuff in the wildcard list.
+                    if( wildcardFlavorsMatched.Count == flavor._strings.Count()) {
+                        return true;
+                    }
+                }
             }
+
             return Equals(flavor);
         }
 
