@@ -17,6 +17,7 @@ namespace CoApp.Packaging.Service.Feeds {
     using System.Linq;
     using System.Threading.Tasks;
     using Common;
+    using Toolkit.Collections;
     using Toolkit.Extensions;
     using Toolkit.Tasks;
 
@@ -29,7 +30,7 @@ namespace CoApp.Packaging.Service.Feeds {
         /// <summary>
         ///   The collection of all the feeds known to the system at the current time. This indexes feeds based on the location string used to create the feed object.
         /// </summary>
-        private static readonly Dictionary<string, PackageFeed> AllFeeds = new Dictionary<string, PackageFeed>();
+        private static readonly IDictionary<string, PackageFeed> AllFeeds = new XDictionary<string, PackageFeed>();
 
         /// <summary>
         ///   indicates if the current feed has already scanned the contents How this is used is up to the child class.

@@ -93,7 +93,7 @@ namespace CoApp.Packaging.Service {
 
         public bool IsPotentiallyInstallable {
             get {
-                return !PackageFailedInstall && (_package.InternalPackageData.HasLocalLocation || !CouldNotDownload && _package.InternalPackageData.HasRemoteLocation);
+                return !PackageFailedInstall && (_package.HasLocalLocation || !CouldNotDownload && _package.HasRemoteLocation);
             }
         }
 
@@ -107,7 +107,7 @@ namespace CoApp.Packaging.Service {
                     return _localValidatedLocation;
                 }
 
-                var location = _package.InternalPackageData.LocalLocation;
+                var location = _package.LocalLocations.FirstOrDefault();
                 if (string.IsNullOrEmpty(location)) {
                     // there are no local locations at all for this package?
                     return _localValidatedLocation = null;
@@ -122,7 +122,7 @@ namespace CoApp.Packaging.Service {
                 if (remoteInterface != null) {
                     Event<GetResponseInterface>.RaiseFirst().SignatureValidation(location, false, null);
                 }
-                var result = _package.InternalPackageData.LocalLocations.Any(Verifier.HasValidSignature) ? location : null;
+                var result = _package.LocalLocations.Any(Verifier.HasValidSignature) ? location : null;
 
                 if (remoteInterface != null) {
                     Event<GetResponseInterface>.RaiseFirst().SignatureValidation(result, !string.IsNullOrEmpty(result), string.IsNullOrEmpty(result) ? null : Verifier.GetPublisherName(result));

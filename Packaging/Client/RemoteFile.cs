@@ -369,7 +369,7 @@ namespace CoApp.Packaging.Client {
                         // Console.WriteLine(ex.Message);
                         // Console.WriteLine(ex.StackTrace);
                     }
-                } catch (Exception e) {
+                } catch {
                     // Console.WriteLine(e.GetType());
                     // Console.WriteLine(e.Message);
                     // Console.WriteLine(e.StackTrace);

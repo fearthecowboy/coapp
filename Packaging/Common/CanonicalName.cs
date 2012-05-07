@@ -13,11 +13,15 @@
 namespace CoApp.Packaging.Common {
     using System;
     using System.Text.RegularExpressions;
+    using System.Xml;
+    using System.Xml.Schema;
+    using System.Xml.Serialization;
     using Toolkit.Exceptions;
     using Toolkit.Extensions;
     using Toolkit.Win32;
 
-    public class CanonicalName : IComparable, IComparable<CanonicalName>, IEquatable<CanonicalName> {
+    [XmlRoot(ElementName = "CanonicalName", Namespace = "http://coapp.org/atom-package-feed-1.0")]
+    public class CanonicalName : IComparable, IComparable<CanonicalName>, IEquatable<CanonicalName>, IXmlSerializable {
         private static readonly char[] Slashes;
         private static readonly Regex CoappRx;
         private static readonly Regex PartialCoappRx;
@@ -27,11 +31,11 @@ namespace CoApp.Packaging.Common {
         public static CanonicalName NugetPackages;
         public static CanonicalName CoAppItself;
         public static CanonicalName CoAppDevtools;
-
+        
         static CanonicalName() {
             Slashes = new[] { '\\', '/' };
-            CoappRx = new Regex(@"^(?<name>.+)(?<flavor>\[.+\])?(?<v1>-\d{1,5})(?<v2>\.\d{1,5})(?<v3>\.\d{1,5})(?<v4>\.\d{1,5})(?<arch>-any|-x86|-x64|-arm)(?<pkt>-[0-9a-f]{16})$", RegexOptions.IgnoreCase);
-            PartialCoappRx = new Regex(@"^(?<name>.*?)?(?<flavor>\[.+\])?(?<v1>-\d{1,5}|-\*)?(?<v2>\.\d{1,5}|\.\*)?(?<v3>\.\d{1,5}|\.\*)?(?<v4>\.\d{1,5}|\.\*)?(<plus>\+)?(?<arch>-{1,2}any|-{1,2}x86|-{1,2}x64|-{1,2}arm|-{1,2}all|-\*)?(?<pkt>-{1,3}[0-9a-f]{16})?$", RegexOptions.IgnoreCase);
+            CoappRx = new Regex(@"^(?<name>.+?)(?<flavor>\[.+\])?(?<v1>-\d{1,5})(?<v2>\.\d{1,5})(?<v3>\.\d{1,5})(?<v4>\.\d{1,5})(?<arch>-any|-x86|-x64|-arm)(?<pkt>-[0-9a-f]{16})$", RegexOptions.IgnoreCase);
+            PartialCoappRx = new Regex(@"^(?<name>.*?)?(?<flavor>\[.*\])?(?<v1>-\d{1,5}|-\*)?(?<v2>\.\d{1,5}|\.\*)?(?<v3>\.\d{1,5}|\.\*)?(?<v4>\.\d{1,5}|\.\*)?(?<plus>\+)?(?<arch>-{1,2}any|-{1,2}x86|-{1,2}x64|-{1,2}arm|-{1,2}all|-{1,2}auto|-\*)?(?<pkt>-{1,3}[0-9a-f]{16}|-\*)?$", RegexOptions.IgnoreCase);
 
             AllPackages = "*:*";
             CoAppPackages = "coapp:*";
@@ -93,7 +97,7 @@ namespace CoApp.Packaging.Common {
             }
         }
 
-        private CanonicalName() {
+        internal CanonicalName() {
         }
 
         public CanonicalName(string canonicalName) {
@@ -463,6 +467,24 @@ namespace CoApp.Packaging.Common {
 
         private static bool TryParsePHP(string input, CanonicalName result) {
             return false;
+        }
+
+        public XmlSchema GetSchema() {
+            return null;
+        }
+
+        public void ReadXml(XmlReader reader) {
+            reader.MoveToContent();
+            var isEmptyElement = reader.IsEmptyElement;
+            reader.ReadStartElement();
+            if (!isEmptyElement) {
+                TryParseImpl(reader.ReadString(), this);
+                reader.ReadEndElement();
+            }
+        }
+
+        public void WriteXml(XmlWriter writer) {
+            writer.WriteString(ToString());
         }
     }
 }

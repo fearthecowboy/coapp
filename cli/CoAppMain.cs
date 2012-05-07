@@ -873,7 +873,7 @@ namespace CoApp.CLI {
                         Version = pkg.Version,
                         Arch = pkg.Architecture,
                         Status = (pkg.IsInstalled ? "Installed " + (pkg.IsBlocked ? "Blocked " : "") + (pkg.IsClientRequired ? "Required ": pkg.IsRequired ? "Dependency " : "")+ (pkg.IsActive ? "Active " : "" ) : ""),
-                        Location = pkg.IsInstalled ? "(installed)" : !string.IsNullOrEmpty(pkg.LocalPackagePath) ? pkg.LocalPackagePath : (pkg.RemoteLocations.IsNullOrEmpty() ? "<unknown>" :  pkg.RemoteLocations.FirstOrDefault().UrlDecode()),
+                        Location = pkg.IsInstalled ? "(installed)" : !string.IsNullOrEmpty(pkg.LocalPackagePath) ? pkg.LocalPackagePath : (pkg.RemoteLocations.IsNullOrEmpty() ? "<unknown>" :  pkg.RemoteLocations.FirstOrDefault().AbsoluteUri.UrlDecode()),
                     }).ToTable().ConsoleOut();
             }
             else {
@@ -1094,7 +1094,7 @@ namespace CoApp.CLI {
                          getsSatisfied
                              ? "Satisfied by {0}".format(pkg.SatisfiedBy.CanonicalName)
                              : !string.IsNullOrEmpty(pkg.LocalPackagePath)
-                                 ? pkg.LocalPackagePath : (pkg.RemoteLocations.IsNullOrEmpty() ? (pkg.IsInstalled? "(installed)" : "") : pkg.RemoteLocations.FirstOrDefault())
+                                 ? pkg.LocalPackagePath : (pkg.RemoteLocations.IsNullOrEmpty() ? (pkg.IsInstalled? "(installed)" : "") : pkg.RemoteLocations.FirstOrDefault().AbsoluteUri)
                      // Satisfied_By = getsSatisfied ? "" : pkg.SatisfiedBy.CanonicalName ,
                      // Satisfied_By = pkg.SatisfiedBy == null ? pkg.CanonicalName : pkg.SatisfiedBy.CanonicalName ,
                      // Status = pkg.IsInstalled ? "Installed" : "will install",
@@ -1114,7 +1114,7 @@ namespace CoApp.CLI {
                          getsSatisfied
                              ? "Satisfied by {0}".format(pkg.SatisfiedBy.CanonicalName)
                              : !string.IsNullOrEmpty(pkg.LocalPackagePath)
-                                 ? pkg.LocalPackagePath : (pkg.RemoteLocations.IsNullOrEmpty() ?(pkg.IsInstalled? "(installed)" : "") : pkg.RemoteLocations.FirstOrDefault())
+                                 ? pkg.LocalPackagePath : (pkg.RemoteLocations.IsNullOrEmpty() ?(pkg.IsInstalled? "(installed)" : "") : pkg.RemoteLocations.FirstOrDefault().AbsoluteUri)
                      // Satisfied_By = getsSatisfied ? "" : pkg.SatisfiedBy.CanonicalName ,
                      // Satisfied_By = pkg.SatisfiedBy == null ? pkg.CanonicalName : pkg.SatisfiedBy.CanonicalName ,
                      // Status = pkg.IsInstalled ? "Installed" : "will install",

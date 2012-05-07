@@ -16,9 +16,10 @@ namespace CoApp.Packaging.Service.PackageFormatHandlers {
     using System.IO;
     using System.Linq;
     using Exceptions;
+    using Toolkit.Collections;
     using dtf.WindowsInstaller;
 
-    internal class MsiProperties : Dictionary<string, string> {
+    internal class MsiProperties : XDictionary<string, string> {
         internal string Filename { get; private set; }
 
         internal MsiProperties(string fileName) {

@@ -14,12 +14,13 @@ namespace CoApp.Packaging.Service {
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using Toolkit.Collections;
 
     public class Cache<T> where T : class {
         public static Cache<T> Value = new Cache<T>();
 
-        protected Dictionary<string, T> _cache = new Dictionary<string, T>();
-        protected Dictionary<string, List<Func<string, T>>> _delegateCache = new Dictionary<string, List<Func<string, T>>>();
+        protected IDictionary<string, T> _cache = new XDictionary<string, T>();
+        protected IDictionary<string, List<Func<string, T>>> _delegateCache = new XDictionary<string, List<Func<string, T>>>();
 
         protected T GetAndRememberDelegateValue(string index) {
             T result = null;

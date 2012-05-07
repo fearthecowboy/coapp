@@ -1,6 +1,8 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright company="CoApp Project">
-//     Copyright (c) 2011 Eric Schultz. All rights reserved.
+//     Copyright (c) 2010-2012 Garrett Serack and CoApp Contributors. 
+//     Contributors can be discovered using the 'git log' command.
+//     All rights reserved.
 // </copyright>
 // <license>
 //     The software is licensed under the Apache 2.0 License (the "License")
@@ -13,11 +15,12 @@ namespace CoApp.Toolkit.Extensions {
     using System.Linq;
     using System.Security.Cryptography;
     using System.Security.Cryptography.X509Certificates;
+    using Collections;
     using Crypto;
 
     public static class X509Certificate2Extensions {
-        public static Dictionary<string, string> GetSubjectNameParts(this X509Certificate2 cert) {
-            var result = new Dictionary<string, string>();
+        public static IDictionary<string, string> GetSubjectNameParts(this X509Certificate2 cert) {
+            var result = new XDictionary<string, string>();
 
             foreach (var bits in cert.SubjectName.Name.SplitToList(',').Select(each => each.Split('='))) {
                 var newKey = bits[0].Trim(' ');

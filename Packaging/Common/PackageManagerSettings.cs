@@ -18,6 +18,7 @@ namespace CoApp.Packaging.Common {
     using System.Security.AccessControl;
     using System.Security.Principal;
     using Exceptions;
+    using Toolkit.Collections;
     using Toolkit.Configuration;
     using Toolkit.Extensions;
     using Toolkit.Win32;
@@ -88,7 +89,7 @@ namespace CoApp.Packaging.Common {
             CoAppInformation.DeleteValues();
         }
 #endif
-
+        private static string _coAppRootDirectory;
         /// <summary>
         ///   Gets or sets the coapp root directory. May only change the value if the existing directory is empty. If the directory can not be set, this will default to the DEFAULT_COAPP_ROOT location every time.
         /// </summary>
@@ -97,19 +98,19 @@ namespace CoApp.Packaging.Common {
         /// </remarks>
         public static string CoAppRootDirectory {
             get {
-                // string result = SystemStringSetting["RootDirectory"];
-                var result = CoAppSettings["#Root"].StringValue;
+                if (_coAppRootDirectory == null) {
+                    _coAppRootDirectory = CoAppSettings["#Root"].StringValue;
 
-                if (string.IsNullOrEmpty(result)) {
-                    CoAppRootDirectory = result = DefaultCoappRoot;
+                    if (string.IsNullOrEmpty(_coAppRootDirectory)) {
+                        CoAppRootDirectory = _coAppRootDirectory = DefaultCoappRoot;
+                    }
+
+                    if (!Directory.Exists(_coAppRootDirectory)) {
+                        throw new ConfigurationException("CoApp Root Directory does not exist", "RootDirectory",
+                            "The Directory [{0}] did not get created.".format(_coAppRootDirectory));
+                    }
                 }
-
-                if (!Directory.Exists(result)) {
-                    throw new ConfigurationException("CoApp Root Directory does not exist", "RootDirectory",
-                        "The Directory [{0}] did not get created.".format(result));
-                }
-
-                return result;
+                return _coAppRootDirectory;
             }
             set {
                 var newRootDirectory = value.GetFullPath();
@@ -147,14 +148,14 @@ namespace CoApp.Packaging.Common {
             }
         }
 
-        public static Dictionary<Architecture, string> _coAppInstalledDirectory;
-
+        public static IDictionary<Architecture, string> _coAppInstalledDirectory;
+        
         /// <summary>
         ///   Gets the CoApp .installed directory (where the packages install to)
         /// </summary>
         /// <remarks>
         /// </remarks>
-        public static Dictionary<Architecture, string> CoAppInstalledDirectory {
+        public static IDictionary<Architecture, string> CoAppInstalledDirectory {
             get {
                 if (_coAppInstalledDirectory == null) {
                     var programFilesAny = KnownFolders.GetFolderPath(KnownFolder.ProgramFiles);
@@ -170,7 +171,7 @@ namespace CoApp.Packaging.Common {
                         Symlink.MakeDirectoryLink(x64, programFilesAny);
                     }
 
-                    _coAppInstalledDirectory = new Dictionary<Architecture, string> {
+                    _coAppInstalledDirectory = new XDictionary<Architecture, string> {
                         {Architecture.Any, any},
                         {Architecture.x86, x86},
                         {Architecture.x64, x64},

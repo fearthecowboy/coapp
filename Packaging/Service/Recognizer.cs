@@ -10,7 +10,6 @@
 // </license>
 //-----------------------------------------------------------------------
 
-
 namespace CoApp.Packaging.Service {
     using System;
     using System.IO;
@@ -112,7 +111,7 @@ namespace CoApp.Packaging.Service {
 
                     // GS01: Should we make a deeper path in the cache directory?
                     // perhaps that would let us use a cached version of the file we're looking for.
-                    Event<GetResponseInterface>.RaiseFirst().RequireRemoteFile(safeCanonicalName, location.AbsoluteUri.SingleItemAsEnumerable(),
+                    Event<GetResponseInterface>.RaiseFirst().RequireRemoteFile(safeCanonicalName, location.SingleItemAsEnumerable(),
                         PackageManagerSettings.CoAppPackageCache, forceRescan);
 
                     // return the completion task, as whatever is waiting for this 

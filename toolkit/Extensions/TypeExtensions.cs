@@ -16,10 +16,11 @@ namespace CoApp.Toolkit.Extensions {
     using System.Collections;
     using System.Collections.Generic;
     using System.Reflection;
+    using Collections;
 
     public static class TypeExtensions {
-        private static readonly Dictionary<Type, MethodInfo> TryParsers = new Dictionary<Type, MethodInfo>();
-        private static readonly Dictionary<Type, ConstructorInfo> TryStrings = new Dictionary<Type, ConstructorInfo>();
+        private static readonly IDictionary<Type, MethodInfo> TryParsers = new XDictionary<Type, MethodInfo>();
+        private static readonly IDictionary<Type, ConstructorInfo> TryStrings = new XDictionary<Type, ConstructorInfo>();
 
         private static MethodInfo GetTryParse(Type parsableType) {
             if (!TryParsers.ContainsKey(parsableType)) {
@@ -36,7 +37,7 @@ namespace CoApp.Toolkit.Extensions {
 
         private static ConstructorInfo GetStringConstructor(Type parsableType) {
             if (!TryStrings.ContainsKey(parsableType)) {
-                TryStrings.Add(parsableType, parsableType.GetConstructor(new Type[] {typeof(string) }));
+                TryStrings.Add(parsableType, parsableType.GetConstructor(new [] {typeof(string)}));
             }
             return TryStrings[parsableType];
         }

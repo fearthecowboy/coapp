@@ -14,10 +14,11 @@ namespace CoApp.Packaging.Service {
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using Toolkit.Collections;
     using Toolkit.Tasks;
 
     public class SessionCache<T> : Cache<T> where T : class {
-        private static Dictionary<Type, object> _nullSessionCache = new Dictionary<Type, object>();
+        private static IDictionary<Type, object> _nullSessionCache = new XDictionary<Type, object>();
 
         public new static SessionCache<T> Value {
             get {

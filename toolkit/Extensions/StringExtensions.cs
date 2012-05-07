@@ -29,6 +29,7 @@ namespace CoApp.Toolkit.Extensions {
     using System.Security.Cryptography;
     using System.Text;
     using System.Text.RegularExpressions;
+    using Collections;
     using Compression;
     using Text;
 
@@ -58,7 +59,7 @@ namespace CoApp.Toolkit.Extensions {
         /// <summary>
         ///   These are crazy, but valid filepath characters that cause regexs to puke and fail.
         /// </summary>
-        private static readonly string[] _validFpCharsThatHurtRegexs = {@"\", "$", "^", "{", "[", "(", "|", ")", "+", "."};
+        private static readonly string[] ValidFpCharsThatHurtRegexs = {@"\", "$", "^", "{", "[", "(", "|", ")", "+", "."};
 
         //putting regexs here so they're only compiled once.
 #pragma warning disable 169
@@ -77,7 +78,6 @@ namespace CoApp.Toolkit.Extensions {
         /// </summary>
         private static readonly Regex MajorMinorRegex = new Regex(@"^\d{1,5}\.\d{1,5}$");
 
-        //TODO this SUCKS. Thanks MS.
         /// <summary>
         ///   Email regex. Needs revising
         /// </summary>
@@ -230,8 +230,9 @@ namespace CoApp.Toolkit.Extensions {
         /// <summary>
         ///   wildcard cache for IsWildcardMatch (so we're not rebuilding the regex every time)
         /// </summary>
-        private static readonly Dictionary<string, Regex> Wildcards = new Dictionary<string, Regex>();
+        private static readonly IDictionary<string, Regex> Wildcards = new XDictionary<string, Regex>();
 
+#if DEPRECATED
         /// <summary>
         ///   Determines if a given string is a match for the given wildcard pattern.
         /// </summary>
@@ -242,7 +243,7 @@ namespace CoApp.Toolkit.Extensions {
         /// <returns> <c>true</c> if [is wildcard match] [the specified text]; otherwise, <c>false</c> . </returns>
         /// <remarks>
         /// </remarks>
-        public static bool _IsWildcardMatch(this string text, string wildcardMask, string ignorePrefix = null, bool escapePrefix = true) {
+        private static bool _IsWildcardMatch(this string text, string wildcardMask, string ignorePrefix = null, bool escapePrefix = true) {
             //find out if the wildcard is rooted?
             if (Path.GetPathRoot(wildcardMask) == String.Empty) {
                 ignorePrefix = String.IsNullOrEmpty(ignorePrefix) ? (text.Contains("\\") ? @".*\\?" : string.Empty) : escapePrefix ? Regex.Escape(ignorePrefix) : ignorePrefix;
@@ -260,7 +261,7 @@ namespace CoApp.Toolkit.Extensions {
             }
             var regexStuff = '^' + ignorePrefix;
 
-            var regexPart2 = wildcardMask.CommentEach(_validFpCharsThatHurtRegexs);
+            var regexPart2 = wildcardMask.CommentEach(ValidFpCharsThatHurtRegexs);
             regexPart2 = regexPart2.Replace("?", @".");
             regexPart2 = regexPart2.Replace("**", @"?");
             regexPart2 = regexPart2.Replace("*", @"[^\\\/\<\>\|]*");
@@ -286,10 +287,111 @@ namespace CoApp.Toolkit.Extensions {
             return mask.IsMatch(text);
         }
 
+          /// <summary>
+        ///   Checks if a string is a valid version string x.x.x.x TODO: this allows x to have values LARGER than the max number for part of a version string. NEED TO FIX
+        /// </summary>
+        /// <param name="input"> a string to be checked </param>
+        /// <param name="strict"> should be strict? </param>
+        /// <returns> true if it the string is a valid version, false otherwise </returns>
+        /// <remarks>
+        /// </remarks>
+        public static bool IsValidVersion(this string input, bool strict = true) {
+            return input.VersionStringToUInt64().UInt64VersiontoString().Equals(input);
+        }
+
+        /// <summary>
+        ///   Extends the version.
+        /// </summary>
+        /// <param name="input"> The input. </param>
+        /// <returns> </returns>
+        /// <remarks>
+        /// </remarks>
+        public static string ExtendVersion(this string input) {
+            return input.VersionStringToUInt64().UInt64VersiontoString();
+        }
+
+        /// <summary>
+        ///   Checks if a string is a valid major.minor version string x.x TODO: this allows x to have values LARGER than the max number for part of a version string. NEED TO FIX
+        /// </summary>
+        /// <param name="input"> a string to be checked </param>
+        /// <returns> true if it the string is a valid major.minor version, false otherwise </returns>
+        /// <remarks>
+        /// </remarks>
+        public static bool IsValidMajorMinorVersion(this string input) {
+            return MajorMinorRegex.IsMatch(input);
+        }
+
+        
+        /// <summary>
+        ///   returns a UInt64 of a standard version string. Returns 0 for parts that are not valid.
+        /// </summary>
+        /// <param name="version"> The version. </param>
+        /// <returns> </returns>
+        /// <remarks>
+        /// </remarks>
+        public static UInt64 VersionStringToUInt64(this string version) {
+            if (String.IsNullOrEmpty(version)) {
+                return 0;
+            }
+            var vers = version.Split('.');
+            var major = vers.Length > 0 ? vers[0].ToInt32(0) : 0;
+            var minor = vers.Length > 1 ? vers[1].ToInt32(0) : 0;
+            var build = vers.Length > 2 ? vers[2].ToInt32(0) : 0;
+            var revision = vers.Length > 3 ? vers[3].ToInt32(0) : 0;
+
+            return (((UInt64)major) << 48) + (((UInt64)minor) << 32) + (((UInt64)build) << 16) + (UInt64)revision;
+        }
+
+        /// <summary>
+        ///   returns a standard version string for a UInt64 version
+        /// </summary>
+        /// <param name="version"> The version. </param>
+        /// <returns> </returns>
+        /// <remarks>
+        /// </remarks>
+        public static string UInt64VersiontoString(this UInt64 version) {
+            return String.Format("{0}.{1}.{2}.{3}", (version >> 48) & 0xFFFF, (version >> 32) & 0xFFFF, (version >> 16) & 0xFFFF,
+                (version) & 0xFFFF);
+        }
+        
+        /// <summary>
+        ///   Replaces the each. Eric ?
+        /// </summary>
+        /// <param name="input"> The input. </param>
+        /// <param name="oldValues"> The old values. </param>
+        /// <param name="newValues"> The new values. </param>
+        /// <returns> </returns>
+        /// <remarks>
+        /// </remarks>
+        public static string ReplaceEach(this string input, IEnumerable<string> oldValues, IEnumerable<string> newValues) {
+            //TODO I feel like there's a LINQ-ier way to do this.
+
+            if (oldValues.Count() != newValues.Count()) {
+                return null;
+            }
+
+            //oldValues.Aggregate(input, (output, ))
+
+            return oldValues.Zip(newValues, (first, second) => new {first, second}).Aggregate(input, (accm, x) => accm.Replace(x.first, x.second));
+        }
+
+        /// <summary>
+        ///   Escapes items in a given string for regex.
+        /// </summary>
+        /// <param name="input"> The input. </param>
+        /// <param name="toComment"> To comment. </param>
+        /// <returns> </returns>
+        /// <remarks>
+        /// </remarks>
+        public static string CommentEach(this string input, IEnumerable<string> toComment) {
+            return input.ReplaceEach(toComment, toComment.Select((s) => @"\" + s));
+        }
+
+#endif
         /// <summary>
         ///   wildcard cache for IsWildcardMatch (so we're not rebuilding the regex every time)
         /// </summary>
-        private static readonly Dictionary<string, Regex> NewWildcards = new Dictionary<string, Regex>();
+        private static readonly IDictionary<string, Regex> NewWildcards = new XDictionary<string, Regex>();
 
         private static readonly Regex EscapeFilepathCharacters = new Regex(@"([\\|\$|\^|\{|\[|\||\)|\+|\.|\]|\}|\/])");
 
@@ -356,9 +458,8 @@ namespace CoApp.Toolkit.Extensions {
         /// <returns> <c>true</c> if [has wildcard match] [the specified source]; otherwise, <c>false</c> . </returns>
         /// <remarks>
         /// </remarks>
-        public static bool HasWildcardMatch(this IEnumerable<string> source, string value, string ignorePrefix = null,
-            bool escapePrefix = true) {
-            return source.Any(wildcard => value._IsWildcardMatch(wildcard, wildcard.Contains(@"\\") ? ignorePrefix : null, escapePrefix));
+        public static bool HasWildcardMatch(this IEnumerable<string> source, string value, string ignorePrefix = null) {
+            return source.Any(wildcard => value.NewIsWildcardMatch(wildcard, wildcard.Contains(@"\\"), ignorePrefix));
         }
 
         /// <summary>
@@ -369,7 +470,7 @@ namespace CoApp.Toolkit.Extensions {
         /// <remarks>
         /// </remarks>
         public static bool HasWildcards(this string input) {
-            return input.Contains('*');
+            return input.IndexOfAny(new []{'*', '?'} ) > -1 ;
         }
 
         /// <summary>
@@ -543,37 +644,6 @@ namespace CoApp.Toolkit.Extensions {
             return data.Any() ? data.ToUtf8String() : String.Empty;
         }
 
-        /// <summary>
-        ///   returns a UInt64 of a standard version string. Returns 0 for parts that are not valid.
-        /// </summary>
-        /// <param name="version"> The version. </param>
-        /// <returns> </returns>
-        /// <remarks>
-        /// </remarks>
-        public static UInt64 VersionStringToUInt64(this string version) {
-            if (String.IsNullOrEmpty(version)) {
-                return 0;
-            }
-            var vers = version.Split('.');
-            var major = vers.Length > 0 ? vers[0].ToInt32(0) : 0;
-            var minor = vers.Length > 1 ? vers[1].ToInt32(0) : 0;
-            var build = vers.Length > 2 ? vers[2].ToInt32(0) : 0;
-            var revision = vers.Length > 3 ? vers[3].ToInt32(0) : 0;
-
-            return (((UInt64)major) << 48) + (((UInt64)minor) << 32) + (((UInt64)build) << 16) + (UInt64)revision;
-        }
-
-        /// <summary>
-        ///   returns a standard version string for a UInt64 version
-        /// </summary>
-        /// <param name="version"> The version. </param>
-        /// <returns> </returns>
-        /// <remarks>
-        /// </remarks>
-        public static string UInt64VersiontoString(this UInt64 version) {
-            return String.Format("{0}.{1}.{2}.{3}", (version >> 48) & 0xFFFF, (version >> 32) & 0xFFFF, (version >> 16) & 0xFFFF,
-                (version) & 0xFFFF);
-        }
 
         /// <summary>
         ///   Calculates the MD5 hash of a string. Additionally all the letters in the hash are in uppercase.
@@ -623,41 +693,6 @@ namespace CoApp.Toolkit.Extensions {
             return CultureInfo.CurrentCulture.TextInfo.ToTitleCase(input.MakeSafeFileName().ToLower());
         }
 
-        /// <summary>
-        ///   Checks if a string is a valid version string x.x.x.x TODO: this allows x to have values LARGER than the max number for part of a version string. NEED TO FIX
-        /// </summary>
-        /// <param name="input"> a string to be checked </param>
-        /// <param name="strict"> should be strict? </param>
-        /// <returns> true if it the string is a valid version, false otherwise </returns>
-        /// <remarks>
-        /// </remarks>
-        public static bool IsValidVersion(this string input, bool strict = true) {
-            return input.VersionStringToUInt64().UInt64VersiontoString().Equals(input);
-        }
-
-        /// <summary>
-        ///   Extends the version.
-        /// </summary>
-        /// <param name="input"> The input. </param>
-        /// <returns> </returns>
-        /// <remarks>
-        /// </remarks>
-        public static string ExtendVersion(this string input) {
-            return input.VersionStringToUInt64().UInt64VersiontoString();
-        }
-
-        /// <summary>
-        ///   Checks if a string is a valid major.minor version string x.x TODO: this allows x to have values LARGER than the max number for part of a version string. NEED TO FIX
-        /// </summary>
-        /// <param name="input"> a string to be checked </param>
-        /// <returns> true if it the string is a valid major.minor version, false otherwise </returns>
-        /// <remarks>
-        /// </remarks>
-        public static bool IsValidMajorMinorVersion(this string input) {
-            return MajorMinorRegex.IsMatch(input);
-        }
-
-#if!COAPP_ENGINE_CORE
         /// <summary>
         ///   Gzips the specified input.
         /// </summary>
@@ -727,8 +762,6 @@ namespace CoApp.Toolkit.Extensions {
             return bytes.ToArray().ToUtf8String();
         }
 
-#endif
-
         /// <summary>
         ///   Determines whether the specified email is email.
         /// </summary>
@@ -738,39 +771,6 @@ namespace CoApp.Toolkit.Extensions {
         /// </remarks>
         public static bool IsEmail(this string email) {
             return EmailRegex.IsMatch(email);
-        }
-
-        /// <summary>
-        ///   Replaces the each. Eric ?
-        /// </summary>
-        /// <param name="input"> The input. </param>
-        /// <param name="oldValues"> The old values. </param>
-        /// <param name="newValues"> The new values. </param>
-        /// <returns> </returns>
-        /// <remarks>
-        /// </remarks>
-        public static string ReplaceEach(this string input, IEnumerable<string> oldValues, IEnumerable<string> newValues) {
-            //TODO I feel like there's a LINQ-ier way to do this.
-
-            if (oldValues.Count() != newValues.Count()) {
-                return null;
-            }
-
-            //oldValues.Aggregate(input, (output, ))
-
-            return oldValues.Zip(newValues, (first, second) => new {first, second}).Aggregate(input, (accm, x) => accm.Replace(x.first, x.second));
-        }
-
-        /// <summary>
-        ///   Escapes items in a given string for regex.
-        /// </summary>
-        /// <param name="input"> The input. </param>
-        /// <param name="toComment"> To comment. </param>
-        /// <returns> </returns>
-        /// <remarks>
-        /// </remarks>
-        public static string CommentEach(this string input, IEnumerable<string> toComment) {
-            return input.ReplaceEach(toComment, toComment.Select((s) => @"\" + s));
         }
 
         /// is this supposed to be deleted?
@@ -819,8 +819,8 @@ namespace CoApp.Toolkit.Extensions {
             s = WebUtility.HtmlEncode(s);
             var sb = new StringBuilder(s.Length + 100);
 
-            for (var p = 0; p < s.Length; p++) {
-                sb.Append(s[p] < 31 ? String.Format("&#x{0:x2};", (int)s[p]) : "" + s[p]);
+            foreach (char t in s) {
+                sb.Append(t < 31 ? String.Format("&#x{0:x2};", (int)t) : "" + t);
             }
 
             return sb.ToString();

@@ -23,7 +23,7 @@
     <OutputPath>$(SolutionDir)\output\any\debug\bin\</OutputPath>
     <DefineConstants>TRACE;DEBUG;COAPP_ENGINE_CORE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
-    <UseVSHostingProcess>false</UseVSHostingProcess>
+    <UseVSHostingProcess>true</UseVSHostingProcess>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -75,6 +75,7 @@
     <Compile Include="Packaging\Common\LinkType.cs" />
     <Compile Include="Packaging\Common\Model\Atom\AtomFeed.cs" />
     <Compile Include="Packaging\Common\Model\Atom\AtomItem.cs" />
+    <Compile Include="Packaging\Common\Model\BindingPolicy.cs" />
     <Compile Include="Packaging\Common\Model\Composition.cs" />
     <Compile Include="Packaging\Common\Model\CompositionAction.cs" />
     <Compile Include="Packaging\Common\Model\CompositionRule.cs" />
@@ -97,14 +98,15 @@
     <Compile Include="Packaging\Common\ServiceAccess.cs" />
     <Compile Include="Packaging\Service\Delegates.cs" />
     <Compile Include="Packaging\Service\Exceptions\InvalidReason.cs" />
-    <Compile Include="Packaging\Service\InternalPackageData.cs" />
     <Compile Include="Packaging\Service\NotifiesPackageManager.cs" />
     <Compile Include="Packaging\Service\PackageRequestData.cs" />
     <Compile Include="Packaging\Service\PackageSessionData.cs" />
     <Compile Include="Packaging\Service\RequestRemoteFileState.cs" />
     <Compile Include="Packaging\Service\SessionCache.cs" />
     <Compile Include="Packaging\Service\Signals.cs" />
-    <Compile Include="Toolkit\Collections\EasyDictionary.cs" />
+    <Compile Include="Toolkit\Collections\XDictionary.cs" />
+    <Compile Include="Toolkit\Collections\InternalDictionary.cs" />
+    <Compile Include="Toolkit\Collections\XList.cs" />
     <Compile Include="Toolkit\Compression\CRC32.cs">
       <SubType>Code</SubType>
     </Compile>

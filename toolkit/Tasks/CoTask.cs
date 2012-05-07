@@ -17,6 +17,7 @@ namespace CoApp.Toolkit.Tasks {
     using System.Reflection.Emit;
     using System.Threading;
     using System.Threading.Tasks;
+    using Collections;
     using Exceptions;
     using Logging;
 
@@ -138,8 +139,8 @@ namespace CoApp.Toolkit.Tasks {
     public static class CoTask {
         private static readonly FieldInfo ParentTaskField = typeof (Task).GetField("m_parent", BindingFlags.NonPublic | BindingFlags.DeclaredOnly | BindingFlags.Instance);
         private static readonly PropertyInfo CurrentTaskProperty = typeof (Task).GetProperty("InternalCurrent", BindingFlags.NonPublic | BindingFlags.DeclaredOnly | BindingFlags.Static);
-        private static readonly Dictionary<Task, List<Delegate>> Tasks = new Dictionary<Task, List<Delegate>>();
-        private static readonly Dictionary<Task, Task> ParentTasks = new Dictionary<Task, Task>();
+        private static readonly IDictionary<Task, List<Delegate>> Tasks = new XDictionary<Task, List<Delegate>>();
+        private static readonly IDictionary<Task, Task> ParentTasks = new XDictionary<Task, Task>();
         private static readonly List<Delegate> NullTaskDelegates = new List<Delegate>();
 
         public static Task<T> AsResultTask<T>(this T result) {

@@ -42,6 +42,7 @@ namespace CoApp.Toolkit.TaskService {
     using System.Text;
     using System.Text.RegularExpressions;
     using System.Xml;
+    using Collections;
     using Properties;
     using V1;
     using V2;
@@ -303,8 +304,7 @@ namespace CoApp.Toolkit.TaskService {
         /// <summary>
         ///   In testing and may change. Do not use until officially introduced into library.
         /// </summary>
-        protected Dictionary<string, object> unboundValues;
-
+        protected IDictionary<string, object> unboundValues;
         private RepetitionPattern repititionPattern;
 
         internal Trigger(ITaskTrigger trigger, V1.TaskTriggerType type) {
@@ -330,7 +330,7 @@ namespace CoApp.Toolkit.TaskService {
 
         internal Trigger(TaskTriggerType triggerType) {
             ttype = triggerType;
-            unboundValues = new Dictionary<string, object>();
+            unboundValues = new XDictionary<string, object>();
 
             v1TriggerData.TriggerSize = (ushort)Marshal.SizeOf(typeof (TaskTrigger));
             try {

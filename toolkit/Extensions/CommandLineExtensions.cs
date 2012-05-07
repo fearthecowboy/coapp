@@ -26,6 +26,7 @@ namespace CoApp.Toolkit.Extensions {
     using System.Reflection;
     using System.Runtime.InteropServices;
     using System.Text.RegularExpressions;
+    using Collections;
     using Win32;
 #if !COAPP_ENGINE_CORE
     using System.Diagnostics;
@@ -50,7 +51,7 @@ namespace CoApp.Toolkit.Extensions {
 
         /// <summary>
         /// </summary>
-        public Dictionary<string, string> Values = new Dictionary<string, string>(); // individual key/values after the []
+        public IDictionary<string, string> Values = new XDictionary<string, string>(); // individual key/values after the []
     }
 
     /// <summary>
@@ -61,7 +62,7 @@ namespace CoApp.Toolkit.Extensions {
     public static class CommandLineExtensions {
         /// <summary>
         /// </summary>
-        private static Dictionary<string, IEnumerable<string>> _switches;
+        private static IDictionary<string, IEnumerable<string>> _switches;
 
         /// <summary>
         /// </summary>
@@ -156,13 +157,13 @@ namespace CoApp.Toolkit.Extensions {
         /// <returns> </returns>
         /// <remarks>
         /// </remarks>
-        public static Dictionary<string, IEnumerable<string>> Switches(this IEnumerable<string> args) {
+        public static IDictionary<string, IEnumerable<string>> Switches(this IEnumerable<string> args) {
             if (_switches != null) {
                 return _switches;
             }
             var assemblypath = Assembly.GetEntryAssembly().Location;
 
-            _switches = new Dictionary<string, IEnumerable<string>>();
+            _switches = new XDictionary<string, IEnumerable<string>>();
 
             var v = Environment.GetEnvironmentVariable("_" + Path.GetFileNameWithoutExtension(assemblypath) + "_");
             if (!string.IsNullOrEmpty(v)) {
@@ -268,7 +269,7 @@ namespace CoApp.Toolkit.Extensions {
         /// </remarks>
         public static void LoadConfiguration(this string file) {
             if (_switches == null) {
-                _switches = new Dictionary<string, IEnumerable<string>>();
+                _switches = new XDictionary<string, IEnumerable<string>>();
             }
 
             var param = "";

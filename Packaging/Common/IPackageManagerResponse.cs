@@ -21,7 +21,7 @@ namespace CoApp.Packaging.Common {
         void SendSessionStarted(string sessionId);
 
         void PackageInformation(CanonicalName canonicalName, string localLocation, bool installed,
-            bool blocked, bool required, bool clientRequired, bool active, bool dependent, FourPartVersion minPolicy, FourPartVersion maxPolicy, IEnumerable<string> remoteLocations,
+            bool blocked, bool required, bool clientRequired, bool active, bool dependent, FourPartVersion minPolicy, FourPartVersion maxPolicy, IEnumerable<Uri> remoteLocations, IEnumerable<Uri> feeds,
             IEnumerable<CanonicalName> dependencies, IEnumerable<CanonicalName> supercedentPackages);
 
         void PackageDetails(CanonicalName canonicalName, IDictionary<string, string> metadata,
@@ -43,7 +43,7 @@ namespace CoApp.Packaging.Common {
         void PackageSatisfiedBy(string requestedCanonicalName, string satisfiedByCanonicalName);
         void PackageHasPotentialUpgrades(CanonicalName packageCanonicalName, IEnumerable<CanonicalName> supercedents);
 
-        void RequireRemoteFile(string requestReference, IEnumerable<string> remoteLocations, string destination, bool force);
+        void RequireRemoteFile(string requestReference, IEnumerable<Uri> remoteLocations, string destination, bool force);
         void Recognized(string location);
 
         void SignatureValidation(string filename, bool isValid, string certificateSubjectName);

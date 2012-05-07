@@ -10,66 +10,7 @@
 // </license>
 //-----------------------------------------------------------------------
 
-#region tmp
-
-/*
-    <entry>
-        <id>$Model.ProductCode</id>
-        <title type="text">$Model.CosmeticName</title>
-        <summary>$Model.ShortDescription</summary>
-        <published>$Model.PublishDate</published>
-         
-        <author>
-          <name>$Model.Publisher.Name</name>
-          <uri>$Model.Publisher.Location</uri>
-          <email>$Model.Publisher.Email</email>
-        </author>
-         
-        <contributor>  <!-- may have multiple ... collection of $Model.Contributors -->
-            <name>$Model.Contributor[n].Name</name>
-          <uri>$Model.Contributor[n].Location</uri>
-          <email>$Model.Contributor[n].Email</email>
-        </contributor>
-     
-        <rights>AUTHOR-SUPPLIED-COPYRIGHT-STATEMENT</rights> <!-- NOT LICENSE TEXT ... hmm? -->
-         
-        <link rel="enclosure" href="http://foo/bar.msi" /> link to original location of the package itself.
-        <link rel="related" title="sourcepackage" href="http://foo/bar-src.msi"/>
-
-        <category term="$Model.Tag[x]" /> <!-- may have multiple tags -->
-         
-        <content type="text/html">
-             $Model.Description *     <!-- this should be limited in supported HTML tags -->
-        </content>
-         
-        <package:Package xmlns:package="http://coapp.org/atom-package-feed"> // our custom package data, xmlserialized.
-            <package:ProductCode>PKG-GUID</package:ProductCode>
-            <package:Name>PROPER-NAME</package:Name> <!-- name-version-platform -->
-            <package:Architecture>x86</package:Architecture>
-            <package:Version>281474976710656</package:Version>
-            <package:PublicKeyToken>1231231231231231</package:PublicKeyToken>
-            <package:BindingPolicyMinVersion>0</package:BindingPolicyMinVersion>
-            <package:BindingPolicyMaxVersion>0</package:BindingPolicyMaxVersion>
-            <package:Dependencies>COMMA-SEPERATED-GUIDS</package:Dependencies>
-            <package:Locations>
-                <package:string>./packages/foo.msi</package:string>
-                <package:string>http://some-other-place.com/foo.msi</package:string>
-            </package:Locations>
-            
-            <package:Icon>BASE-64-ENCODED-IMAGE(PNG, 256x256)</package:Icon>
-          
-            <!-- soon: potential package metadata tags:
-             *  license: license text (or license URL?)
-             *  etc...
-             * -->
-        </package:Package>
-  </entry> 
-         */
-
-#endregion
-
 namespace CoApp.Packaging.Common.Model.Atom {
-    
     using System.Linq;
     using System.ServiceModel.Syndication;
     using System.Xml;
@@ -77,8 +18,6 @@ namespace CoApp.Packaging.Common.Model.Atom {
 
 #if COAPP_ENGINE_CORE
     using Packaging.Service;
-    using Toolkit.Tasks;
-    using System.Collections.Generic;
 #endif
 
     public class AtomItem : SyndicationItem {
@@ -186,7 +125,7 @@ namespace CoApp.Packaging.Common.Model.Atom {
 
             Model.PackageDetails.CopyrightStatement = Copyright == null ? string.Empty : Copyright.Text;
 
-            Model.Locations = Links.Select(each => each.Uri.AbsoluteUri.ToUri()).Distinct().ToList();
+            Model.Locations = Links.Select(each => each.Uri.AbsoluteUri.ToUri()).Distinct().ToXList();
         }
 
         /// <summary>
@@ -213,29 +152,19 @@ namespace CoApp.Packaging.Common.Model.Atom {
 
 #if COAPP_ENGINE_CORE
         public AtomItem(Package package) {
-            Model = new PackageModel();
-            Model.CanonicalName = package.CanonicalName; // name, flavor, version, arch and pkt all are set with this.
-            
-            Model.DisplayName = package.DisplayName;
-            Model.Vendor = package.Vendor;
-            Model.BindingPolicyMinVersion = package.InternalPackageData.PolicyMinimumVersion;
-            Model.BindingPolicyMaxVersion = package.InternalPackageData.PolicyMaximumVersion;
-
-            Model.Roles = new List<Role>(package.InternalPackageData.Roles);
-            Model.PackageDependencies = package.InternalPackageData.Dependencies.Select(each => each.CanonicalName.ToString()).ToList();
-            if (!package.InternalPackageData.Features.IsNullOrEmpty()) {
-                Model.Features = new List<Feature>(package.InternalPackageData.Features);
-            }
-            if (!package.InternalPackageData.RequiredFeatures.IsNullOrEmpty()) {
-                Model.RequiredFeatures = new List<Feature>(package.InternalPackageData.RequiredFeatures);
-            }
-
-            Model.Feeds = package.InternalPackageData.FeedLocations.Select(each => each.ToUri()).ToList();
-            Model.Locations = package.InternalPackageData.RemoteLocations.Select(each => each.ToUri()).ToList();
-
-            // heh-heh, this makes life ... EASY!
-            // Note: Should this be a clone? 
-            Model.PackageDetails = package.PackageDetails;
+            Model = new PackageModel {
+                CanonicalName = package.CanonicalName, 
+                DisplayName = package.DisplayName, 
+                Vendor = package.Vendor, 
+                BindingPolicy = package.BindingPolicy, 
+                Roles = package.Roles,
+                Dependencies = package.Dependencies.ToXDictionary(each => each.CanonicalName, each => each.FeedLocations), 
+                Features = package.Features, 
+                RequiredFeatures = package.RequiredFeatures, 
+                Feeds = package.FeedLocations,
+                Locations = package.RemoteLocations, 
+                PackageDetails = package.PackageDetails
+            };
 
             // when complete, 
             SyncFromModel();
@@ -246,52 +175,35 @@ namespace CoApp.Packaging.Common.Model.Atom {
         /// </summary>
         public Package Package {
             get {
-                if( string.IsNullOrEmpty(Model.CanonicalName) ) {
+                if( null == Model.CanonicalName) {
                     return null;
                 }
 
                 var package = Package.GetPackage(Model.CanonicalName);
                 lock (package) {
                     // lets copy what details we have into that package.
+
+                    if (!Model.Dependencies.IsNullOrEmpty()) {
+                        package.Dependencies.AddRange(Model.Dependencies.Keys.Select(each => {
+                            var result = Package.GetPackage(each);
+                            result.FeedLocations.AddRangeUnique(Model.Dependencies[each]);
+                            return result;
+                        }));
+                    }
+
                     package.DisplayName = Model.DisplayName;
                     package.Vendor = Model.Vendor;
-
-                    package.InternalPackageData.PolicyMinimumVersion = Model.BindingPolicyMinVersion;
-                    package.InternalPackageData.PolicyMaximumVersion = Model.BindingPolicyMaxVersion;
-                    if (package.InternalPackageData.Roles.IsNullOrEmpty()) {
-                        package.InternalPackageData.Roles.AddRange(Model.Roles);
-                    }
-                    if (package.InternalPackageData.Dependencies.IsNullOrEmpty()) {
-                        package.InternalPackageData.Dependencies.AddRange(Model.PackageDependencies.Select(each => Package.GetPackage(each)));
-                    }
-                    if (package.InternalPackageData.Features.IsNullOrEmpty() && !Model.Features.IsNullOrEmpty()) {
-                        package.InternalPackageData.Features.AddRange(Model.Features);
-                    }
-                    if (package.InternalPackageData.RequiredFeatures.IsNullOrEmpty() && !Model.RequiredFeatures.IsNullOrEmpty()) {
-                        package.InternalPackageData.RequiredFeatures.AddRange(Model.RequiredFeatures);
-                    }
-                    if (!Model.Feeds.IsNullOrEmpty()) {
-                        foreach (var feed in Model.Feeds) {
-                            package.InternalPackageData.FeedLocation = feed.AbsoluteUri;
-                        }
-                    }
-                    if (!Model.Locations.IsNullOrEmpty()) {
-                        foreach (var location in Model.Locations) {
-                            package.InternalPackageData.RemoteLocation = location.AbsoluteUri;
-                        }
-                    }
-
-                    // store the place to get the cosmetic package details later 
-                    Cache<PackageDetails>.Value.Insert(package.CanonicalName, unusedCanonicalFileName => GetPackageDetails(package, Model));
+                    package.BindingPolicy = Model.BindingPolicy;
+                    package.Roles.AddRangeUnique(Model.Roles);
+                    package.Features.AddRangeUnique(Model.Features);
+                    package.RequiredFeatures.AddRangeUnique(Model.RequiredFeatures);
+                    package.FeedLocations.AddRangeUnique(Model.Feeds);
+                    package.RemoteLocations.AddRangeUnique( Model.Locations );
+                    package.PackageDetails = Model.PackageDetails;
                 }
                 return package;
             }
         }
-
-        internal static PackageDetails GetPackageDetails(Package pkg, PackageModel model) {
-            return model.PackageDetails;
-        }
-
 #endif
     }
 }

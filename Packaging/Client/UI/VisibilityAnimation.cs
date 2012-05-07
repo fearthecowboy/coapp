@@ -16,6 +16,7 @@ namespace CoApp.Packaging.Client.UI {
     using System.Windows;
     using System.Windows.Data;
     using System.Windows.Media.Animation;
+    using Toolkit.Collections;
 
     /// <summary>
     ///   Supplies attached properties that provides visibility of animations
@@ -41,7 +42,7 @@ namespace CoApp.Packaging.Client.UI {
         /// <summary>
         ///   List of hooked objects
         /// </summary>
-        private static readonly Dictionary<FrameworkElement, bool> _hookedElements = new Dictionary<FrameworkElement, bool>();
+        private static readonly IDictionary<FrameworkElement, bool> _hookedElements = new XDictionary<FrameworkElement, bool>();
 
         /// <summary>
         ///   Get AnimationType attached property

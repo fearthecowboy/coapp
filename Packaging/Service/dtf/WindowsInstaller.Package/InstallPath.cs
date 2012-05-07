@@ -605,7 +605,7 @@ namespace CoApp.Packaging.Service.dtf.WindowsInstaller.Package
             }
         }
 
-        private Dictionary<string, InstallPath> items;
+        private IDictionary<string, InstallPath> items;
 
         /// <summary>
         /// Creates a new empty InstallPathMap.

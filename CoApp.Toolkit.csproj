@@ -48,7 +48,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Toolkit\Collections\EasyDictionary.cs" />
+    <Compile Include="Toolkit\Collections\InternalDictionary.cs" />
+    <Compile Include="Toolkit\Collections\XDictionary.cs" />
+    <Compile Include="Toolkit\Collections\XList.cs" />
     <Compile Include="Toolkit\Compression\CRC32.cs">
       <SubType>Code</SubType>
     </Compile>

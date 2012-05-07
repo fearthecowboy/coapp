@@ -12,17 +12,12 @@
 
 namespace CoApp.Packaging.Common.Model {
     using System;
-    using System.Collections.Generic;
-    using System.Linq;
     using System.Xml;
     using System.Xml.Serialization;
+    using Toolkit.Collections;
     using Toolkit.Exceptions;
     using Toolkit.Extensions;
     using Toolkit.Win32;
-
-#if COAPP_ENGINE_CORE
-    using Packaging.Service;
-#endif
 
     [XmlRoot(ElementName = "Package", Namespace = "http://coapp.org/atom-package-feed-1.0")]
     public class PackageModel {
@@ -152,33 +147,8 @@ namespace CoApp.Packaging.Common.Model {
         [XmlAttribute]
         public string Vendor;
 
-        [XmlIgnore]
-        public FourPartVersion BindingPolicyMinVersion { get; set; }
-
-        [XmlIgnore]
-        public FourPartVersion BindingPolicyMaxVersion { get; set; }
-
-        // Workaround to get around stupid .NET serialization of structs being a PITA.
-        [XmlElement("BindingPolicyMinVersion", IsNullable = false)]
-        public string BindingPolicyMinVersionSurrogate {
-            get {
-                return BindingPolicyMinVersion.ToString();
-            }
-            set {
-                BindingPolicyMinVersion = FourPartVersion.Parse(value);
-            }
-        }
-
-        // Workaround to get around stupid .NET serialization of structs being a PITA.
-        [XmlElement("BindingPolicyMaxVersion", IsNullable = false)]
-        public string BindingPolicyMaxVersionSurrogate {
-            get {
-                return BindingPolicyMaxVersion.ToString();
-            }
-            set {
-                BindingPolicyMaxVersion = FourPartVersion.Parse(value);
-            }
-        }
+        [XmlElement("BindingPolicy", IsNullable = false)]
+        public BindingPolicy BindingPolicy { get; set; }
 
         [XmlAttribute]
         public string RelativeLocation { get; set; }
@@ -186,32 +156,23 @@ namespace CoApp.Packaging.Common.Model {
         [XmlAttribute]
         public string Filename { get; set; }
 
-        [XmlArray(IsNullable = false)]
-        public List<Role> Roles { get; set; }
+        [XmlElement(IsNullable = false)]
+        public XList<Role> Roles { get; set; }
 
-        [XmlArray(IsNullable = false)]
-        public List<string> PackageDependencies { get; set; }
+        [XmlElement("Dependencies", IsNullable = false)]
+        public XDictionary<CanonicalName, XList<Uri>> Dependencies { get; set; }
 
-        [XmlArray(IsNullable = false)]
-        public List<Feature> Features { get; set; }
+        [XmlElement(IsNullable = false)]
+        public XList<Feature> Features { get; set; }
 
-        // must be a canonically recognized feature.
-
-        [XmlArray(IsNullable = false)]
-        public List<Feature> RequiredFeatures { get; set; }
-
-        [XmlArray(IsNullable = false)]
-        public List<string> PackageFeeds {
-            get {
-                return Feeds.IsNullOrEmpty() ? new List<string>() : Feeds.Select(each => each.AbsoluteUri).ToList();
-            }
-            set {
-                Feeds = new List<Uri>(value.Select(each => each.ToUri()));
-            }
-        }
+        [XmlElement(IsNullable = false)]
+        public XList<Feature> RequiredFeatures { get; set; }
 
         [XmlElement(IsNullable = false, ElementName = "Details")]
         public PackageDetails PackageDetails { get; set; }
+        
+        [XmlElement("Feeds")]
+        public XList<Uri> Feeds { get; set; }
 
         [XmlIgnore]
         public string CosmeticName {
@@ -221,11 +182,8 @@ namespace CoApp.Packaging.Common.Model {
         }
 
         [XmlIgnore]
-        public List<Uri> Locations { get; set; }
-
-        [XmlIgnore]
-        public List<Uri> Feeds { get; set; }
-
+        public XList<Uri> Locations { get; set; }
+        
         [XmlIgnore]
         public Composition CompositionData { get; set; }
 

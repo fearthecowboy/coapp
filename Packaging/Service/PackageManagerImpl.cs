@@ -20,6 +20,7 @@ namespace CoApp.Packaging.Service {
     using Common;
     using Feeds;
     using PackageFormatHandlers;
+    using Toolkit.Collections;
     using Toolkit.Crypto;
     using Toolkit.Exceptions;
     using Toolkit.Extensions;
@@ -232,7 +233,7 @@ namespace CoApp.Packaging.Service {
                 // otherwise the client will get the names in 
                 if (dependencies == true) {
                     // grab the dependencies too.
-                    var deps = results.SelectMany(each => each.InternalPackageData.Dependencies).Distinct();
+                    var deps = results.SelectMany(each => each.Dependencies).Distinct();
 
                     if (latest == true) {
                         deps = deps.HighestPackages();
@@ -259,7 +260,7 @@ namespace CoApp.Packaging.Service {
                         }
 
                         var supercedents = (from p in SearchForPackages(package.CanonicalName.OtherVersionFilter)
-                            where p.InternalPackageData.PolicyMinimumVersion <= package.CanonicalName.Version && p.InternalPackageData.PolicyMaximumVersion >= package.CanonicalName.Version
+                            where p.IsAnUpdateFor(package)
                             select p).OrderByDescending(p => p.CanonicalName.Version).ToArray();
 
                         PackageInformation(response, package, supercedents.Select(each => each.CanonicalName));
@@ -287,29 +288,20 @@ namespace CoApp.Packaging.Service {
                 return FinishedSynchronously;
             }
 
-            var AA = package.PackageDetails.IconLocations;
-            var BB = package.PackageDetails.Licenses.ToDictionary(each => each.Name, each => each.Text);
-            var CC = package.InternalPackageData.Roles.ToDictionary(each => each.Name, each => each.PackageRole.ToString());
-            var DD = package.PackageDetails.Tags;
-            var EE = package.PackageDetails.Contributors.ToDictionary(each => each.Name, each => each.Location.AbsoluteUri);
-            var FF = package.PackageDetails.Contributors.ToDictionary(each => each.Name, each => each.Email);
-            
 
-
-
-            response.PackageDetails(package.CanonicalName, new Dictionary<string, string> {
+            response.PackageDetails(package.CanonicalName, new XDictionary<string, string> {
                 {"description", package.PackageDetails.Description},
                 {"summary", package.PackageDetails.SummaryDescription},
                 {"display-name", package.DisplayName},
                 {"copyright", package.PackageDetails.CopyrightStatement},
                 {"author-version", package.PackageDetails.AuthorVersion},
             },
-               AA,// package.PackageDetails.IconLocations,
-               BB,// package.PackageDetails.Licenses.ToDictionary(each => each.Name, each => each.Text),
-               CC,// package.InternalPackageData.Roles.ToDictionary(each => each.Name, each => each.PackageRole.ToString()),
-               DD,// package.PackageDetails.Tags,
-               EE,// package.PackageDetails.Contributors.ToDictionary(each => each.Name, each => each.Location.AbsoluteUri),
-               FF );// package.PackageDetails.Contributors.ToDictionary(each => each.Name, each => each.Email));
+               package.PackageDetails.IconLocations,
+               package.PackageDetails.Licenses.ToDictionary(each => each.Name, each => each.Text),
+               package.Roles.ToDictionary(each => each.Name, each => each.PackageRole.ToString()),
+               package.PackageDetails.Tags,
+               package.PackageDetails.Contributors.ToDictionary(each => each.Name, each => each.Location.AbsoluteUri),
+               package.PackageDetails.Contributors.ToDictionary(each => each.Name, each => each.Email));
             return FinishedSynchronously;
         }
 
@@ -361,7 +353,7 @@ namespace CoApp.Packaging.Service {
                     }
 
                     var installedPackages = SearchForInstalledPackages(package.CanonicalName.OtherVersionFilter).ToArray();
-                    var installedCompatibleVersions = installedPackages.Where(each => each.CanonicalName.Version >= package.InternalPackageData.PolicyMinimumVersion && each.CanonicalName.Version <= package.InternalPackageData.PolicyMaximumVersion).ToArray();
+                    var installedCompatibleVersions = installedPackages.Where(package.IsAnUpdateFor).ToArray();
 
                     // is the user authorized to install this?
                     var highestInstalledPackage = installedPackages.HighestPackages().FirstOrDefault();
@@ -411,7 +403,7 @@ namespace CoApp.Packaging.Service {
                         } catch (OperationCompletedBeforeResultException) {
                             // we encountered an unresolvable condition in the install graph.
                             // messages should have already been sent.
-                            response.FailedPackageInstall(canonicalName, package.InternalPackageData.LocalLocation,
+                            response.FailedPackageInstall(canonicalName, package.LocalLocations.FirstOrDefault(),
                                 "One or more dependencies are unable to be resolved.");
                             return FinishedSynchronously;
                         }
@@ -433,7 +425,7 @@ namespace CoApp.Packaging.Service {
 
                         // we've got an install graph.
                         // let's see if we've got all the files
-                        var missingFiles = (from p in installGraph where !p.InternalPackageData.HasLocalLocation select p).ToArray();
+                        var missingFiles = (from p in installGraph where !p.HasLocalLocation select p).ToArray();
 
                         if (download == true) {
                             // we want to try downloading all the files that we're missing, regardless if we've tried before.
@@ -456,7 +448,7 @@ namespace CoApp.Packaging.Service {
                             // we've got some packages to install that don't have files.
                             foreach (var p in missingFiles.Where(p => !p.PackageSessionData.HasRequestedDownload)) {
                                 response.RequireRemoteFile(p.CanonicalName,
-                                    p.InternalPackageData.RemoteLocations, PackageManagerSettings.CoAppPackageCache, false);
+                                    p.RemoteLocations, PackageManagerSettings.CoAppPackageCache, false);
 
                                 p.PackageSessionData.HasRequestedDownload = true;
                             }
@@ -487,7 +479,7 @@ namespace CoApp.Packaging.Service {
                                     if (!currentPackageInstalling.IsInstalled) {
                                         if (string.IsNullOrEmpty(validLocation)) {
                                             // can't find a valid location
-                                            response.FailedPackageInstall(currentPackageInstalling.CanonicalName, currentPackageInstalling.InternalPackageData.LocalLocation, "Can not find local valid package");
+                                            response.FailedPackageInstall(currentPackageInstalling.CanonicalName, currentPackageInstalling.LocalLocations.FirstOrDefault(), "Can not find local valid package");
                                             currentPackageInstalling.PackageSessionData.PackageFailedInstall = true;
                                         } else {
                                             lastProgress[0] = 0;
@@ -1083,9 +1075,9 @@ namespace CoApp.Packaging.Service {
         private void PackageInformation(IPackageManagerResponse response, Package package, IEnumerable<CanonicalName> supercedents = null) {
             if (package != null) {
                 supercedents = supercedents ?? Enumerable.Empty<CanonicalName>();
-                response.PackageInformation(package.CanonicalName, package.InternalPackageData.LocalLocation, package.IsInstalled, package.IsBlocked,
-                    package.IsRequired, package.IsClientRequested, package.IsActive, package.PackageSessionData.IsDependency, package.InternalPackageData.PolicyMinimumVersion, package.InternalPackageData.PolicyMaximumVersion,
-                    package.InternalPackageData.RemoteLocations, package.InternalPackageData.Dependencies.Select(each => each.CanonicalName), supercedents);
+                response.PackageInformation(package.CanonicalName, package.LocalLocations.FirstOrDefault(), package.IsInstalled, package.IsBlocked,
+                    package.IsRequired, package.IsClientRequested, package.IsActive, package.PackageSessionData.IsDependency, package.BindingPolicy.Minimum, package.BindingPolicy.Maximum,
+                    package.RemoteLocations, package.FeedLocations, package.Dependencies.Select(each => each.CanonicalName), supercedents);
             }
         }
 
@@ -1188,7 +1180,7 @@ namespace CoApp.Packaging.Service {
                 var feedLocations = Feeds.Select(each => each.Location);
                 var packages = feeds.SelectMany(each => each.FindPackages(canonicalName)).Distinct().ToArray();
 
-                var otherFeeds = packages.SelectMany(each => each.InternalPackageData.FeedLocations).Distinct().Where(each => !feedLocations.Contains(each));
+                var otherFeeds = packages.SelectMany(each => each.FeedLocations).Distinct().Where(each => !feedLocations.Contains(each.AbsoluteUri));
                 // given a list of other feeds that we're not using, we can search each of those feeds for newer versions of the packages that we already have.
                 var tf = TransientFeeds(otherFeeds);
                 return packages.Union(packages.SelectMany(p => tf.SelectMany(each => each.FindPackages(p.CanonicalName.OtherVersionFilter)))).Distinct().ToArray();
@@ -1205,15 +1197,15 @@ namespace CoApp.Packaging.Service {
         /// </summary>
         /// <param name="locations"> List of feed locations </param>
         /// <returns> </returns>
-        internal IEnumerable<PackageFeed> TransientFeeds(IEnumerable<string> locations) {
+        internal IEnumerable<PackageFeed> TransientFeeds(IEnumerable<Uri> locations) {
             var locs = locations.ToArray();
             var tf = SessionCache<List<PackageFeed>>.Value["TransientFeeds"] ?? (SessionCache<List<PackageFeed>>.Value["TransientFeeds"] = new List<PackageFeed>());
             var existingLocations = tf.Select(each => each.Location);
-            var newLocations = locs.Where(each => !existingLocations.Contains(each));
-            var tasks = newLocations.Select(PackageFeed.GetPackageFeedFromLocation).ToArray();
+            var newLocations = locs.Where(each => !existingLocations.Contains(each.AbsoluteUri));
+            var tasks = newLocations.Select(each => PackageFeed.GetPackageFeedFromLocation(each.AbsoluteUri )).ToArray();
             var newFeeds = tasks.Where(each => each.Result != null).Select(each => each.Result);
             tf.AddRange(newFeeds);
-            return tf.Where(each => locs.Contains(each.Location));
+            return tf.Where(each => locs.Contains(each.Location.ToUri()));
         }
 
         /// <summary>
@@ -1278,10 +1270,7 @@ namespace CoApp.Packaging.Service {
                     installedSupercedents = (from p in installedSupercedents where p.CanonicalName.Version > package.CanonicalName.Version select p).OrderByDescending(p => p.CanonicalName.Version).ToArray();
                 } else {
                     // otherwise, we're installing a dependency, and we need something compatable.
-                    installedSupercedents = (from p in installedSupercedents
-                        where p.InternalPackageData.PolicyMinimumVersion <= package.CanonicalName.Version &&
-                            p.InternalPackageData.PolicyMaximumVersion >= package.CanonicalName.Version
-                        select p).OrderByDescending(p => p.CanonicalName.Version).ToArray();
+                    installedSupercedents = (from p in installedSupercedents where p.IsAnUpdateFor(package) select p).OrderByDescending(p => p.CanonicalName.Version).ToArray();
                 }
                 var installedSupercedent = installedSupercedents.FirstOrDefault();
                 if (installedSupercedent != null) {
@@ -1304,10 +1293,7 @@ namespace CoApp.Packaging.Service {
                     supercedents = (from p in supercedents where p.CanonicalName.Version > package.CanonicalName.Version select p).OrderByDescending(p => p.CanonicalName.Version).ToArray();
                 } else {
                     // otherwise, we're installing a dependency, and we need something compatable.
-                    supercedents = (from p in supercedents
-                        where p.InternalPackageData.PolicyMinimumVersion <= package.CanonicalName.Version &&
-                            p.InternalPackageData.PolicyMaximumVersion >= package.CanonicalName.Version
-                        select p).OrderByDescending(p => p.CanonicalName.Version).ToArray();
+                    supercedents = (from p in supercedents where p.IsAnUpdateFor(package) select p).OrderByDescending(p => p.CanonicalName.Version).ToArray();
                 }
 
                 if (supercedents.Any()) {
@@ -1367,7 +1353,7 @@ namespace CoApp.Packaging.Service {
             }
 
             var childrenFailed = false;
-            foreach (var d in package.InternalPackageData.Dependencies) {
+            foreach (var d in package.Dependencies) {
                 IEnumerable<Package> children;
                 try {
                     children = GenerateInstallGraph(d);

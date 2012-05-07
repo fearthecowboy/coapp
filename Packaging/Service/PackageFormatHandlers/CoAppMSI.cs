@@ -98,7 +98,7 @@ namespace CoApp.Packaging.Service.PackageFormatHandlers {
 
             if (result != null) {
                 // set things that only we can do here...
-                result.InternalPackageData.LocalLocation = localPackagePath;
+                result.LocalLocations.AddUnique(localPackagePath);
                 result.PackageHandler = Instance;
             }
 
@@ -181,7 +181,7 @@ namespace CoApp.Packaging.Service.PackageFormatHandlers {
                     }
                     // }
                     Installer.InstallProduct(package.PackageSessionData.LocalValidatedLocation,
-                        @"TARGETDIR=""{0}"" ALLUSERS=1 COAPP=1 REBOOT=REALLYSUPPRESS {1}".format(package.TargetDirectory,
+                        @"TARGETDIR=""{0}"" ALLUSERS=1 COAPP=1 REBOOT=REALLYSUPPRESS {1}".format(package.BaseInstallDirectory,
                             package.PackageSessionData.IsClientSpecified ? "ADD_TO_ARP=1" : ""));
                 } finally {
                     SetUIHandlersToSilent();

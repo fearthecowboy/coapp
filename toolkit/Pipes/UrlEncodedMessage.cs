@@ -1,6 +1,8 @@
 //-----------------------------------------------------------------------
 // <copyright company="CoApp Project">
-//     Copyright (c) 2010 Garrett Serack . All rights reserved.
+//     Copyright (c) 2010-2012 Garrett Serack and CoApp Contributors. 
+//     Contributors can be discovered using the 'git log' command.
+//     All rights reserved.
 // </copyright>
 // <license>
 //     The software is licensed under the Apache 2.0 License (the "License")
@@ -104,8 +106,8 @@ namespace CoApp.Toolkit.Pipes {
 
         private static MethodInfo CastMethod = typeof(Enumerable).GetMethod("Cast");
         private static MethodInfo ToArrayMethod = typeof(Enumerable).GetMethod("ToArray");
-        private static Dictionary<Type, MethodInfo> _castMethods = new Dictionary<Type, MethodInfo>();
-        private static Dictionary<Type, MethodInfo> _toArrayMethods = new Dictionary<Type, MethodInfo>();
+        private static IDictionary<Type, MethodInfo> _castMethods = new XDictionary<Type, MethodInfo>();
+        private static IDictionary<Type, MethodInfo> _toArrayMethods = new XDictionary<Type, MethodInfo>();
 
         public object GetValueAsIEnumerable(string collectionName, Type elementType, Type collectionType) {
             var rx = new Regex(@"^{0}\[\d*\]$".format(Regex.Escape(collectionName)));
@@ -133,10 +135,10 @@ namespace CoApp.Toolkit.Pipes {
             var pairs = from k in Data.Keys let match = rx.Match(k) where match.Success select new { key = match.Groups[1].Captures[0].Value.UrlDecode(), value = Data[k]};
             dynamic result;
 
-            if ((dictionaryType.Name.IndexOf("IDictionary") > -1) || (dictionaryType.Name.IndexOf("EasyDictionary") > -1)) {
-                result = Activator.CreateInstance(typeof(EasyDictionary<,>).MakeGenericType(keyType, valueType));
+            if ((dictionaryType.Name.IndexOf("IDictionary") > -1) || (dictionaryType.Name.IndexOf("XDictionary") > -1)) {
+                result = Activator.CreateInstance(typeof(XDictionary<,>).MakeGenericType(keyType, valueType));
             } else {
-                result = Activator.CreateInstance(typeof(Dictionary<,>).MakeGenericType(keyType, valueType));    
+                result = Activator.CreateInstance(typeof(XDictionary<,>).MakeGenericType(keyType, valueType));    
             }
             
             
@@ -193,8 +195,8 @@ namespace CoApp.Toolkit.Pipes {
 
         public string ToSmallerString() {
             return Data.Any()
-                ? Data.Keys.Aggregate(Command.UrlEncode() + "?", (current, k) => current + (!string.IsNullOrEmpty(Data[k]) ? (k.UrlEncode() + "=" + Data[k].Substring(0, Math.Min(Data[k].Length, 512)).UrlEncode() + "&") : string.Empty))
-                : Command.UrlEncode();
+                ? Data.Keys.Aggregate(Command + "?", (current, k) => current + (!string.IsNullOrEmpty(Data[k]) ? (k + "=" + Data[k].Substring(0, Math.Min(Data[k].Length, 512)) + "&") : string.Empty))
+                : Command;
         }
 
         /// <summary>

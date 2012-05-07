@@ -23,6 +23,8 @@ namespace CoApp.Toolkit.Extensions {
     using System.Collections.ObjectModel;
     using System.Linq;
     using System.Text;
+    using Collections;
+    using Exceptions;
 
     /// <summary>
     /// </summary>
@@ -170,7 +172,11 @@ namespace CoApp.Toolkit.Extensions {
             return collection == null || !collection.Any();
         }
 
-        public static TValue AddOrSet<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key, TValue value) where TValue : class {
+        public static bool IsNullOrEmpty<T,V>(this IDictionary<T,V> dictionary) {
+            return dictionary == null || !dictionary.Keys.Any();
+        }
+
+        public static TValue AddOrSet<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key, TValue value) where TValue : class {
             if (dictionary.ContainsKey(key)) {
                 dictionary[key] = value;
             } else {
@@ -179,12 +185,75 @@ namespace CoApp.Toolkit.Extensions {
             return value;
         }
 
-        public static TValue GetOrAdd<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key, Func<TValue> valueFunction) where TValue : class {
+        public static TValue GetOrAdd<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key, Func<TValue> valueFunction) where TValue : class {
             return dictionary.ContainsKey(key) ? dictionary[key] : dictionary.AddOrSet(key, valueFunction());
         }
 
+        public static void AddObjectPairPair<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, object key, object value) where TKey : class where TValue : class {
+            dictionary.Add(key as TKey, value as TValue);
+        }
+
+        public static void AddUnique<TValue>(this IList<TValue> list, TValue value) {
+            if( value.Equals(default(TValue))) {
+                return;
+            }
+
+            if( !list.Contains(value)) {
+                list.Add(value);
+            }
+        }
+
+        public static void AddRangeUnique<TValue>(this IList<TValue> list, IEnumerable<TValue> values) {
+            if (values == null) {
+                return;
+            }
+            foreach(var item in values) {
+                list.AddUnique(item);
+            }
+        }
+
+        public static XList<TSource> ToXList<TSource>(this IEnumerable<TSource> source) {
+            return source == null ? new XList<TSource>() : new XList<TSource>(source);
+        }
+
+        internal class IdentityFunction<TElement> {
+            public static Func<TElement, TElement> Instance {
+                get { return x => x; }
+            }
+        }
+
+        public static XDictionary<TKey, TSource> ToXDictionary<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector) {
+            return ToXDictionary<TSource, TKey, TSource>(source, keySelector, IdentityFunction<TSource>.Instance, null);
+        }
+
+        public static XDictionary<TKey, TSource> ToXDictionary<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector, IEqualityComparer<TKey> comparer) {
+            return ToXDictionary<TSource, TKey, TSource>(source, keySelector, IdentityFunction<TSource>.Instance, comparer);
+        }
+
+        public static XDictionary<TKey, TElement> ToXDictionary<TSource, TKey, TElement>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector, Func<TSource, TElement> elementSelector) {
+            return ToXDictionary<TSource, TKey, TElement>(source, keySelector, elementSelector, null);
+        }
+
+        public static XDictionary<TKey, TElement> ToXDictionary<TSource, TKey, TElement>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector, Func<TSource, TElement> elementSelector, IEqualityComparer<TKey> comparer) {
+            if (source == null) {
+                throw new CoAppException("ToXDictionary (source) value null.");
+            }
+            if (keySelector == null) {
+                throw new CoAppException("ToXDictionary (keySelector) value null.");
+            }
+            if (elementSelector == null) {
+                throw new CoAppException("ToXDictionary (elementSelector) value null.");
+            }
+
+            var d = new XDictionary<TKey, TElement>(comparer);
+            foreach (var element in source) {
+                d.Add(keySelector(element), elementSelector(element));
+            }
+            return d;
+        }
+
 #if !COAPP_ENGINE_CORE
-        public static Dictionary<string, IEnumerable<string>> Merge(this Dictionary<string, IEnumerable<string>> result, IDictionary<string, IEnumerable<string>> more) {
+        public static IDictionary<string, IEnumerable<string>> Merge(this IDictionary<string, IEnumerable<string>> result, IDictionary<string, IEnumerable<string>> more) {
             foreach (var k in more.Keys) {
                 if (result.ContainsKey(k)) {
                     result[k] = result[k].Union(more[k]).Distinct();
@@ -195,7 +264,7 @@ namespace CoApp.Toolkit.Extensions {
             return result;
         }
 
-        public static TValue GetOrDefault<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key) {
+        public static TValue GetOrDefault<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key) {
             TValue value;
             dictionary.TryGetValue(key, out value);
             return value;

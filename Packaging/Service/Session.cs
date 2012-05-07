@@ -376,7 +376,7 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        private Dictionary<Type, object> _sessionCache = new Dictionary<Type, object>();
+        private IDictionary<Type, object> _sessionCache = new XDictionary<Type, object>();
         private readonly ManualResetEvent _bufferReady = new ManualResetEvent(true);
 
         /// <summary>
@@ -495,7 +495,7 @@ namespace CoApp.Packaging.Service {
                                         Logger.Message("Request:[{0}]{1}".format(requestMessage.GetValueAsString("rqid"), requestMessage.ToSmallerString()));
 
                                        
-                                        var packageRequestData = new EasyDictionary<string, PackageRequestData>();
+                                        var packageRequestData = new XDictionary<string, PackageRequestData>();
                                         var rqid = requestMessage.GetValueAsString("rqid");
 
                                         CurrentTask.Events += new GetCurrentRequestId(() => rqid );

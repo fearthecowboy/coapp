@@ -73,7 +73,7 @@ namespace CoApp.Toolkit.Pipes {
 
                     case "Dictionary":
                     case "IDictionary":
-                    case "EasyDictionary":
+                    case "XDictionary":
                         ParameterType = ParameterType.Dictionary;
                         Type = t;
                         DictionaryKeyType = genericArguments[0];
@@ -141,7 +141,7 @@ namespace CoApp.Toolkit.Pipes {
 
     public class IncomingCallDispatcher<T> {
         private readonly T _targetObject;
-        private readonly EasyDictionary<string, DispatchableMethod> _methodTargets = new EasyDictionary<string, DispatchableMethod>();
+        private readonly XDictionary<string, DispatchableMethod> _methodTargets = new XDictionary<string, DispatchableMethod>();
 
         public IncomingCallDispatcher(T target) {
             _targetObject = target;

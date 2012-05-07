@@ -62,7 +62,7 @@ namespace CoApp.Toolkit.Extensions {
             stringBuilder.Append(value.UrlEncode());
         }
 
-        public static StringBuilder GetFormData(this Dictionary<string, string> data) {
+        public static StringBuilder GetFormData(this IDictionary<string, string> data) {
             var result = new StringBuilder();
             foreach (var key in data.Keys) {
                 result.AppendFormData(key, data[key]);
@@ -74,7 +74,7 @@ namespace CoApp.Toolkit.Extensions {
             return Service(url, requestType, responseType, out resultCode, null, null);
         }
 
-        public static object Service(this Uri url, RequestType requestType, ResponseType responseType, out int resultCode, Dictionary<string, string> formData) {
+        public static object Service(this Uri url, RequestType requestType, ResponseType responseType, out int resultCode, IDictionary<string, string> formData) {
             return Service(url, requestType, responseType, out resultCode, null, formData);
         }
 
@@ -82,7 +82,7 @@ namespace CoApp.Toolkit.Extensions {
             return Service(url, requestType, responseType, out resultCode, outputFilename, null);
         }
 
-        public static object Service(this Uri url, RequestType requestType, ResponseType responseType, out int resultCode, string outputFilename, Dictionary<string, string> formData) {
+        public static object Service(this Uri url, RequestType requestType, ResponseType responseType, out int resultCode, string outputFilename, IDictionary<string, string> formData) {
             object result = null;
             resultCode = -1;
 
@@ -207,19 +207,19 @@ namespace CoApp.Toolkit.Extensions {
             return result as string;
         }
 
-        public static string Post(this string url, Dictionary<string, string> args) {
+        public static string Post(this string url, IDictionary<string, string> args) {
             int resultCode;
             var result = Service(new Uri(url), RequestType.POST, ResponseType.String, out resultCode, args);
             return result as string;
         }
-
-        public static byte[] PostBinary(this string url, Dictionary<string, string> args) {
+        
+        public static byte[] PostBinary(this string url, IDictionary<string, string> args) {
             int resultCode;
             var result = Service(new Uri(url), RequestType.POST, ResponseType.Binary, out resultCode);
             return result as byte[];
         }
 
-        public static string PostBinaryFile(this string url, string outputFilename, Dictionary<string, string> args) {
+        public static string PostBinaryFile(this string url, string outputFilename, IDictionary<string, string> args) {
             int resultCode;
             var result = Service(new Uri(url), RequestType.POST, ResponseType.Binary, out resultCode, outputFilename);
             return result as string;

@@ -13,6 +13,7 @@
 namespace CoApp.Packaging.Service {
     using System;
     using System.Collections.Generic;
+    using System.Collections.ObjectModel;
     using System.IO;
     using System.Linq;
     using Common;
@@ -21,6 +22,7 @@ namespace CoApp.Packaging.Service {
     using Exceptions;
     using Feeds;
     using PackageFormatHandlers;
+    using Toolkit.Collections;
     using Toolkit.Configuration;
     using Toolkit.Exceptions;
     using Toolkit.Extensions;
@@ -30,39 +32,111 @@ namespace CoApp.Packaging.Service {
     using Toolkit.Win32;
 
     public class Package : NotifiesPackageManager {
-        private bool? _isInstalled;
-        private PackageDetails _packageDetails;
-        private InternalPackageData _internalPackageData;
-        internal IPackageFormatHandler PackageHandler;
-        public CanonicalName CanonicalName;
+        private static readonly XDictionary<CanonicalName, Package> Packages = new XDictionary<CanonicalName, Package>();
+       
+        private static readonly IDictionary<string, string> DefaultMacros = new XDictionary<string, string>{
+                {"apps", PackageManagerSettings.CoAppRootDirectory},
+                {"cache", Path.Combine(PackageManagerSettings.CoAppRootDirectory, ".cache")},
+                {"assemblies", Path.Combine(PackageManagerSettings.CoAppRootDirectory, "ReferenceAssemblies")},
+                {"referenceassemblies", Path.Combine(PackageManagerSettings.CoAppRootDirectory, "ReferenceAssemblies")},
+                {"x86", Path.Combine(PackageManagerSettings.CoAppRootDirectory, "x86")},
+                {"x64", Path.Combine(PackageManagerSettings.CoAppRootDirectory, "x64")},
+                {"bin", Path.Combine(PackageManagerSettings.CoAppRootDirectory, "bin")},
+                {"powershell", Path.Combine(PackageManagerSettings.CoAppRootDirectory, "powershell")},
+                {"lib", Path.Combine(PackageManagerSettings.CoAppRootDirectory, "lib")},
+                {"include", Path.Combine(PackageManagerSettings.CoAppRootDirectory, "include")},
+                {"etc", Path.Combine(PackageManagerSettings.CoAppRootDirectory, "etc")},
+                {"allprograms", KnownFolders.GetFolderPath(KnownFolder.CommonPrograms)},
+            };
 
-        public string Vendor { get; internal set; }
+        internal CanonicalName CanonicalName;
+        internal IPackageFormatHandler PackageHandler;
+        internal BindingPolicy BindingPolicy;
+        internal string Vendor { get; set; }
         internal string DisplayName { get; set; }
+        internal PackageDetails PackageDetails { get; set; }
+        private bool? _isInstalled;
+        private Composition _compositionData;
+
+        internal readonly XList<Uri> RemoteLocations = new XList<Uri>();
+        internal readonly XList<Uri> FeedLocations = new XList<Uri>();
+        internal readonly XList<string> LocalLocations = new XList<string>();
+        internal readonly XList<Role> Roles = new XList<Role>();
+        internal readonly XList<Feature> Features = new XList<Feature>();
+        internal readonly XList<Feature> RequiredFeatures = new XList<Feature>();
+        internal readonly ObservableCollection<Package> Dependencies = new ObservableCollection<Package>();
+        
+        private Package(CanonicalName canonicalName) {
+            Packages.Changed += x => Changed();
+            Dependencies.CollectionChanged += (x, y) => Changed();
+            CanonicalName = canonicalName;
+        }
+
+        internal static Package GetPackageFromFilename(string filename) {
+            filename = filename.CanonicalizePathIfLocalAndExists();
+
+            if (!File.Exists(filename)) {
+                Event<GetResponseInterface>.RaiseFirst().FileNotFound(filename);
+                return null;
+            }
+
+            Package pkg;
+
+            lock (Packages) {
+                pkg = (Packages.Values.FirstOrDefault(package =>package.HasLocalLocation && package.LocalLocations.Contains(filename)));
+            }
+
+            // if we didn't find it by looking at the packages in memory, and seeing if it matches a known path.
+            // try package handlers to see if we can find one that will return a valid package for it.
+
+            pkg = pkg ?? CoAppMSI.GetCoAppPackageFileInformation(filename);
+
+            // pkg = pkg ?? NugetPackageHandler.GetCoAppPackageFileInformation(filename);
+            // pkg = pkg ?? PythonPackageHandler.GetCoAppPackageFileInformation(filename); // etc.
+
+            return pkg;
+        }
+
+        internal static Package GetPackage(CanonicalName canonicalName) {
+            if (!canonicalName.IsCanonical) {
+                throw new CoAppException("GetPackage requries that CanonicalName must not be a partial name.");
+            }
+
+            lock (Packages) {
+                return Packages.GetOrAdd(canonicalName, () => new Package(canonicalName));
+            }
+        }
+
+        internal static FourPartVersion GetCurrentPackageVersion(CanonicalName canonicalName) {
+            var installedVersionsOfPackage = PackageManagerImpl.Instance.InstalledPackages.Where(each => canonicalName.DiffersOnlyByVersion(each.CanonicalName)).OrderByDescending(each => each.CanonicalName.Version);
+            var latestPackage = installedVersionsOfPackage.FirstOrDefault();
+
+            // clean as we go...
+            if (latestPackage == null) {
+                PackageManagerSettings.PerPackageSettings[canonicalName.GeneralName, "CurrentVersion"].Value = null;
+                return 0;
+            }
+
+            // is there a version set?
+            FourPartVersion ver = (ulong)PackageManagerSettings.PerPackageSettings[canonicalName.GeneralName, "CurrentVersion"].LongValue;
+
+            // if not (or it's not set to an installed package), let's set it to the latest version of the package.
+            if (ver == 0 || installedVersionsOfPackage.FirstOrDefault(p => p.CanonicalName.Version == ver) == null) {
+                latestPackage.SetPackageCurrent();
+                return latestPackage.CanonicalName.Version;
+            }
+            return ver;
+        }
 
         internal string PackageDirectory {
             get {
-                return Path.Combine(TargetDirectory, Vendor.MakeSafeFileName(), CanonicalName.PackageName);
+                return Path.Combine(BaseInstallDirectory, Vendor.MakeSafeFileName(), CanonicalName.PackageName);
             }
         }
 
-        internal string TargetDirectory {
+        internal string BaseInstallDirectory {
             get {
                 return PackageManagerSettings.CoAppInstalledDirectory[CanonicalName.Architecture];
-            }
-        }
-
-        /// <summary>
-        ///   Gets the package details object. if _packageDetails is null, it tries to get the data from the cache (probably by use of a delegate)
-        /// </summary>
-        internal PackageDetails PackageDetails {
-            get {
-                return _packageDetails ?? (_packageDetails = Cache<PackageDetails>.Value[CanonicalName]);
-            }
-        }
-
-        internal InternalPackageData InternalPackageData {
-            get {
-                return _internalPackageData ?? (_internalPackageData = new InternalPackageData(this));
             }
         }
 
@@ -79,7 +153,7 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        public bool IsInstalled {
+        internal bool IsInstalled {
             get {
                 if (!_isInstalled.HasValue) {
                     lock (this) {
@@ -107,17 +181,23 @@ namespace CoApp.Packaging.Service {
             }
         }
 
+        /// <summary>
+        /// Determines if this package is a supercedent of an older package.
+        /// 
+        /// Note:This should be the only method that does comparisons on the package policy *ANYWHERE*
+        /// </summary>
+        /// <param name="olderPackage"></param>
+        /// <returns></returns>
         public bool IsAnUpdateFor(Package olderPackage) {
-            return CanonicalName.DiffersOnlyByVersion(olderPackage.CanonicalName) &&
-                InternalPackageData.PolicyMinimumVersion <= olderPackage.CanonicalName.Version &&
-                    InternalPackageData.PolicyMaximumVersion >= olderPackage.CanonicalName.Version;
+            return CanonicalName.DiffersOnlyByVersion(olderPackage.CanonicalName) && 
+                BindingPolicy != null && 
+                    BindingPolicy.Minimum <= olderPackage.CanonicalName.Version &&
+                    BindingPolicy.Maximum >= olderPackage.CanonicalName.Version;
         }
 
         public bool IsAnUpgradeFor(Package olderPackage) {
             return CanonicalName.DiffersOnlyByVersion(olderPackage.CanonicalName) &&
-                CanonicalName.Version > olderPackage.CanonicalName.Version &&
-                    !(InternalPackageData.PolicyMinimumVersion <= olderPackage.CanonicalName.Version &&
-                        InternalPackageData.PolicyMaximumVersion >= olderPackage.CanonicalName.Version);
+                CanonicalName.Version > olderPackage.CanonicalName.Version && !IsAnUpdateFor(olderPackage);
         }
 
         public bool IsActive {
@@ -126,68 +206,9 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        /// <summary>
-        ///   the collection of all known packages
-        /// </summary>
-        // private static readonly ObservableCollection<Package> Packages = new ObservableCollection<Package>();
-        private static readonly Dictionary<CanonicalName, Package> Packages = new Dictionary<CanonicalName, Package>();
-
-        internal static Package GetPackageFromFilename(string filename) {
-            filename = filename.CanonicalizePathIfLocalAndExists();
-
-            if (!File.Exists(filename)) {
-                Event<GetResponseInterface>.RaiseFirst().FileNotFound(filename);
-                return null;
-            }
-
-            Package pkg;
-
-            lock (Packages) {
-                pkg = (Packages.Values.FirstOrDefault(package =>
-                    package.InternalPackageData.HasLocalLocation &&
-                        package.InternalPackageData.LocalLocations.Contains(filename)));
-            }
-
-            // if we didn't find it by looking at the packages in memory, and seeing if it matches a known path.
-            // try package handlers to see if we can find one that will return a valid package for it.
-
-            pkg = pkg ?? CoAppMSI.GetCoAppPackageFileInformation(filename);
-
-            // pkg = pkg ?? NugetPackageHandler.GetCoAppPackageFileInformation(filename);
-            // pkg = pkg ?? PythonPackageHandler.GetCoAppPackageFileInformation(filename); // etc.
-
-            return pkg;
-        }
-
-        internal static Package GetPackage(CanonicalName canonicalName) {
-            if (!canonicalName.IsCanonical) {
-                throw new CoAppException("GetPackage requries that CanonicalName must not be a partial name.");
-            }
-
-            lock (Packages) {
-                return Packages.GetOrAdd(canonicalName, () => new Package(canonicalName));
-            }
-        }
-
-        private Package(CanonicalName canonicalName) {
-            CanonicalName = canonicalName;
-        }
-
-        /// <summary>
-        ///   This drops any data from the object that isn't minimally neccessary for the smooth running of the package manager.
-        /// </summary>
-        internal void DropDetails() {
-            // drop the package details. If it's needed again, there should be a delegate to grab it 
-            // from the MSI or Feed.
-            _packageDetails = null;
-            Cache<PackageDetails>.Value.Clear(CanonicalName);
-        }
-
-        #region Install/Remove
-
         public void Install() {
             try {
-                EnsureCanonicalFoldersArePresent();
+                Engine.EnsureCanonicalFoldersArePresent();
 
                 var currentVersion = GetCurrentPackageVersion(CanonicalName);
 
@@ -246,55 +267,6 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        #endregion
-
-        private static readonly string[] CanonicalFolders = new[] {".cache", "ReferenceAssemblies", "ReferenceAssemblies\\x86", "ReferenceAssemblies\\x64", "ReferenceAssemblies\\any", "x86", "x64", "bin", "powershell", "lib", "include", "etc"};
-
-        internal static void EnsureCanonicalFoldersArePresent() {
-            var root = PackageManagerSettings.CoAppRootDirectory;
-            // try to make a convenience symlink:  %SYSTEMDRIVE%:\apps
-            var appsdir = "{0}:\\apps".format(root[0]);
-            if (!Directory.Exists(appsdir) && !File.Exists(appsdir)) {
-                Symlink.MakeDirectoryLink("{0}:\\apps".format(root[0]), root);
-            }
-
-            foreach (var path in CanonicalFolders.Select(folder => Path.Combine(root, folder)).Where(path => !Directory.Exists(path))) {
-                Directory.CreateDirectory(path);
-            }
-            // make sure system paths are updated.
-            var binPath = Path.Combine(root, "bin");
-            var psPath = Path.Combine(root, "powershell");
-
-            if (!EnvironmentUtility.SystemPath.Contains(binPath)) {
-                EnvironmentUtility.SystemPath = EnvironmentUtility.SystemPath.Prepend(binPath);
-            }
-            if (!EnvironmentUtility.PowershellModulePath.Contains(psPath)) {
-                EnvironmentUtility.PowershellModulePath = EnvironmentUtility.PowershellModulePath.Prepend(psPath);
-            }
-
-            EnvironmentUtility.BroadcastChange();
-        }
-
-        #region Package Composition 
-
-        private static readonly Lazy<Dictionary<string, string>> DefaultMacros = new Lazy<Dictionary<string, string>>(() => {
-            var root = PackageManagerSettings.CoAppRootDirectory;
-            return new Dictionary<string, string> {
-                {"apps", root},
-                {"cache", Path.Combine(root, ".cache")},
-                {"assemblies", Path.Combine(root, "ReferenceAssemblies")},
-                {"referenceassemblies", Path.Combine(root, "ReferenceAssemblies")},
-                {"x86", Path.Combine(root, "x86")},
-                {"x64", Path.Combine(root, "x64")},
-                {"bin", Path.Combine(root, "bin")},
-                {"powershell", Path.Combine(root, "powershell")},
-                {"lib", Path.Combine(root, "lib")},
-                {"include", Path.Combine(root, "include")},
-                {"etc", Path.Combine(root, "etc")},
-                {"allprograms", KnownFolders.GetFolderPath(KnownFolder.CommonPrograms)},
-            };
-        });
-
         /// <summary>
         ///   V1 of the Variable Resolver.
         /// </summary>
@@ -306,8 +278,8 @@ namespace CoApp.Packaging.Service {
             }
 
             return text.FormatWithMacros(macro => {
-                if (DefaultMacros.Value.ContainsKey(macro)) {
-                    return DefaultMacros.Value[macro];
+                if (DefaultMacros.ContainsKey(macro)) {
+                    return DefaultMacros[macro];
                 }
 
                 switch (macro.ToLower()) {
@@ -317,7 +289,7 @@ namespace CoApp.Packaging.Service {
                         return PackageDirectory;
 
                     case "targetdirectory":
-                        return TargetDirectory;
+                        return BaseInstallDirectory;
 
                     case "publishedpackagedir":
                     case "publishedpackagedirectory":
@@ -343,12 +315,12 @@ namespace CoApp.Packaging.Service {
         }
 
         internal void UpdateDependencyFlags() {
-            foreach (var dpkg in InternalPackageData.Dependencies.Where(each => !each.IsRequired)) {
+            foreach (var dpkg in Dependencies.Where(each => !each.IsRequired)) {
                 var dependentPackage = dpkg;
 
                 // find each dependency that is the policy-preferred version, and mark it as currentlyrequested.
                 var supercedentPackage = (from supercedent in PackageManagerImpl.Instance.SearchForInstalledPackages(dependentPackage.CanonicalName.OtherVersionFilter)
-                    where supercedent.InternalPackageData.PolicyMinimumVersion <= dependentPackage.CanonicalName.Version && supercedent.InternalPackageData.PolicyMaximumVersion >= dependentPackage.CanonicalName.Version
+                    where supercedent.IsAnUpdateFor(dependentPackage)
                     select supercedent).OrderByDescending(p => p.CanonicalName.Version).FirstOrDefault();
 
                 (supercedentPackage ?? dependentPackage).UpdateDependencyFlags();
@@ -361,7 +333,7 @@ namespace CoApp.Packaging.Service {
 
         public IEnumerable<CompositionRule> ImplicitRules {
             get {
-                foreach (var r in InternalPackageData.Roles) {
+                foreach (var r in Roles) {
                     var role = r;
                     switch (role.PackageRole) {
                         case PackageRole.Application:
@@ -373,7 +345,7 @@ namespace CoApp.Packaging.Service {
                             };
                             break;
                         case PackageRole.DeveloperLibrary:
-                            foreach (var devLib in InternalPackageData.DeveloperLibraries.Where(each => each.Name == role.Name)) {
+                            foreach (var devLib in DeveloperLibraries.Where(each => each.Name == role.Name)) {
                                 // expose the reference assemblies 
                                 if (!devLib.ReferenceAssemblyFiles.IsNullOrEmpty()) {
                                     foreach (var asmFile in devLib.ReferenceAssemblyFiles) {
@@ -483,7 +455,7 @@ namespace CoApp.Packaging.Service {
         public void DoPackageComposition(bool makeCurrent) {
             // GS01: if package composition fails, and we're in the middle of installing a package
             // we should roll back the package install.
-            var rules = ImplicitRules.Union(InternalPackageData.CompositionRules).ToArray();
+            var rules = ImplicitRules.Union(CompositionRules).ToArray();
 
             var packagedir = ResolveVariables("${packagedir}\\");
             var appsdir = ResolveVariables("${apps}\\");
@@ -693,7 +665,7 @@ namespace CoApp.Packaging.Service {
         }
 
         public void UndoPackageComposition() {
-            var rules = ImplicitRules.Union(InternalPackageData.CompositionRules).ToArray();
+            var rules = ImplicitRules.Union(CompositionRules).ToArray();
 
             foreach (var link in from rule in rules.Where(r => r.Action == CompositionAction.Shortcut)
                 let target = ResolveVariables(rule.Source).GetFullPath()
@@ -718,27 +690,6 @@ namespace CoApp.Packaging.Service {
                 select link) {
                 Symlink.DeleteSymlink(link);
             }
-        }
-
-        internal static FourPartVersion GetCurrentPackageVersion(CanonicalName canonicalName) {
-            var installedVersionsOfPackage = PackageManagerImpl.Instance.InstalledPackages.Where(each => canonicalName.DiffersOnlyByVersion(each.CanonicalName)).OrderByDescending(each => each.CanonicalName.Version);
-            var latestPackage = installedVersionsOfPackage.FirstOrDefault();
-
-            // clean as we go...
-            if (latestPackage == null) {
-                PackageManagerSettings.PerPackageSettings[canonicalName.GeneralName, "CurrentVersion"].Value = null;
-                return 0;
-            }
-
-            // is there a version set?
-            FourPartVersion ver = (ulong)PackageManagerSettings.PerPackageSettings[canonicalName.GeneralName, "CurrentVersion"].LongValue;
-
-            // if not (or it's not set to an installed package), let's set it to the latest version of the package.
-            if (ver == 0 || installedVersionsOfPackage.FirstOrDefault(p => p.CanonicalName.Version == ver) == null) {
-                latestPackage.SetPackageCurrent();
-                return latestPackage.CanonicalName.Version;
-            }
-            return ver;
         }
 
         /// <summary>
@@ -805,6 +756,60 @@ namespace CoApp.Packaging.Service {
             PackageSessionData.GeneralPackageSettings["#CurrentVersion"].LongValue = (long)(ulong)CanonicalName.Version;
         }
 
-        #endregion
+        public bool HasLocalLocation {
+            get {
+                return !LocalLocations.IsNullOrEmpty();
+            }
+        }
+
+        public bool HasRemoteLocation {
+            get {
+                return !RemoteLocations.IsNullOrEmpty();
+            }
+        }
+
+        private Composition CompositionData {
+            get {
+                return _compositionData ?? (_compositionData = PackageHandler.GetCompositionData(this));
+            }
+        }
+
+        public IEnumerable<CompositionRule> CompositionRules {
+            get {
+                return CompositionData.CompositionRules ?? Enumerable.Empty<CompositionRule>();
+            }
+        }
+
+        public IEnumerable<WebApplication> WebApplications {
+            get {
+                return CompositionData.WebApplications ?? Enumerable.Empty<WebApplication>();
+            }
+        }
+
+        public IEnumerable<DeveloperLibrary> DeveloperLibraries {
+            get {
+                return CompositionData.DeveloperLibraries ?? Enumerable.Empty<DeveloperLibrary>();
+            }
+        }
+
+        public IEnumerable<Service> Services {
+            get {
+                return CompositionData.Services ?? Enumerable.Empty<Service>();
+            }
+        }
+
+        public IEnumerable<Driver> Drivers {
+            get {
+                return CompositionData.Drivers ?? Enumerable.Empty<Driver>();
+            }
+        }
+
+        public IEnumerable<SourceCode> SourceCodes {
+            get {
+                return CompositionData.SourceCodes ?? Enumerable.Empty<SourceCode>();
+            }
+        }
     }
+
+
 }
