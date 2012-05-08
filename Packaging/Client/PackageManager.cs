@@ -321,9 +321,7 @@ namespace CoApp.Packaging.Client {
         }
 
         public Task Elevate() {
-            return Task.Factory.StartNew(
-                () => {
-                });
+            return Session.Elevate();
         }
 
         public Task<bool> VerifyFileSignature(string filename) {

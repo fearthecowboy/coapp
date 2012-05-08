@@ -1,5 +1,5 @@
 #product-info {
-    product-name: "coapp toolkit";
+    product-name: "coapp";
     version: "1.2";
     original-source-location: "git@github.com:coapp/coapp.git";
     original-source-website: "https://github.com/coapp/coapp";
@@ -58,7 +58,7 @@ upload {
     default: false;
     uses : install;
     build-command: @"
-    for /F %%G in ('dir /s /b /o-n  coapp.toolkit*.msi') do ( 
+    for /F %%G in ('dir /s /b /o-n  coapp*.msi') do ( 
         curl -T %%G http://coapp.org/upload/
         goto :eof
     )
@@ -70,7 +70,7 @@ install {
     set : cfg = "Release";
     uses : package;
     build-command: @"
-    for /F %%G in ('dir /s /b /o-n  coapp.toolkit*.msi') do ( 
+    for /F %%G in ('dir /s /b /o-n  coapp*.msi') do ( 
         coapp install %%G
         goto :eof
     )

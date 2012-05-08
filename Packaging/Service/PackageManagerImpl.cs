@@ -58,12 +58,21 @@ namespace CoApp.Packaging.Service {
         /// </summary>
         private IEnumerable<string> SystemFeedLocations {
             get {
-                if (PackageManagerSettings.CoAppSettings["#feedLocations"].HasValue) {
-                    return PackageManagerSettings.CoAppSettings["#feedLocations"].StringsValue;
+                lock (typeof(PackageManagerImpl)) {
+                    if (!PackageManagerSettings.CoAppSettings["#feedLocations"].HasValue) {
+
+                        PackageManagerSettings.CoAppSettings["#feedLocations"].StringsValue = new[] {
+                            "http://coapp.org/current",
+                            "http://coapp.org/archive",
+                            "http://coapp.org/unstable"
+                        };
+
+                        SetFeedFlags("http://coapp.org/archive", "Passive");
+                        SetFeedFlags("http://coapp.org/unstable", "Ignored");
+                    }
                 }
-                // defaults to the installed packages feed 
-                // and the default coapp feed.
-                return "http://coapp.org/current".SingleItemAsEnumerable();
+
+                return PackageManagerSettings.CoAppSettings["#feedLocations"].StringsValue;
             }
         }
 
@@ -75,7 +84,10 @@ namespace CoApp.Packaging.Service {
 
         private void AddSessionFeed(string feedLocation) {
             lock (this) {
-                feedLocation = feedLocation.CanonicalizePathWithWildcards();
+                if (!feedLocation.IsWebUri()) {
+                    feedLocation = feedLocation.CanonicalizePathWithWildcards();
+                }
+
                 var sessionFeeds = SessionFeedLocations.Union(feedLocation.SingleItemAsEnumerable()).Distinct();
                 SessionCache<IEnumerable<string>>.Value["session-feeds"] = sessionFeeds.ToArray();
             }
@@ -83,8 +95,9 @@ namespace CoApp.Packaging.Service {
 
         private void AddSystemFeed(string feedLocation) {
             lock (this) {
-                feedLocation = feedLocation.CanonicalizePathWithWildcards();
-
+                if( !feedLocation.IsWebUri()) {
+                    feedLocation = feedLocation.CanonicalizePathWithWildcards();
+                }
                 var systemFeeds = SystemFeedLocations.Union(feedLocation.SingleItemAsEnumerable()).Distinct();
                 PackageManagerSettings.CoAppSettings["#feedLocations"].StringsValue = systemFeeds.ToArray();
             }
@@ -92,7 +105,9 @@ namespace CoApp.Packaging.Service {
 
         private void RemoveSessionFeed(string feedLocation) {
             lock (this) {
-                feedLocation = feedLocation.CanonicalizePathWithWildcards();
+                if (!feedLocation.IsWebUri()) {
+                    feedLocation = feedLocation.CanonicalizePathWithWildcards();
+                }
 
                 var sessionFeeds = from emove in SessionFeedLocations where !emove.Equals(feedLocation, StringComparison.CurrentCultureIgnoreCase) select emove;
                 SessionCache<IEnumerable<string>>.Value["session-feeds"] = sessionFeeds.ToArray();
@@ -104,7 +119,9 @@ namespace CoApp.Packaging.Service {
 
         private void RemoveSystemFeed(string feedLocation) {
             lock (this) {
-                feedLocation = feedLocation.CanonicalizePathWithWildcards();
+                if (!feedLocation.IsWebUri()) {
+                    feedLocation = feedLocation.CanonicalizePathWithWildcards();
+                }
 
                 var systemFeeds = from feed in SystemFeedLocations where !feed.Equals(feedLocation, StringComparison.CurrentCultureIgnoreCase) select feed;
                 PackageManagerSettings.CoAppSettings["#feedLocations"].StringsValue = systemFeeds.ToArray();
@@ -297,11 +314,11 @@ namespace CoApp.Packaging.Service {
                 {"author-version", package.PackageDetails.AuthorVersion},
             },
                package.PackageDetails.IconLocations,
-               package.PackageDetails.Licenses.ToDictionary(each => each.Name, each => each.Text),
-               package.Roles.ToDictionary(each => each.Name, each => each.PackageRole.ToString()),
+               package.PackageDetails.Licenses.ToXDictionary(each => each.Name, each => each.Text),
+               package.Roles.ToXDictionary(each => each.Name, each => each.PackageRole.ToString()),
                package.PackageDetails.Tags,
-               package.PackageDetails.Contributors.ToDictionary(each => each.Name, each => each.Location.AbsoluteUri),
-               package.PackageDetails.Contributors.ToDictionary(each => each.Name, each => each.Email));
+               package.PackageDetails.Contributors.ToXDictionary(each => each.Name, each => each.Location.AbsoluteUri),
+               package.PackageDetails.Contributors.ToXDictionary(each => each.Name, each => each.Email));
             return FinishedSynchronously;
         }
 
@@ -751,7 +768,7 @@ namespace CoApp.Packaging.Service {
                             response.FeedAdded(location);
 
                             if (foundFeed != SessionPackageFeed.Instance || foundFeed != InstalledPackageFeed.Instance) {
-                                Cache<PackageFeed>.Value[location] = foundFeed;
+                                Cache<PackageFeed   >.Value[location] = foundFeed;
                             }
                         } else {
                             response.Error("add-feed", "location", "failed to recognize location '{0}' as a valid package feed".format(location));

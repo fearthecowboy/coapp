@@ -64,7 +64,7 @@ namespace CoApp.Toolkit.Pipes {
             var parts = rawMessage.Split(_query, StringSplitOptions.RemoveEmptyEntries);
             Command = (parts.FirstOrDefault() ?? "").UrlDecode();
             Data = (parts.Skip(1).FirstOrDefault() ?? "").Split(_separator, StringSplitOptions.RemoveEmptyEntries).Select(
-                p => p.Split(_equals, StringSplitOptions.RemoveEmptyEntries)).ToDictionary(
+                p => p.Split(_equals, StringSplitOptions.RemoveEmptyEntries)).ToXDictionary(
                     s => s[0].UrlDecode(),
                     s => s.Length > 1 ? s[1].UrlDecode() : String.Empty);
         }
@@ -144,6 +144,7 @@ namespace CoApp.Toolkit.Pipes {
             
             foreach (var each in pairs) {
                 try {
+                    
                     result.AddPair(keyType.ParseString(each.key), keyType.ParseString(each.value));
                 } catch (Exception e ) {
                     Console.WriteLine(e.Message);
@@ -153,17 +154,17 @@ namespace CoApp.Toolkit.Pipes {
             return result;
             /*
             if (keyType == typeof (string) && valueType.IsParsable()) {
-                return keys.ToDictionary(key => key, key => valueType.ParseString(Data[key]));
+                return keys.ToXDictionary(key => key, key => valueType.ParseString(Data[key]));
             }
             if (keyType.IsParsable() && valueType == typeof (string)) {
                 dynamic result = Activator.CreateInstance(typeof (Dictionary<,>).MakeGenericType(keyType, valueType));
                 foreach( var key in keys ) {
                     result.Add(keyType.ParseString(key), Data[key]);
                 }
-                // return keys.ToDictionary(key => keyType.ParseString(key), key => Data[key]);
+                // return keys.ToXDictionary(key => keyType.ParseString(key), key => Data[key]);
             }
             if (keyType.IsParsable() && valueType.IsParsable()) {
-                return keys.ToDictionary(key => keyType.ParseString(key), key => valueType.ParseString(Data[key]));
+                return keys.ToXDictionary(key => keyType.ParseString(key), key => valueType.ParseString(Data[key]));
             }
             */
             throw new CoAppException("Unsupported Dictionary type '{0}/{1}' (keys and values must support tryparse)".format(keyType.Name, valueType.Name));

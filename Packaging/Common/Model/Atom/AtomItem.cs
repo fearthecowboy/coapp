@@ -134,12 +134,17 @@ namespace CoApp.Packaging.Common.Model.Atom {
         /// <param name="version"> </param>
         /// <returns> When the reader parses the embedded package model we sync that back to the exposed model right away. </returns>
         protected override bool TryParseElement(XmlReader reader, string version) {
-            var extension = Model.XmlSerializer.Deserialize(reader) as PackageModel;
-            if (extension != null) {
-                Model = extension;
-                SyncToModel();
+            try {
+                var extension = Model.XmlSerializer.Deserialize(reader) as PackageModel;
+                if (extension != null) {
+                    Model = extension;
+                    SyncToModel();
+                }
+                return Model != null;
+            } catch {
+                
             }
-            return Model != null;
+            return false;
         }
 
         public AtomItem() {

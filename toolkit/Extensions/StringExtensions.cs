@@ -980,5 +980,21 @@ namespace CoApp.Toolkit.Extensions {
         public static string IfNullOrEmpty(this string text, string defaultText) {
             return string.IsNullOrEmpty(text) ? defaultText : text;
         }
+
+        public static bool IsWebUri(this string text) {
+            try {
+                return new Uri(text).IsWebUri();
+            }
+            catch {
+            }
+            return false;
+        }
+
+        public static bool IsWebUri(this Uri uri) {
+            if ((uri != null) && ( uri.Scheme == Uri.UriSchemeHttp || (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeFtp))) {
+                return true;
+            }
+            return false;
+        }
     }
 }

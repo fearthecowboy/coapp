@@ -76,18 +76,26 @@ namespace CoApp.Packaging.Client {
             }
         }
 
-        public static IPackageManager RemoteService;
+        internal const int BufferSize = 1024 * 1024 * 2;
+        private bool _isElevated;
+        private IPackageManager _remoteService;
         private static Session _instance = new Session();
-        private static readonly ManualResetEvent IsBufferReady = new ManualResetEvent(false);
+        private readonly ManualResetEvent _isBufferReady = new ManualResetEvent(false);
+        private Task _connectingTask;
+        private int _autoConnectionCount;
+        private string PipeName = "CoAppInstaller";
+        private NamedPipeClientStream _pipe;
+        
 
-        private static NamedPipeClientStream _pipe;
-        internal const int BufferSize = 1024*1024*2;
-
-        public static int ActiveCalls {
+        internal static int ActiveCalls {
             get {
                 return ManualEventQueue.EventQueues.Keys.Count;
             }
         }
+
+        public static IPackageManager RemoteService { get {
+            return _instance._remoteService;
+        } }
 
         public static bool IsServiceAvailable {
             get {
@@ -97,12 +105,12 @@ namespace CoApp.Packaging.Client {
 
         public static bool IsConnected {
             get {
-                return IsServiceAvailable && _pipe != null && _pipe.IsConnected;
+                return IsServiceAvailable && _instance._pipe != null && _instance._pipe.IsConnected;
             }
         }
 
         private Session() : base(WriteAsync) {
-            RemoteService = this.ActLike();
+            _remoteService = this.ActLike();
         }
 
         /// <summary>
@@ -147,31 +155,39 @@ namespace CoApp.Packaging.Client {
             return true;
         }
 
-        /// <summary>
-        ///   DEPRECATED Making this deprecated. Client library should be smart enough to connect without being told to.
-        /// </summary>
-        /// <param name="clientName"> </param>
-        /// <param name="sessionId"> </param>
-        /// <param name="millisecondsTimeout"> </param>
-        public void ConnectAndWait(string clientName, string sessionId = null, int millisecondsTimeout = 5000) {
-            Connect(clientName, sessionId).Wait(millisecondsTimeout);
-        }
+        internal static Task Elevate() {
+            lock (_instance) {
+                if (_instance._isElevated) {
+                    return "Elevated".AsResultTask();
+                }
+                // Disconnect from old pipe asap.
+                _instance.Disconnect();
 
-        internal static Task Connect() {
-            return Connect(Process.GetCurrentProcess().Id.ToString());
-        }
+                // change pipe name 
+                _instance.PipeName = "CoAppInstaller" + Process.GetCurrentProcess().Id.ToString().MD5Hash();
 
-        private static Task _connectingTask;
-        private static int _autoConnectionCount;
+                // start elevation proxy
+                // Process.Start( ... )
 
-        internal static Task Connect(string clientName, string sessionId = null) {
-            if (IsConnected) {
-                return "Completed".AsResultTask();
+                // if( process started ok  ) _isElevated = true;
+
+
+                // continue with re-connect.
+                return _instance.Connect();
             }
+        }
+        
 
-            lock (typeof (Session)) {
+        private Task Connect(string clientName = null, string sessionId = null) {
+            lock (this) {
+                if (IsConnected) {
+                    return "Completed".AsResultTask();
+                }
+
+                clientName = clientName ?? Process.GetCurrentProcess().Id.ToString();
+
                 if (_connectingTask == null) {
-                    IsBufferReady.Reset();
+                    _isBufferReady.Reset();
 
                     _connectingTask = Task.Factory.StartNew(() => {
                         EngineServiceManager.EnsureServiceIsResponding();
@@ -179,7 +195,7 @@ namespace CoApp.Packaging.Client {
                         sessionId = sessionId ?? Process.GetCurrentProcess().Id.ToString() + "/" + _autoConnectionCount++;
 
                         for (int count = 0; count < 5; count++) {
-                            _pipe = new NamedPipeClientStream(".", "CoAppInstaller", PipeDirection.InOut, PipeOptions.Asynchronous, TokenImpersonationLevel.Impersonation);
+                            _pipe = new NamedPipeClientStream(".", PipeName, PipeDirection.InOut, PipeOptions.Asynchronous, TokenImpersonationLevel.Impersonation);
                             try {
                                 _pipe.Connect(500);
                                 _pipe.ReadMode = PipeTransmissionMode.Message;
@@ -203,17 +219,17 @@ namespace CoApp.Packaging.Client {
             return _connectingTask;
         }
 
-        private static void ProcessMessages() {
+        private void ProcessMessages() {
             var incomingMessage = new byte[BufferSize];
-            IsBufferReady.Set();
+            _isBufferReady.Set();
 
             try {
                 do {
                     // we need to wait for the buffer to become available.
-                    IsBufferReady.WaitOne();
+                    _isBufferReady.WaitOne();
 
                     // now we claim the buffer 
-                    IsBufferReady.Reset();
+                    _isBufferReady.Reset();
 
                     var readTask = _pipe.ReadAsync(incomingMessage, 0, BufferSize);
 
@@ -243,7 +259,7 @@ namespace CoApp.Packaging.Client {
                                 }
                             }
                             // it's ok to let the next readTask use the buffer, we've got the data out & queued.
-                            IsBufferReady.Set();
+                            _isBufferReady.Set();
                         }).AutoManage();
 
                     // this wait just makes sure that we're only asking for one message at a time
@@ -257,15 +273,15 @@ namespace CoApp.Packaging.Client {
             }
         }
 
-        public static void Disconnect() {
-            lock (typeof (Session)) {
+        public void Disconnect() {
+            lock (this) {
                 _connectingTask = null;
 
                 try {
                     if (_pipe != null) {
                         // ensure all queues are stopped and cleared out.
                         ManualEventQueue.ResetAllQueues();
-                        IsBufferReady.Set();
+                        _isBufferReady.Set();
                         var pipe = _pipe;
                         _pipe = null;
                         pipe.Close();
@@ -288,14 +304,14 @@ namespace CoApp.Packaging.Client {
             if (IsConnected) {
                 try {
                     message.Add("rqid", Event<GetCurrentRequestId>.RaiseFirst());
-                    _pipe.WriteLineAsync(message.ToString()).ContinueWith(antecedent => Logger.Error("Async Write Fail!? (1)"),
+                    _instance._pipe.WriteLineAsync(message.ToString()).ContinueWith(antecedent => Logger.Error("Async Write Fail!? (1)"),
                         TaskContinuationOptions.OnlyOnFaulted);
                 } catch /* (Exception e) */ {
                 }
             }
         }
 
-        private static void StartSession(string clientId, string sessionId) {
+        private void StartSession(string clientId, string sessionId) {
             WriteAsync(new UrlEncodedMessage("StartSession") {
                 {"client", clientId},
                 {"id", sessionId},

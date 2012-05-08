@@ -3,7 +3,7 @@
 // autopackage file for coapp.toolkit
 
 package {
-    name: "CoApp.Toolkit";
+    name: "CoApp";
     display-name: "CoApp Package Manager";
 }
 
@@ -12,7 +12,7 @@ provides {
 }
 
 metadata {
-    summary: "The CoApp Core toolkit and engine.";
+    summary: "The CoApp Core Package Manager.";
     description: @"This is the core component for CoApp.
 
 CoApp, is the Common Opensource Application Publishing Platform, an open-source package management system for Windows. 

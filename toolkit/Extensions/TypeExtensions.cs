@@ -23,21 +23,25 @@ namespace CoApp.Toolkit.Extensions {
         private static readonly IDictionary<Type, ConstructorInfo> TryStrings = new XDictionary<Type, ConstructorInfo>();
 
         private static MethodInfo GetTryParse(Type parsableType) {
-            if (!TryParsers.ContainsKey(parsableType)) {
-                if (parsableType.IsPrimitive || parsableType.IsValueType || parsableType.GetConstructor(new Type[] { }) != null) {
-                    TryParsers.Add(parsableType, parsableType.GetMethod("TryParse", new[] { typeof(string), parsableType.MakeByRefType() }));
-                } else {
-                    // if they don't have a default constructor, 
-                    // it's not going to be 'parsable'
-                    TryParsers.Add(parsableType, null);
+            lock (TryParsers) {
+                if (!TryParsers.ContainsKey(parsableType)) {
+                    if (parsableType.IsPrimitive || parsableType.IsValueType || parsableType.GetConstructor(new Type[] {}) != null) {
+                        TryParsers.Add(parsableType, parsableType.GetMethod("TryParse", new[] {typeof (string), parsableType.MakeByRefType()}));
+                    } else {
+                        // if they don't have a default constructor, 
+                        // it's not going to be 'parsable'
+                        TryParsers.Add(parsableType, null);
+                    }
                 }
             }
             return TryParsers[parsableType];
         }
 
         private static ConstructorInfo GetStringConstructor(Type parsableType) {
-            if (!TryStrings.ContainsKey(parsableType)) {
-                TryStrings.Add(parsableType, parsableType.GetConstructor(new [] {typeof(string)}));
+            lock (TryStrings) {
+                if (!TryStrings.ContainsKey(parsableType)) {
+                    TryStrings.Add(parsableType, parsableType.GetConstructor(new[] {typeof (string)}));
+                }
             }
             return TryStrings[parsableType];
         }
@@ -47,6 +51,9 @@ namespace CoApp.Toolkit.Extensions {
         }
 
         public static bool IsParsable(this Type parsableType) {
+            if (parsableType.IsDictionary() || parsableType.IsArray) {
+                return false;
+            }
             return parsableType.IsEnum || GetTryParse(parsableType) != null || IsConstructableFromString(parsableType);
         }
 

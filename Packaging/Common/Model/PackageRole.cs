@@ -60,5 +60,11 @@ namespace CoApp.Packaging.Common.Model {
         /// </summary>
         [XmlEnum("Service")]
         Service,
+
+        /// <summary>
+        ///  Virutal Packages?
+        /// </summary>
+        [XmlEnum("Faux")]
+        Faux,
     }
 }

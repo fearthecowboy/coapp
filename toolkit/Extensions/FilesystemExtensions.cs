@@ -1073,15 +1073,5 @@ namespace CoApp.Toolkit.Extensions {
             }
             return allPaths.Select(Path.GetFileName);
         }
-
-        public static bool IsWebUrl(this string path) {
-            try {
-                if (new Uri(path).Scheme == Uri.UriSchemeHttp || (true && new Uri(path).Scheme == Uri.UriSchemeHttps)) {
-                    return true;
-                }
-            } catch {
-            }
-            return false;
-        }
     }
 }

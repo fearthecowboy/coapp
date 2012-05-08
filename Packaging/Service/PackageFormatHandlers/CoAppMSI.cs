@@ -175,7 +175,7 @@ namespace CoApp.Packaging.Service.PackageFormatHandlers {
 
                 try {
                     // if( WindowsVersionInfo.IsVistaOrPrior) {
-                    var cachedInstaller = Path.Combine(PackageManagerSettings.CoAppPackageCache, package.CanonicalName + ".msi");
+                    var cachedInstaller = Path.Combine(PackageManagerSettings.CoAppPackageCache, package.CanonicalName.LocalName + ".msi");
                     if (!File.Exists(cachedInstaller)) {
                         File.Copy(package.PackageSessionData.LocalValidatedLocation, cachedInstaller);
                     }
@@ -246,7 +246,7 @@ namespace CoApp.Packaging.Service.PackageFormatHandlers {
                 try {
                     Installer.InstallProduct(package.PackageSessionData.LocalValidatedLocation, @"REMOVE=ALL COAPP=1 ALLUSERS=1 REBOOT=REALLYSUPPRESS");
 
-                    var cachedInstaller = Path.Combine(PackageManagerSettings.CoAppPackageCache, package.CanonicalName + ".msi");
+                    var cachedInstaller = Path.Combine(PackageManagerSettings.CoAppPackageCache, package.CanonicalName.LocalName + ".msi");
                     if (File.Exists(cachedInstaller)) {
                         cachedInstaller.TryHardToDelete();
                     }

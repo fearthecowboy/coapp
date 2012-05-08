@@ -40,7 +40,7 @@ namespace CoApp.Packaging.Common {
             AllPackages = "*:*";
             CoAppPackages = "coapp:*";
             NugetPackages = "nuget:*";
-            CoAppItself = "coapp:coapp.toolkit-*-any-1e373a58e25250cb";
+            CoAppItself = "coapp:coapp-*-any-1e373a58e25250cb";
             CoAppDevtools = "coapp:coapp.devtools-*-any-1e373a58e25250cb";
         }
 
@@ -66,11 +66,30 @@ namespace CoApp.Packaging.Common {
 
         public string GeneralName {
             get {
-                return _generalName ?? (_generalName = OtherVersionFilter.ToString());
+                if( _generalName == null ) {
+                    var allVersions = OtherVersionFilter;
+                    if (IsPartial) {
+                        // we have think a bit more for general names on partial matches.
+
+                        // we can't match a partial name on a flavor.
+                        if (allVersions.Flavor.ToString().Contains("*")) {
+                            allVersions.Flavor = "";
+                        }
+
+                        // we can't match a wildcard on architecture. Default to Any.
+                        if (allVersions.Architecture == Architecture.Auto || allVersions.Architecture == Architecture.Unknown) {
+                            allVersions.Architecture = Architecture.Any;
+                        }
+
+                        allVersions.Name = Name.Replace("*", "");
+                    }
+                    _generalName = allVersions.ToString();
+                }
+                return _generalName;
             }
         }
 
-        public string WholeName {
+        public string LocalName {
             get {
                 if (_wholeName == null) {
                     if (PackageType == PackageType.CoApp) {
@@ -149,6 +168,7 @@ namespace CoApp.Packaging.Common {
             }
         }
 
+       
         public override string ToString() {
             if (_canonicalName == null) {
                 if (PackageType == PackageType.CoApp) {

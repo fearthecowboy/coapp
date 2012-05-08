@@ -116,6 +116,10 @@ namespace CoApp.Toolkit.Collections {
             return _base.ContainsKey(key);
         }
 
+        public void AddPair( object k, object v) {
+            Add((TKey)k, (TValue)v);
+        }
+
         public void Add(TKey key, TValue value) {
             object o = value;
             if (o == null || value.Equals(Default)) {

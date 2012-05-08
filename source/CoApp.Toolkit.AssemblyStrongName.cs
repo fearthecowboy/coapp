@@ -14,8 +14,8 @@ using System.Reflection;
 // we publish it, so now we will have just one set of  Version  lines, and no strong 
 // naming until publishing.
 
-[assembly: AssemblyVersion("1.2.0.218")]
-[assembly: AssemblyFileVersion("1.2.0.218")]
+[assembly: AssemblyVersion("1.2.0.233")]
+[assembly: AssemblyFileVersion("1.2.0.233")]
 
 [AttributeUsage(AttributeTargets.Assembly, Inherited = false)]
 internal class AssemblyBugtrackerAttribute : Attribute {

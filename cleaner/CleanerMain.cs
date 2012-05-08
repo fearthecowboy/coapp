@@ -319,7 +319,7 @@ CoApp.Cleaner [options]
                 OnPropertyChanged();
 
                 // Remove CoApp toolkit MSIs
-                var toolkits = installedMSIs.Where(each => each.ProductName == "CoApp.Toolkit" && each.Manufacturer == "OUTERCURVE FOUNDATION").ToArray();
+                var toolkits = installedMSIs.Where(each => (each.ProductName.Equals("CoApp.Toolkit", StringComparison.InvariantCultureIgnoreCase) || each.ProductName.Equals("CoApp", StringComparison.InvariantCultureIgnoreCase)) && each.Manufacturer.Equals("OUTERCURVE FOUNDATION", StringComparison.CurrentCultureIgnoreCase)) .ToArray();
 
                 if (toolkits.Any()) {
                     StatusText = "Status: Removing CoApp Toolkit.";
@@ -330,7 +330,7 @@ CoApp.Cleaner [options]
                         OverallProgress++;
                         OnPropertyChanged();
 
-                        MsiInstallProduct(pkg.Path, @"REMOVE=ALL ALLUSERS=1 COAPP=1 REBOOT=REALLYSUPPRESS");
+                        MsiInstallProduct(pkg.Path, @"REMOVE=ALL ALLUSERS=1 COAPP=1 COAPP_INSTALLED=1 REBOOT=REALLYSUPPRESS");
                     }
                 }
 
@@ -347,7 +347,7 @@ CoApp.Cleaner [options]
                             OverallProgress += eachProgress;
                             OnPropertyChanged();
 
-                            MsiInstallProduct(pkg.Path, @"REMOVE=ALL ALLUSERS=1 COAPP=1 REBOOT=REALLYSUPPRESS");
+                            MsiInstallProduct(pkg.Path, @"REMOVE=ALL ALLUSERS=1 COAPP=1 COAPP_INSTALLED=1 REBOOT=REALLYSUPPRESS");
                         }
                     }
                 }

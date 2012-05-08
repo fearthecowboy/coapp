@@ -64,6 +64,7 @@ namespace CoApp.Packaging.Service {
         internal readonly XList<Role> Roles = new XList<Role>();
         internal readonly XList<Feature> Features = new XList<Feature>();
         internal readonly XList<Feature> RequiredFeatures = new XList<Feature>();
+
         internal readonly ObservableCollection<Package> Dependencies = new ObservableCollection<Package>();
         
         private Package(CanonicalName canonicalName) {
@@ -298,7 +299,7 @@ namespace CoApp.Packaging.Service {
 
                     case "productname":
                     case "packagename":
-                        return CanonicalName.WholeName;
+                        return CanonicalName.LocalName;
 
                     case "version":
                         return CanonicalName.Version.ToString();
@@ -423,6 +424,8 @@ namespace CoApp.Packaging.Service {
                         case PackageRole.Service:
                             break;
                         case PackageRole.WebApplication:
+                            break;
+                        case PackageRole.Faux:
                             break;
                     }
                 }

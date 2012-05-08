@@ -37,25 +37,26 @@ namespace CoApp.Toolkit.Pipes {
         Nullable,
         String,
         Enumeration
-
     }
 
     internal class CachedParameter {
         internal CachedParameter(ParameterInfo parameterInfo) {
             Name = parameterInfo.Name;
-
             var t = parameterInfo.ParameterType;
+
             if (t.IsEnum) {
                 ParameterType = ParameterType.Enumeration;
                 Type = t;
-            } else if (t == typeof(string)) {
-                // can be converted to a string I guess.
+                return;
+            } 
+
+            if (t == typeof(string)) {
                 ParameterType = ParameterType.String;
                 Type = t;
-            } else if (t.IsParsable()) {
-                ParameterType = ParameterType.Parseable;
-                Type = t;
-            } else if (t.IsGenericType) {
+                return;
+            } 
+
+            if (t.IsGenericType) {
                 var basename = t.Name.Split('`')[0];
                 var genericArguments = t.GetGenericArguments();
                 // better be IEnumerable,Dictionary or Nullable
@@ -63,13 +64,13 @@ namespace CoApp.Toolkit.Pipes {
                     case "Nullable":
                         ParameterType = ParameterType.Nullable;
                         NullableType = genericArguments[0];
-                        break;
+                        return;
 
                     case "IEnumerable":
                         ParameterType = ParameterType.Enumerable;
                         Type = t;
                         CollectionType = genericArguments[0];
-                        break;
+                        return;
 
                     case "Dictionary":
                     case "IDictionary":
@@ -78,27 +79,35 @@ namespace CoApp.Toolkit.Pipes {
                         Type = t;
                         DictionaryKeyType = genericArguments[0];
                         DictionaryValueType = genericArguments[1];
-                        break;
-
-                    default:
-                        throw new CoAppException("Unsupported Generic Type");
+                        return;
                 }
             }
-            else if (t.IsArray) {
+            
+            if (t.IsArray) {
                 // an array of soemthing.
                 ParameterType = ParameterType.Array;
                 CollectionType = t.GetElementType();
                 Type = t;
+                return;
             }
-            else {
-                throw new CoAppException("Unsupported Type: '{0}'".format(t.Name));
-            }
+
+            if (t.IsParsable()) {
+                ParameterType = ParameterType.Parseable;
+                Type = t;
+                return;
+            } 
+
+  
+            throw new CoAppException("Unsupported Type: '{0}'".format(t.Name));
+            
         }
 
         internal string Name { get; set; }
         internal ParameterType ParameterType { get; set; }
         internal Type Type { get; set; }
-
+        internal Type CollectionType { get; set; }
+        internal Type DictionaryKeyType { get; set; }
+        internal Type DictionaryValueType { get; set; }
         internal Type NullableType {
             get {
                 return Type;
@@ -107,10 +116,6 @@ namespace CoApp.Toolkit.Pipes {
                 Type = value;
             }
         }
-
-        internal Type CollectionType { get; set; }
-        internal Type DictionaryKeyType { get; set; }
-        internal Type DictionaryValueType { get; set; }
 
         internal object FromString(UrlEncodedMessage message, string key) {
             switch (ParameterType) {
@@ -202,7 +207,7 @@ namespace CoApp.Toolkit.Pipes {
                 var argName = binder.CallInfo.ArgumentNames[i];
                 if (arg != null) {
                     var argType = arg.GetType();
-                    if (argType == typeof (string) || argType.IsEnum || argType.IsParsable()) {
+                    if (argType == typeof(string) || argType.IsEnum || argType.IsParsable()) {
                         msg.Add(argName, arg.ToString());
                     } else if (argType.IsDictionary()) {
                         msg.AddDictionary(argName, (IDictionary)arg);
@@ -210,7 +215,8 @@ namespace CoApp.Toolkit.Pipes {
                         msg.AddCollection(argName, ((object[])arg).Select(each => each.ToString()));
                     } else if (argType.IsIEnumerable()) {
                         msg.AddCollection(argName, ((IEnumerable)arg));
-                    } else {
+                    } 
+                    else {
                         throw new CoAppException("Unable to serialize output parameter '{0}' as '{1}'.".format(argName, argType.Name));
                     }
                 }
