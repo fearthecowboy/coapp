@@ -93,7 +93,7 @@ namespace CoApp.Packaging.Service {
 
         public bool IsPotentiallyInstallable {
             get {
-                return !PackageFailedInstall && (_package.InternalPackageData.HasLocalLocation || !CouldNotDownload && _package.InternalPackageData.HasRemoteLocation);
+                return !PackageFailedInstall && (_package.HasLocalLocation || !CouldNotDownload && _package.HasRemoteLocation);
             }
         }
 
@@ -107,29 +107,25 @@ namespace CoApp.Packaging.Service {
                     return _localValidatedLocation;
                 }
 
-                var location = _package.InternalPackageData.LocalLocation;
-                if (string.IsNullOrEmpty(location)) {
-                    // there are no local locations at all for this package?
-                    return _localValidatedLocation = null;
-                }
+                foreach (var loc in _package.LocalLocations) {
+                    var location = loc.CanonicalizePathIfLocalAndExists();
 
-                if (Verifier.HasValidSignature(location)) {
-                    if (remoteInterface != null) {
-                        Event<GetResponseInterface>.RaiseFirst().SignatureValidation(location, true, Verifier.GetPublisherName(location));
+                    if (!string.IsNullOrEmpty(location)) {
+                        var result = Verifier.HasValidSignature(location);
+                        if (remoteInterface != null) {
+                            // only call this when we're connected to a client
+                            Event<GetResponseInterface>.RaiseFirst().SignatureValidation(location, result, result ? Verifier.GetPublisherName(location) : null);
+                        }
+
+                        if (result) {
+                            // looks valid, return it. 
+                            return (_localValidatedLocation = location);
+                        }
                     }
-                    return _localValidatedLocation = location;
                 }
-                if (remoteInterface != null) {
-                    Event<GetResponseInterface>.RaiseFirst().SignatureValidation(location, false, null);
-                }
-                var result = _package.InternalPackageData.LocalLocations.Any(Verifier.HasValidSignature) ? location : null;
 
-                if (remoteInterface != null) {
-                    Event<GetResponseInterface>.RaiseFirst().SignatureValidation(result, !string.IsNullOrEmpty(result), string.IsNullOrEmpty(result) ? null : Verifier.GetPublisherName(result));
-                }
-                // GS01: if all the locations end up invalid, and we're trying to remove a package 
-
-                return _localValidatedLocation = result;
+                // there are no local locations at all for this package?
+                return null;
             }
         }
 

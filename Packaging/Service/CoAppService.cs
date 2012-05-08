@@ -10,15 +10,14 @@
 // </license>
 //-----------------------------------------------------------------------
 
-namespace CoApp.Service {
+namespace CoApp.Packaging.Service {
     using System.Configuration.Install;
     using System.Diagnostics;
     using System.IO;
     using System.Reflection;
     using System.ServiceProcess;
-    using Packaging.Common;
-    using Packaging.Service;
-    using Toolkit.Win32;
+    using CoApp.Packaging.Common;
+    using CoApp.Toolkit.Win32;
 
     public class CoAppService : ServiceBase {
         public CoAppService() {
@@ -26,11 +25,11 @@ namespace CoApp.Service {
         }
 
         protected override void OnStart(string[] args) {
-            EngineService.Start(false);
+            Engine.Start(false);
         }
 
         protected override void OnStop() {
-            EngineService.RequestStop();
+            Engine.RequestStop();
         }
 
         public static void Uninstall() {

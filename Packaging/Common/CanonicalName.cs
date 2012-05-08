@@ -13,15 +13,36 @@
 namespace CoApp.Packaging.Common {
     using System;
     using System.Text.RegularExpressions;
+    using System.Xml;
+    using System.Xml.Schema;
+    using System.Xml.Serialization;
     using Toolkit.Exceptions;
     using Toolkit.Extensions;
     using Toolkit.Win32;
 
-    public class CanonicalName : IComparable, IComparable<CanonicalName>, IEquatable<CanonicalName> {
-        public static CanonicalName AllPackages = "*:*";
-        public static CanonicalName CoAppPackages = "coapp:*";
-        public static CanonicalName NugetPackages = "nuget:*";
-        public static CanonicalName CoAppItself = "coapp:coapp.toolkit-*-any-1e373a58e25250cb";
+    [XmlRoot(ElementName = "CanonicalName", Namespace = "http://coapp.org/atom-package-feed-1.0")]
+    public class CanonicalName : IComparable, IComparable<CanonicalName>, IEquatable<CanonicalName>, IXmlSerializable {
+        private static readonly char[] Slashes;
+        private static readonly Regex CoappRx;
+        private static readonly Regex PartialCoappRx;
+
+        public static CanonicalName AllPackages;
+        public static CanonicalName CoAppPackages;
+        public static CanonicalName NugetPackages;
+        public static CanonicalName CoAppItself;
+        public static CanonicalName CoAppDevtools;
+        
+        static CanonicalName() {
+            Slashes = new[] { '\\', '/' };
+            CoappRx = new Regex(@"^(?<name>.+?)(?<flavor>\[.+\])?(?<v1>-\d{1,5})(?<v2>\.\d{1,5})(?<v3>\.\d{1,5})(?<v4>\.\d{1,5})(?<arch>-any|-x86|-x64|-arm)(?<pkt>-[0-9a-f]{16})$", RegexOptions.IgnoreCase);
+            PartialCoappRx = new Regex(@"^(?<name>.*?)?(?<flavor>\[.*\])?(?<v1>-\d{1,5}|-\*)?(?<v2>\.\d{1,5}|\.\*)?(?<v3>\.\d{1,5}|\.\*)?(?<v4>\.\d{1,5}|\.\*)?(?<plus>\+)?(?<arch>-{1,2}any|-{1,2}x86|-{1,2}x64|-{1,2}arm|-{1,2}all|-{1,2}auto|-\*)?(?<pkt>-{1,3}[0-9a-f]{16}|-\*)?$", RegexOptions.IgnoreCase);
+
+            AllPackages = "*:*";
+            CoAppPackages = "coapp:*";
+            NugetPackages = "nuget:*";
+            CoAppItself = "coapp:coapp-*-any-1e373a58e25250cb";
+            CoAppDevtools = "coapp:coapp.devtools-*-any-1e373a58e25250cb";
+        }
 
         public PackageType PackageType { get; private set; }
         public string Name { get; private set; }
@@ -33,6 +54,9 @@ namespace CoApp.Packaging.Common {
         public bool IsCanonical { get; private set; }
         private string _generalName;
         private string _wholeName;
+        private string _canonicalName;
+        private string _packageName;
+        private int? _hashCode;
 
         public bool IsPartial {
             get {
@@ -42,15 +66,34 @@ namespace CoApp.Packaging.Common {
 
         public string GeneralName {
             get {
-                return _generalName ?? (_generalName = OtherVersionFilter.ToString());
+                if( _generalName == null ) {
+                    var allVersions = OtherVersionFilter;
+                    if (IsPartial) {
+                        // we have think a bit more for general names on partial matches.
+
+                        // we can't match a partial name on a flavor.
+                        if (allVersions.Flavor.ToString().Contains("*")) {
+                            allVersions.Flavor = "";
+                        }
+
+                        // we can't match a wildcard on architecture. Default to Any.
+                        if (allVersions.Architecture == Architecture.Auto || allVersions.Architecture == Architecture.Unknown) {
+                            allVersions.Architecture = Architecture.Any;
+                        }
+
+                        allVersions.Name = Name.Replace("*", "");
+                    }
+                    _generalName = allVersions.ToString();
+                }
+                return _generalName;
             }
         }
 
-        public string WholeName {
+        public string LocalName {
             get {
                 if (_wholeName == null) {
                     if (PackageType == PackageType.CoApp) {
-                        _wholeName = "{1}{2}".format(Name, Flavor);
+                        _wholeName = "{0}{1}".format(Name, Flavor);
                     } else if (PackageType == PackageType.NuGet) {
                         _wholeName = "{0}:{1}".format(PackageType, "(NOT IMPLEMENTED)");
                     } else if (PackageType == PackageType.Chocolatey) {
@@ -67,10 +110,13 @@ namespace CoApp.Packaging.Common {
             }
         }
 
-        private string _canonicalName;
-        private int? _hashCode;
+        public string PackageName {
+            get {
+                return _packageName ?? (_packageName = ToString().Substring(_canonicalName.IndexOf(':') + 1));
+            }
+        }
 
-        private CanonicalName() {
+        internal CanonicalName() {
         }
 
         public CanonicalName(string canonicalName) {
@@ -92,11 +138,11 @@ namespace CoApp.Packaging.Common {
             }
 
             return PackageType == packageCriteria.PackageType &&
-                Name.IsWildcardMatch(packageCriteria.Name) &&
+                Name.NewIsWildcardMatch(packageCriteria.Name) &&
                     Flavor.IsWildcardMatch(packageCriteria.Flavor) &&
                         (Version == packageCriteria.Version || (packageCriteria.MatchVersionOrGreater && Version > packageCriteria.Version)) &&
                             (packageCriteria.Architecture == Architecture.Auto || packageCriteria.Architecture == Architecture) &&
-                                PublicKeyToken.IsWildcardMatch(packageCriteria.PublicKeyToken);
+                                PublicKeyToken.NewIsWildcardMatch(packageCriteria.PublicKeyToken);
         }
 
         public bool DiffersOnlyByVersion(CanonicalName otherPackage) {
@@ -122,10 +168,11 @@ namespace CoApp.Packaging.Common {
             }
         }
 
+       
         public override string ToString() {
             if (_canonicalName == null) {
                 if (PackageType == PackageType.CoApp) {
-                    _canonicalName = "{0}:{1}{2}-{3}{4}-{5}-{6}".format(PackageType, Name, Flavor, Version, MatchVersionOrGreater ? "+" : "", Architecture.InCanonicalFormat, PublicKeyToken);
+                    _canonicalName = "{0}:{1}{2}-{3}{4}-{5}-{6}".format(PackageType, Name, Flavor, Version, (MatchVersionOrGreater ? "+" : ""), Architecture.InCanonicalFormat, PublicKeyToken);
                 } else if (PackageType == PackageType.NuGet) {
                     _canonicalName = "{0}:{1}".format(PackageType, "(NOT IMPLEMENTED)");
                 } else if (PackageType == PackageType.Chocolatey) {
@@ -142,6 +189,9 @@ namespace CoApp.Packaging.Common {
         }
 
         public static implicit operator string(CanonicalName canonicalName) {
+            if( ReferenceEquals(canonicalName,null)) {
+                return null;
+            }
             return canonicalName.ToString();
         }
 
@@ -345,26 +395,44 @@ namespace CoApp.Packaging.Common {
             throw new CoAppException("Unhandled Package Type");
         }
 
-        private static readonly char[] Slashes = new[] {'\\', '/'};
+        
 
-        private static readonly Regex CoappRx = new Regex(@"^(?<name>.+)(?<flavor>\[.+\])?(?<v1>-\d{1,5})(?<v2>\.\d{1,5})(?<v3>\.\d{1,5})(?<v4>\.\d{1,5})(?<arch>-any|-x86|-x64|-arm)(?<pkt>-[0-9a-f]{16})$", RegexOptions.IgnoreCase);
+        private static void SetFieldsFromMatch(Match match, ref CanonicalName result, bool isCanonical) {
+            result.IsCanonical = isCanonical;
 
-        private static readonly Regex PartialCoappRx =
-            new Regex(@"^(?<name>.*?)?(?<flavor>\[.+\])?(?<v1>-\d{1,5}|-\*)?(?<v2>\.\d{1,5}|\.\*)?(?<v3>\.\d{1,5}|\.\*)?(?<v4>\.\d{1,5}|\.\*)?(<plus>\+)?(?<arch>-{1,2}any|-{1,2}x86|-{1,2}x64|-{1,2}arm|-{1,2}all|-\*)?(?<pkt>-{1,3}[0-9a-f]{16})?$",
-                RegexOptions.IgnoreCase);
-
-        private static void SetFieldsFromMatch(Match match, ref CanonicalName result) {
             var version1 = match.GetValue("v1", "0");
             var version2 = match.GetValue("v2", ".0");
             var version3 = match.GetValue("v3", ".0");
             var version4 = match.GetValue("v4", ".0");
 
-            result.Name = match.GetValue("name");
+            result.Name = match.GetValue("name").IfNullOrEmpty("*");
             result.MatchVersionOrGreater = !(match.Groups["v1"].Success && match.Groups["v2"].Success && match.Groups["v3"].Success && match.Groups["v4"].Success) || match.Groups["plus"].Success;
+            
             result.Version = version1 + version2 + version3 + version4;
-            result.Flavor = match.GetValue("flavor");
-            result.Architecture = match.GetValue("arch");
-            result.PublicKeyToken = match.GetValue("pkt");
+            
+            // no version is always a wildcard match.
+            if (result.Version == 0) {
+                result.MatchVersionOrGreater = true;
+            }
+
+            // if we are a wildcard match (however it happened), we're not canonical
+            if (result.MatchVersionOrGreater) {
+                // this isn't canonical. 
+                result.IsCanonical = false;
+            }
+
+            result.Architecture = match.GetValue("arch").IfNullOrEmpty("*");
+            
+            if (result.Architecture == Architecture.Unknown || result.Architecture == Architecture.Auto) {
+                // if the architecture is unknown/auto, we're not canonical
+                result.Architecture = Architecture.Auto;
+                isCanonical = false;
+            }
+
+            // an empty flavor is a valid value. if we're not going to be a canonical name anyway, then go for wide open.
+            result.Flavor = isCanonical ? match.GetValue("flavor") : match.GetValue("flavor").IfNullOrEmpty("*");
+
+            result.PublicKeyToken = match.GetValue("pkt").IfNullOrEmpty("*");
         }
 
         private static bool TryParseCoApp(string input, CanonicalName result) {
@@ -375,32 +443,27 @@ namespace CoApp.Packaging.Common {
             var match = CoappRx.Match(input);
             if (match.Success) {
                 // perfect canonical match for a name 
-                SetFieldsFromMatch(match, ref result);
+                SetFieldsFromMatch(match, ref result,true);
                 result.PackageType = PackageType.CoApp;
-                if (result.Version == 0) {
-                    result.MatchVersionOrGreater = true;
-                } else {
-                    result.IsCanonical = true;
-                }
                 return true;
             }
 
             // after this point, we're only able to come up with a partial package name
             match = PartialCoappRx.Match(input);
             if (match.Success) {
-                SetFieldsFromMatch(match, ref result);
+                SetFieldsFromMatch(match, ref result, false);
                 result.PackageType = PackageType.CoApp;
-                result.IsCanonical = false;
                 return true;
             }
 
+            // we're going to assume we got a package name, and the rest is wildcard.
             result.Name = input;
-            result.Version = "0.0.0.0";
+            result.Version = 0;
             result.MatchVersionOrGreater = true;
             result.PackageType = PackageType.CoApp;
-            result.Flavor = null;
-            result.Architecture = Architecture.Unknown;
-            result.PublicKeyToken = null;
+            result.Flavor = "*";
+            result.Architecture = Architecture.Auto;
+            result.PublicKeyToken = "*";
             result.IsCanonical = false;
 
             return true;
@@ -424,6 +487,24 @@ namespace CoApp.Packaging.Common {
 
         private static bool TryParsePHP(string input, CanonicalName result) {
             return false;
+        }
+
+        public XmlSchema GetSchema() {
+            return null;
+        }
+
+        public void ReadXml(XmlReader reader) {
+            reader.MoveToContent();
+            var isEmptyElement = reader.IsEmptyElement;
+            reader.ReadStartElement();
+            if (!isEmptyElement) {
+                TryParseImpl(reader.ReadString(), this);
+                reader.ReadEndElement();
+            }
+        }
+
+        public void WriteXml(XmlWriter writer) {
+            writer.WriteString(ToString());
         }
     }
 }

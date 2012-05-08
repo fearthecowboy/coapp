@@ -18,6 +18,7 @@ namespace CoApp.Packaging.Common {
     using System.Security.AccessControl;
     using System.Security.Principal;
     using Exceptions;
+    using Toolkit.Collections;
     using Toolkit.Configuration;
     using Toolkit.Extensions;
     using Toolkit.Win32;
@@ -31,27 +32,27 @@ namespace CoApp.Packaging.Common {
         /// <summary>
         ///   Registry view for the package manager settings
         /// </summary>
-        public static RegistryView CoAppSettings = RegistryView.CoAppSystem[@"PackageManager"];
-
-        /// <summary>
-        ///   Registry view for the volatile information key
-        /// </summary>
-        public static RegistryView CoAppInformation = RegistryView.CoAppSystem[@"Information"];
+        public static RegistryView CoAppSettings;
 
         /// <summary>
         ///   registry view for the cached items (contents subject to being dropped at a whim)
         /// </summary>
-        public static RegistryView CacheSettings = CoAppSettings[@".cache"];
+        public static RegistryView CacheSettings;
 
         /// <summary>
         ///   registry view for package-specific information. This data is currently the only registry data in coapp that can't be rebuilt--this stores the "current" version of a given package. This is also where we will store flags like "blocked" or "required"
         /// </summary>
-        public static RegistryView PerPackageSettings = CoAppSettings[@".packageInformation"];
+        public static RegistryView PerPackageSettings;
 
         /// <summary>
         ///   registry view for feed-specific information.
         /// </summary>
-        public static RegistryView PerFeedSettings = CoAppSettings[@".feedInformation"];
+        public static RegistryView PerFeedSettings;
+
+        /// <summary>
+        ///   Registry view for the volatile information key
+        /// </summary>
+        public static RegistryView CoAppInformation;
 
         /// <summary>
         ///   Gets the default for the CoApp root folder.
@@ -65,6 +66,13 @@ namespace CoApp.Packaging.Common {
         }
 
         static PackageManagerSettings() {
+            CoAppSettings = RegistryView.CoAppSystem[@"PackageManager"];
+            CoAppSettings.StringValue = "";
+            CacheSettings = CoAppSettings[@".cache"];
+            PerPackageSettings = CoAppSettings[@".packageInformation"];
+            PerFeedSettings = CoAppSettings[@".feedInformation"];
+
+            CoAppInformation = RegistryView.CoAppSystem[@"Information"];
             CoAppInformation.IsVolatile = true;
 #if COAPP_ENGINE_CORE
     // on startup of the engine, we wipe the contents of this key.
@@ -81,7 +89,7 @@ namespace CoApp.Packaging.Common {
             CoAppInformation.DeleteValues();
         }
 #endif
-
+        private static string _coAppRootDirectory;
         /// <summary>
         ///   Gets or sets the coapp root directory. May only change the value if the existing directory is empty. If the directory can not be set, this will default to the DEFAULT_COAPP_ROOT location every time.
         /// </summary>
@@ -90,19 +98,19 @@ namespace CoApp.Packaging.Common {
         /// </remarks>
         public static string CoAppRootDirectory {
             get {
-                // string result = SystemStringSetting["RootDirectory"];
-                var result = CoAppSettings["#Root"].StringValue;
+                if (_coAppRootDirectory == null) {
+                    _coAppRootDirectory = CoAppSettings["#Root"].StringValue;
 
-                if (string.IsNullOrEmpty(result)) {
-                    CoAppRootDirectory = result = DefaultCoappRoot;
+                    if (string.IsNullOrEmpty(_coAppRootDirectory)) {
+                        CoAppRootDirectory = _coAppRootDirectory = DefaultCoappRoot;
+                    }
+
+                    if (!Directory.Exists(_coAppRootDirectory)) {
+                        throw new ConfigurationException("CoApp Root Directory does not exist", "RootDirectory",
+                            "The Directory [{0}] did not get created.".format(_coAppRootDirectory));
+                    }
                 }
-
-                if (!Directory.Exists(result)) {
-                    throw new ConfigurationException("CoApp Root Directory does not exist", "RootDirectory",
-                        "The Directory [{0}] did not get created.".format(result));
-                }
-
-                return result;
+                return _coAppRootDirectory;
             }
             set {
                 var newRootDirectory = value.GetFullPath();
@@ -121,7 +129,7 @@ namespace CoApp.Packaging.Common {
                 }
 
                 if (Directory.Exists(rootDirectory)) {
-                    if (Directory.EnumerateFileSystemEntries(rootDirectory).Count() > 0) {
+                    if (Directory.EnumerateFileSystemEntries(rootDirectory).Any()) {
                         throw new ConfigurationException(
                             "The CoApp RootDirectory can not be changed with contents in it.", "RootDirectory",
                             "Remove contents of the existing CoApp Root Directory before changing it [{0}]".format(
@@ -140,14 +148,14 @@ namespace CoApp.Packaging.Common {
             }
         }
 
-        public static Dictionary<Architecture, string> _coAppInstalledDirectory;
-
+        public static IDictionary<Architecture, string> _coAppInstalledDirectory;
+        
         /// <summary>
         ///   Gets the CoApp .installed directory (where the packages install to)
         /// </summary>
         /// <remarks>
         /// </remarks>
-        public static Dictionary<Architecture, string> CoAppInstalledDirectory {
+        public static IDictionary<Architecture, string> CoAppInstalledDirectory {
             get {
                 if (_coAppInstalledDirectory == null) {
                     var programFilesAny = KnownFolders.GetFolderPath(KnownFolder.ProgramFiles);
@@ -163,7 +171,7 @@ namespace CoApp.Packaging.Common {
                         Symlink.MakeDirectoryLink(x64, programFilesAny);
                     }
 
-                    _coAppInstalledDirectory = new Dictionary<Architecture, string> {
+                    _coAppInstalledDirectory = new XDictionary<Architecture, string> {
                         {Architecture.Any, any},
                         {Architecture.x86, x86},
                         {Architecture.x64, x64},
@@ -184,8 +192,7 @@ namespace CoApp.Packaging.Common {
                 var result = Path.Combine(CoAppRootDirectory, ".cache");
                 if (!Directory.Exists(result)) {
                     Directory.CreateDirectory(result);
-                    var di = new DirectoryInfo(result);
-                    di.Attributes = FileAttributes.Hidden;
+                    var di = new DirectoryInfo(result) {Attributes = FileAttributes.Hidden};
                     var acl = di.GetAccessControl();
                     acl.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null), FileSystemRights.Modify | FileSystemRights.CreateDirectories | FileSystemRights.CreateFiles, InheritanceFlags.ObjectInherit,
                         PropagationFlags.InheritOnly, AccessControlType.Allow));
@@ -205,8 +212,7 @@ namespace CoApp.Packaging.Common {
                 var result = Path.Combine(CoAppCacheDirectory, "packages");
                 if (!Directory.Exists(result)) {
                     Directory.CreateDirectory(result);
-                    var di = new DirectoryInfo(result);
-                    di.Attributes = FileAttributes.Hidden;
+                    var di = new DirectoryInfo(result) {Attributes = FileAttributes.Hidden};
                     var acl = di.GetAccessControl();
                     acl.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null), FileSystemRights.Modify | FileSystemRights.CreateDirectories | FileSystemRights.CreateFiles, InheritanceFlags.ObjectInherit,
                         PropagationFlags.InheritOnly, AccessControlType.Allow));

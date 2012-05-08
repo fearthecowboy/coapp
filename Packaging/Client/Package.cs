@@ -11,15 +11,17 @@
 //-----------------------------------------------------------------------
 
 namespace CoApp.Packaging.Client {
+    using System;
     using System.Collections.Generic;
     using System.Linq;
     using Common;
     using Common.Model;
+    using Toolkit.Collections;
     using Toolkit.Extensions;
     using Toolkit.Win32;
 
     public class Package {
-        private static readonly Dictionary<CanonicalName, Package> AllPackages = new Dictionary<CanonicalName, Package>();
+        private static readonly IDictionary<CanonicalName, Package> AllPackages = new XDictionary<CanonicalName, Package>();
 
         public static Package GetPackage(CanonicalName canonicalName) {
             lock (AllPackages) {
@@ -33,7 +35,8 @@ namespace CoApp.Packaging.Client {
             IsPackageInfoStale = true;
             IsPackageDetailsStale = true;
             Tags = Enumerable.Empty<string>();
-            RemoteLocations = Enumerable.Empty<string>();
+            RemoteLocations = Enumerable.Empty<Uri>();
+            Feeds = Enumerable.Empty<Uri>();
             Dependencies = Enumerable.Empty<CanonicalName>();
             SupercedentPackages = Enumerable.Empty<CanonicalName>();
         }
@@ -107,7 +110,8 @@ namespace CoApp.Packaging.Client {
         public Package SatisfiedBy { get; set; }
 
         public IEnumerable<string> Tags { get; set; }
-        public IEnumerable<string> RemoteLocations { get; set; }
+        public IEnumerable<Uri> RemoteLocations { get; set; }
+        public IEnumerable<Uri> Feeds { get; set; }
         public IEnumerable<CanonicalName> Dependencies { get; set; }
         public IEnumerable<CanonicalName> SupercedentPackages { get; set; }
         public IEnumerable<Role> Roles { get; set; }

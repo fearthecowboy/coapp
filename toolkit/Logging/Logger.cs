@@ -64,7 +64,7 @@
                 if (String.IsNullOrEmpty(Source)) {
                     Source = "CoApp (misc)";
                 }
-
+                
                 if (!EventLog.SourceExists(Source)) {
                     EventLog.CreateEventSource(Source, "CoApp");
                 }

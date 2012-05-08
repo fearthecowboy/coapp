@@ -29,7 +29,7 @@ namespace CoApp.Packaging.Service.Feeds {
         /// </summary>
         private readonly List<Package> _packageList = new List<Package>();
 
-        private string _path;
+        private readonly string _path;
 
         /// <summary>
         ///   the wildcard patter for matching files in this feed.
@@ -82,7 +82,7 @@ namespace CoApp.Packaging.Service.Feeds {
                         select file;
 
                     foreach (var pkg in pkgFiles.Select(Package.GetPackageFromFilename).Where(pkg => pkg != null)) {
-                        pkg.InternalPackageData.FeedLocation = Location;
+                        pkg.FeedLocations.AddUnique(Location.ToUri());
 
                         if (!_packageList.Contains(pkg)) {
                             _packageList.Add(pkg);
@@ -97,11 +97,6 @@ namespace CoApp.Packaging.Service.Feeds {
         /// <summary>
         ///   Finds packages based on the cosmetic name of the package. Supports wildcard in pattern match.
         /// </summary>
-        /// <param name="name"> </param>
-        /// <param name="version"> </param>
-        /// <param name="arch"> </param>
-        /// <param name="publicKeyToken"> </param>
-        /// <param name="packageFilter"> The package filter. </param>
         /// <returns> </returns>
         /// <remarks>
         /// </remarks>

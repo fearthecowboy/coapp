@@ -19,6 +19,7 @@ namespace CoApp.Packaging.Client {
     using Common;
     using Common.Exceptions;
     using Common.Model;
+    using Toolkit.Collections;
     using Toolkit.Exceptions;
     using Toolkit.Extensions;
     using Toolkit.Logging;
@@ -26,8 +27,8 @@ namespace CoApp.Packaging.Client {
     using Toolkit.Tasks;
     using Toolkit.Win32;
 
-    public class CallResponse : IPackageManagerResponse {
-        private static readonly IPackageManager PM = RemoteCallDispatcher.RemoteService;
+    public class PackageManagerResponseImpl : IPackageManagerResponse {
+        private static readonly IPackageManager Remote = Session.RemoteService;
 
         private readonly Lazy<List<Package>> _packages = new Lazy<List<Package>>(() => new List<Package>());
         private readonly Lazy<List<Feed>> _feeds = new Lazy<List<Feed>>(() => new List<Feed>());
@@ -69,9 +70,9 @@ namespace CoApp.Packaging.Client {
         internal string OperationCanceledReason;
         internal Package UpgradablePackage;
         internal IEnumerable<Package> PotentialUpgrades;
-        internal static Dictionary<string, Task> CurrentDownloads = new Dictionary<string, Task>();
+        internal static IDictionary<string, Task> CurrentDownloads = new XDictionary<string, Task>();
 
-        public CallResponse() {
+        public PackageManagerResponseImpl() {
             // this makes sure that all response messages are getting sent back to here.
             _dispatcher = new IncomingCallDispatcher<IPackageManagerResponse>(this);
             CurrentTask.Events += new GetResponseDispatcher(() => _dispatcher);
@@ -110,7 +111,7 @@ namespace CoApp.Packaging.Client {
         }
 
         public void PackageInformation(CanonicalName canonicalName, string localLocation, bool installed, bool blocked, bool required, bool clientRequired, bool active, bool dependent, FourPartVersion minPolicy, FourPartVersion maxPolicy,
-            IEnumerable<string> remoteLocations, IEnumerable<CanonicalName> dependencies, IEnumerable<CanonicalName> supercedentPackages) {
+            IEnumerable<Uri> remoteLocations, IEnumerable<Uri> feeds, IEnumerable<CanonicalName> dependencies, IEnumerable<CanonicalName> supercedentPackages) {
             if (!Environment.Is64BitOperatingSystem && canonicalName.Architecture == Architecture.x64) {
                 // skip x64 packages from the result set if you're not on an x64 system.
                 return;
@@ -130,13 +131,14 @@ namespace CoApp.Packaging.Client {
             result.IsActive = active;
             result.IsDependency = dependent;
             result.RemoteLocations = remoteLocations;
+            result.Feeds = feeds;
             result.Dependencies = dependencies;
             result.SupercedentPackages = supercedentPackages;
             result.IsPackageInfoStale = false;
             _packages.Value.Add(result);
         }
 
-        public void PackageDetails(CanonicalName canonicalName, Dictionary<string, string> metadata, IEnumerable<string> iconLocations, Dictionary<string, string> licenses, Dictionary<string, string> roles, IEnumerable<string> tags,
+        public void PackageDetails(CanonicalName canonicalName, IDictionary<string, string> metadata, IEnumerable<string> iconLocations, IDictionary<string, string> licenses, IDictionary<string, string> roles, IEnumerable<string> tags,
             IDictionary<string, string> contributorUrls, IDictionary<string, string> contributorEmails) {
             var result = Package.GetPackage(canonicalName);
             result.Icon = iconLocations.FirstOrDefault();
@@ -144,7 +146,6 @@ namespace CoApp.Packaging.Client {
             result.Tags = tags;
             // licenses not done yet.
             result.Description = metadata["description"];
-            result.Summary = metadata["summary"];
             result.Summary = metadata["summary"];
             result.DisplayName = metadata["display-name"];
             result.Copyright = metadata["copyright"];
@@ -158,7 +159,7 @@ namespace CoApp.Packaging.Client {
                 LastScanned = lastScanned,
                 IsSession = session,
                 IsSuppressed = suppressed,
-                FeedState = state.ParseEnum(FeedState.active)
+                FeedState = state.ParseEnum(FeedState.Active)
             });
         }
 
@@ -190,17 +191,19 @@ namespace CoApp.Packaging.Client {
             throw new FailedPackageRemoveException(canonicalName, reason);
         }
 
-        public void RequireRemoteFile(CanonicalName canonicalName, IEnumerable<string> remoteLocations, string destination, bool force) {
-            var targetFilename = Path.Combine(destination, canonicalName);
+        public void RequireRemoteFile(string requestReference, IEnumerable<Uri> remoteLocations, string destination, bool force) {
+            var filename = requestReference.MakeSafeFileName();
+
+            var targetFilename = Path.Combine(destination, filename);
             lock (CurrentDownloads) {
-                if (CurrentDownloads.ContainsKey(targetFilename)) {
+                if (CurrentDownloads.ContainsKey(requestReference)) {
                     // wait for this guy to respond (which should give us what we need)
-                    CurrentDownloads[targetFilename].Continue(() => {
+                    CurrentDownloads[requestReference].Continue(() => {
                         if (File.Exists(targetFilename)) {
-                            Event<DownloadCompleted>.Raise(canonicalName, targetFilename);
-                            PM.RecognizeFile(canonicalName, targetFilename, remoteLocations.FirstOrDefault());
+                            Event<DownloadCompleted>.Raise(requestReference, targetFilename);
+
+                            Remote.RecognizeFile(requestReference, targetFilename, (remoteLocations.FirstOrDefault() ?? new Uri("http://nowhere")).AbsoluteUri);
                         }
-                        return;
                     });
                     return;
                 }
@@ -210,14 +213,14 @@ namespace CoApp.Packaging.Client {
                     foreach (var location in remoteLocations) {
                         try {
                             // a filesystem location (remote or otherwise)
-                            var uri = new Uri(location);
+                            var uri = location;
                             if (uri.IsFile) {
                                 // try to copy the file local.
                                 var remoteFile = uri.AbsoluteUri.CanonicalizePath();
 
                                 // if this fails, we'll just move down the line.
                                 File.Copy(remoteFile, targetFilename);
-                                PM.RecognizeFile(canonicalName, targetFilename, uri.AbsoluteUri);
+                                Remote.RecognizeFile(requestReference, targetFilename, uri.AbsoluteUri);
                                 return;
                             }
 
@@ -225,26 +228,26 @@ namespace CoApp.Packaging.Client {
                             Task progressTask = null;
                             var success = false;
                             var rf = new RemoteFile(uri, targetFilename,
-                                completed: (itemUri) => {
-                                    PM.RecognizeFile(canonicalName, targetFilename, uri.AbsoluteUri);
-                                    Event<DownloadCompleted>.Raise(canonicalName, targetFilename);
+                                itemUri => {
+                                    Remote.RecognizeFile(requestReference, targetFilename, uri.AbsoluteUri);
+                                    Event<DownloadCompleted>.Raise(requestReference, targetFilename);
                                     // remove it from the list of current downloads
-                                    CurrentDownloads.Remove(targetFilename);
+                                    CurrentDownloads.Remove(requestReference);
                                     success = true;
                                 },
-                                failed: (itemUri) => {
+                                itemUri => {
                                     success = false;
                                 },
-                                progress: (itemUri, percent) => {
+                                (itemUri, percent) => {
                                     if (progressTask == null) {
                                         // report progress to the engine
-                                        progressTask = PM.DownloadProgress(canonicalName, percent);
+                                        progressTask = Remote.DownloadProgress(requestReference, percent);
                                         progressTask.Continue(() => {
                                             progressTask = null;
                                         });
                                     }
 
-                                    Event<DownloadProgress>.Raise(canonicalName, targetFilename, percent);
+                                    Event<DownloadProgress>.Raise(requestReference, targetFilename, percent);
                                 });
 
                             rf.Get();
@@ -252,7 +255,8 @@ namespace CoApp.Packaging.Client {
                             if (success && File.Exists(targetFilename)) {
                                 return;
                             }
-                        } catch (Exception e) {
+                        }
+                        catch (Exception e) {
                             // bogus, dude.
                             // try the next one.
                             Logger.Error(e);
@@ -262,15 +266,15 @@ namespace CoApp.Packaging.Client {
 
                     // was there a file there from before?
                     if (File.Exists(targetFilename)) {
-                        Event<DownloadCompleted>.Raise(canonicalName, targetFilename);
-                        PM.RecognizeFile(canonicalName, targetFilename, remoteLocations.FirstOrDefault());
+                        Event<DownloadCompleted>.Raise(requestReference, targetFilename);
+                        Remote.RecognizeFile(requestReference, targetFilename, (remoteLocations.FirstOrDefault() ?? new Uri("http://nowhere")).AbsoluteUri);
                     }
 
                     // remove it from the list of current downloads
-                    CurrentDownloads.Remove(targetFilename);
+                    CurrentDownloads.Remove(requestReference);
 
                     // if we got here, that means we couldn't get the file. too bad, so sad.
-                    PM.UnableToAcquire(canonicalName);
+                    Remote.UnableToAcquire(requestReference);
                 }, TaskCreationOptions.AttachedToParent);
 
                 CurrentDownloads.Add(targetFilename, task);
@@ -311,7 +315,7 @@ namespace CoApp.Packaging.Client {
         }
 
         public void FileNotFound(string filename) {
-            throw new NotImplementedException();
+            // throw new NotImplementedException();
         }
 
         public void UnknownPackage(CanonicalName canonicalName) {
@@ -323,7 +327,7 @@ namespace CoApp.Packaging.Client {
         }
 
         public void FileNotRecognized(string filename, string reason) {
-            throw new NotImplementedException();
+            // throw new NotImplementedException();
         }
 
         public void UnexpectedFailure(string type, string failure, string stacktrace) {

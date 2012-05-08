@@ -36,6 +36,7 @@ namespace CoApp.Toolkit.TaskService {
     using System.Globalization;
     using System.Reflection;
     using System.Runtime.InteropServices;
+    using Collections;
     using Properties;
     using V1;
     using V2;
@@ -79,7 +80,7 @@ namespace CoApp.Toolkit.TaskService {
         /// <summary>
         ///   List of unbound values when working with Actions not associated with a registered task.
         /// </summary>
-        protected Dictionary<string, object> unboundValues = new Dictionary<string, object>();
+        protected IDictionary<string, object> unboundValues = new XDictionary<string, object>();
 
         internal virtual bool Bound {
             get {

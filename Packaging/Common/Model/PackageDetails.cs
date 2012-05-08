@@ -13,7 +13,6 @@
 namespace CoApp.Packaging.Common.Model {
     using System;
     using System.Collections.Generic;
-    using System.IO;
     using System.Linq;
     using System.Xml;
     using System.Xml.Serialization;
@@ -21,6 +20,7 @@ namespace CoApp.Packaging.Common.Model {
 #if COAPP_ENGINE_CORE
     using Atom;
     using Packaging.Service;
+    using System.IO;
 #endif
 
     [XmlRoot(ElementName = "Details", Namespace = "http://coapp.org/atom-package-feed-1.0")]

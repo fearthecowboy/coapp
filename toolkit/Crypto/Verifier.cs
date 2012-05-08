@@ -16,6 +16,7 @@ namespace CoApp.Toolkit.Crypto {
     using System.Runtime.InteropServices;
     using System.Security.Cryptography.Pkcs;
     using System.Security.Cryptography.X509Certificates;
+    using Collections;
     using Win32;
     using FILETIME = System.Runtime.InteropServices.ComTypes.FILETIME;
 
@@ -141,8 +142,8 @@ namespace CoApp.Toolkit.Crypto {
             }
         }
 
-        public static Dictionary<string, string> GetPublisherInformation(string filename) {
-            var result = new Dictionary<string, string>();
+        public static IDictionary<string, string> GetPublisherInformation(string filename) {
+            var result = new XDictionary<string, string>();
             try {
                 var cert = new X509Certificate2(filename);
                 var fields = cert.Subject.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries);

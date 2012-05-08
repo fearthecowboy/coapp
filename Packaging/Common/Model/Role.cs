@@ -15,10 +15,10 @@ namespace CoApp.Packaging.Common.Model {
 
     [XmlRoot(ElementName = "Role", Namespace = "http://coapp.org/atom-package-feed-1.0")]
     public class Role {
-        [XmlElement(IsNullable = false)]
+        [XmlAttribute]
         public string Name { get; set; }
 
-        [XmlElement(IsNullable = false)]
+        [XmlAttribute]
         public PackageRole PackageRole { get; set; }
     }
 }

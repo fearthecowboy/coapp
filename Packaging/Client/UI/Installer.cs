@@ -372,8 +372,8 @@ namespace CoApp.Packaging.Client.UI {
             }
         }
 
-        private PackageManager _packageManager = new PackageManager();
-        private EventWaitHandle _ping;
+        private readonly PackageManager _packageManager = new PackageManager();
+        private readonly EventWaitHandle _ping;
 
         internal bool Ping {
             get {
@@ -388,7 +388,7 @@ namespace CoApp.Packaging.Client.UI {
             }
         }
 
-        private InstallerMainWindow window;
+        private readonly InstallerMainWindow _window;
 
         public Installer(string filename) {
             try {
@@ -413,8 +413,8 @@ namespace CoApp.Packaging.Client.UI {
                 } catch {
                 }
 
-                window = new InstallerMainWindow(this);
-                window.ShowDialog();
+                _window = new InstallerMainWindow(this);
+                _window.ShowDialog();
 
                 if (Application.Current != null) {
                     Application.Current.Shutdown(0);
@@ -473,7 +473,7 @@ namespace CoApp.Packaging.Client.UI {
                             PackageSet = antecedent3.Result;
                             Task.Factory.StartNew(() => {
                                 Thread.Sleep(140);
-                                window.Dispatcher.Invoke((Action)(window.FixFont));
+                                _window.Dispatcher.Invoke((Action)(_window.FixFont));
                             });
                         });
                 });
@@ -573,13 +573,9 @@ namespace CoApp.Packaging.Client.UI {
 
                 var instTask = _packageManager.InstallPackage(SelectedPackage.CanonicalName, autoUpgrade: false);
 
-                instTask.Continue(() => {
-                    OnFinished();
-                });
+                instTask.Continue(() => OnFinished());
 
-                instTask.ContinueOnFail((exception) => {
-                    DoError(InstallerFailureState.FailedToGetPackageFromFile, exception);
-                });
+                instTask.ContinueOnFail(exception => DoError(InstallerFailureState.FailedToGetPackageFromFile, exception));
             }
         }
 
@@ -601,7 +597,7 @@ namespace CoApp.Packaging.Client.UI {
                             var taskNumber = index;
                             var v = canonicalVersions[index];
                             /*
-                            RemoteCallDispatcher.RemoteService.RemovePackage(
+                            Session.RemoteService.RemovePackage(
                                 v, messages: new PackageManagerMessages {
                                     RemovingPackageProgress = (canonicalName, progress) => {
                                         Progress = (progress / taskCount) + taskNumber * 100 / taskCount;
@@ -614,9 +610,7 @@ namespace CoApp.Packaging.Client.UI {
                              * */
                         }
                     }
-                }).ContinueWith(antecedent => {
-                    OnFinished();
-                }, TaskContinuationOptions.AttachedToParent);
+                }).ContinueWith(antecedent => OnFinished(), TaskContinuationOptions.AttachedToParent);
             }
         }
 

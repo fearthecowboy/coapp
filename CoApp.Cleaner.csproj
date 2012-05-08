@@ -54,6 +54,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Toolkit\Collections\InternalDictionary.cs" />
+    <Compile Include="Toolkit\Collections\XDictionary.cs" />
+    <Compile Include="Toolkit\Collections\XList.cs" />
     <Compile Include="Toolkit\Compression\CRC32.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -124,6 +127,7 @@
     <Compile Include="Toolkit\Extensions\ObjectExtensions.cs" />
     <Compile Include="Toolkit\Extensions\PropertySheetExtensions.cs" />
     <Compile Include="Toolkit\Extensions\TaskExtensions.cs" />
+    <Compile Include="Toolkit\Extensions\TypeExtensions.cs" />
     <Compile Include="Toolkit\Extensions\WebRequestExtensions.cs" />
     <Compile Include="Toolkit\Extensions\X509Certificate2Extensions.cs" />
     <Compile Include="Toolkit\Extensions\X509StoreExtensions.cs" />
@@ -134,8 +138,6 @@
     </Compile>
     <Compile Include="Toolkit\Extensions\XmlExtensions.cs" />
     <Compile Include="Toolkit\Logging\Logger.cs" />
-    <Compile Include="Toolkit\Pipes\AsyncPipeExtensions.cs" />
-    <Compile Include="Toolkit\Pipes\UrlEncodedMessage.cs" />
     <Compile Include="Toolkit\Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -348,6 +350,9 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
       <SubType>Designer</SubType>
     </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Toolkit\Pipes\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

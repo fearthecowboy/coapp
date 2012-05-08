@@ -28,9 +28,9 @@ namespace CoApp.Packaging.Service.dtf.Compression.Zip
     /// </summary>
     internal partial class ZipEngine : CompressionEngine
     {
-        private static Dictionary<ZipCompressionMethod, Converter<Stream, Stream>>
+        private static IDictionary<ZipCompressionMethod, Converter<Stream, Stream>>
             compressionStreamCreators;
-        private static Dictionary<ZipCompressionMethod, Converter<Stream, Stream>>
+        private static IDictionary<ZipCompressionMethod, Converter<Stream, Stream>>
             decompressionStreamCreators;
 
         private static void InitCompressionStreamCreators()

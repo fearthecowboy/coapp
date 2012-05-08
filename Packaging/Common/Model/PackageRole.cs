@@ -11,6 +11,8 @@
 //-----------------------------------------------------------------------
 
 namespace CoApp.Packaging.Common.Model {
+    using System.Xml.Serialization;
+
     /// <summary>
     ///   Different types of package roles
     /// </summary>
@@ -20,36 +22,49 @@ namespace CoApp.Packaging.Common.Model {
         /// <summary>
         ///   Shared Library (.NET Assembly, or native DLL)
         /// </summary>
+        [XmlEnum("Assembly")]
         Assembly,
 
         /// <summary>
         ///   Developer Library (.NET assembly or .lib/.h files)
         /// </summary>
+        [XmlEnum("DeveloperLibrary")]
         DeveloperLibrary,
 
         /// <summary>
         ///   Source Code MSI
         /// </summary>
+        [XmlEnum("SourceCode")]
         SourceCode,
 
         /// <summary>
         ///   Application (binaries, etc)
         /// </summary>
+        [XmlEnum("Application")]
         Application,
 
         /// <summary>
         ///   Device Driver
         /// </summary>
+        [XmlEnum("Driver")]
         Driver,
 
         /// <summary>
         ///   A web-application (registers with a web server)
         /// </summary>
+        [XmlEnum("WebApplication")]
         WebApplication,
 
         /// <summary>
         ///   Win32 Service (registers with SC)
         /// </summary>
+        [XmlEnum("Service")]
         Service,
+
+        /// <summary>
+        ///  Virutal Packages?
+        /// </summary>
+        [XmlEnum("Faux")]
+        Faux,
     }
 }

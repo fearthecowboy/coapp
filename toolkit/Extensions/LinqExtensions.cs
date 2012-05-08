@@ -15,6 +15,7 @@ namespace CoApp.Toolkit.Extensions {
     using System.Collections;
     using System.Collections.Generic;
     using System.Linq;
+    using Collections;
 
     public static class LinqExtensions {
         /// <summary>
@@ -147,7 +148,7 @@ namespace CoApp.Toolkit.Extensions {
         }
 
         private class ListIndex : IEnumerable<int> {
-            private int _max;
+            private readonly int _max;
 
             internal ListIndex(int i) {
                 _max = i;
@@ -202,20 +203,20 @@ namespace CoApp.Toolkit.Extensions {
 
         private List<TLeft> _onlyInLeftList = new List<TLeft>();
         private List<TRight> _onlyInRightList = new List<TRight>();
-        private Dictionary<TLeft, TRight> _different = new Dictionary<TLeft, TRight>();
-        private Dictionary<TLeft, TRight> _equal = new Dictionary<TLeft, TRight>();
+        private IDictionary<TLeft, TRight> _different = new XDictionary<TLeft, TRight>();
+        private IDictionary<TLeft, TRight> _equal = new XDictionary<TLeft, TRight>();
 
         #endregion
 
         #region Properties
 
-        public Dictionary<TLeft, TRight> Equal {
+        public IDictionary<TLeft, TRight> Equal {
             get {
                 return _equal;
             }
         }
 
-        public Dictionary<TLeft, TRight> Different {
+        public IDictionary<TLeft, TRight> Different {
             get {
                 return _different;
             }
@@ -253,9 +254,6 @@ namespace CoApp.Toolkit.Extensions {
 
         #endregion
 
-        #region Constructor
-
-        #endregion
     }
 
     #endregion

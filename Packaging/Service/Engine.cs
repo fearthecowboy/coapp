@@ -10,11 +10,12 @@
 // </license>
 //-----------------------------------------------------------------------
 
-
 namespace CoApp.Packaging.Service {
     using System;
     using System.Diagnostics;
+    using System.IO;
     using System.IO.Pipes;
+    using System.Linq;
     using System.Reflection;
     using System.Security.AccessControl;
     using System.Security.Principal;
@@ -22,6 +23,7 @@ namespace CoApp.Packaging.Service {
     using System.Threading;
     using System.Threading.Tasks;
     using Common;
+    using Toolkit.Extensions;
     using Toolkit.Logging;
     using Toolkit.Pipes;
     using Toolkit.Tasks;
@@ -31,7 +33,7 @@ namespace CoApp.Packaging.Service {
     /// </summary>
     /// <remarks>
     /// </remarks>
-    public class EngineService {
+    public class Engine {
         /// <summary>
         /// </summary>
         private const string PipeName = @"CoAppInstaller";
@@ -41,6 +43,21 @@ namespace CoApp.Packaging.Service {
         private const string OutputPipeName = @"CoAppInstaller-";
 
         public static bool IsInteractive { get; set; }
+
+        private static readonly string[] CanonicalFolders = new[] {
+            ".cache", 
+            "ReferenceAssemblies", 
+            "ReferenceAssemblies\\x86", 
+            "ReferenceAssemblies\\x64", 
+            "ReferenceAssemblies\\any", 
+            "x86", 
+            "x64", 
+            "bin", 
+            "powershell", 
+            "lib", 
+            "include", 
+            "etc"
+        };
 
         /// <summary>
         /// </summary>
@@ -52,7 +69,7 @@ namespace CoApp.Packaging.Service {
 
         /// <summary>
         /// </summary>
-        private static readonly Lazy<EngineService> _instance = new Lazy<EngineService>(() => new EngineService());
+        private static readonly Lazy<Engine> _instance = new Lazy<Engine>(() => new Engine());
 
         /// <summary>
         /// </summary>
@@ -66,7 +83,7 @@ namespace CoApp.Packaging.Service {
         /// </summary>
         private PipeSecurity _pipeSecurity;
 
-        private Task _engineService;
+        private Task _engineTask;
 
         /// <summary>
         ///   Stops this instance.
@@ -110,7 +127,7 @@ namespace CoApp.Packaging.Service {
         /// </remarks>
         private Task Main() {
             if (IsRunning) {
-                return _engineService;
+                return _engineTask;
             }
             Signals.EngineStartupStatus = 0;
 
@@ -131,7 +148,7 @@ namespace CoApp.Packaging.Service {
 
                     // this ensures that composition rules are run for toolkit.
                     Signals.EngineStartupStatus = 5;
-                    Package.EnsureCanonicalFoldersArePresent();
+                    EnsureCanonicalFoldersArePresent();
                     Signals.EngineStartupStatus = 10;
                     var v = Package.GetCurrentPackageVersion(CanonicalName.CoAppItself);
                     Signals.EngineStartupStatus = 95;
@@ -157,7 +174,7 @@ namespace CoApp.Packaging.Service {
                 }
             });
 
-            _engineService = Task.Factory.StartNew(() => {
+            _engineTask = Task.Factory.StartNew(() => {
                 _pipeSecurity = new PipeSecurity();
                 _pipeSecurity.AddAccessRule(new PipeAccessRule(new SecurityIdentifier(WellKnownSidType.WorldSid, null), PipeAccessRights.ReadWrite, AccessControlType.Allow));
                 _pipeSecurity.AddAccessRule(new PipeAccessRule(WindowsIdentity.GetCurrent().Owner, PipeAccessRights.FullControl, AccessControlType.Allow));
@@ -167,13 +184,13 @@ namespace CoApp.Packaging.Service {
                 StartListener();
             }, _cancellationTokenSource.Token).AutoManage();
 
-            _engineService = _engineService.ContinueWith(antecedent => {
+            _engineTask = _engineTask.ContinueWith(antecedent => {
                 RequestStop();
                 // ensure the sessions are all getting closed.
                 Session.CancelAll();
-                _engineService = null;
+                _engineTask = null;
             }, TaskContinuationOptions.AttachedToParent).AutoManage();
-            return _engineService;
+            return _engineTask;
         }
 
         private int listenerCount;
@@ -305,6 +322,31 @@ namespace CoApp.Packaging.Service {
                     WindowStyle = ProcessWindowStyle.Hidden,
                 });
             });
+        }
+
+        internal static void EnsureCanonicalFoldersArePresent() {
+            var root = PackageManagerSettings.CoAppRootDirectory;
+            // try to make a convenience symlink:  %SYSTEMDRIVE%:\apps
+            var appsdir = "{0}:\\apps".format(root[0]);
+            if (!Directory.Exists(appsdir) && !File.Exists(appsdir)) {
+                Symlink.MakeDirectoryLink("{0}:\\apps".format(root[0]), root);
+            }
+
+            foreach (var path in CanonicalFolders.Select(folder => Path.Combine(root, folder)).Where(path => !Directory.Exists(path))) {
+                Directory.CreateDirectory(path);
+            }
+            // make sure system paths are updated.
+            var binPath = Path.Combine(root, "bin");
+            var psPath = Path.Combine(root, "powershell");
+
+            if (!EnvironmentUtility.SystemPath.Contains(binPath)) {
+                EnvironmentUtility.SystemPath = EnvironmentUtility.SystemPath.Prepend(binPath);
+            }
+            if (!EnvironmentUtility.PowershellModulePath.Contains(psPath)) {
+                EnvironmentUtility.PowershellModulePath = EnvironmentUtility.PowershellModulePath.Prepend(psPath);
+            }
+
+            EnvironmentUtility.BroadcastChange();
         }
 
         /// <summary>

@@ -1,6 +1,8 @@
 //-----------------------------------------------------------------------
 // <copyright company="CoApp Project">
-//     Copyright (c) 2010 Garrett Serack . All rights reserved.
+//     Copyright (c) 2010-2012 Garrett Serack and CoApp Contributors. 
+//     Contributors can be discovered using the 'git log' command.
+//     All rights reserved.
 // </copyright>
 // <license>
 //     The software is licensed under the Apache 2.0 License (the "License")
@@ -13,7 +15,9 @@ namespace CoApp.Toolkit.Pipes {
     using System.Collections;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Reflection;
     using System.Text.RegularExpressions;
+    using Collections;
     using Exceptions;
     using Extensions;
 
@@ -60,7 +64,7 @@ namespace CoApp.Toolkit.Pipes {
             var parts = rawMessage.Split(_query, StringSplitOptions.RemoveEmptyEntries);
             Command = (parts.FirstOrDefault() ?? "").UrlDecode();
             Data = (parts.Skip(1).FirstOrDefault() ?? "").Split(_separator, StringSplitOptions.RemoveEmptyEntries).Select(
-                p => p.Split(_equals, StringSplitOptions.RemoveEmptyEntries)).ToDictionary(
+                p => p.Split(_equals, StringSplitOptions.RemoveEmptyEntries)).ToXDictionary(
                     s => s[0].UrlDecode(),
                     s => s.Length > 1 ? s[1].UrlDecode() : String.Empty);
         }
@@ -86,47 +90,83 @@ namespace CoApp.Toolkit.Pipes {
             }
         }
 
-        public object GetValueAsArray(string collectionName, Type elementType) {
+        public object GetValueAsArray(string collectionName, Type elementType, Type arrayType) {
             var rx = new Regex(@"^{0}\[\d*\]$".format(Regex.Escape(collectionName)));
             if (elementType == typeof (string)) {
                 return (from k in Data.Keys where rx.IsMatch(k) select Data[k]).ToArray();
             }
-
+            
             if (elementType.IsParsable()) {
-                return (from k in Data.Keys where rx.IsMatch(k) select elementType.ParseString(Data[k])).ToArray();
+                return _toArrayMethods.GetOrAdd(elementType, () => ToArrayMethod.MakeGenericMethod(elementType)).Invoke(null, new object[] {
+                    _castMethods.GetOrAdd(elementType, () => CastMethod.MakeGenericMethod(elementType))
+                    .Invoke(null, new object[] { (from k in Data.Keys where rx.IsMatch(k) select elementType.ParseString(Data[k])) })});
             }
             throw new CoAppException("Unsupported Array type '{0}' (must support tryparse)".format(elementType.Name));
         }
 
-        public object GetValueAsIEnumerable(string collectionName, Type elementType) {
+        private static MethodInfo CastMethod = typeof(Enumerable).GetMethod("Cast");
+        private static MethodInfo ToArrayMethod = typeof(Enumerable).GetMethod("ToArray");
+        private static IDictionary<Type, MethodInfo> _castMethods = new XDictionary<Type, MethodInfo>();
+        private static IDictionary<Type, MethodInfo> _toArrayMethods = new XDictionary<Type, MethodInfo>();
+
+        public object GetValueAsIEnumerable(string collectionName, Type elementType, Type collectionType) {
             var rx = new Regex(@"^{0}\[\d*\]$".format(Regex.Escape(collectionName)));
             if (elementType == typeof (string)) {
                 return from k in Data.Keys where rx.IsMatch(k) select Data[k];
             }
 
             if (elementType.IsParsable()) {
-                return from k in Data.Keys where rx.IsMatch(k) select elementType.ParseString(Data[k]);
+                return _castMethods.GetOrAdd(elementType, () => CastMethod.MakeGenericMethod(elementType)).Invoke(null, new object[] { (from k in Data.Keys where rx.IsMatch(k) select elementType.ParseString(Data[k])) });
             }
-            throw new CoAppException("Unsupported IEnumerable type '{0}' (must support tryparse)".format(elementType.Name));
+
+            throw new CoAppException("Unsupported IEnumerable type '{0}' (must support tryparse or string constructor)".format(elementType.Name));
         }
 
-        public object GetValueAsDictionary(string collectionName, Type keyType, Type valueType) {
-            var rx = new Regex(@"^{0}\[(.*)\]$".format(Regex.Escape(collectionName)));
-            var keys = from k in Data.Keys let match = rx.Match(k) where match.Success select match.Groups[1].Captures[0].Value.UrlDecode();
-
-            if (keyType == typeof (string) && valueType == typeof (string)) {
-                return keys.ToDictionary(key => key, key => Data[key]);
+        public object GetValueAsEnum( string key, Type enumerationType) {
+            var v = GetValueAsString(key);
+            if( string.IsNullOrEmpty(v)) {
+                return null;
             }
+            return Enum.Parse(enumerationType, v);
+        }
+
+        public object GetValueAsDictionary(string collectionName, Type keyType, Type valueType, Type dictionaryType) {
+            var rx = new Regex(@"^{0}\[(.*)\]$".format(Regex.Escape(collectionName)));
+            var pairs = from k in Data.Keys let match = rx.Match(k) where match.Success select new { key = match.Groups[1].Captures[0].Value.UrlDecode(), value = Data[k]};
+            dynamic result;
+
+            if ((dictionaryType.Name.IndexOf("IDictionary") > -1) || (dictionaryType.Name.IndexOf("XDictionary") > -1)) {
+                result = Activator.CreateInstance(typeof(XDictionary<,>).MakeGenericType(keyType, valueType));
+            } else {
+                result = Activator.CreateInstance(typeof(XDictionary<,>).MakeGenericType(keyType, valueType));    
+            }
+            
+            
+            foreach (var each in pairs) {
+                try {
+                    
+                    result.AddPair(keyType.ParseString(each.key), keyType.ParseString(each.value));
+                } catch (Exception e ) {
+                    Console.WriteLine(e.Message);
+                    Console.WriteLine(e.StackTrace);
+                }
+            }
+            return result;
+            /*
             if (keyType == typeof (string) && valueType.IsParsable()) {
-                return keys.ToDictionary(key => key, key => valueType.ParseString(Data[key]));
+                return keys.ToXDictionary(key => key, key => valueType.ParseString(Data[key]));
             }
             if (keyType.IsParsable() && valueType == typeof (string)) {
-                return keys.ToDictionary(key => keyType.ParseString(key), key => Data[key]);
+                dynamic result = Activator.CreateInstance(typeof (Dictionary<,>).MakeGenericType(keyType, valueType));
+                foreach( var key in keys ) {
+                    result.Add(keyType.ParseString(key), Data[key]);
+                }
+                // return keys.ToXDictionary(key => keyType.ParseString(key), key => Data[key]);
             }
             if (keyType.IsParsable() && valueType.IsParsable()) {
-                return keys.ToDictionary(key => keyType.ParseString(key), key => valueType.ParseString(Data[key]));
+                return keys.ToXDictionary(key => keyType.ParseString(key), key => valueType.ParseString(Data[key]));
             }
-
+            */
             throw new CoAppException("Unsupported Dictionary type '{0}/{1}' (keys and values must support tryparse)".format(keyType.Name, valueType.Name));
         }
 
@@ -156,8 +196,8 @@ namespace CoApp.Toolkit.Pipes {
 
         public string ToSmallerString() {
             return Data.Any()
-                ? Data.Keys.Aggregate(Command.UrlEncode() + "?", (current, k) => current + (!string.IsNullOrEmpty(Data[k]) ? (k.UrlEncode() + "=" + Data[k].Substring(0, Math.Min(Data[k].Length, 512)).UrlEncode() + "&") : string.Empty))
-                : Command.UrlEncode();
+                ? Data.Keys.Aggregate(Command + "?", (current, k) => current + (!string.IsNullOrEmpty(Data[k]) ? (k + "=" + Data[k].Substring(0, Math.Min(Data[k].Length, 512)) + "&") : string.Empty))
+                : Command;
         }
 
         /// <summary>
@@ -233,7 +273,8 @@ namespace CoApp.Toolkit.Pipes {
 
         public void AddDictionary(string key, IDictionary collection) {
             foreach (var each in collection.Keys) {
-                AddKeyValuePair(key, each.ToString(), collection[each].ToString());
+                var val = collection[each] ?? "";
+                AddKeyValuePair(key, each.ToString(), val.ToString());
             }
         }
 

@@ -52,7 +52,7 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Packaging\Client\CallResponse.cs" />
+    <Compile Include="Packaging\Client\PackageManagerResponseImpl.cs" />
     <Compile Include="Packaging\Client\Delegates.cs" />
     <Compile Include="Packaging\Client\UI\InstallChoice.cs" />
     <Compile Include="Packaging\Client\UI\InstallerFailureState.cs" />
@@ -65,7 +65,7 @@
     <Compile Include="Packaging\Client\UI\Installer.cs" />
     <Compile Include="Packaging\Client\LoggingSettings.cs" />
     <Compile Include="Packaging\Client\Package.cs" />
-    <Compile Include="Packaging\Client\RemoteCallDispatcher.cs">
+    <Compile Include="Packaging\Client\Session.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Packaging\Client\PackageSet.cs" />
@@ -85,6 +85,7 @@
     <Compile Include="Packaging\Common\IPackageManager.cs" />
     <Compile Include="Packaging\Common\LinkType.cs" />
     <Compile Include="Packaging\Common\FlavorString.cs" />
+    <Compile Include="Packaging\Common\Model\BindingPolicy.cs" />
     <Compile Include="Packaging\Common\Model\Composition.cs" />
     <Compile Include="Packaging\Common\Model\CompositionAction.cs" />
     <Compile Include="Packaging\Common\Model\CompositionRule.cs" />
@@ -121,7 +122,7 @@
       <DependentUpon>InstallerMainWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Packaging\Client\UI\VisibilityAnimation.cs" />
-    <Compile Include="Packaging\Common\SERVICE_ACCESS.cs" />
+    <Compile Include="Packaging\Common\ServiceAccess.cs" />
   </ItemGroup>
   <ItemGroup>
     <Resource Include="resources\images\logo.png" />

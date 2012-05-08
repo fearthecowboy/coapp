@@ -14,22 +14,22 @@ namespace CoApp.Packaging.Service.PackageFormatHandlers {
     using System;
     using System.IO;
     using System.Linq;
-    using CoApp.Toolkit.Crypto;
-    using CoApp.Toolkit.Extensions;
-    using CoApp.Packaging.Common;
-    using CoApp.Packaging.Common.Model;
-    using CoApp.Packaging.Common.Model.Atom;
-    using CoApp.Packaging.Service;
-    using CoApp.Packaging.Service.Exceptions;
-    using CoApp.Packaging.Service.dtf.WindowsInstaller;
-    using CoApp.Toolkit.Tasks;
+    using Common;
+    using Common.Model;
+    using Common.Model.Atom;
+    using Exceptions;
+    using Toolkit.Crypto;
+    using Toolkit.Extensions;
+    using Toolkit.Tasks;
+    using dtf.WindowsInstaller;
 
     /// <summary>
-    /// A representation of an CoApp MSI file
+    ///   A representation of an CoApp MSI file
     /// </summary>
-    /// <remarks></remarks>
-    internal class CoAppMSI : MSIBase, IPackageFormatHandler  {
-        internal static CoAppMSI Instance  = new CoAppMSI();
+    /// <remarks>
+    /// </remarks>
+    internal class CoAppMSI : MSIBase, IPackageFormatHandler {
+        internal static CoAppMSI Instance = new CoAppMSI();
 
         private CoAppMSI() {
         }
@@ -39,11 +39,12 @@ namespace CoApp.Packaging.Service.PackageFormatHandlers {
         }
 
         /// <summary>
-        /// Determines whether a given file is a CoApp MSI
+        ///   Determines whether a given file is a CoApp MSI
         /// </summary>
-        /// <param name="path">The path.</param>
-        /// <returns><c>true</c> if [is co app package file] [the specified path]; otherwise, <c>false</c>.</returns>
-        /// <remarks></remarks>
+        /// <param name="path"> The path. </param>
+        /// <returns> <c>true</c> if [is co app package file] [the specified path]; otherwise, <c>false</c> . </returns>
+        /// <remarks>
+        /// </remarks>
         internal static bool IsValidPackageFile(string path) {
             try {
                 return HasCoAppProperties(path) && Verifier.HasValidSignature(path);
@@ -53,11 +54,10 @@ namespace CoApp.Packaging.Service.PackageFormatHandlers {
         }
 
         /// <summary>
-        /// Performs a quick peek inside an MSI to see if it has our two properties.
-        /// Hopefully, this will speed up our scanning of files.
+        ///   Performs a quick peek inside an MSI to see if it has our two properties. Hopefully, this will speed up our scanning of files.
         /// </summary>
         /// <param name="localPackagePath"> </param>
-        /// <returns></returns>
+        /// <returns> </returns>
         internal static bool HasCoAppProperties(string localPackagePath) {
             if (IsStructuredStorageFile(localPackagePath)) {
                 lock (typeof (MSIBase)) {
@@ -68,19 +68,20 @@ namespace CoApp.Packaging.Service.PackageFormatHandlers {
                                 return view.Count() == 2;
                             }
                         }
-                    } catch { }
+                    } catch {
+                    }
                 }
             }
             return false;
         }
 
         /// <summary>
-        /// Given a package filename, loads the metadata from the MSI
-        /// 
+        ///   Given a package filename, loads the metadata from the MSI
         /// </summary>
-        /// <param name="localPackagePath">The local package path.</param>
-        /// <returns></returns>
-        /// <remarks></remarks>
+        /// <param name="localPackagePath"> The local package path. </param>
+        /// <returns> </returns>
+        /// <remarks>
+        /// </remarks>
         internal static Package GetCoAppPackageFileInformation(string localPackagePath) {
             if (!IsValidPackageFile(localPackagePath)) {
                 return null;
@@ -90,23 +91,21 @@ namespace CoApp.Packaging.Service.PackageFormatHandlers {
 
             // pull out the rules & feed, send the info to the pm. 
             var atomFeedText = packageProperties["CoAppPackageFeed"];
-            var productCode = new Guid( packageProperties["ProductCode"] );
+            var canonicalName = packageProperties["CanonicalName"];
 
             var feed = AtomFeed.Load(atomFeedText);
-            var result = feed.Packages.FirstOrDefault(each => each.CanonicalName == productCode);
-            
-            if( result == null ) {
-                throw new InvalidPackageException(InvalidReason.MalformedCoAppMSI, localPackagePath);
-            }
+            var result = feed.Packages.FirstOrDefault(each => each != null && each.CanonicalName == canonicalName);
 
-            // set things that only we can do here...
-            result.InternalPackageData.LocalLocation = localPackagePath;
-            result.PackageHandler = Instance;
+            if (result != null) {
+                // set things that only we can do here...
+                result.LocalLocations.AddUnique(localPackagePath);
+                result.PackageHandler = Instance;
+            }
 
             return result;
         }
-        
-        public Composition GetCompositionData(Package package ) {
+
+        public Composition GetCompositionData(Package package) {
             if (!IsValidPackageFile(package.PackageSessionData.LocalValidatedLocation)) {
                 throw new InvalidPackageException(InvalidReason.NotCoAppMSI, package.PackageSessionData.LocalValidatedLocation);
             }
@@ -119,14 +118,13 @@ namespace CoApp.Packaging.Service.PackageFormatHandlers {
         }
 
         /// <summary>
-        /// Installs the specified package.
+        ///   Installs the specified package.
         /// </summary>
-        /// <param name="package">The package.</param>
-        /// <remarks></remarks>
+        /// <param name="package"> The package. </param>
+        /// <remarks>
+        /// </remarks>
         public void Install(Package package) {
-            lock (typeof(MSIBase)) {
-                
-
+            lock (typeof (MSIBase)) {
                 int currentTotalTicks = -1;
                 int currentProgress = 0;
                 int progressDirection = 1;
@@ -164,7 +162,7 @@ namespace CoApp.Packaging.Service.PackageFormatHandlers {
 
                             if (currentTotalTicks > 0) {
                                 var newPercent = (currentProgress*100/currentTotalTicks);
-                                if( actualPercent < newPercent) {
+                                if (actualPercent < newPercent) {
                                     actualPercent = newPercent;
                                     Event<IndividualProgress>.RaiseFirst(actualPercent);
                                 }
@@ -177,29 +175,28 @@ namespace CoApp.Packaging.Service.PackageFormatHandlers {
 
                 try {
                     // if( WindowsVersionInfo.IsVistaOrPrior) {
-                    var cachedInstaller = Path.Combine(PackageManagerSettings.CoAppPackageCache, package.CanonicalName + ".msi");
-                        if( !File.Exists(cachedInstaller)) {
-                            File.Copy(package.PackageSessionData.LocalValidatedLocation, cachedInstaller);   
-                        }
+                    var cachedInstaller = Path.Combine(PackageManagerSettings.CoAppPackageCache, package.CanonicalName.LocalName + ".msi");
+                    if (!File.Exists(cachedInstaller)) {
+                        File.Copy(package.PackageSessionData.LocalValidatedLocation, cachedInstaller);
+                    }
                     // }
                     Installer.InstallProduct(package.PackageSessionData.LocalValidatedLocation,
-                        @"TARGETDIR=""{0}"" ALLUSERS=1 COAPP_INSTALLED=1 REBOOT=REALLYSUPPRESS {1}".format(package.TargetDirectory ,
+                        @"TARGETDIR=""{0}"" ALLUSERS=1 COAPP=1 REBOOT=REALLYSUPPRESS {1}".format(package.BaseInstallDirectory,
                             package.PackageSessionData.IsClientSpecified ? "ADD_TO_ARP=1" : ""));
-                }
-                finally {
+                } finally {
                     SetUIHandlersToSilent();
                 }
             }
         }
 
         /// <summary>
-        /// Removes the specified package.
+        ///   Removes the specified package.
         /// </summary>
-        /// <param name="package">The package.</param>
-        /// <remarks></remarks>
+        /// <param name="package"> The package. </param>
+        /// <remarks>
+        /// </remarks>
         public void Remove(Package package) {
-            lock (typeof(MSIBase)) {
-                
+            lock (typeof (MSIBase)) {
                 int currentTotalTicks = -1;
                 int currentProgress = 0;
                 int progressDirection = 1;
@@ -247,14 +244,13 @@ namespace CoApp.Packaging.Service.PackageFormatHandlers {
                 }), InstallLogModes.Progress);
 
                 try {
-                    Installer.InstallProduct(package.PackageSessionData.LocalValidatedLocation, @"REMOVE=ALL COAPP_INSTALLED=1 ALLUSERS=1 REBOOT=REALLYSUPPRESS");
+                    Installer.InstallProduct(package.PackageSessionData.LocalValidatedLocation, @"REMOVE=ALL COAPP=1 ALLUSERS=1 REBOOT=REALLYSUPPRESS");
 
-                    var cachedInstaller = Path.Combine(PackageManagerSettings.CoAppPackageCache, package.CanonicalName + ".msi");
+                    var cachedInstaller = Path.Combine(PackageManagerSettings.CoAppPackageCache, package.CanonicalName.LocalName + ".msi");
                     if (File.Exists(cachedInstaller)) {
                         cachedInstaller.TryHardToDelete();
                     }
-                }
-                finally {
+                } finally {
                     SetUIHandlersToSilent();
                 }
             }

@@ -76,7 +76,7 @@ namespace CoApp.Toolkit.Extensions {
                     var filters = new[] {"*Thread*", "*Enumerable*", "*__*", "*trace*", "*updated*", "*Task*"}; //"*`*",
                     var print = true;
                     foreach (var flt in filters) {
-                        if (fnName.IsWildcardMatch(flt) || clsName.IsWildcardMatch(flt)) {
+                        if (fnName.NewIsWildcardMatch(flt) || clsName.NewIsWildcardMatch(flt)) {
                             print = false;
                         }
                     }

@@ -28,8 +28,8 @@ namespace CoApp.Packaging.Common {
     using TimeoutException = System.TimeoutException;
 
     public static class EngineServiceManager {
-        public const string CoAppServiceName = "CoApp Package Installer Service";
-        public const string CoAppDisplayName = "CoApp Package Installer Service";
+        public const string CoAppServiceName = "CoApp";
+        public const string CoAppDisplayName = "CoApp Service";
 
         public static bool IsServiceInstalled {
             get {
@@ -64,7 +64,7 @@ namespace CoApp.Packaging.Common {
             var rsd = new RawSecurityDescriptor(psd, 0);
             var dacl = new DiscretionaryAcl(false, false, rsd.DiscretionaryAcl);
 
-            dacl.AddAccess(AccessControlType.Allow, new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null), (int)SERVICE_ACCESS.SERVICE_COAPP, InheritanceFlags.None, PropagationFlags.None);
+            dacl.AddAccess(AccessControlType.Allow, new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null), (int)ServiceAccess.ServiceCoapp, InheritanceFlags.None, PropagationFlags.None);
 
             // convert discretionary ACL back to raw form; looks like via byte[] is only way
             var rawdacl = new byte[dacl.BinaryLength];

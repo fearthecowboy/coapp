@@ -15,11 +15,11 @@ namespace CoApp.Packaging.Service.PackageFormatHandlers {
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
-    using CoApp.Packaging.Service;
-    using CoApp.Packaging.Service.Exceptions;
-    using CoApp.Packaging.Service.dtf.WindowsInstaller;
+    using Exceptions;
+    using Toolkit.Collections;
+    using dtf.WindowsInstaller;
 
-    internal class MsiProperties : Dictionary<string, string> {
+    internal class MsiProperties : XDictionary<string, string> {
         internal string Filename { get; private set; }
 
         internal MsiProperties(string fileName) {
@@ -90,14 +90,14 @@ namespace CoApp.Packaging.Service.PackageFormatHandlers {
             return false;
         }
 
-        private static byte[] SSHeader = new byte[] {0xd0, 0xcf, 0x11, 0xe0};
+        private static readonly byte[] StructuredStorageHeader = new byte[] {0xd0, 0xcf, 0x11, 0xe0};
 
         public static bool IsStructuredStorageFile(string path) {
             try {
                 if (File.Exists(path)) {
                     using (var f = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)) {
                         var bytes = new byte[4];
-                        if (f.Read(bytes, 0, 4) == 4 && SSHeader.SequenceEqual(bytes)) {
+                        if (f.Read(bytes, 0, 4) == 4 && StructuredStorageHeader.SequenceEqual(bytes)) {
                             return true;
                         }
                     }

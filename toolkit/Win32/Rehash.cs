@@ -22,13 +22,14 @@ namespace CoApp.Toolkit.Win32 {
     using System.Security.Cryptography;
     using System.Threading;
     using System.Threading.Tasks;
+    using Collections;
     using Extensions;
     using Logging;
     using Microsoft.Win32.SafeHandles;
 
     internal static class Rehash {
         private static readonly SafeWaitHandle _globalResetEvent = Kernel32.CreateEvent(IntPtr.Zero, true, false, "Global\\CoApp.Reload.Environment");
-        private static readonly Dictionary<ProcessorType, byte[]> _reHashDlls = new Dictionary<ProcessorType, byte[]>();
+        private static readonly IDictionary<ProcessorType, byte[]> _reHashDlls = new XDictionary<ProcessorType, byte[]>();
         
         static Rehash() {
             foreach( var arch in Enum.GetValues(typeof(ProcessorType)) ) {

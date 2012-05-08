@@ -41,7 +41,7 @@ namespace CoApp.Packaging.Client {
         public readonly Uri RemoteLocation;
         private readonly string _localDirectory;
         private string _filename;
-        private bool IsCanceled;
+        private bool _isCanceled;
         private string _fullPath;
         private DateTime _lastModified;
         private long _contentLength;
@@ -74,7 +74,7 @@ namespace CoApp.Packaging.Client {
         }
 
         public void Cancel() {
-            IsCanceled = true;
+            _isCanceled = true;
         }
 
         private readonly RemoteFileCompleted _completed;
@@ -82,7 +82,7 @@ namespace CoApp.Packaging.Client {
         private readonly RemoteFileProgress _progress;
 
         public RemoteFile(string remoteLocation, string localDestination, RemoteFileCompleted completed = null, RemoteFileFailed failed = null, RemoteFileProgress progress = null)
-            : this(new Uri(remoteLocation), localDestination) {
+            : this(new Uri(remoteLocation), localDestination, completed, failed, progress) {
         }
 
         public RemoteFile(Uri remoteLocation, string localDestination, RemoteFileCompleted completed = null, RemoteFileFailed failed = null, RemoteFileProgress progress = null) {
@@ -98,7 +98,7 @@ namespace CoApp.Packaging.Client {
 
             _localDirectory = Path.GetDirectoryName(destination);
 
-            if (!Directory.Exists(_localDirectory)) {
+            if (_localDirectory != null && !Directory.Exists(_localDirectory)) {
                 Directory.CreateDirectory(_localDirectory);
             }
 
@@ -126,7 +126,7 @@ namespace CoApp.Packaging.Client {
 
             try {
                 var response = webRequest.GetResponse() as HttpWebResponse;
-                if (IsCanceled || response == null) {
+                if (_isCanceled || response == null) {
                     _failed(RemoteLocation);
                     return;
                 }
@@ -195,7 +195,7 @@ namespace CoApp.Packaging.Client {
 
                 try {
                     using (var filestream = File.Open(Filename, FileMode.Create)) {
-                        if (IsCanceled) {
+                        if (_isCanceled) {
                             _failed(RemoteLocation);
                             return;
                         }
@@ -219,7 +219,7 @@ namespace CoApp.Packaging.Client {
                             }
                         }
                     }
-                } catch (Exception ex) {
+                } catch (Exception ) {
                     // if it fails during download, then we cleanup the file too.
                     if (File.Exists(Filename)) {
                         Filename.TryHardToDelete();
@@ -259,7 +259,7 @@ namespace CoApp.Packaging.Client {
             return Task.Factory.FromAsync(webRequest.BeginGetResponse, (Func<IAsyncResult, WebResponse>)webRequest.BetterEndGetResponse, this).ContinueWith(asyncResult => {
                 // Logging.Logger.Message("In FromAsync Task::::::{0}", RemoteLocation);
                 try {
-                    if (IsCanceled) {
+                    if (_isCanceled) {
                         _failed(RemoteLocation);
                         return;
                     }
@@ -272,7 +272,7 @@ namespace CoApp.Packaging.Client {
                         _contentLength = httpWebResponse.ContentLength;
                         ActualRemoteLocation = httpWebResponse.ResponseUri;
 
-                        if (IsCanceled) {
+                        if (_isCanceled) {
                             _failed(RemoteLocation);
                             return;
                         }
@@ -334,7 +334,7 @@ namespace CoApp.Packaging.Client {
 
                             _filestream = File.Open(Filename, FileMode.Create);
 
-                            if (IsCanceled) {
+                            if (_isCanceled) {
                                 _failed(RemoteLocation);
                                 return;
                             }
@@ -360,19 +360,19 @@ namespace CoApp.Packaging.Client {
                     foreach (var ex in ee.InnerExceptions) {
                         var wex = ex as WebException;
                         if (wex != null) {
-                            Console.WriteLine("Status:" + wex.Status);
-                            Console.WriteLine("Response:" + wex.Response);
-                            Console.WriteLine("Response:" + ((HttpWebResponse)wex.Response).StatusCode);
+                            // Console.WriteLine("Status:" + wex.Status);
+                            // Console.WriteLine("Response:" + wex.Response);
+                            // Console.WriteLine("Response:" + ((HttpWebResponse)wex.Response).StatusCode);
                         }
 
-                        Console.WriteLine(ex.GetType());
-                        Console.WriteLine(ex.Message);
-                        Console.WriteLine(ex.StackTrace);
+                        // Console.WriteLine(ex.GetType());
+                        // Console.WriteLine(ex.Message);
+                        // Console.WriteLine(ex.StackTrace);
                     }
-                } catch (Exception e) {
-                    Console.WriteLine(e.GetType());
-                    Console.WriteLine(e.Message);
-                    Console.WriteLine(e.StackTrace);
+                } catch {
+                    // Console.WriteLine(e.GetType());
+                    // Console.WriteLine(e.Message);
+                    // Console.WriteLine(e.StackTrace);
                 }
             }, TaskContinuationOptions.AttachedToParent);
         }
@@ -382,7 +382,7 @@ namespace CoApp.Packaging.Client {
                 var total = 0L;
                 var buffer = new byte[BufferSize];
                 while (true) {
-                    if (IsCanceled) {
+                    if (_isCanceled) {
                         _failed(RemoteLocation);
                         tcs.SetResult(null);
                         break;
@@ -411,7 +411,7 @@ namespace CoApp.Packaging.Client {
                 _filestream = null;
 
                 try {
-                    if (IsCanceled) {
+                    if (_isCanceled) {
                         _failed(RemoteLocation);
                         tcs.SetResult(null);
                     } else {

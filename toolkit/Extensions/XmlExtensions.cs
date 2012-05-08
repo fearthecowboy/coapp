@@ -27,6 +27,7 @@ namespace CoApp.Toolkit.Extensions {
     using System.Xml;
     using System.Xml.Linq;
     using System.Xml.Serialization;
+    using Collections;
 
     /// <summary>
     ///   Xml Extension Methods.
@@ -37,7 +38,7 @@ namespace CoApp.Toolkit.Extensions {
         /// <summary>
         ///   Cache for xml strings and their xml document equivalent.
         /// </summary>
-        private static readonly Dictionary<string, XmlDocument> DocCache = new Dictionary<string, XmlDocument>();
+        private static readonly IDictionary<string, XmlDocument> DocCache = new XDictionary<string, XmlDocument>();
 
         /// <summary>
         ///   Returns a list of strings for the inner text of a collection of XmlNodes

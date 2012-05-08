@@ -57,11 +57,13 @@ namespace CoApp.Packaging.Service.Feeds {
                     if (!Cache.Contains(lookup)) {
                         var pkg = Package.GetPackageFromFilename(each);
                         if (pkg != null && pkg.IsInstalled) {
-                            _packageList.Add(pkg);
+                            PackageInstalled(pkg);
                         } else {
                             // doesn't appear to be a coapp package
-                            Cache.Add(lookup);
-                            SaveCache();
+                            lock (Cache) {
+                                Cache.Add(lookup);
+                                SaveCache();
+                            }
                         }
                     }
                 }
@@ -72,25 +74,31 @@ namespace CoApp.Packaging.Service.Feeds {
             lock (this) {
                 if (!Scanned || Stale) {
                     LastScanned = DateTime.Now;
+                    _packageList.Clear();
                     ScanInstalledMSIs(); // kick off the system package task. It's ok if this doesn't get done in a hurry.
 
                     // add the cached package directory, 'cause on backlevel platform, they taint the MSI in the installed files folder.
                     var coAppInstalledFiles = PackageManagerSettings.CoAppPackageCache.FindFilesSmarter("*.msi").ToArray();
 
-                    coAppInstalledFiles.AsParallel().ForAll(each => {
+                    // coAppInstalledFiles.AsParallel().ForAll(each => {
+                    foreach (var each in coAppInstalledFiles) {
                         var lookup = File.GetCreationTime(each).Ticks + each.GetHashCode();
                         if (!Cache.Contains(lookup)) {
                             var pkg = Package.GetPackageFromFilename(each);
 
                             if (pkg != null && pkg.IsInstalled) {
-                                _packageList.Add(pkg);
+                                PackageInstalled(pkg);
                             } else {
                                 // doesn't appear to be a coapp package
-                                Cache.Add(lookup);
-                                SaveCache();
+                                lock (Cache) {
+                                    Cache.Add(lookup);
+                                    SaveCache();
+                                }
                             }
                         }
-                    });
+                        // });
+                    }
+                    
                     Scanned = true;
                     Stale = false;
                 }

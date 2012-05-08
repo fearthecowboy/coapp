@@ -17,7 +17,8 @@ namespace CoApp.Toolkit.Extensions {
         private static int[] tenPrimes = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29};
 
         /// <summary>
-        ///   Create a pretty good hashcode using the hashcodes from a bunch of objects. <para>Say you have an class with a bunch of properties (usually strings). You want
+        ///   Create a pretty good hashcode using the hashcodes from a bunch of objects. 
+        /// <para>Say you have an class with a bunch of properties (usually strings). You want
         ///                                                                                instantiations to have the same hashcode when all the properties are the same.
         ///                                                                                This method provides the following functionality:
         ///                                                                                <list type="bullet">

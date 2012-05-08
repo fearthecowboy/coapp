@@ -283,7 +283,7 @@ namespace CoApp.CLI {
                             _latest = true;
                         }
 
-                        task = preCommandTasks.Continue(() => _packageManager.GetPackages(parameters, _minVersion, _maxVersion, false, _installed, _active, null, _blocked, _latest, _location )
+                        task = preCommandTasks.Continue(() => _packageManager.QueryPackages(parameters, _minVersion, _maxVersion, false, _installed, _active, null, _blocked, _latest, _location )
                             .Continue(packages => {
                                 if (packages.IsNullOrEmpty()) {
                                     PrintNoPackagesFound(parameters);
@@ -330,7 +330,8 @@ namespace CoApp.CLI {
                     case "upgrade":
                     case "upgrade-package":
                     case "upgrade-packages":
-                        task = preCommandTasks.Continue(() => _packageManager.GetUpgradablePackages(parameters)).Continue(pkgs => PrintPackages(pkgs));
+                        Console.WriteLine("UPDATE CURRENTLY DISABLED. CHECK BACK SOON");
+                        // task = preCommandTasks.Continue(() => _packageManager.GetUpgradablePackages(parameters)).Continue(pkgs => PrintPackages(pkgs));
                         break;
 
                     case "-u":
@@ -339,7 +340,7 @@ namespace CoApp.CLI {
                     case "update-packages":
                         Console.WriteLine("UPDATE CURRENTLY DISABLED. CHECK BACK SOON");
 
-                        task = preCommandTasks.Continue(() => _packageManager.GetUpdatablePackages(parameters)).Continue(pkgs => PrintPackages(pkgs));
+                        // task = preCommandTasks.Continue(() => _packageManager.GetUpdatablePackages(parameters)).Continue(pkgs => PrintPackages(pkgs));
                         // task = preCommandTasks.Continue(() => _packageManager.GetUpdatablePackages(parameters)).Continue( packages => Update(packages) );
                         break;
 
@@ -383,7 +384,7 @@ namespace CoApp.CLI {
                     case "feed-active":
                     case "activate-feed":
                         task = preCommandTasks.Continue(() => MatchFeeds(parameters)).Continue(feeds => {
-                            feeds.Select(each => _packageManager.SetFeed(each, FeedState.active)).ToArray();
+                            feeds.Select(each => _packageManager.SetFeed(each, FeedState.Active)).ToArray();
                         });
                         
                         break;
@@ -391,7 +392,7 @@ namespace CoApp.CLI {
                     case "feed-passive":
                     case "passivate-feed":
                         task = preCommandTasks.Continue(() => MatchFeeds(parameters)).Continue(feeds => {
-                            feeds.Select(each => _packageManager.SetFeed(each, FeedState.passive)).ToArray();
+                            feeds.Select(each => _packageManager.SetFeed(each, FeedState.Passive)).ToArray();
                         });
                         break;
                     case "set-feed-ignored":
@@ -400,7 +401,7 @@ namespace CoApp.CLI {
                     case "feed-ignore":
                     case "disable-feed":
                         task = preCommandTasks.Continue(() => MatchFeeds(parameters)).Continue(feeds => {
-                            feeds.Select(each => _packageManager.SetFeed(each, FeedState.ignored)).ToArray();
+                            feeds.Select(each => _packageManager.SetFeed(each, FeedState.Ignored)).ToArray();
                         });
                         break;
 
@@ -408,7 +409,7 @@ namespace CoApp.CLI {
                     case "activate":
                     case "activate-package":
                     case "activate-packages":
-                        task = preCommandTasks.Continue(() => _packageManager.GetPackages(parameters, _minVersion, _maxVersion, false, true, _active, _required, false, _latest, _location)
+                        task = preCommandTasks.Continue(() => _packageManager.QueryPackages(parameters, _minVersion, _maxVersion, false, true, _active, _required, false, _latest, _location)
                             .Continue(packages => Activate(parameters, packages)));
 
                         break;
@@ -416,7 +417,7 @@ namespace CoApp.CLI {
                     case "-g":
                     case "get-packageinfo":
                     case "info":
-                        task = preCommandTasks.Continue(() => _packageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, _installed, _active, _required, _blocked, _latest, _location)
+                        task = preCommandTasks.Continue(() => _packageManager.QueryPackages(parameters, _minVersion, _maxVersion, _dependencies, _installed, _active, _required, _blocked, _latest, _location)
                             .Continue(packages => GetPackageInfo(parameters,packages)));
                         break;
 
@@ -424,7 +425,7 @@ namespace CoApp.CLI {
                     case "block-packages":
                     case "block-package":
                     case "block":
-                        task = preCommandTasks.Continue(() => _packageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, _installed, _active, _required, _blocked, _latest, _location)
+                        task = preCommandTasks.Continue(() => _packageManager.QueryPackages(parameters, _minVersion, _maxVersion, _dependencies, _installed, _active, _required, _blocked, _latest, _location)
                             .Continue(packages=> Block(parameters, packages)));
 
                         break;
@@ -433,7 +434,7 @@ namespace CoApp.CLI {
                     case "unblock-packages":
                     case "unblock-package":
                     case "unblock":
-                        task = preCommandTasks.Continue(() => _packageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, _installed, _active, _required, _blocked, _latest, _location)
+                        task = preCommandTasks.Continue(() => _packageManager.QueryPackages(parameters, _minVersion, _maxVersion, _dependencies, _installed, _active, _required, _blocked, _latest, _location)
                             .Continue(packages => UnBlock(parameters,packages)));
                         break;
 
@@ -441,7 +442,7 @@ namespace CoApp.CLI {
                     case "require-package":
                     case "require-packages":
                     case "require":
-                        task = preCommandTasks.Continue(() => _packageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
+                        task = preCommandTasks.Continue(() => _packageManager.QueryPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
                             .Continue(packages => Require(parameters, packages)));
                         
                         break;
@@ -451,31 +452,31 @@ namespace CoApp.CLI {
                     case "unrequire-packages":
                     case "unrequire":
                     case "notrequire":
-                        task = preCommandTasks.Continue(() => _packageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
+                        task = preCommandTasks.Continue(() => _packageManager.QueryPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
                             .Continue(packages => UnRequire(parameters, packages)));
                         break;
 
                     case "do-not-update":
                     case "hold":
-                        task = preCommandTasks.Continue(() => _packageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
+                        task = preCommandTasks.Continue(() => _packageManager.QueryPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
                             .Continue(packages => DoNotUpdate(parameters, packages)));
                         break;
 
                     case "do-update":
                     case "release":
-                        task = preCommandTasks.Continue(() => _packageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
+                        task = preCommandTasks.Continue(() => _packageManager.QueryPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
                            .Continue(packages => DoUpdate(parameters, packages)));
                         break;
 
                     case "do-not-upgrade":
                     case "freeze":
-                        task = preCommandTasks.Continue(() => _packageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
+                        task = preCommandTasks.Continue(() => _packageManager.QueryPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
                            .Continue(packages => DoNotUpgrade(parameters, packages)));
                         break;
 
                     case "do-upgrade":
                     case "thaw":
-                        task = preCommandTasks.Continue(() => _packageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
+                        task = preCommandTasks.Continue(() => _packageManager.QueryPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
                            .Continue(packages => DoUpgrade(parameters, packages)));
                         break;
 
@@ -872,7 +873,7 @@ namespace CoApp.CLI {
                         Version = pkg.Version,
                         Arch = pkg.Architecture,
                         Status = (pkg.IsInstalled ? "Installed " + (pkg.IsBlocked ? "Blocked " : "") + (pkg.IsClientRequired ? "Required ": pkg.IsRequired ? "Dependency " : "")+ (pkg.IsActive ? "Active " : "" ) : ""),
-                        Location = pkg.IsInstalled ? "(installed)" : !string.IsNullOrEmpty(pkg.LocalPackagePath) ? pkg.LocalPackagePath : (pkg.RemoteLocations.IsNullOrEmpty() ? "<unknown>" :  pkg.RemoteLocations.FirstOrDefault().UrlDecode()),
+                        Location = pkg.IsInstalled ? "(installed)" : !string.IsNullOrEmpty(pkg.LocalPackagePath) ? pkg.LocalPackagePath : (pkg.RemoteLocations.IsNullOrEmpty() ? "<unknown>" :  pkg.RemoteLocations.FirstOrDefault().AbsoluteUri.UrlDecode()),
                     }).ToTable().ConsoleOut();
             }
             else {
@@ -921,7 +922,7 @@ namespace CoApp.CLI {
             CurrentTask.Events += new PackageInstallProgress((canonicalName, progress, overall) => "Installing: {0}".format(canonicalName).PrintProgressBar(progress));
 
             // given what the user requested, what packages are they really asking for?
-            return _packageManager.GetPackages(parameters, _minVersion, _maxVersion, false, null, null, null, false, _latest ?? true, _location, false, false, false).Continue(packages => {
+            return _packageManager.QueryPackages(parameters, _minVersion, _maxVersion, false, null, null, null, false, _latest ?? true, _location, false, false, false).Continue(packages => {
                 // we got back a package collection for what the user passed in.
 
                 // but, we *can* get back an empty collection...
@@ -1005,7 +1006,7 @@ namespace CoApp.CLI {
 
             CurrentTask.Events += new PackageRemoveProgress((name, progress) => "Removing {0}".format(name).PrintProgressBar(progress));
 
-            var removePackagesTask = _packageManager.GetPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
+            var removePackagesTask = _packageManager.QueryPackages(parameters, _minVersion, _maxVersion, _dependencies, true, _active, _required, _blocked, _latest, _location)
                 .Continue(packagesToRemove => {
                     if (packagesToRemove.IsNullOrEmpty()) {
                         PrintNoPackagesFound(parameters);
@@ -1093,7 +1094,7 @@ namespace CoApp.CLI {
                          getsSatisfied
                              ? "Satisfied by {0}".format(pkg.SatisfiedBy.CanonicalName)
                              : !string.IsNullOrEmpty(pkg.LocalPackagePath)
-                                 ? pkg.LocalPackagePath : (pkg.RemoteLocations.IsNullOrEmpty() ? (pkg.IsInstalled? "(installed)" : "") : pkg.RemoteLocations.FirstOrDefault())
+                                 ? pkg.LocalPackagePath : (pkg.RemoteLocations.IsNullOrEmpty() ? (pkg.IsInstalled? "(installed)" : "") : pkg.RemoteLocations.FirstOrDefault().AbsoluteUri)
                      // Satisfied_By = getsSatisfied ? "" : pkg.SatisfiedBy.CanonicalName ,
                      // Satisfied_By = pkg.SatisfiedBy == null ? pkg.CanonicalName : pkg.SatisfiedBy.CanonicalName ,
                      // Status = pkg.IsInstalled ? "Installed" : "will install",
@@ -1113,7 +1114,7 @@ namespace CoApp.CLI {
                          getsSatisfied
                              ? "Satisfied by {0}".format(pkg.SatisfiedBy.CanonicalName)
                              : !string.IsNullOrEmpty(pkg.LocalPackagePath)
-                                 ? pkg.LocalPackagePath : (pkg.RemoteLocations.IsNullOrEmpty() ?(pkg.IsInstalled? "(installed)" : "") : pkg.RemoteLocations.FirstOrDefault())
+                                 ? pkg.LocalPackagePath : (pkg.RemoteLocations.IsNullOrEmpty() ?(pkg.IsInstalled? "(installed)" : "") : pkg.RemoteLocations.FirstOrDefault().AbsoluteUri)
                      // Satisfied_By = getsSatisfied ? "" : pkg.SatisfiedBy.CanonicalName ,
                      // Satisfied_By = pkg.SatisfiedBy == null ? pkg.CanonicalName : pkg.SatisfiedBy.CanonicalName ,
                      // Status = pkg.IsInstalled ? "Installed" : "will install",

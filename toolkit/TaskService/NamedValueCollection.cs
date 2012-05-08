@@ -35,6 +35,7 @@ namespace CoApp.Toolkit.TaskService {
     using System.Collections;
     using System.Collections.Generic;
     using System.Runtime.InteropServices;
+    using Collections;
     using V2;
 
     /// <summary>
@@ -42,14 +43,14 @@ namespace CoApp.Toolkit.TaskService {
     /// </summary>
     public sealed class NamedValueCollection : IDisposable, IEnumerable {
         private ITaskNamedValueCollection v2Coll;
-        private readonly Dictionary<string, string> unboundDict;
+        private readonly IDictionary<string, string> unboundDict;
 
         internal NamedValueCollection(ITaskNamedValueCollection iColl) {
             v2Coll = iColl;
         }
 
         internal NamedValueCollection() {
-            unboundDict = new Dictionary<string, string>(5);
+            unboundDict = new XDictionary<string, string>(5);
             ;
         }
 

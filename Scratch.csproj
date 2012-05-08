@@ -60,6 +60,16 @@
     <Compile Include="scratch\Program.cs" />
     <Compile Include="scratch\Properties\AssemblyInfo.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="CoApp.Client.csproj">
+      <Project>{cc917e10-0068-4e91-8d3d-3276846f7e43}</Project>
+      <Name>CoApp.Client</Name>
+    </ProjectReference>
+    <ProjectReference Include="CoApp.Toolkit.csproj">
+      <Project>{8B7E0D2F-6CA0-4E5E-BF52-1E4BDB132BBC}</Project>
+      <Name>CoApp.Toolkit</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

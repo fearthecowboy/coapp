@@ -14,13 +14,13 @@ namespace CoApp.Packaging.Common {
     using System;
 
     [Flags]
-    internal enum SERVICE_ACCESS {
-        SERVICE_INTERROGATE = 0x0080,
-        SERVICE_PAUSE_CONTINUE = 0x0040,
-        SERVICE_QUERY_CONFIG = 0x0001,
-        SERVICE_QUERY_STATUS = 0x0004,
-        SERVICE_START = 0x0010,
-        SERVICE_STOP = 0x0020,
-        SERVICE_COAPP = SERVICE_INTERROGATE | SERVICE_PAUSE_CONTINUE | SERVICE_QUERY_CONFIG | SERVICE_QUERY_STATUS | SERVICE_START | SERVICE_STOP
+    internal enum ServiceAccess {
+        ServiceInterrogate = 0x0080,
+        ServicePauseContinue = 0x0040,
+        ServiceQueryConfig = 0x0001,
+        ServiceQueryStatus = 0x0004,
+        ServiceStart = 0x0010,
+        ServiceStop = 0x0020,
+        ServiceCoapp = ServiceInterrogate | ServicePauseContinue | ServiceQueryConfig | ServiceQueryStatus | ServiceStart | ServiceStop
     }
 }

@@ -15,12 +15,12 @@ namespace CoApp.Packaging.Service {
     using Common;
     using System;
 
-    public delegate object GetSessionCache(Type type, Func<object> constructor);
+    internal delegate object GetSessionCache(Type type, Func<object> constructor);
     internal delegate IPackageManagerResponse GetResponseInterface();
-    internal delegate EasyDictionary<string, PackageRequestData> GetRequestPackageDataCache();
+    internal delegate XDictionary<string, PackageRequestData> GetRequestPackageDataCache();
     internal delegate bool CheckForPermission(PermissionPolicy policy);
     internal delegate string GetCanonicalizedPath(string path);
     internal delegate string GetCurrentRequestId();
-    public delegate void IndividualProgress(int percentComplete);
+    internal delegate void IndividualProgress(int percentComplete);
     internal delegate bool IsCancellationRequested();
 }

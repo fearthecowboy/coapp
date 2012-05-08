@@ -1,4 +1,16 @@
-﻿namespace CoApp.Toolkit.Extensions {
+﻿//-----------------------------------------------------------------------
+// <copyright company="CoApp Project">
+//     Copyright (c) 2010-2012 Garrett Serack and CoApp Contributors. 
+//     Contributors can be discovered using the 'git log' command.
+//     All rights reserved.
+// </copyright>
+// <license>
+//     The software is licensed under the Apache 2.0 License (the "License")
+//     You may not use the software except in compliance with the License. 
+// </license>
+//-----------------------------------------------------------------------
+
+namespace CoApp.Toolkit.Extensions {
     using System;
     using System.Collections.Generic;
     using System.Linq;
@@ -75,7 +87,7 @@
         /// <typeparam name="TAntecedentResult"> The result type of the antecedent Task </typeparam>
         /// <param name="antecedent"> The antecedent Task </param>
         /// <param name="childFunction"> The function to run on completion of the antecedent Task </param>
-        /// <returns> A Task <TResult>for the child function </returns>
+        /// <returns> A Task (TResult)for the child function </returns>
         public static Task<TResult> Continue<TResult, TAntecedentResult>(this Task<TAntecedentResult> antecedent, Func<TAntecedentResult, TResult> childFunction) {
             return antecedent.ContinueWith(a => childFunction(a.Result), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.AttachedToParent);
         }
@@ -99,7 +111,7 @@
         /// <typeparam name="TAntecedentResult"> The result type of the antecedent Task </typeparam>
         /// <param name="antecedent"> The antecedent Task </param>
         /// <param name="childTaskFunction"> A function returning a task to run on completion of the antecedent Task </param>
-        /// <returns> An unwrapped Task <TResult>for the child function. </returns>
+        /// <returns> An unwrapped Task (TResult)for the child function. </returns>
         public static Task<TResult> Continue<TResult, TAntecedentResult>(this Task<TAntecedentResult> antecedent, Func<TAntecedentResult, Task<TResult>> childTaskFunction) {
             return antecedent.ContinueWith(a => childTaskFunction(a.Result), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.AttachedToParent).Unwrap();
         }
@@ -122,7 +134,7 @@
         /// <typeparam name="TResult"> The result type of the child function </typeparam>
         /// <param name="antecedent"> The antecedent Task </param>
         /// <param name="childFunction"> The function to run on completion of the antecedent Task </param>
-        /// <returns> A Task <TResult>for the child function </returns>
+        /// <returns> A Task (TResult)for the child function </returns>
         public static Task<TResult> Continue<TResult>(this Task antecedent, Func<TResult> childFunction) {
             return antecedent.ContinueWith(a => childFunction(), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.AttachedToParent);
         }
@@ -145,7 +157,7 @@
         /// <typeparam name="TResult"> The result type of the child function </typeparam>
         /// <param name="antecedent"> The antecedent Task </param>
         /// <param name="childTaskFunction"> A function returning a task to run on completion of the antecedent Task </param>
-        /// <returns> An unwrapped Task <TResult>for the child function. </returns>
+        /// <returns> An unwrapped Task (TResult)for the child function. </returns>
         public static Task<TResult> Continue<TResult>(this Task antecedent, Func<Task<TResult>> childTaskFunction) {
             return antecedent.ContinueWith(a => childTaskFunction(), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.AttachedToParent).Unwrap();
         }

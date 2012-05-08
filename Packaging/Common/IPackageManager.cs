@@ -22,30 +22,39 @@ namespace CoApp.Packaging.Common {
 
         Task GetPackageDetails(CanonicalName canonicalName);
         Task InstallPackage(CanonicalName canonicalName, bool? autoUpgrade, bool? force, bool? download, bool? pretend, bool? isUpdating, bool? isUpgrading);
-        Task DownloadProgress(CanonicalName canonicalName, int? downloadProgress);
+        Task RemovePackage(CanonicalName canonicalName, bool? force);
+
         Task ListFeeds(int? index = null, int? maxResults = null);
         Task RemoveFeed(string location, bool? session);
         Task AddFeed(string location, bool? session);
-        Task VerifyFileSignature(string filename);
-        Task SetPackage(CanonicalName canonicalName, bool? active, bool? required, bool? blocked, bool? doNotUpdate, bool? doNotUpgrade);
-        Task RemovePackage(CanonicalName canonicalName, bool? force);
-        Task UnableToAcquire(CanonicalName canonicalName);
-        Task RecognizeFile(CanonicalName canonicalName, string localLocation, string remoteLocation);
         Task SetFeedFlags(string location, string activePassiveIgnored);
         Task SuppressFeed(string location);
+        Task SetFeedStale(string feedLocation);
+
+        Task VerifyFileSignature(string filename);
+        Task SetPackage(CanonicalName canonicalName, bool? active, bool? required, bool? blocked, bool? doNotUpdate, bool? doNotUpgrade);
+        
+        Task RecognizeFile(string requestReference, string localLocation, string remoteLocation);
+        Task UnableToAcquire(string requestReference);
+        Task DownloadProgress(string requestReference, int? downloadProgress);
+
         Task GetPolicy(string policyName);
         Task AddToPolicy(string policyName, string account);
         Task RemoveFromPolicy(string policyName, string account);
+
         Task CreateSymlink(string existingLocation, string newLink, LinkType linkType);
-        Task SetFeedStale(string feedLocation);
+        
         Task StopService();
         Task SetLogging(bool? messages, bool? warnings, bool? errors);
+      
         Task ScheduleTask(string taskName, string executable, string commandline, int hour, int minutes, DayOfWeek? dayOfWeek, int intervalInMinutes);
         Task RemoveScheduledTask(string taskName);
         Task GetScheduledTasks(string taskName);
+
         Task AddTrustedPublisher();
         Task RemoveTrustedPublisher();
         Task GetTrustedPublishers();
+
         Task GetTelemetry();
         Task SetTelemetry(bool optin);
     }

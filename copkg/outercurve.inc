@@ -2,7 +2,7 @@
 
 package {
     location: "http://coapp.org/repository/${OutputFilename}";
-    feed: "http://coapp.org/repository/packages.atom.xml";
+    feed: "http://coapp.org/current";
     publisher: "CoApp Project";
 }
 

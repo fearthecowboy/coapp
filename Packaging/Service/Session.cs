@@ -83,7 +83,8 @@ namespace CoApp.Packaging.Service {
         private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private readonly bool _isAsychronous = true;
 
-        private readonly OutgoingCallDispatcher _dispatcher;
+        private readonly OutgoingCallDispatcher _outgoingDispatcher;
+        private readonly IPackageManagerResponse _dispatcher;
 
         private bool Connected {
             get {
@@ -274,6 +275,9 @@ namespace CoApp.Packaging.Service {
             _isAsychronous = serverPipe == responsePipe;
             Connected = true;
 
+            _outgoingDispatcher = new OutgoingCallDispatcher(WriteAsync);
+            _dispatcher = _outgoingDispatcher.ActLike<IPackageManagerResponse>();
+
             // this session task
             _task = Task.Factory.StartNew(ProcessMesages, _cancellationTokenSource.Token);
 
@@ -282,8 +286,7 @@ namespace CoApp.Packaging.Service {
 
             // when the task is done, call end.
             _task.ContinueWith(antecedent => End());
-
-            _dispatcher = new OutgoingCallDispatcher(WriteAsync);
+            
         }
 
         private bool IsCanceled {
@@ -373,7 +376,7 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        private Dictionary<Type, object> _sessionCache = new Dictionary<Type, object>();
+        private IDictionary<Type, object> _sessionCache = new XDictionary<Type, object>();
         private readonly ManualResetEvent _bufferReady = new ManualResetEvent(true);
 
         /// <summary>
@@ -429,9 +432,9 @@ namespace CoApp.Packaging.Service {
             Task<int> readTask = null;
             // SendSessionStarted(_sessionId);
 
-            var serverInput = new byte[EngineService.BufferSize];
+            var serverInput = new byte[Engine.BufferSize];
 
-            while (EngineService.IsRunning) {
+            while (Engine.IsRunning) {
                 if (!Connected) {
                     readTask = null;
 
@@ -472,7 +475,7 @@ namespace CoApp.Packaging.Service {
                                     return;
                                 }
 
-                                if (antecedent.Result >= EngineService.BufferSize) {
+                                if (antecedent.Result >= Engine.BufferSize) {
                                     _bufferReady.Set();
                                     Event<GetResponseInterface>.RaiseFirst().UnexpectedFailure("CoAppException", "Message size exceeds maximum size allowed.", "");
                                     return;
@@ -491,10 +494,12 @@ namespace CoApp.Packaging.Service {
                                     } else {
                                         Logger.Message("Request:[{0}]{1}".format(requestMessage.GetValueAsString("rqid"), requestMessage.ToSmallerString()));
 
-                                        var dispatcher = _dispatcher.ActLike();
-                                        var packageRequestData = new EasyDictionary<string, PackageRequestData>();
-                                        CurrentTask.Events += new GetCurrentRequestId(() => requestMessage.GetValueAsString("rqid"));
-                                        CurrentTask.Events += new GetResponseInterface(() => dispatcher);
+                                       
+                                        var packageRequestData = new XDictionary<string, PackageRequestData>();
+                                        var rqid = requestMessage.GetValueAsString("rqid");
+
+                                        CurrentTask.Events += new GetCurrentRequestId(() => rqid );
+                                        CurrentTask.Events += new GetResponseInterface(() => _dispatcher);
                                         CurrentTask.Events += new GetRequestPackageDataCache(() => packageRequestData);
 
                                         var dispatchTask = PackageManagerImpl.Dispatcher.Dispatch(requestMessage);

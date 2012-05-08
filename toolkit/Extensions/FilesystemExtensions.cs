@@ -881,8 +881,10 @@ namespace CoApp.Toolkit.Extensions {
                 return path;
             }
             try {
-                path = Path.GetFullPath(path.Trim('"'));
-                FullPathCache.Add(path);
+                if( path.IndexOfAny(Path.GetInvalidPathChars()) == -1 ) {
+                    path = Path.GetFullPath(path.Trim('"'));
+                    FullPathCache.Add(path);    
+                }
             } catch {
             }
             return path;
@@ -1070,16 +1072,6 @@ namespace CoApp.Toolkit.Extensions {
                 return newPaths.Select(each => each.Aggregate((current, value) => current + "\\" + value));
             }
             return allPaths.Select(Path.GetFileName);
-        }
-
-        public static bool IsWebUrl(this string path) {
-            try {
-                if (new Uri(path).Scheme == Uri.UriSchemeHttp || (true && new Uri(path).Scheme == Uri.UriSchemeHttps)) {
-                    return true;
-                }
-            } catch {
-            }
-            return false;
         }
     }
 }
