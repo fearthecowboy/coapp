@@ -819,7 +819,7 @@ namespace CoApp.Toolkit.Extensions {
                 }
 
                 if (File.Exists(location)) {
-                    Logger.Error("Unable to forcably remove file '{0}'. This can't be good.", location);
+                    // Logger.Error("Unable to forcably remove file '{0}'. This can't be good.", location);
                 }
             }
             return;

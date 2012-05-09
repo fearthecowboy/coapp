@@ -407,6 +407,23 @@ namespace CoApp.Packaging.Service {
                 return false;
             });
 
+            CurrentTask.Events += new QueryPermission(policy => {
+                try {
+                    var result = false;
+                    _serverPipe.RunAsClient(() => {
+                        result = policy.HasPermission;
+                    });
+                    return result;
+                }
+                catch {
+                    // may have been disconnected?
+                    if (!_serverPipe.IsConnected) {
+                        Disconnect();
+                    }
+                }
+                return false;
+            });
+
             CurrentTask.Events += new IsCancellationRequested(() => _cancellationTokenSource.Token.IsCancellationRequested);
             CurrentTask.Events += new GetCanonicalizedPath(path => {
                 var result = path;

@@ -141,10 +141,8 @@ namespace CoApp.Toolkit.Pipes {
                 result = Activator.CreateInstance(typeof(XDictionary<,>).MakeGenericType(keyType, valueType));    
             }
             
-            
             foreach (var each in pairs) {
                 try {
-                    
                     result.AddPair(keyType.ParseString(each.key), keyType.ParseString(each.value));
                 } catch (Exception e ) {
                     Console.WriteLine(e.Message);

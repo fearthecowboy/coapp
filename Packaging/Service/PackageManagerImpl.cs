@@ -67,8 +67,8 @@ namespace CoApp.Packaging.Service {
                             "http://coapp.org/unstable"
                         };
 
-                        SetFeedFlags("http://coapp.org/archive", "Passive");
-                        SetFeedFlags("http://coapp.org/unstable", "Ignored");
+                        PackageManagerSettings.PerPackageSettings["http://coapp.org/archive", "state"].StringValue = "passive";
+                        PackageManagerSettings.PerPackageSettings["http://coapp.org/unstable", "state"].StringValue = "ignored";
                     }
                 }
 
@@ -131,25 +131,28 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        internal IEnumerable<Task> LoadSystemFeeds() {
-            // load system feeds
-
-            var systemCacheLoaded = SessionCache<string>.Value["system-cache-loaded"];
-            if (systemCacheLoaded.IsTrue()) {
-                yield break;
+        internal void EnsureSystemFeedsAreLoaded() {
+            // do a cheap check first (so that this session never gets blocked unnecessarily).
+            if (SessionCache<string>.Value["system-cache-loaded"].IsTrue()) {
+                return;
             }
 
-            SessionCache<string>.Value["system-cache-loaded"] = "true";
+            lock (this) {
+                if (SessionCache<string>.Value["system-cache-loaded"].IsTrue()) {
+                    return;
+                }
 
-            foreach (var f in SystemFeedLocations) {
-                var feedLocation = f;
-                yield return PackageFeed.GetPackageFeedFromLocation(feedLocation).ContinueWith(antecedent => {
+                Task.WaitAll(SystemFeedLocations.Select(each => PackageFeed.GetPackageFeedFromLocation(each).ContinueAlways(antecedent => {
                     if (antecedent.Result != null) {
-                        Cache<PackageFeed>.Value[feedLocation] = antecedent.Result;
-                    } else {
-                        Logger.Error("Feed {0} was unable to load.", feedLocation);
+                        Cache<PackageFeed>.Value[each] = antecedent.Result;
                     }
-                }, TaskContinuationOptions.AttachedToParent);
+                    else {
+                        Logger.Error("Feed {0} was unable to load.", each);
+                    }
+                })).ToArray());
+
+                // mark this session as 'yeah, done that already'
+                SessionCache<string>.Value["system-cache-loaded"] = "true";
             }
         }
 
@@ -633,8 +636,8 @@ namespace CoApp.Packaging.Service {
                 return FinishedSynchronously;
             }
 
-            var canFilterSession = Event<CheckForPermission>.RaiseFirst(PermissionPolicy.EditSessionFeeds);
-            var canFilterSystem = Event<CheckForPermission>.RaiseFirst(PermissionPolicy.EditSystemFeeds);
+            var canFilterSession = Event<QueryPermission>.RaiseFirst(PermissionPolicy.EditSessionFeeds);
+            var canFilterSystem = Event<QueryPermission>.RaiseFirst(PermissionPolicy.EditSystemFeeds);
 
             var activeSessionFeeds = SessionCache<PackageFeed>.Value.SessionValues;
             var activeSystemFeeds = Cache<PackageFeed>.Value.Values;
@@ -1093,7 +1096,7 @@ namespace CoApp.Packaging.Service {
             if (package != null) {
                 supercedents = supercedents ?? Enumerable.Empty<CanonicalName>();
                 response.PackageInformation(package.CanonicalName, package.LocalLocations.FirstOrDefault(), package.IsInstalled, package.IsBlocked,
-                    package.IsRequired, package.IsClientRequested, package.IsActive, package.PackageSessionData.IsDependency, package.BindingPolicy.Minimum, package.BindingPolicy.Maximum,
+                    package.IsRequired, package.IsClientRequested, package.IsActive, package.PackageSessionData.IsDependency, package.BindingPolicy == null ? 0 : package.BindingPolicy.Minimum, package.BindingPolicy == null ? 0 : package.BindingPolicy.Maximum,
                     package.RemoteLocations, package.FeedLocations, package.Dependencies.Select(each => each.CanonicalName), supercedents);
             }
         }
@@ -1156,20 +1159,21 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        internal IEnumerable<PackageFeed> Feeds {
+        internal PackageFeed[] Feeds {
             get {
                 try {
-                    // ensure that the system feeds actually get loaded.
-                    Task.WaitAll(LoadSystemFeeds().ToArray());
+                    EnsureSystemFeedsAreLoaded();
 
-                    var canFilterSession = Event<CheckForPermission>.RaiseFirst(PermissionPolicy.EditSessionFeeds);
-                    var canFilterSystem = Event<CheckForPermission>.RaiseFirst(PermissionPolicy.EditSystemFeeds);
-                    var feedFilters = BlockedScanLocations;
-
+                    var canFilterSession = Event<QueryPermission>.RaiseFirst(PermissionPolicy.EditSessionFeeds);
+                    var canFilterSystem = Event<QueryPermission>.RaiseFirst(PermissionPolicy.EditSystemFeeds);
+                    var filters = BlockedScanLocations.ToArray();
+                    if( filters.IsNullOrEmpty()) {
+                        return new PackageFeed[] { SessionPackageFeed.Instance, InstalledPackageFeed.Instance}.Union(Cache<PackageFeed>.Value.Values).Union(SessionCache<PackageFeed>.Value.SessionValues).ToArray();
+                    }
                     return new PackageFeed[] {
                         SessionPackageFeed.Instance, InstalledPackageFeed.Instance
-                    }.Union(from feed in Cache<PackageFeed>.Value.Values where !canFilterSystem || !feed.IsLocationMatch(feedFilters) select feed).Union(
-                        from feed in SessionCache<PackageFeed>.Value.SessionValues where !canFilterSession || !feed.IsLocationMatch(feedFilters) select feed);
+                    }.Union(from feed in Cache<PackageFeed>.Value.Values where !canFilterSystem || !feed.IsLocationMatch(filters) select feed)
+                     .Union(from feed in SessionCache<PackageFeed>.Value.SessionValues where !canFilterSession || !feed.IsLocationMatch(filters) select feed).ToArray();
                 } catch (Exception e) {
                     Logger.Error(e);
                     throw;
@@ -1187,14 +1191,18 @@ namespace CoApp.Packaging.Service {
         /// <returns> </returns>
         internal IEnumerable<Package> SearchForPackages(CanonicalName canonicalName, string location = null) {
             try {
-                var feeds = string.IsNullOrEmpty(location) ? Feeds : Feeds.Where(each => each.IsLocationMatch(location));
-                if (location != null || canonicalName.IsCanonical) {
+                var allfeeds = Feeds;
+
+                // get the filtered list of feeds.
+                var feeds = string.IsNullOrEmpty(location) ? allfeeds : allfeeds.Where(each => each.IsLocationMatch(location)).ToArray();
+
+                if (!string.IsNullOrEmpty(location ) || canonicalName.IsCanonical) {
                     // asking a specific feed, or they are not asking for more than one version of a given package.
                     // or asking for a specific version.
                     return feeds.SelectMany(each => each.FindPackages(canonicalName)).Distinct().ToArray();
                 }
 
-                var feedLocations = Feeds.Select(each => each.Location);
+                var feedLocations = allfeeds.Select(each => each.Location);
                 var packages = feeds.SelectMany(each => each.FindPackages(canonicalName)).Distinct().ToArray();
 
                 var otherFeeds = packages.SelectMany(each => each.FeedLocations).Distinct().Where(each => !feedLocations.Contains(each.AbsoluteUri));
@@ -1205,6 +1213,7 @@ namespace CoApp.Packaging.Service {
                 // this can happen if the collection changes during the operation (and can actually happen in the middle of .ToArray() 
                 // since, locking the hell out of the collections isn't worth the effort, we'll just try again on this type of exception
                 // and pray the collection won't keep changing :)
+                Logger.Message("PERF HIT [REPORT THIS IF THIS IS CONSISTENT!]: Rerunning SearchForPackages!");
                 return SearchForPackages(canonicalName, location);
             }
         }
@@ -1239,13 +1248,6 @@ namespace CoApp.Packaging.Service {
                 return InstalledPackageFeed.Instance.FindPackages(CanonicalName.AllPackages);
             }
         }
-
-        internal IEnumerable<Package> AllPackages {
-            get {
-                return SearchForPackages(CanonicalName.AllPackages);
-            }
-        }
-
         #endregion
 
         /// <summary>
@@ -1267,15 +1269,6 @@ namespace CoApp.Packaging.Service {
             }
 
             var packageData = package.PackageSessionData;
-
-            if (!package.PackageSessionData.IsPotentiallyInstallable) {
-                if (hypothetical) {
-                    yield break;
-                }
-
-                // otherwise
-                throw new OperationCompletedBeforeResultException();
-            }
 
             if (!packageData.DoNotSupercede) {
                 var installedSupercedents = SearchForInstalledPackages(package.CanonicalName.OtherVersionFilter);
@@ -1354,6 +1347,17 @@ namespace CoApp.Packaging.Service {
                     }
                 }
             }
+
+            // if this isn't potentially installable, 
+            if (!package.PackageSessionData.IsPotentiallyInstallable) {
+                if (hypothetical) {
+                    yield break;
+                }
+
+                // otherwise
+                throw new OperationCompletedBeforeResultException();
+            }
+
 
             if (packageData.CouldNotDownload) {
                 if (!hypothetical) {

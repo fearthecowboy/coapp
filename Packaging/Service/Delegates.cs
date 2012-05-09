@@ -19,6 +19,7 @@ namespace CoApp.Packaging.Service {
     internal delegate IPackageManagerResponse GetResponseInterface();
     internal delegate XDictionary<string, PackageRequestData> GetRequestPackageDataCache();
     internal delegate bool CheckForPermission(PermissionPolicy policy);
+    internal delegate bool QueryPermission(PermissionPolicy policy);
     internal delegate string GetCanonicalizedPath(string path);
     internal delegate string GetCurrentRequestId();
     internal delegate void IndividualProgress(int percentComplete);

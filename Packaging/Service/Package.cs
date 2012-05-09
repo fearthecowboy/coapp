@@ -109,6 +109,8 @@ namespace CoApp.Packaging.Service {
         }
 
         internal static FourPartVersion GetCurrentPackageVersion(CanonicalName canonicalName) {
+            var pkgs = PackageManagerImpl.Instance.InstalledPackages.ToArray();
+
             var installedVersionsOfPackage = PackageManagerImpl.Instance.InstalledPackages.Where(each => canonicalName.DiffersOnlyByVersion(each.CanonicalName)).OrderByDescending(each => each.CanonicalName.Version);
             var latestPackage = installedVersionsOfPackage.FirstOrDefault();
 
@@ -295,11 +297,14 @@ namespace CoApp.Packaging.Service {
                     case "publishedpackagedir":
                     case "publishedpackagedirectory":
                     case "publishedpackagefolder":
-                        return @"${apps}\${productname}";
+                        return @"${apps}\${simplename}";
 
                     case "productname":
                     case "packagename":
-                        return CanonicalName.LocalName;
+                        return CanonicalName.PackageName;
+
+                    case "simplename":
+                        return CanonicalName.SimpleName;
 
                     case "version":
                         return CanonicalName.Version.ToString();
@@ -359,7 +364,7 @@ namespace CoApp.Packaging.Service {
 
                                         yield return new CompositionRule {
                                             Action = CompositionAction.SymlinkFile,
-                                            Destination = "${referenceassemblies}\\${arch}\\${productname}-${version}\\" + Path.GetFileName(asmFile),
+                                            Destination = "${referenceassemblies}\\${arch}\\${simplename}-${version}\\" + Path.GetFileName(asmFile),
                                             Source = "${packagedir}\\" + asmFile,
                                             Category = null
                                         };
