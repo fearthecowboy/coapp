@@ -56,14 +56,4 @@ namespace CoApp.Toolkit.Query
             return base.ToString();
         }
     }
-
-    /*
-    public static class FilterComparison
-    {
-        public static FilterComparison<T, TProperty> Create<T, TProperty>(PropRef<T, TProperty> property,
-                                                                          FilterOp comparison, TProperty value)
-        {
-            return new FilterComparison<T, TProperty> {Comparison = comparison, Property = property, Value = value};
-        }
-    }*/
 }
