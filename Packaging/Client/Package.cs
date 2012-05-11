@@ -18,9 +18,10 @@ namespace CoApp.Packaging.Client {
     using Common.Model;
     using Toolkit.Collections;
     using Toolkit.Extensions;
+    using Toolkit.Pipes;
     using Toolkit.Win32;
 
-    public class Package {
+    public class Package : IPackage {
         private static readonly IDictionary<CanonicalName, Package> AllPackages = new XDictionary<CanonicalName, Package>();
 
         public static Package GetPackage(CanonicalName canonicalName) {
@@ -31,57 +32,28 @@ namespace CoApp.Packaging.Client {
             }
         }
 
-        protected Package() {
+
+        internal Package() {
             IsPackageInfoStale = true;
             IsPackageDetailsStale = true;
-            Tags = Enumerable.Empty<string>();
             RemoteLocations = Enumerable.Empty<Uri>();
             Feeds = Enumerable.Empty<Uri>();
             Dependencies = Enumerable.Empty<CanonicalName>();
-            SupercedentPackages = Enumerable.Empty<CanonicalName>();
         }
 
         public CanonicalName CanonicalName { get; set; }
         public string LocalPackagePath { get; set; }
 
-        public string Name {
-            get {
-                return CanonicalName.Name;
-            }
-        }
+        public string Name { get { return CanonicalName.Name; } }
+        public FlavorString Flavor { get { return CanonicalName.Flavor; } }
+        public FourPartVersion Version { get { return CanonicalName.Version; } }
+        public PackageType PackageType { get { return CanonicalName.PackageType; } }
+        public Architecture Architecture { get { return CanonicalName.Architecture; } }
+        public string PublicKeyToken { get { return CanonicalName.PublicKeyToken; } }
 
-        public string Flavor {
-            get {
-                return CanonicalName.Flavor;
-            }
-        }
+        public BindingPolicy BindingPolicy { get; set; }
 
-        public FourPartVersion Version {
-            get {
-                return CanonicalName.Version;
-            }
-        }
-
-        public PackageType PackageType {
-            get {
-                return CanonicalName.PackageType;
-            }
-        }
-
-        public FourPartVersion MinPolicy { get; set; }
-        public FourPartVersion MaxPolicy { get; set; }
-
-        public Architecture Architecture {
-            get {
-                return CanonicalName.Architecture;
-            }
-        }
-
-        public string PublicKeyToken {
-            get {
-                return CanonicalName.PublicKeyToken;
-            }
-        }
+        public PackageDetails PackageDetails { get; set; }
 
         public bool IsInstalled { get; set; }
         public bool IsBlocked { get; set; }
@@ -89,40 +61,34 @@ namespace CoApp.Packaging.Client {
         public bool IsClientRequired { get; set; }
         public bool IsActive { get; set; }
         public bool IsDependency { get; set; }
-        public string Description { get; set; }
-        public string Summary { get; set; }
+
         public string DisplayName { get; set; }
-        public string Copyright { get; set; }
-        public string AuthorVersion { get; set; }
-        public string Icon { get; set; }
-        public string License { get; set; }
-        public string LicenseUrl { get; set; }
-        public string PublishDate { get; set; }
-        public string PublisherName { get; set; }
-        public string PublisherUrl { get; set; }
-        public string PublisherEmail { get; set; }
-        public string ProductCode { get; set; }
+        
         public string PackageItemText { get; set; }
 
         public bool DoNotUpdate { get; set; }
         public bool DoNotUpgrade { get; set; }
 
-        public Package SatisfiedBy { get; set; }
-
-        public IEnumerable<string> Tags { get; set; }
+        public IPackage SatisfiedBy { get; set; }
         public IEnumerable<Uri> RemoteLocations { get; set; }
         public IEnumerable<Uri> Feeds { get; set; }
         public IEnumerable<CanonicalName> Dependencies { get; set; }
-        public IEnumerable<CanonicalName> SupercedentPackages { get; set; }
+
+        public IEnumerable<IPackage> UpdatePackages { get; set; }
+        public IEnumerable<IPackage> UpgradePackages { get; set; }
+        public IEnumerable<IPackage> NewerPackages { get; set; }
         public IEnumerable<Role> Roles { get; set; }
 
         internal bool IsPackageInfoStale { get; set; }
         internal bool IsPackageDetailsStale { get; set; }
+        
+        public new string ToString() {
+            return "TODO: IMPLEMENT";
+        }
 
-        public bool IsCompatableWith(Package package) {
-            return package.Version > Version
-                ? package.MinPolicy <= package.Version && package.MaxPolicy >= Version
-                : MinPolicy <= package.Version && MaxPolicy >= package.Version;
+        public static bool TryParse(string text, out IPackage details) {
+            details = null;
+            return false;
         }
     };
 }

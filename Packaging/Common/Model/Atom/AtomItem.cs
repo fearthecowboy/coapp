@@ -115,10 +115,10 @@ namespace CoApp.Packaging.Common.Model.Atom {
                 Name = each.Name,
                 Location = each.Uri.ToUri(),
                 Email = each.Email,
-            }).ToList();
+            }).ToXList();
 
-            Model.PackageDetails.Tags = Categories.Where(each => each.Scheme == "/Tags").Select(each => each.Name).ToList();
-            Model.PackageDetails.Categories = Categories.Where(each => each.Scheme == "/Categories").Select(each => each.Name).ToList();
+            Model.PackageDetails.Tags = Categories.Where(each => each.Scheme == "/Tags").Select(each => each.Name).ToXList();
+            Model.PackageDetails.Categories = Categories.Where(each => each.Scheme == "/Categories").Select(each => each.Name).ToXList();
 
             var content = (Content as TextSyndicationContent);
             Model.PackageDetails.Description = content == null ? string.Empty : content.Text;

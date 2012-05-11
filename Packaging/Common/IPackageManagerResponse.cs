@@ -11,6 +11,7 @@
 namespace CoApp.Packaging.Common {
     using System;
     using System.Collections.Generic;
+    using Model;
     using Toolkit.ImpromptuInterface.Dynamic;
     using Toolkit.Win32;
 
@@ -20,13 +21,9 @@ namespace CoApp.Packaging.Common {
         void PolicyInformation(string name, string description, IEnumerable<string> accounts);
         void SendSessionStarted(string sessionId);
 
-        void PackageInformation(CanonicalName canonicalName, string localLocation, bool installed,
-            bool blocked, bool required, bool clientRequired, bool active, bool dependent, FourPartVersion minPolicy, FourPartVersion maxPolicy, IEnumerable<Uri> remoteLocations, IEnumerable<Uri> feeds,
-            IEnumerable<CanonicalName> dependencies, IEnumerable<CanonicalName> supercedentPackages);
+        void PackageInformation(IPackage package);
 
-        void PackageDetails(CanonicalName canonicalName, IDictionary<string, string> metadata,
-            IEnumerable<string> iconLocations, IDictionary<string, string> licenses, IDictionary<string, string> roles,
-            IEnumerable<string> tags, IDictionary<string, string> contributorUrls, IDictionary<string, string> contributorEmails);
+        void PackageDetails(CanonicalName canonicalName, PackageDetails details);
 
         void FeedDetails(string location, DateTime lastScanned, bool session, bool suppressed, bool validated, string state);
         void FeedAdded(string location);

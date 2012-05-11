@@ -11,6 +11,7 @@
 //-----------------------------------------------------------------------
 
 namespace CoApp.Packaging.Common.Model {
+    using System;
     using System.Xml.Serialization;
     using Toolkit.Win32;
 

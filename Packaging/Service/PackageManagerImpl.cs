@@ -20,7 +20,6 @@ namespace CoApp.Packaging.Service {
     using Common;
     using Feeds;
     using PackageFormatHandlers;
-    using Toolkit.Collections;
     using Toolkit.Crypto;
     using Toolkit.Exceptions;
     using Toolkit.Extensions;
@@ -283,7 +282,9 @@ namespace CoApp.Packaging.Service {
                             where p.IsAnUpdateFor(package)
                             select p).OrderByDescending(p => p.CanonicalName.Version).ToArray();
 
-                        PackageInformation(response, package, supercedents.Select(each => each.CanonicalName));
+                        IEnumerable<CanonicalName> supercedents1 = supercedents.Select(each => each.CanonicalName);
+                        // GS02: FIX THIS NOW. SUPERCEDENTS SHOULD BE PASSED BACK SOMEHOW.
+                        response.PackageInformation(package);
                     }
                 } else {
                     response.NoPackagesFound();
@@ -309,19 +310,7 @@ namespace CoApp.Packaging.Service {
             }
 
 
-            response.PackageDetails(package.CanonicalName, new XDictionary<string, string> {
-                {"description", package.PackageDetails.Description},
-                {"summary", package.PackageDetails.SummaryDescription},
-                {"display-name", package.DisplayName},
-                {"copyright", package.PackageDetails.CopyrightStatement},
-                {"author-version", package.PackageDetails.AuthorVersion},
-            },
-               package.PackageDetails.IconLocations,
-               package.PackageDetails.Licenses.ToXDictionary(each => each.Name, each => each.Text),
-               package.Roles.ToXDictionary(each => each.Name, each => each.PackageRole.ToString()),
-               package.PackageDetails.Tags,
-               package.PackageDetails.Contributors.ToXDictionary(each => each.Name, each => each.Location.AbsoluteUri),
-               package.PackageDetails.Contributors.ToXDictionary(each => each.Name, each => each.Email));
+            response.PackageDetails(package.CanonicalName, package.PackageDetails);
             return FinishedSynchronously;
         }
 
@@ -372,7 +361,7 @@ namespace CoApp.Packaging.Service {
                         return FinishedSynchronously;
                     }
 
-                    var installedPackages = SearchForInstalledPackages(package.CanonicalName.OtherVersionFilter).ToArray();
+                    var installedPackages = package.InstalledVersions.ToArray();
                     var installedCompatibleVersions = installedPackages.Where(package.IsAnUpdateFor).ToArray();
 
                     // is the user authorized to install this?
@@ -438,7 +427,7 @@ namespace CoApp.Packaging.Service {
                             // we can just return a bunch of foundpackage messages, since we're not going to be 
                             // actually installing anything, nor trying to download anything.
                             foreach (var p in installGraph) {
-                                PackageInformation(response, p);
+                                response.PackageInformation(p);
                             }
                             return FinishedSynchronously;
                         }
@@ -477,7 +466,7 @@ namespace CoApp.Packaging.Service {
                                 // we can just return a bunch of found-package messages, since we're not going to be 
                                 // actually installing anything, and everything we needed is downloaded.
                                 foreach (var p in installGraph) {
-                                    PackageInformation(response, p);
+                                    response.PackageInformation(p);
                                 }
                                 return FinishedSynchronously;
                             }
@@ -541,14 +530,14 @@ namespace CoApp.Packaging.Service {
                                 if (isUpdating == true) {
                                     // if this is marked as an update
                                     // remove REQUESTED flag from all older compatible version 
-                                    foreach (var eachPkg in installedCompatibleVersions) {
+                                    foreach (Package eachPkg in installedCompatibleVersions) {
                                         eachPkg.IsClientRequested = false;
                                     }
                                 }
                                 if (isUpgrading == true) {
                                     // if this is marked as an update
                                     // remove REQUESTED flag from all older compatible version 
-                                    foreach (var eachPkg in installedPackages) {
+                                    foreach (Package eachPkg in installedPackages) {
                                         eachPkg.IsClientRequested = false;
                                     }
                                 }
@@ -845,7 +834,7 @@ namespace CoApp.Packaging.Service {
 
             if (false == active) {
                 if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.ChangeActivePackage)) {
-                    var pqg = SearchForInstalledPackages(package.CanonicalName.OtherVersionFilter).HighestPackages().FirstOrDefault();
+                    var pqg = package.InstalledVersions.HighestPackages().FirstOrDefault() as Package;
                     if (pqg != null) {
                         pqg.SetPackageCurrent();
                     }
@@ -897,7 +886,7 @@ namespace CoApp.Packaging.Service {
                     package.DoNotUpgrade = false;
                 }
             }
-            PackageInformation(response, package);
+            response.PackageInformation(package);
             return FinishedSynchronously;
         }
 
@@ -1074,7 +1063,7 @@ namespace CoApp.Packaging.Service {
 
                         SessionPackageFeed.Instance.Add(package);
 
-                        PackageInformation(response, package);
+                        response.PackageInformation(package);
                         response.Recognized(localLocation);
                     }
                     return;
@@ -1090,15 +1079,6 @@ namespace CoApp.Packaging.Service {
                 response.FileNotRecognized(location, "File isn't a package, and doesn't appear to have been requested. ");
             }, TaskContinuationOptions.AttachedToParent);
             return FinishedSynchronously;
-        }
-
-        private void PackageInformation(IPackageManagerResponse response, Package package, IEnumerable<CanonicalName> supercedents = null) {
-            if (package != null) {
-                supercedents = supercedents ?? Enumerable.Empty<CanonicalName>();
-                response.PackageInformation(package.CanonicalName, package.LocalLocations.FirstOrDefault(), package.IsInstalled, package.IsBlocked,
-                    package.IsRequired, package.IsClientRequested, package.IsActive, package.PackageSessionData.IsDependency, package.BindingPolicy == null ? 0 : package.BindingPolicy.Minimum, package.BindingPolicy == null ? 0 : package.BindingPolicy.Maximum,
-                    package.RemoteLocations, package.FeedLocations, package.Dependencies.Select(each => each.CanonicalName), supercedents);
-            }
         }
 
         public Task SetFeedFlags(string location, string activePassiveIgnored) {
@@ -1234,15 +1214,6 @@ namespace CoApp.Packaging.Service {
             return tf.Where(each => locs.Contains(each.Location.ToUri()));
         }
 
-        /// <summary>
-        ///   Gets just installed packages based on criteria
-        /// </summary>
-        /// <param name="canonicalName"> </param>
-        /// <returns> </returns>
-        internal IEnumerable<Package> SearchForInstalledPackages(CanonicalName canonicalName) {
-            return InstalledPackageFeed.Instance.FindPackages(canonicalName);
-        }
-
         internal IEnumerable<Package> InstalledPackages {
             get {
                 return InstalledPackageFeed.Instance.FindPackages(CanonicalName.AllPackages);
@@ -1271,22 +1242,22 @@ namespace CoApp.Packaging.Service {
             var packageData = package.PackageSessionData;
 
             if (!packageData.DoNotSupercede) {
-                var installedSupercedents = SearchForInstalledPackages(package.CanonicalName.OtherVersionFilter);
+                IEnumerable<IPackage> installedSupercedents;
 
                 if (package.PackageSessionData.IsClientSpecified || hypothetical) {
                     // this means that we're talking about a requested package
                     // and not a dependent package and we can liberally construe supercedent 
                     // as anything with a highger version number
-                    installedSupercedents = (from p in installedSupercedents where p.CanonicalName.Version > package.CanonicalName.Version select p).OrderByDescending(p => p.CanonicalName.Version).ToArray();
+                    installedSupercedents = (from p in  package.InstalledVersions where p.CanonicalName.Version > package.CanonicalName.Version select p).OrderByDescending(p => p.CanonicalName.Version).ToArray();
                 } else {
                     // otherwise, we're installing a dependency, and we need something compatable.
-                    installedSupercedents = (from p in installedSupercedents where p.IsAnUpdateFor(package) select p).OrderByDescending(p => p.CanonicalName.Version).ToArray();
+                    installedSupercedents = (from p in  package.InstalledVersions where p.IsAnUpdateFor(package) select p).OrderByDescending(p => p.CanonicalName.Version).ToArray();
                 }
                 var installedSupercedent = installedSupercedents.FirstOrDefault();
                 if (installedSupercedent != null) {
-                    if (!installedSupercedent.PackageRequestData.NotifiedClientThisSupercedes) {
+                    if (!(installedSupercedent as Package).PackageRequestData.NotifiedClientThisSupercedes) {
                         response.PackageSatisfiedBy(package.CanonicalName, installedSupercedent.CanonicalName);
-                        installedSupercedent.PackageRequestData.NotifiedClientThisSupercedes = true;
+                        (installedSupercedent as Package).PackageRequestData.NotifiedClientThisSupercedes = true;
                     }
                     yield break; // a supercedent package is already installed.
                 }

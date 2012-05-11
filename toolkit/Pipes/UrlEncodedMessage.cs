@@ -14,37 +14,38 @@ namespace CoApp.Toolkit.Pipes {
     using System;
     using System.Collections;
     using System.Collections.Generic;
+    using System.IO;
     using System.Linq;
     using System.Reflection;
+    using System.Runtime.Serialization;
     using System.Text.RegularExpressions;
     using Collections;
     using Exceptions;
     using Extensions;
+    using Text;
+
+  
 
     /// <summary>
-    ///   Helper class to create/read UrlEncodedMessages
+    ///   UrlEncodedMessages
     /// </summary>
-    /// <remarks>
-    ///   NOTE: EXPLICITLY IGNORE, NOT READY FOR TESTING.
-    /// </remarks>
     public class UrlEncodedMessage : IEnumerable<string> {
+
+      
+#if REMOVED        
+        private static readonly IFormatter Formatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
+#endif
         /// <summary>
         /// </summary>
-        private static readonly char[] _query = new[] {
-            '?'
-        };
+        private static readonly char[] Query = new[] { '?' };
 
         /// <summary>
         /// </summary>
-        private static readonly char[] _separator = new[] {
-            '&'
-        };
-
+        private readonly char[] _separator = new[] {'&' };
+        private readonly string _separatorString = "&";
         /// <summary>
         /// </summary>
-        private static readonly char[] _equals = new[] {
-            '='
-        };
+        private static readonly char[] Equal = new[] { '=' };
 
         /// <summary>
         /// </summary>
@@ -52,21 +53,45 @@ namespace CoApp.Toolkit.Pipes {
 
         /// <summary>
         /// </summary>
-        internal IDictionary<string, string> Data;
+        private readonly IDictionary<string, string> _data;
+
+        private bool _storeTypeInformation;
 
         /// <summary>
         ///   Initializes a new instance of the <see cref="UrlEncodedMessage" /> class.
         /// </summary>
         /// <param name="rawMessage"> The raw message. </param>
+        /// <param name="seperator"> </param>
+        /// <param name="storeTypeInformation"> </param>
         /// <remarks>
         /// </remarks>
-        public UrlEncodedMessage(string rawMessage) {
-            var parts = rawMessage.Split(_query, StringSplitOptions.RemoveEmptyEntries);
-            Command = (parts.FirstOrDefault() ?? "").UrlDecode();
-            Data = (parts.Skip(1).FirstOrDefault() ?? "").Split(_separator, StringSplitOptions.RemoveEmptyEntries).Select(
-                p => p.Split(_equals, StringSplitOptions.RemoveEmptyEntries)).ToXDictionary(
-                    s => s[0].UrlDecode(),
-                    s => s.Length > 1 ? s[1].UrlDecode() : String.Empty);
+        public UrlEncodedMessage(string rawMessage = null, string seperator = "&", bool storeTypeInformation = false) {
+            _separatorString = seperator;
+            _separator = seperator.ToCharArray();
+            _storeTypeInformation = storeTypeInformation;
+
+            var parts = (rawMessage ?? "" ).Split(Query, StringSplitOptions.RemoveEmptyEntries);
+            switch( parts.Length ) {
+                case 0:
+                    _data = new XDictionary<string, string>();
+                    break;
+
+                case 1:
+                    Command = "";
+                    _data = (parts.FirstOrDefault() ?? "").Split(_separator, StringSplitOptions.RemoveEmptyEntries).Select(
+                        p => p.Split(Equal, StringSplitOptions.RemoveEmptyEntries))
+                            .ToXDictionary(s => s[0].UrlDecode(),s => s.Length > 1 ? s[1].UrlDecode() : String.Empty);
+                    break;
+
+                default:
+                    Command = parts.FirstOrDefault().UrlDecode();
+                    // ReSharper disable PossibleNullReferenceException (the parts has two or more!)
+                    _data = parts.Skip(1).FirstOrDefault().Split(_separator, StringSplitOptions.RemoveEmptyEntries).Select(
+                        p => p.Split(Equal, StringSplitOptions.RemoveEmptyEntries))
+                            .ToXDictionary(s => s[0].UrlDecode(),s => s.Length > 1 ? s[1].UrlDecode() : String.Empty);
+                    // ReSharper restore PossibleNullReferenceException
+                    break;
+            }
         }
 
         /// <summary>
@@ -74,110 +99,16 @@ namespace CoApp.Toolkit.Pipes {
         /// </summary>
         /// <param name="command"> The command. </param>
         /// <param name="data"> The data. </param>
+        /// <param name="seperator"> </param>
+        /// <param name="storeTypeInformation"> </param>
         /// <remarks>
         /// </remarks>
-        public UrlEncodedMessage(string command, IDictionary<string, string> data) {
+        public UrlEncodedMessage(string command, IDictionary<string, string> data, string seperator = "&", bool storeTypeInformation = false) {
+            _separatorString = seperator;
+            _separator = seperator.ToCharArray();
+            _storeTypeInformation = storeTypeInformation;
             Command = command;
-            Data = data;
-        }
-
-        public string this[string key] {
-            get {
-                return GetValueAsString(key);
-            }
-            set {
-                Add(key, value);
-            }
-        }
-
-        public object GetValueAsArray(string collectionName, Type elementType, Type arrayType) {
-            var rx = new Regex(@"^{0}\[\d*\]$".format(Regex.Escape(collectionName)));
-            if (elementType == typeof (string)) {
-                return (from k in Data.Keys where rx.IsMatch(k) select Data[k]).ToArray();
-            }
-            
-            if (elementType.IsParsable()) {
-                return _toArrayMethods.GetOrAdd(elementType, () => ToArrayMethod.MakeGenericMethod(elementType)).Invoke(null, new object[] {
-                    _castMethods.GetOrAdd(elementType, () => CastMethod.MakeGenericMethod(elementType))
-                    .Invoke(null, new object[] { (from k in Data.Keys where rx.IsMatch(k) select elementType.ParseString(Data[k])) })});
-            }
-            throw new CoAppException("Unsupported Array type '{0}' (must support tryparse)".format(elementType.Name));
-        }
-
-        private static MethodInfo CastMethod = typeof(Enumerable).GetMethod("Cast");
-        private static MethodInfo ToArrayMethod = typeof(Enumerable).GetMethod("ToArray");
-        private static IDictionary<Type, MethodInfo> _castMethods = new XDictionary<Type, MethodInfo>();
-        private static IDictionary<Type, MethodInfo> _toArrayMethods = new XDictionary<Type, MethodInfo>();
-
-        public object GetValueAsIEnumerable(string collectionName, Type elementType, Type collectionType) {
-            var rx = new Regex(@"^{0}\[\d*\]$".format(Regex.Escape(collectionName)));
-            if (elementType == typeof (string)) {
-                return from k in Data.Keys where rx.IsMatch(k) select Data[k];
-            }
-
-            if (elementType.IsParsable()) {
-                return _castMethods.GetOrAdd(elementType, () => CastMethod.MakeGenericMethod(elementType)).Invoke(null, new object[] { (from k in Data.Keys where rx.IsMatch(k) select elementType.ParseString(Data[k])) });
-            }
-
-            throw new CoAppException("Unsupported IEnumerable type '{0}' (must support tryparse or string constructor)".format(elementType.Name));
-        }
-
-        public object GetValueAsEnum( string key, Type enumerationType) {
-            var v = GetValueAsString(key);
-            if( string.IsNullOrEmpty(v)) {
-                return null;
-            }
-            return Enum.Parse(enumerationType, v);
-        }
-
-        public object GetValueAsDictionary(string collectionName, Type keyType, Type valueType, Type dictionaryType) {
-            var rx = new Regex(@"^{0}\[(.*)\]$".format(Regex.Escape(collectionName)));
-            var pairs = from k in Data.Keys let match = rx.Match(k) where match.Success select new { key = match.Groups[1].Captures[0].Value.UrlDecode(), value = Data[k]};
-            dynamic result;
-
-            if ((dictionaryType.Name.IndexOf("IDictionary") > -1) || (dictionaryType.Name.IndexOf("XDictionary") > -1)) {
-                result = Activator.CreateInstance(typeof(XDictionary<,>).MakeGenericType(keyType, valueType));
-            } else {
-                result = Activator.CreateInstance(typeof(XDictionary<,>).MakeGenericType(keyType, valueType));    
-            }
-            
-            foreach (var each in pairs) {
-                try {
-                    result.AddPair(keyType.ParseString(each.key), keyType.ParseString(each.value));
-                } catch (Exception e ) {
-                    Console.WriteLine(e.Message);
-                    Console.WriteLine(e.StackTrace);
-                }
-            }
-            return result;
-            /*
-            if (keyType == typeof (string) && valueType.IsParsable()) {
-                return keys.ToXDictionary(key => key, key => valueType.ParseString(Data[key]));
-            }
-            if (keyType.IsParsable() && valueType == typeof (string)) {
-                dynamic result = Activator.CreateInstance(typeof (Dictionary<,>).MakeGenericType(keyType, valueType));
-                foreach( var key in keys ) {
-                    result.Add(keyType.ParseString(key), Data[key]);
-                }
-                // return keys.ToXDictionary(key => keyType.ParseString(key), key => Data[key]);
-            }
-            if (keyType.IsParsable() && valueType.IsParsable()) {
-                return keys.ToXDictionary(key => keyType.ParseString(key), key => valueType.ParseString(Data[key]));
-            }
-            */
-            throw new CoAppException("Unsupported Dictionary type '{0}/{1}' (keys and values must support tryparse)".format(keyType.Name, valueType.Name));
-        }
-
-        public string GetValueAsString(string key) {
-            return Data.ContainsKey(key) ? Data[key] : string.Empty;
-        }
-
-        public object GetValueAsPrimitive(string key, Type primitiveType) {
-            return primitiveType.ParseString(Data.ContainsKey(key) ? Data[key] : null);
-        }
-
-        public object GetValueAsNullable(string key, Type primitiveType) {
-            return Data.ContainsKey(key) ? primitiveType.ParseString(Data[key]) : null;
+            _data = data;
         }
 
         /// <summary>
@@ -187,14 +118,14 @@ namespace CoApp.Toolkit.Pipes {
         /// <remarks>
         /// </remarks>
         public override string ToString() {
-            return Data.Any()
-                ? Data.Keys.Aggregate(Command.UrlEncode() + "?", (current, k) => current + (!string.IsNullOrEmpty(Data[k]) ? (k.UrlEncode() + "=" + Data[k].UrlEncode() + "&") : string.Empty))
+            return _data.Any()
+                ? _data.Keys.Aggregate(string.IsNullOrEmpty(Command) ? "" : Command.UrlEncode() + "?", (current, k) => current + (!string.IsNullOrEmpty(_data[k]) ? (k.UrlEncode() + "=" + _data[k].UrlEncode() + _separatorString) : string.Empty))
                 : Command.UrlEncode();
         }
 
         public string ToSmallerString() {
-            return Data.Any()
-                ? Data.Keys.Aggregate(Command + "?", (current, k) => current + (!string.IsNullOrEmpty(Data[k]) ? (k + "=" + Data[k].Substring(0, Math.Min(Data[k].Length, 512)) + "&") : string.Empty))
+            return _data.Any()
+                ? _data.Keys.Aggregate(string.IsNullOrEmpty(Command) ? "" : Command + "?", (current, k) => current + (!string.IsNullOrEmpty(_data[k]) ? (k + "=" + _data[k].Substring(0, Math.Min(_data[k].Length, 512)) + _separatorString) : string.Empty))
                 : Command;
         }
 
@@ -207,7 +138,168 @@ namespace CoApp.Toolkit.Pipes {
         IEnumerator IEnumerable.GetEnumerator() {
             return GetEnumerator();
         }
+        /// <summary>
+        ///   Returns an enumerator that iterates through the collection.
+        /// </summary>
+        /// <returns> A <see cref="T:System.Collections.Generic.IEnumerator`1" /> that can be used to iterate through the collection. </returns>
+        /// <remarks>
+        /// </remarks>
+        public IEnumerator<string> GetEnumerator() {
+            return _data.Keys.GetEnumerator();
+        }
+        public string this[string key] {
+            get {
+                return GetValueAsString(key);
+            }
+            set {
+                Add(key, value);
+            }
+        }
 
+        private const string CollectionEx = @"^{0}\[(\d*)\]$";
+        private const string ComplexCollectionEx = @"^{0}\[(\d*?)\]{1}$";
+        
+
+        private IEnumerable<string> GetCollectionOfString( string collectionName ) {
+            var rx = new Regex(CollectionEx.format(Regex.Escape(collectionName)));
+            return (from k in _data.Keys let match = rx.Match(k) where match.Success select new {index = match.Groups[1].Captures[0].Value.UrlDecode().ToInt32(), value = _data[k]}).OrderBy(each => each.index).Select(each => each.value );
+        }
+
+        private IEnumerable<object> GetCollectionOfParsable(string collectionName, Type elementType) {
+            var rx = new Regex(CollectionEx.format(Regex.Escape(collectionName)));
+            return (from k in _data.Keys let match = rx.Match(k) where match.Success select new { index = match.Groups[1].Captures[0].Value.UrlDecode().ToInt32(), value = _data[k] }).OrderBy(each => each.index).Select(each => elementType.ParseString(each.value));
+        }
+
+        private object GetValueAsArrayOfParsable(string collectionName, Type elementType) {
+            if (elementType == typeof(string)) {
+                return GetCollectionOfString(collectionName).ToArray();
+            }
+            return GetCollectionOfParsable(collectionName, elementType).ToArrayOfType(elementType);
+        }
+
+        private object GetValueAsArrayOfComplex(string collectionName, Type elementType) {
+            var rx = new Regex(@"^{0}\[(\d*?)\](.*)$".format(Regex.Escape(collectionName)));
+            return (from k in _data.Keys
+                    let match = rx.Match(k)
+                    where match.Success
+                    select GetValue(string.Format("{0}[{1}]", collectionName, match.Groups[1].Captures[0].Value), elementType)).ToArrayOfType(elementType);
+        }
+
+        private object GetValueAsIEnumerableOfParsable(string collectionName, Type elementType) {
+            if (elementType == typeof(string)) {
+                return GetCollectionOfString(collectionName);
+            }
+            return GetCollectionOfParsable(collectionName, elementType).CastToIEnumerableOfType(elementType);
+        }
+
+        private object GetValueAsIEnumerableOfComplex(string collectionName, Type elementType) {
+            var rx = new Regex(@"^{0}\[(\d*?)\](.*)$".format(Regex.Escape(collectionName)));
+            return (from k in _data.Keys
+                          let match = rx.Match(k)
+                          where match.Success
+                          select GetValue(string.Format("{0}[{1}]", collectionName, match.Groups[1].Captures[0].Value), elementType)).CastToIEnumerableOfType(elementType);
+        }
+
+        public object GetValueAsArray(string collectionName, Type elementType, Type arrayType) {
+            return elementType.IsParsable() ? GetValueAsArrayOfParsable(collectionName, elementType) : GetValueAsArrayOfComplex(collectionName, elementType);
+        }
+
+        public object GetValueAsIEnumerable(string collectionName, Type elementType, Type collectionType) {
+            var collection = elementType.IsParsable() ? GetValueAsIEnumerableOfParsable(collectionName, elementType) : GetValueAsIEnumerableOfComplex(collectionName, elementType);
+            if (collectionType.Name.StartsWith("IEnumerable")) {
+                return collection;
+            } else {
+                // we need to get the collection and then insert the elements into the target type.
+                IList result = (IList) collectionType.CreateInstance();
+                foreach( var o in (IEnumerable)collection ) {
+                    result.Add(o);
+                }
+                return result;
+            }
+        }
+
+        public object GetValueAsEnum( string key, Type enumerationType) {
+            var v = GetValueAsString(key);
+            if( string.IsNullOrEmpty(v)) {
+                return null;
+            }
+            return Enum.Parse(enumerationType, v);
+        }
+
+        public IEnumerable<KeyValuePair<string, string>> GetKeyValueStringPairs(string collectionName) {
+            var rx = new Regex(@"^{0}\[(.*?)\]$".format(Regex.Escape(collectionName)));
+            return from k in _data.Keys let match = rx.Match(k) where match.Success select new KeyValuePair<string, string>(match.Groups[1].Captures[0].Value.UrlDecode(), _data[k]);
+        }
+
+        public object GetValueAsDictionaryOfParsable(string collectionName, Type keyType, Type valueType, Type dictionaryType) {
+            IDictionary result;
+
+            if ((dictionaryType.Name.StartsWith("IDictionary")) || (dictionaryType.Name.StartsWith("XDictionary"))) {
+                result = (IDictionary)Activator.CreateInstance(typeof(XDictionary<,>).MakeGenericType(keyType, valueType));
+            }
+            else {
+                result = (IDictionary)Activator.CreateInstance(typeof(Dictionary<,>).MakeGenericType(keyType, valueType));
+            }
+            foreach (var each in GetKeyValueStringPairs(collectionName)) {
+                result.Add(keyType.ParseString(each.Key), valueType.ParseString(each.Value));
+            }
+            return result;
+        }
+
+        public object GetValueAsDictionaryOfComplex(string collectionName, Type keyType, Type valueType, Type dictionaryType) {
+            var rx = new Regex(@"^{0}\[(.*?)\](.*)$".format(Regex.Escape(collectionName)));
+            var results = from k in _data.Keys
+                          let match = rx.Match(k)
+                          where match.Success
+                          select new KeyValuePair<string, object>(match.Groups[1].Captures[0].Value.UrlDecode(), GetValue(string.Format("{0}[{1}]", collectionName, match.Groups[1].Captures[0].Value), valueType));
+            
+            IDictionary result;
+
+            if ((dictionaryType.Name.StartsWith("IDictionary") ) || (dictionaryType.Name.StartsWith("XDictionary"))) {
+                result = (IDictionary)Activator.CreateInstance(typeof(XDictionary<,>).MakeGenericType(keyType, valueType));
+            }
+            else {
+                result = (IDictionary)Activator.CreateInstance(typeof(Dictionary<,>).MakeGenericType(keyType, valueType));
+            }
+
+            foreach (var each in results) {
+                result.Add(keyType.ParseString(each.Key), each.Value);
+            }
+            return result;
+        }
+
+        public object GetValueAsDictionary(string collectionName, Type keyType, Type valueType, Type dictionaryType) {
+            return valueType.IsParsable() ? GetValueAsDictionaryOfParsable(collectionName, keyType, valueType, dictionaryType) : GetValueAsDictionaryOfComplex(collectionName, keyType, valueType, dictionaryType);
+        }
+
+        public string GetValueAsString(string key) {
+            return _data.ContainsKey(key) ? _data[key] : string.Empty;
+        }
+
+        public object GetValueAsPrimitive(string key, Type primitiveType) {
+            return primitiveType.ParseString(_data.ContainsKey(key) ? _data[key] : null);
+        }
+
+        public object GetValueAsNullable(string key, Type primitiveType) {
+            return _data.ContainsKey(key) ? primitiveType.ParseString(_data[key]) : null;
+        }
+
+        public object GetValueAsOther(string key, Type otherType, object o = null) {
+            o = o ?? otherType.CreateInstance();
+
+            var persistable = otherType.GetPersistableElements();
+            foreach (var f in persistable.Fields) {
+                f.SetValue(o, GetValue(key + "." + f.Name, f.FieldType));
+            }
+
+            foreach (var p in persistable.Properties) {
+                p.SetValue(o, GetValue(key + "." + p.Name, p.PropertyType), null);
+            }
+
+            return null;
+        }
+
+    
         /// <summary>
         ///   Adds the specified key.
         /// </summary>
@@ -217,50 +309,12 @@ namespace CoApp.Toolkit.Pipes {
         /// </remarks>
         public void Add(string key, string value) {
             if (!string.IsNullOrEmpty(value)) {
-                if (Data.ContainsKey(key)) {
-                    Data[key] = value;
-                } else {
-                    Data.Add(key, value);
-                }
+                _data[key] = value;
             }
         }
 
-        /// <summary>
-        ///   Adds the specified key.
-        /// </summary>
-        /// <param name="key"> The key. </param>
-        /// <param name="value"> The value. </param>
-        /// <remarks>
-        /// </remarks>
-        public void Add(string key, bool? value) {
-            if (value != null) {
-                if (Data.ContainsKey(key)) {
-                    Data[key] = value.ToString();
-                } else {
-                    Data.Add(key, value.ToString());
-                }
-            }
-        }
-
-        /// <summary>
-        ///   Adds the specified key.
-        /// </summary>
-        /// <param name="key"> The key. </param>
-        /// <param name="value"> The value. </param>
-        /// <remarks>
-        /// </remarks>
-        public void Add(string key, int? value) {
-            if (value != null) {
-                if (Data.ContainsKey(key)) {
-                    Data[key] = value.ToString();
-                } else {
-                    Data.Add(key, value.ToString());
-                }
-            }
-        }
-
-        public void AddKeyValuePair(string key, string elementName, string elementValue) {
-            Add("{0}[{1}]".format(key, elementName.UrlEncode()), elementValue);
+        public void AddKeyValuePair(string key, string elementName, object elementValue) {
+            Add("{0}[{1}]".format(key, elementName.UrlEncode()), elementValue, elementValue.GetType());
         }
 
         public void AddKeyValueCollection(string key, IEnumerable<KeyValuePair<string, string>> collection) {
@@ -271,13 +325,14 @@ namespace CoApp.Toolkit.Pipes {
 
         public void AddDictionary(string key, IDictionary collection) {
             foreach (var each in collection.Keys) {
-                var val = collection[each] ?? "";
-                AddKeyValuePair(key, each.ToString(), val.ToString());
+                if( each.GetType().IsParsable() ) {
+                    AddKeyValuePair(key, each.ToString(), collection[each]);
+                }
             }
         }
 
-        public void AddCollection(string key, IEnumerable<string> values) {
-            if (!values.IsNullOrEmpty()) {
+        public void AddStringCollection(string key, IEnumerable<string> values) {
+            if (values != null) {
                 var index = 0;
                 foreach (var s in values.Where(s => !string.IsNullOrEmpty(s))) {
                     Add("{0}[{1}]".format(key, index++), s);
@@ -289,20 +344,13 @@ namespace CoApp.Toolkit.Pipes {
             if (values != null) {
                 var index = 0;
                 for (var enmerator = values.GetEnumerator(); enmerator.MoveNext();) {
-                    Add("{0}[{1}]".format(key, index++), enmerator.Current.ToString());
+                    if (enmerator.Current != null ) {
+                        Add("{0}[{1}]".format(key, index++), enmerator.Current, enmerator.Current.GetType() );    
+                    }
                 }
             }
         }
-
-        /// <summary>
-        ///   Returns an enumerator that iterates through the collection.
-        /// </summary>
-        /// <returns> A <see cref="T:System.Collections.Generic.IEnumerator`1" /> that can be used to iterate through the collection. </returns>
-        /// <remarks>
-        /// </remarks>
-        public IEnumerator<string> GetEnumerator() {
-            return Data.Keys.GetEnumerator();
-        }
+      
 
         /// <summary>
         ///   Gets the collection.
@@ -313,23 +361,96 @@ namespace CoApp.Toolkit.Pipes {
         /// </remarks>
         public IEnumerable<string> GetCollection(string collectionName) {
             var rx = new Regex(@"^{0}\[\d*\]$".format(Regex.Escape(collectionName)));
-            return from k in Data.Keys where rx.IsMatch(k) select Data[k];
+            return from k in _data.Keys where rx.IsMatch(k) select _data[k];
         }
 
-        /// <summary>
-        ///   Gets the collection.
-        /// </summary>
-        /// <param name="collectionName"> The key for the collection. </param>
-        /// <returns> </returns>
-        /// <remarks>
-        /// </remarks>
-        public IEnumerable<KeyValuePair<string, string>> GetKeyValuePairs(string collectionName) {
-            var rx = new Regex(@"^{0}\[(.*)\]$".format(Regex.Escape(collectionName)));
-            return from k in Data.Keys let match = rx.Match(k) where match.Success select new KeyValuePair<string, string>(match.Groups[1].Captures[0].Value.UrlDecode(), Data[k]);
+        public void Add(string argName, object arg, Type argType) {
+            if( arg == null ) {
+                return;
+            }
+            
+            if (_storeTypeInformation) {
+                Add(argName+"$T$", argType.FullName);
+            }
+
+            if (argType == typeof(string) || argType.IsEnum || argType.IsParsable()) {
+                Add(argName, arg.ToString());
+                return;
+            }
+
+            if (argType.IsDictionary()) {
+                AddDictionary(argName, (IDictionary)arg);
+                return;
+            }
+
+            if (argType.IsArray || argType.IsIEnumerable()) {
+                AddCollection(argName, (IEnumerable)arg);
+                return;
+            }
+
+            // fall through to reflection-based serialization.
+            var persistable = argType.GetPersistableElements();
+            foreach( var f in persistable.Fields ) {
+                Add(argName+"."+f.Name, f.GetValue(arg), f.FieldType);
+            }
+
+            foreach (var p in persistable.Properties) {
+                Add(argName + "." + p.Name, p.GetValue(arg,null), p.PropertyType);
+            }
+            
+        }
+
+        public void Add(string key, object value) {
+            Add( key, value, value.GetType() );
         }
 
         public static implicit operator string(UrlEncodedMessage value) {
             return value.ToString();
         }
+
+        public object GetValue( string key , Type argType, object o = null) {
+            var pi = argType.GetPersistableInfo();
+            switch (pi.PersistableType) {
+                case PersistableType.String:
+                    return GetValueAsString(key);
+
+                case PersistableType.Parseable:
+                    return GetValueAsPrimitive(key, pi.Type);
+
+                case PersistableType.Nullable:
+                    return GetValueAsNullable(key, pi.Type);
+
+                case PersistableType.Enumerable:
+                    return GetValueAsIEnumerable(key, pi.ElementType, pi.Type);
+
+                case PersistableType.Array:
+                    return GetValueAsArray(key, pi.ElementType, pi.Type);
+
+                case PersistableType.Dictionary:
+                    return GetValueAsDictionary(key, pi.DictionaryKeyType, pi.DictionaryValueType, pi.Type);
+
+                case PersistableType.Enumeration:
+                    return GetValueAsEnum(key, pi.Type);
+
+                case PersistableType.Other:
+                    return GetValueAsOther(key, pi.Type, o);
+            }
+
+            return o;
+        }
+
+        public T DeserializeTo<T>(T intoInstance = default(T), string key = null) {
+            return (T)GetValue(key, typeof(T), intoInstance);
+        }
+       
     }
+
+    public static class UEMSerializationExtensions {
+        public static UrlEncodedMessage Serialize( this object obj,string seperator = "&" , bool storeTypeNames = false) {
+            return new UrlEncodedMessage(null, seperator, storeTypeNames) { { "", obj, obj.GetType() } };
+        }
+    }
+
+
+    
 }

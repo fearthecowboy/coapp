@@ -17,7 +17,6 @@ namespace CoApp.Toolkit.Pipes {
     using System.Dynamic;
     using System.Linq;
     using System.Reflection;
-    using System.Runtime.Serialization;
     using System.Threading.Tasks;
     using Collections;
     using Exceptions;
@@ -29,116 +28,41 @@ namespace CoApp.Toolkit.Pipes {
         internal IEnumerable<CachedParameter> Parameters;
     }
 
-    internal enum ParameterType {
-        Parseable,
-        Array,
-        Enumerable,
-        Dictionary,
-        Nullable,
-        String,
-        Enumeration
-    }
-
     internal class CachedParameter {
         internal CachedParameter(ParameterInfo parameterInfo) {
             Name = parameterInfo.Name;
-            var t = parameterInfo.ParameterType;
-
-            if (t.IsEnum) {
-                ParameterType = ParameterType.Enumeration;
-                Type = t;
-                return;
-            } 
-
-            if (t == typeof(string)) {
-                ParameterType = ParameterType.String;
-                Type = t;
-                return;
-            } 
-
-            if (t.IsGenericType) {
-                var basename = t.Name.Split('`')[0];
-                var genericArguments = t.GetGenericArguments();
-                // better be IEnumerable,Dictionary or Nullable
-                switch (basename) {
-                    case "Nullable":
-                        ParameterType = ParameterType.Nullable;
-                        NullableType = genericArguments[0];
-                        return;
-
-                    case "IEnumerable":
-                        ParameterType = ParameterType.Enumerable;
-                        Type = t;
-                        CollectionType = genericArguments[0];
-                        return;
-
-                    case "Dictionary":
-                    case "IDictionary":
-                    case "XDictionary":
-                        ParameterType = ParameterType.Dictionary;
-                        Type = t;
-                        DictionaryKeyType = genericArguments[0];
-                        DictionaryValueType = genericArguments[1];
-                        return;
-                }
-            }
-            
-            if (t.IsArray) {
-                // an array of soemthing.
-                ParameterType = ParameterType.Array;
-                CollectionType = t.GetElementType();
-                Type = t;
-                return;
-            }
-
-            if (t.IsParsable()) {
-                ParameterType = ParameterType.Parseable;
-                Type = t;
-                return;
-            } 
-
-  
-            throw new CoAppException("Unsupported Type: '{0}'".format(t.Name));
-            
+            PersistableInfo = parameterInfo.ParameterType.GetPersistableInfo();
         }
 
         internal string Name { get; set; }
-        internal ParameterType ParameterType { get; set; }
-        internal Type Type { get; set; }
-        internal Type CollectionType { get; set; }
-        internal Type DictionaryKeyType { get; set; }
-        internal Type DictionaryValueType { get; set; }
-        internal Type NullableType {
-            get {
-                return Type;
-            }
-            set {
-                Type = value;
-            }
-        }
+        internal PersistableInfo PersistableInfo { get; set; }
+
 
         internal object FromString(UrlEncodedMessage message, string key) {
-            switch (ParameterType) {
-                case ParameterType.String:
+            switch (PersistableInfo.PersistableType) {
+                case PersistableType.String:
                     return message.GetValueAsString(key);
 
-                case ParameterType.Parseable:
-                    return message.GetValueAsPrimitive(key, Type);
+                case PersistableType.Parseable:
+                    return message.GetValueAsPrimitive(key, PersistableInfo.Type);
 
-                case ParameterType.Nullable:
-                    return message.GetValueAsNullable(key, Type);
+                case PersistableType.Nullable:
+                    return message.GetValueAsNullable(key, PersistableInfo.Type);
 
-                case ParameterType.Enumerable:
-                    return message.GetValueAsIEnumerable(key, CollectionType,Type);
+                case PersistableType.Enumerable:
+                    return message.GetValueAsIEnumerable(key, PersistableInfo.ElementType, PersistableInfo.Type);
 
-                case ParameterType.Array:
-                    return message.GetValueAsArray(key, CollectionType,Type);
+                case PersistableType.Array:
+                    return message.GetValueAsArray(key, PersistableInfo.ElementType, PersistableInfo.Type);
 
-                case ParameterType.Dictionary:
-                    return message.GetValueAsDictionary(key, DictionaryKeyType, DictionaryValueType, Type);
-                
-                case ParameterType.Enumeration:
-                    return message.GetValueAsEnum(key, Type);
+                case PersistableType.Dictionary:
+                    return message.GetValueAsDictionary(key, PersistableInfo.DictionaryKeyType, PersistableInfo.DictionaryValueType, PersistableInfo.Type);
+
+                case PersistableType.Enumeration:
+                    return message.GetValueAsEnum(key, PersistableInfo.Type);
+
+                case PersistableType.Other:
+                    return message.GetValue(key, PersistableInfo.Type);
             }
             return null;
         }
@@ -146,16 +70,14 @@ namespace CoApp.Toolkit.Pipes {
 
     public class IncomingCallDispatcher<T> {
         private readonly T _targetObject;
-        private readonly XDictionary<string, DispatchableMethod> _methodTargets = new XDictionary<string, DispatchableMethod>();
+        private readonly XDictionary<string, DispatchableMethod> _methodTargets;
 
         public IncomingCallDispatcher(T target) {
             _targetObject = target;
-            foreach (var method in target.GetType().GetMethods()) {
-                _methodTargets.Add(method.Name, new DispatchableMethod {
-                    MethodInfo = method,
-                    Parameters = method.GetParameters().Select(each => new CachedParameter(each))
-                });
-            }
+            _methodTargets = target.GetType().GetMethods().ToXDictionary(method => method.Name, method => new DispatchableMethod {
+                MethodInfo = method,
+                Parameters = method.GetParameters().Select(each => new CachedParameter(each))
+            });
         }
 
         /// <summary>
@@ -166,7 +88,8 @@ namespace CoApp.Toolkit.Pipes {
         public Task Dispatch(UrlEncodedMessage message) {
             return _methodTargets[message.Command].With(method => Task.Factory.StartNew(() => {
                 try {
-                    method.MethodInfo.Invoke(_targetObject, method.Parameters.Select(each => each.FromString(message, each.Name)).ToArray());
+                    // method.MethodInfo.Invoke(_targetObject, method.Parameters.Select(each => each.FromString(message, each.Name)).ToArray());
+                    method.MethodInfo.Invoke(_targetObject, method.Parameters.Select(each => message.GetValue(each.Name, each.PersistableInfo.Type)).ToArray());
                 } catch( Exception e ) {
                     Logger.Error(e);
                 }
@@ -182,7 +105,8 @@ namespace CoApp.Toolkit.Pipes {
         /// <returns> </returns>
         public bool DispatchSynchronous(UrlEncodedMessage message) {
             _methodTargets[message.Command].With(method => {
-                method.MethodInfo.Invoke(_targetObject, method.Parameters.Select(each => each.FromString(message, each.Name)).ToArray());
+                // method.MethodInfo.Invoke(_targetObject, method.Parameters.Select(each => each.FromString(message, each.Name)).ToArray());
+                method.MethodInfo.Invoke(_targetObject, method.Parameters.Select(each => message.GetValue(each.Name, each.PersistableInfo.Type)).ToArray());
             }, () => {
                 throw new MissingMethodException("Method '{0}' does not exist in this interface", message.Command);
             });
@@ -203,23 +127,7 @@ namespace CoApp.Toolkit.Pipes {
         public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result) {
             var msg = new UrlEncodedMessage(binder.Name);
             for (int i = 0; i < binder.CallInfo.ArgumentCount; i++) {
-                var arg = args[i];
-                var argName = binder.CallInfo.ArgumentNames[i];
-                if (arg != null) {
-                    var argType = arg.GetType();
-                    if (argType == typeof(string) || argType.IsEnum || argType.IsParsable()) {
-                        msg.Add(argName, arg.ToString());
-                    } else if (argType.IsDictionary()) {
-                        msg.AddDictionary(argName, (IDictionary)arg);
-                    } else if (argType.IsArray) {
-                        msg.AddCollection(argName, ((object[])arg).Select(each => each.ToString()));
-                    } else if (argType.IsIEnumerable()) {
-                        msg.AddCollection(argName, ((IEnumerable)arg));
-                    } 
-                    else {
-                        throw new CoAppException("Unable to serialize output parameter '{0}' as '{1}'.".format(argName, argType.Name));
-                    }
-                }
+                msg.Add( binder.CallInfo.ArgumentNames[i], args[i], args[i].GetType() );
             }
             _writeAsync(msg);
 

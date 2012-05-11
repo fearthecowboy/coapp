@@ -31,7 +31,7 @@ namespace CoApp.Packaging.Service {
     using Toolkit.Tasks;
     using Toolkit.Win32;
 
-    public class Package : NotifiesPackageManager {
+    public class Package : NotifiesPackageManager, IPackage {
         private static readonly XDictionary<CanonicalName, Package> Packages = new XDictionary<CanonicalName, Package>();
        
         private static readonly IDictionary<string, string> DefaultMacros = new XDictionary<string, string>{
@@ -49,17 +49,52 @@ namespace CoApp.Packaging.Service {
                 {"allprograms", KnownFolders.GetFolderPath(KnownFolder.CommonPrograms)},
             };
 
-        internal CanonicalName CanonicalName;
+        public CanonicalName CanonicalName { get; private set; }
+        public string Name { get { return CanonicalName.Name; } }
+        public FlavorString Flavor { get { return CanonicalName.Flavor; } }
+        public FourPartVersion Version { get { return CanonicalName.Version; } }
+        public PackageType PackageType { get { return CanonicalName.PackageType; } }
+        public Architecture Architecture { get { return CanonicalName.Architecture; } }
+        public string PublicKeyToken { get { return CanonicalName.PublicKeyToken; } }
+        public string DisplayName { get; set; }
+        public BindingPolicy BindingPolicy { get; set; }
+
+        public IPackage SatisfiedBy {
+            get { return InstalledVersions.FirstOrDefault(each => each.IsAnUpdateFor(this)) ?? (IsInstalled ? this : null); }
+        }
+
+        public IEnumerable<Uri> Feeds { get { return FeedLocations; } }
+
+        IEnumerable<CanonicalName> IPackage.Dependencies { get { return Dependencies.Select(each => each.CanonicalName); } }
+        IEnumerable<Role> IPackage.Roles { get { return Roles; } }
+        IEnumerable<Uri> IPackage.RemoteLocations { get { return RemoteLocations; } }
+
+        public IEnumerable<IPackage> NewerPackages {
+            get { return PackageManagerImpl.Instance.SearchForPackages(CanonicalName.OtherVersionFilter).OrderByDescending(each => each.Version).Where(each => each.IsNewerThan(this)).ToArray(); }
+        }
+
+        public IEnumerable<IPackage> UpdatePackages {
+            get { return NewerPackages.Where(each => each.IsAnUpdateFor(this)).ToArray(); }
+        }
+    
+        public IEnumerable<IPackage> UpgradePackages {
+            get { return NewerPackages.Where(each => each.IsAnUpgradeFor(this)).ToArray(); }
+        }
+
+        public IEnumerable<IPackage> InstalledVersions {
+            get { return InstalledPackageFeed.Instance.FindPackages(CanonicalName.OtherVersionFilter).OrderByDescending(each => each.Version).ToArray(); }
+        }
+
         internal IPackageFormatHandler PackageHandler;
-        internal BindingPolicy BindingPolicy;
         internal string Vendor { get; set; }
-        internal string DisplayName { get; set; }
-        internal PackageDetails PackageDetails { get; set; }
+        
+        public PackageDetails PackageDetails { get; set; }
         private bool? _isInstalled;
         private Composition _compositionData;
 
         internal readonly XList<Uri> RemoteLocations = new XList<Uri>();
         internal readonly XList<Uri> FeedLocations = new XList<Uri>();
+
         internal readonly XList<string> LocalLocations = new XList<string>();
         internal readonly XList<Role> Roles = new XList<Role>();
         internal readonly XList<Feature> Features = new XList<Feature>();
@@ -109,8 +144,6 @@ namespace CoApp.Packaging.Service {
         }
 
         internal static FourPartVersion GetCurrentPackageVersion(CanonicalName canonicalName) {
-            var pkgs = PackageManagerImpl.Instance.InstalledPackages.ToArray();
-
             var installedVersionsOfPackage = PackageManagerImpl.Instance.InstalledPackages.Where(each => canonicalName.DiffersOnlyByVersion(each.CanonicalName)).OrderByDescending(each => each.CanonicalName.Version);
             var latestPackage = installedVersionsOfPackage.FirstOrDefault();
 
@@ -156,7 +189,7 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        internal bool IsInstalled {
+        public bool IsInstalled {
             get {
                 if (!_isInstalled.HasValue) {
                     lock (this) {
@@ -184,28 +217,22 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        /// <summary>
-        /// Determines if this package is a supercedent of an older package.
-        /// 
-        /// Note:This should be the only method that does comparisons on the package policy *ANYWHERE*
-        /// </summary>
-        /// <param name="olderPackage"></param>
-        /// <returns></returns>
-        public bool IsAnUpdateFor(Package olderPackage) {
-            return CanonicalName.DiffersOnlyByVersion(olderPackage.CanonicalName) && 
-                BindingPolicy != null && 
-                    BindingPolicy.Minimum <= olderPackage.CanonicalName.Version &&
-                    BindingPolicy.Maximum >= olderPackage.CanonicalName.Version;
-        }
 
-        public bool IsAnUpgradeFor(Package olderPackage) {
-            return CanonicalName.DiffersOnlyByVersion(olderPackage.CanonicalName) &&
-                CanonicalName.Version > olderPackage.CanonicalName.Version && !IsAnUpdateFor(olderPackage);
+        public bool IsClientRequired {
+            get {
+                throw new NotImplementedException();
+            }
         }
 
         public bool IsActive {
             get {
                 return GetCurrentPackageVersion(CanonicalName) == CanonicalName.Version;
+            }
+        }
+
+        public bool IsDependency {
+            get {
+                throw new NotImplementedException();
             }
         }
 
@@ -325,11 +352,11 @@ namespace CoApp.Packaging.Service {
                 var dependentPackage = dpkg;
 
                 // find each dependency that is the policy-preferred version, and mark it as currentlyrequested.
-                var supercedentPackage = (from supercedent in PackageManagerImpl.Instance.SearchForInstalledPackages(dependentPackage.CanonicalName.OtherVersionFilter)
+                var supercedentPackage = (from supercedent in InstalledVersions
                     where supercedent.IsAnUpdateFor(dependentPackage)
                     select supercedent).OrderByDescending(p => p.CanonicalName.Version).FirstOrDefault();
 
-                (supercedentPackage ?? dependentPackage).UpdateDependencyFlags();
+                ((supercedentPackage ?? dependentPackage) as Package).UpdateDependencyFlags();
             }
             // if this isn't already set, do it.
             if (!IsRequired) {
@@ -460,7 +487,7 @@ namespace CoApp.Packaging.Service {
             return null;
         }
 
-        public void DoPackageComposition(bool makeCurrent) {
+        internal void DoPackageComposition(bool makeCurrent) {
             // GS01: if package composition fails, and we're in the middle of installing a package
             // we should roll back the package install.
             var rules = ImplicitRules.Union(CompositionRules).ToArray();

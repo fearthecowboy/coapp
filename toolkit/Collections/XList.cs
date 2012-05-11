@@ -18,7 +18,7 @@ namespace CoApp.Toolkit.Collections {
     using System.Xml.Serialization;
     using Extensions;
 
-    [XmlRoot("List", Namespace = "http://coapp.org/atom-package-feed-1.0")]
+    [XmlRoot("List", Namespace = "http://coapp.org/atom-package-feed-1.0"), Serializable]
     public class XList<T> : List<T>, IXmlSerializable {
         readonly string _elementName = typeof(T).Name;
         

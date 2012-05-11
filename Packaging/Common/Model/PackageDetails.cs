@@ -14,10 +14,14 @@ namespace CoApp.Packaging.Common.Model {
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Runtime.Serialization;
     using System.Xml;
     using System.Xml.Serialization;
+    using Toolkit.Collections;
     using Toolkit.Extensions;
-#if COAPP_ENGINE_CORE
+    using Toolkit.Pipes;
+
+#if COAPP_ENGINE_CORE_DEPRECATED
     using Atom;
     using Packaging.Service;
     using System.IO;
@@ -29,7 +33,7 @@ namespace CoApp.Packaging.Common.Model {
         // they get persisted as elements in the Atom Format (so that we have a suitable Atom feed to look at)
         public PackageDetails() {
             Publisher = new Identity();
-            Contributors = new List<Identity>();
+            Contributors = new XList<Identity>();
         }
 
         [XmlElement(IsNullable = false)]
@@ -38,21 +42,11 @@ namespace CoApp.Packaging.Common.Model {
         [XmlElement(IsNullable = false)]
         public string BugTracker { get; set; }
 
-        [XmlArray(IsNullable = false)]
-        public List<string> IconLocations {
-            get {
-                return Icons.IsNullOrEmpty() ? new List<string>() : Icons.Select(each => each.AbsoluteUri).ToList();
-            }
-            set {
-                Icons = new List<Uri>(value.Select(each => each.ToUri()));
-            }
-        }
-
         [XmlIgnore]
-        public List<Uri> Icons { get; set; }
+        public XList<Uri> Icons { get; set; }
 
-        [XmlArray(IsNullable = false)]
-        public List<License> Licenses { get; set; }
+        [XmlElement(IsNullable = false)]
+        public XList<License> Licenses { get; set; }
 
         [XmlElement(IsNullable = false)]
         public bool IsNsfw { get; set; }
@@ -73,21 +67,21 @@ namespace CoApp.Packaging.Common.Model {
         public Identity Publisher { get; set; }
 
         [XmlIgnore]
-        public List<Identity> Contributors { get; set; }
+        public XList<Identity> Contributors { get; set; }
 
         [XmlIgnore]
         public string CopyrightStatement { get; set; }
 
         [XmlIgnore]
-        public List<string> Tags { get; set; }
+        public XList<string> Tags { get; set; }
 
         [XmlIgnore]
-        public List<string> Categories { get; set; }
+        public XList<string> Categories { get; set; }
 
         [XmlIgnore]
         public string Description { get; set; }
 
-#if COAPP_ENGINE_CORE
+#if COAPP_ENGINE_CORE_DEPRECATED
         internal string GetAtomItemText(Package package) {
             var item = new AtomItem(package);
             using (var sw = new StringWriter()) {

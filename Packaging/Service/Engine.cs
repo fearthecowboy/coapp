@@ -250,7 +250,7 @@ namespace CoApp.Packaging.Service {
 
                                 // check for the required parameters. 
                                 // close the session if they are not here.
-                                if (string.IsNullOrEmpty(requestMessage.GetValueAsString("id")) || string.IsNullOrEmpty(requestMessage.Data["client"])) {
+                                if (string.IsNullOrEmpty(requestMessage.GetValueAsString("id")) || string.IsNullOrEmpty(requestMessage["client"])) {
                                     return;
                                 }
                                 var isAsync = requestMessage.GetValueAsNullable("async", typeof (bool)) as bool?;
