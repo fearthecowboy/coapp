@@ -19,15 +19,14 @@ namespace CoApp.Toolkit.Extensions {
     using Collections;
 
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
-    public class SkipAttribute : Attribute {
+    public class NotPersistableAttribute : Attribute {
     }
 
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property )]
-    public class IncludeAttribute : Attribute {
+    public class PersistableAttribute : Attribute {
     }
 
-
-    internal enum PersistableType {
+    internal enum PersistableCategory {
         Parseable,
         Array,
         Enumerable,
@@ -39,24 +38,23 @@ namespace CoApp.Toolkit.Extensions {
     }
 
     public class PersistableInfo {
-        internal PersistableInfo(Type persistableType) {
-            if (persistableType.IsEnum) {
-                PersistableType = PersistableType.Enumeration;
-                Type = persistableType;
-                return;
-            } 
+        internal PersistableInfo(Type type) {
+            Type = type;
 
-            if (persistableType == typeof(string)) {
-                PersistableType = PersistableType.String;
-                Type = persistableType;
+            if (type.IsEnum) {
+                PersistableCategory = PersistableCategory.Enumeration;
                 return;
-            } 
+            }
 
-            if( typeof(IDictionary).IsAssignableFrom(persistableType) ) {
-                PersistableType = PersistableType.Dictionary;
-                Type = persistableType;
-                if( persistableType.IsGenericType) {
-                    var genericArguments = persistableType.GetGenericArguments();
+            if (type == typeof(string)) {
+                PersistableCategory = PersistableCategory.String;
+                return;
+            }
+
+            if (typeof(IDictionary).IsAssignableFrom(type)) {
+                PersistableCategory = PersistableCategory.Dictionary;
+                if (type.IsGenericType) {
+                    var genericArguments = type.GetGenericArguments();
                     DictionaryKeyType = genericArguments[0];
                     DictionaryValueType = genericArguments[1];
                 } else {
@@ -66,54 +64,43 @@ namespace CoApp.Toolkit.Extensions {
                 return;
             }
 
-            if (typeof(IEnumerable).IsAssignableFrom(persistableType)) {
-                PersistableType = PersistableType.Enumerable;
-                Type = persistableType;
-                ElementType = persistableType.IsGenericType ? persistableType.GetGenericArguments()[0]: typeof(object);
+            if (typeof(IEnumerable).IsAssignableFrom(type)) {
+                PersistableCategory = PersistableCategory.Enumerable;
+                ElementType = type.IsGenericType ? type.GetGenericArguments()[0] : typeof(object);
                 return;
             }
-            
-            if (persistableType.IsGenericType) {
+
+            if (type.IsGenericType) {
                 // better be Nullable
-                switch (persistableType.Name.Split('`')[0]) {
+                switch (type.Name.Split('`')[0]) {
                     case "Nullable":
-                        PersistableType = PersistableType.Nullable;
-                        NullableType = persistableType.GetGenericArguments()[0];
+                        PersistableCategory = PersistableCategory.Nullable;
+                        NullableType = type.GetGenericArguments()[0];
                         return;
                 }
             }
-            
-            if (persistableType.IsArray) {
+
+            if (type.IsArray) {
                 // an array of soemthing.
-                PersistableType = PersistableType.Array;
-                ElementType = persistableType.GetElementType();
-                Type = persistableType;
+                PersistableCategory = PersistableCategory.Array;
+                ElementType = type.GetElementType();
                 return;
             }
 
-            if (persistableType.IsParsable()) {
-                PersistableType = PersistableType.Parseable;
-                Type = persistableType;
+            if (type.IsParsable()) {
+                PersistableCategory = PersistableCategory.Parseable;
                 return;
             }
 
-            PersistableType = PersistableType.Other;
-            Type = persistableType;
+            PersistableCategory = PersistableCategory.Other;
         }
 
-        internal PersistableType PersistableType { get; set; }
+        internal PersistableCategory PersistableCategory { get; set; }
         internal Type Type { get; set; }
         internal Type ElementType { get; set; }
         internal Type DictionaryKeyType { get; set; }
         internal Type DictionaryValueType { get; set; }
-        internal Type NullableType {
-            get {
-                return Type;
-            }
-            set {
-                Type = value;
-            }
-        }
+        internal Type NullableType  { get; set; }
     }
 
     public static class AutoCache {
@@ -140,6 +127,8 @@ namespace CoApp.Toolkit.Extensions {
         private static readonly MethodInfo ToArrayMethod = typeof(Enumerable).GetMethod("ToArray");
         private static readonly IDictionary<Type, MethodInfo> CastMethods = new XDictionary<Type, MethodInfo>();
         private static readonly IDictionary<Type, MethodInfo> ToArrayMethods = new XDictionary<Type, MethodInfo>();
+        public static readonly IDictionary<Type, Type> TypeSubtitution = new XDictionary<Type, Type>();
+
 
         public static PersistableInfo GetPersistableInfo(this Type t) {
             return AutoCache.Get(t, () => new PersistableInfo(t));
@@ -149,9 +138,9 @@ namespace CoApp.Toolkit.Extensions {
             return AutoCache.Get(type, () => 
                 new PersistableElements {
                     Fields = type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(each => 
-                        !each.IsInitOnly && !each.GetCustomAttributes(typeof (SkipAttribute), true).Any() && (
+                        !each.IsInitOnly && !each.GetCustomAttributes(typeof (NotPersistableAttribute), true).Any() && (
                             each.IsPublic || 
-                            each.GetCustomAttributes(typeof (IncludeAttribute), true).Any())
+                            each.GetCustomAttributes(typeof (PersistableAttribute), true).Any())
                         ).ToArray(),
 
                     Properties = type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(each => {
@@ -159,9 +148,11 @@ namespace CoApp.Toolkit.Extensions {
                         var sm = each.GetSetMethod(true);
                         var gm = each.GetGetMethod(true);
 
-                        return (sm != null && gm != null) && !each.GetCustomAttributes(typeof (SkipAttribute), true).Any() && (
-                            (each.GetSetMethod(true).IsPublic && each.GetGetMethod(true).IsPublic) ||
-                                each.GetCustomAttributes(typeof (IncludeAttribute), true).Any());
+                        return 
+                            ((sm != null && gm != null) && 
+                                !each.GetCustomAttributes(typeof (NotPersistableAttribute), true).Any() && 
+                                (each.GetSetMethod(true).IsPublic && each.GetGetMethod(true).IsPublic)) ||
+                            each.GetCustomAttributes(typeof (PersistableAttribute), true).Any();
                     }).ToArray()
                 });
         
@@ -175,13 +166,13 @@ namespace CoApp.Toolkit.Extensions {
         public static object CastToIEnumerableOfType(this IEnumerable<object> enumerable, Type collectionType  ) {
             return CastMethods.GetOrAdd(collectionType, () => CastMethod.MakeGenericMethod(collectionType)).Invoke(null, new object[] { enumerable });
         }
-
+#if REMOVED
         public static bool IsCreateable(this Type type) {
             return AutoCache.Get(type, () => type.GetConstructor(BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null)) != null;
         }
-
+#endif 
         public static object CreateInstance(this Type type) {
-            return Activator.CreateInstance(type);
+            return Activator.CreateInstance(TypeSubtitution[type] ?? type, true);
             // return AutoCache.Get(type, () => type.GetConstructor(BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null)).Invoke(null);
         }
 

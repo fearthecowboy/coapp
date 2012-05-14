@@ -109,6 +109,13 @@ namespace CoApp.Packaging.Client {
             }
         }
 
+        static Session() {
+            UrlEncodedMessage.ObjectCreationSubstitution[typeof (IPackage)] = (message, objectName, expectedType) => {
+                return Package.GetPackage(message[objectName + ".CanonicalName"]);
+            };
+            // UrlEncodedMessage.TypeSubtitution.Add(typeof(IPackage), typeof(Package));
+        }
+
         private Session() : base(WriteAsync) {
             _remoteService = this.ActLike();
         }
@@ -242,13 +249,13 @@ namespace CoApp.Packaging.Client {
                             if (antecedent.Result > 0) {
                                 var rawMessage = Encoding.UTF8.GetString(incomingMessage, 0, antecedent.Result);
                                 var responseMessage = new UrlEncodedMessage(rawMessage);
-                                var rqid = responseMessage.GetValueAsNullable("rqid", typeof (int)) as int?;
+                                var rqid = responseMessage["rqid"].ToInt32();
 
                                 // lazy log the response (since we're at the end of this task)
                                 Logger.Message("Response:[{0}]{1}".format(rqid, responseMessage.ToSmallerString()));
 
                                 try {
-                                    var queue = ManualEventQueue.GetQueue(rqid.GetValueOrDefault());
+                                    var queue = ManualEventQueue.GetQueue(rqid);
                                     if (queue != null) {
                                         queue.Enqueue(responseMessage);
                                     }

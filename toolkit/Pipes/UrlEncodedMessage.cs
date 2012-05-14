@@ -14,31 +14,19 @@ namespace CoApp.Toolkit.Pipes {
     using System;
     using System.Collections;
     using System.Collections.Generic;
-    using System.IO;
     using System.Linq;
-    using System.Reflection;
-    using System.Runtime.Serialization;
     using System.Text.RegularExpressions;
     using Collections;
-    using Exceptions;
     using Extensions;
-    using Text;
-
-  
 
     /// <summary>
     ///   UrlEncodedMessages
     /// </summary>
     public class UrlEncodedMessage : IEnumerable<string> {
-
-      
-#if REMOVED        
-        private static readonly IFormatter Formatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
-#endif
         /// <summary>
         /// </summary>
         private static readonly char[] Query = new[] { '?' };
-
+        public static IDictionary<Type, Func<UrlEncodedMessage,string,Type, object> > ObjectCreationSubstitution = new XDictionary<Type, Func<UrlEncodedMessage, string, Type, object>>();
         /// <summary>
         /// </summary>
         private readonly char[] _separator = new[] {'&' };
@@ -69,7 +57,9 @@ namespace CoApp.Toolkit.Pipes {
             _separatorString = seperator;
             _separator = seperator.ToCharArray();
             _storeTypeInformation = storeTypeInformation;
+            rawMessage = rawMessage ?? string.Empty;
 
+            
             var parts = (rawMessage ?? "" ).Split(Query, StringSplitOptions.RemoveEmptyEntries);
             switch( parts.Length ) {
                 case 0:
@@ -77,10 +67,16 @@ namespace CoApp.Toolkit.Pipes {
                     break;
 
                 case 1:
-                    Command = "";
-                    _data = (parts.FirstOrDefault() ?? "").Split(_separator, StringSplitOptions.RemoveEmptyEntries).Select(
-                        p => p.Split(Equal, StringSplitOptions.RemoveEmptyEntries))
-                            .ToXDictionary(s => s[0].UrlDecode(),s => s.Length > 1 ? s[1].UrlDecode() : String.Empty);
+                    if (rawMessage.IndexOf("=") > -1) {
+                        Command = "";
+                        _data = (parts.FirstOrDefault() ?? "").Split(_separator, StringSplitOptions.RemoveEmptyEntries).Select(
+                            p => p.Split(Equal, StringSplitOptions.RemoveEmptyEntries))
+                                .ToXDictionary(s => s[0].UrlDecode(), s => s.Length > 1 ? s[1].UrlDecode() : String.Empty);
+                        break;
+                    }
+
+                    Command = rawMessage;
+                    _data = new XDictionary<string, string>();
                     break;
 
                 default:
@@ -200,25 +196,26 @@ namespace CoApp.Toolkit.Pipes {
                           select GetValue(string.Format("{0}[{1}]", collectionName, match.Groups[1].Captures[0].Value), elementType)).CastToIEnumerableOfType(elementType);
         }
 
-        public object GetValueAsArray(string collectionName, Type elementType, Type arrayType) {
+        private object GetValueAsArray(string collectionName, Type elementType, Type arrayType) {
             return elementType.IsParsable() ? GetValueAsArrayOfParsable(collectionName, elementType) : GetValueAsArrayOfComplex(collectionName, elementType);
         }
 
-        public object GetValueAsIEnumerable(string collectionName, Type elementType, Type collectionType) {
+        private object GetValueAsIEnumerable(string collectionName, Type elementType, Type collectionType) {
             var collection = elementType.IsParsable() ? GetValueAsIEnumerableOfParsable(collectionName, elementType) : GetValueAsIEnumerableOfComplex(collectionName, elementType);
+
             if (collectionType.Name.StartsWith("IEnumerable")) {
                 return collection;
-            } else {
-                // we need to get the collection and then insert the elements into the target type.
-                IList result = (IList) collectionType.CreateInstance();
-                foreach( var o in (IEnumerable)collection ) {
-                    result.Add(o);
-                }
-                return result;
+            } 
+
+            // we need to get the collection and then insert the elements into the target type.
+            var result = (IList) collectionType.CreateInstance();
+            foreach( var o in (IEnumerable)collection ) {
+                result.Add(o);
             }
+            return result;
         }
 
-        public object GetValueAsEnum( string key, Type enumerationType) {
+        private object GetValueAsEnum( string key, Type enumerationType) {
             var v = GetValueAsString(key);
             if( string.IsNullOrEmpty(v)) {
                 return null;
@@ -226,12 +223,12 @@ namespace CoApp.Toolkit.Pipes {
             return Enum.Parse(enumerationType, v);
         }
 
-        public IEnumerable<KeyValuePair<string, string>> GetKeyValueStringPairs(string collectionName) {
+        private IEnumerable<KeyValuePair<string, string>> GetKeyValueStringPairs(string collectionName) {
             var rx = new Regex(@"^{0}\[(.*?)\]$".format(Regex.Escape(collectionName)));
             return from k in _data.Keys let match = rx.Match(k) where match.Success select new KeyValuePair<string, string>(match.Groups[1].Captures[0].Value.UrlDecode(), _data[k]);
         }
 
-        public object GetValueAsDictionaryOfParsable(string collectionName, Type keyType, Type valueType, Type dictionaryType) {
+        private object GetValueAsDictionaryOfParsable(string collectionName, Type keyType, Type valueType, Type dictionaryType) {
             IDictionary result;
 
             if ((dictionaryType.Name.StartsWith("IDictionary")) || (dictionaryType.Name.StartsWith("XDictionary"))) {
@@ -246,7 +243,7 @@ namespace CoApp.Toolkit.Pipes {
             return result;
         }
 
-        public object GetValueAsDictionaryOfComplex(string collectionName, Type keyType, Type valueType, Type dictionaryType) {
+        private object GetValueAsDictionaryOfComplex(string collectionName, Type keyType, Type valueType, Type dictionaryType) {
             var rx = new Regex(@"^{0}\[(.*?)\](.*)$".format(Regex.Escape(collectionName)));
             var results = from k in _data.Keys
                           let match = rx.Match(k)
@@ -268,24 +265,33 @@ namespace CoApp.Toolkit.Pipes {
             return result;
         }
 
-        public object GetValueAsDictionary(string collectionName, Type keyType, Type valueType, Type dictionaryType) {
+        private object GetValueAsDictionary(string collectionName, Type keyType, Type valueType, Type dictionaryType) {
             return valueType.IsParsable() ? GetValueAsDictionaryOfParsable(collectionName, keyType, valueType, dictionaryType) : GetValueAsDictionaryOfComplex(collectionName, keyType, valueType, dictionaryType);
         }
 
-        public string GetValueAsString(string key) {
+        private string GetValueAsString(string key) {
             return _data.ContainsKey(key) ? _data[key] : string.Empty;
         }
 
-        public object GetValueAsPrimitive(string key, Type primitiveType) {
+        private object GetValueAsPrimitive(string key, Type primitiveType) {
             return primitiveType.ParseString(_data.ContainsKey(key) ? _data[key] : null);
         }
 
-        public object GetValueAsNullable(string key, Type primitiveType) {
+        private object GetValueAsNullable(string key, Type primitiveType) {
             return _data.ContainsKey(key) ? primitiveType.ParseString(_data[key]) : null;
         }
 
-        public object GetValueAsOther(string key, Type otherType, object o = null) {
-            o = o ?? otherType.CreateInstance();
+        private object GetValueAsOther(string key, Type otherType, object o = null) {
+            if (o == null) {
+                var noo = ObjectCreationSubstitution[otherType];
+                o = noo != null ? noo(this, key, otherType) : otherType.CreateInstance();
+                if( o == null ) {
+                    return null;
+                }
+
+                otherType = o.GetType();
+            }
+
 
             var persistable = otherType.GetPersistableElements();
             foreach (var f in persistable.Fields) {
@@ -293,13 +299,15 @@ namespace CoApp.Toolkit.Pipes {
             }
 
             foreach (var p in persistable.Properties) {
-                p.SetValue(o, GetValue(key + "." + p.Name, p.PropertyType), null);
+                if (p.GetSetMethod(true) != null) {
+                    p.SetValue(o, GetValue(key + "." + p.Name, p.PropertyType), null);
+                }
             }
 
-            return null;
+            return o;
         }
 
-    
+
         /// <summary>
         ///   Adds the specified key.
         /// </summary>
@@ -368,7 +376,7 @@ namespace CoApp.Toolkit.Pipes {
             if( arg == null ) {
                 return;
             }
-            
+           
             if (_storeTypeInformation) {
                 Add(argName+"$T$", argType.FullName);
             }
@@ -395,7 +403,9 @@ namespace CoApp.Toolkit.Pipes {
             }
 
             foreach (var p in persistable.Properties) {
-                Add(argName + "." + p.Name, p.GetValue(arg,null), p.PropertyType);
+                if (p.GetGetMethod(true) != null) {
+                    Add(argName + "." + p.Name, p.GetValue(arg, null), p.PropertyType);
+                }
             }
             
         }
@@ -409,40 +419,39 @@ namespace CoApp.Toolkit.Pipes {
         }
 
         public object GetValue( string key , Type argType, object o = null) {
-            var pi = argType.GetPersistableInfo();
-            switch (pi.PersistableType) {
-                case PersistableType.String:
+            var pi = (TypeExtensions.TypeSubtitution[argType] ?? argType).GetPersistableInfo();
+
+            switch (pi.PersistableCategory) {
+                case PersistableCategory.String:
                     return GetValueAsString(key);
 
-                case PersistableType.Parseable:
+                case PersistableCategory.Parseable:
                     return GetValueAsPrimitive(key, pi.Type);
 
-                case PersistableType.Nullable:
-                    return GetValueAsNullable(key, pi.Type);
+                case PersistableCategory.Nullable:
+                    return GetValueAsNullable(key, pi.NullableType);
 
-                case PersistableType.Enumerable:
+                case PersistableCategory.Enumerable:
                     return GetValueAsIEnumerable(key, pi.ElementType, pi.Type);
 
-                case PersistableType.Array:
+                case PersistableCategory.Array:
                     return GetValueAsArray(key, pi.ElementType, pi.Type);
 
-                case PersistableType.Dictionary:
+                case PersistableCategory.Dictionary:
                     return GetValueAsDictionary(key, pi.DictionaryKeyType, pi.DictionaryValueType, pi.Type);
 
-                case PersistableType.Enumeration:
+                case PersistableCategory.Enumeration:
                     return GetValueAsEnum(key, pi.Type);
 
-                case PersistableType.Other:
+                case PersistableCategory.Other:
                     return GetValueAsOther(key, pi.Type, o);
             }
-
             return o;
         }
 
         public T DeserializeTo<T>(T intoInstance = default(T), string key = null) {
             return (T)GetValue(key, typeof(T), intoInstance);
         }
-       
     }
 
     public static class UEMSerializationExtensions {
@@ -450,7 +459,4 @@ namespace CoApp.Toolkit.Pipes {
             return new UrlEncodedMessage(null, seperator, storeTypeNames) { { "", obj, obj.GetType() } };
         }
     }
-
-
-    
 }

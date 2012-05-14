@@ -457,7 +457,7 @@ namespace CoApp.Packaging.Service {
                             // we've got some packages to install that don't have files.
                             foreach (var p in missingFiles.Where(p => !p.PackageSessionData.HasRequestedDownload)) {
                                 response.RequireRemoteFile(p.CanonicalName,
-                                    p.RemoteLocations, PackageManagerSettings.CoAppPackageCache, false);
+                                    p.RemotePackageLocations, PackageManagerSettings.CoAppPackageCache, false);
 
                                 p.PackageSessionData.HasRequestedDownload = true;
                             }
@@ -531,14 +531,14 @@ namespace CoApp.Packaging.Service {
                                     // if this is marked as an update
                                     // remove REQUESTED flag from all older compatible version 
                                     foreach (Package eachPkg in installedCompatibleVersions) {
-                                        eachPkg.IsClientRequested = false;
+                                        eachPkg.IsClientRequired= false;
                                     }
                                 }
                                 if (isUpgrading == true) {
                                     // if this is marked as an update
                                     // remove REQUESTED flag from all older compatible version 
                                     foreach (Package eachPkg in installedPackages) {
-                                        eachPkg.IsClientRequested = false;
+                                        eachPkg.IsClientRequired = false;
                                     }
                                 }
 

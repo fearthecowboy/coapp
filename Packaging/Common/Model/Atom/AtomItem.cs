@@ -162,12 +162,12 @@ namespace CoApp.Packaging.Common.Model.Atom {
                 DisplayName = package.DisplayName, 
                 Vendor = package.Vendor, 
                 BindingPolicy = package.BindingPolicy, 
-                Roles = package.Roles,
+                Roles = package.PackageRoles,
                 Dependencies = package.Dependencies.ToXDictionary(each => each.CanonicalName, each => each.FeedLocations), 
                 Features = package.Features, 
                 RequiredFeatures = package.RequiredFeatures, 
                 Feeds = package.FeedLocations,
-                Locations = package.RemoteLocations, 
+                Locations = package.RemotePackageLocations, 
                 PackageDetails = package.PackageDetails
             };
 
@@ -199,11 +199,11 @@ namespace CoApp.Packaging.Common.Model.Atom {
                     package.DisplayName = Model.DisplayName;
                     package.Vendor = Model.Vendor;
                     package.BindingPolicy = Model.BindingPolicy;
-                    package.Roles.AddRangeUnique(Model.Roles);
+                    package.PackageRoles.AddRangeUnique(Model.Roles);
                     package.Features.AddRangeUnique(Model.Features);
                     package.RequiredFeatures.AddRangeUnique(Model.RequiredFeatures);
                     package.FeedLocations.AddRangeUnique(Model.Feeds);
-                    package.RemoteLocations.AddRangeUnique( Model.Locations );
+                    package.RemotePackageLocations.AddRangeUnique( Model.Locations );
                     package.PackageDetails = Model.PackageDetails;
                 }
                 return package;

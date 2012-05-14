@@ -14,7 +14,6 @@ namespace CoApp.Packaging.Common {
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using System.Runtime.Serialization;
     using Model;
     using Toolkit.Win32;
 

@@ -48,55 +48,131 @@ namespace CoApp.Packaging.Service {
                 {"etc", Path.Combine(PackageManagerSettings.CoAppRootDirectory, "etc")},
                 {"allprograms", KnownFolders.GetFolderPath(KnownFolder.CommonPrograms)},
             };
-
+        
+        [Persistable]
         public CanonicalName CanonicalName { get; private set; }
-        public string Name { get { return CanonicalName.Name; } }
-        public FlavorString Flavor { get { return CanonicalName.Flavor; } }
-        public FourPartVersion Version { get { return CanonicalName.Version; } }
-        public PackageType PackageType { get { return CanonicalName.PackageType; } }
-        public Architecture Architecture { get { return CanonicalName.Architecture; } }
-        public string PublicKeyToken { get { return CanonicalName.PublicKeyToken; } }
+        [Persistable]
         public string DisplayName { get; set; }
+        [Persistable]
         public BindingPolicy BindingPolicy { get; set; }
+        [Persistable]
+        public IEnumerable<Role> Roles { get { return PackageRoles; } }
+        [Persistable]
+        public IEnumerable<Uri> RemoteLocations { get { return RemotePackageLocations; } }
+        [Persistable]
+        public PackageDetails PackageDetails { get; set; }
+        [Persistable]
+        public IEnumerable<Uri> Feeds { get { return FeedLocations; } }
 
+        /// <summary>
+        ///   Indicates that the client specifically requested the package, or is the dependency of a requested package
+        /// </summary>
+        [Persistable]
+        public bool IsRequired {
+            get {
+                return IsClientRequired || PackageSessionData.IsDependency;
+            }
+            set {
+                IsClientRequired = value;
+            }
+        }
+
+        /// <summary>
+        ///   Indicates that the client specifically requested the package
+        /// </summary>
+        [Persistable]
+        public bool IsClientRequired {
+            get {
+                return PackageSessionData.PackageSettings["#Requested"].BoolValue;
+            }
+            set {
+                PackageSessionData.PackageSettings["#Requested"].BoolValue = value;
+            }
+        }
+
+        [Persistable]
+        public bool DoNotUpdate {
+            get {
+                return PackageSessionData.PackageSettings["#DoNotUpdate"].BoolValue;
+            }
+            set {
+                PackageSessionData.PackageSettings["#DoNotUpdate"].BoolValue = value;
+            }
+        }
+
+        [Persistable]
+        public bool IsBlocked {
+            get {
+                return PackageSessionData.GeneralPackageSettings["#Blocked"].BoolValue;
+            }
+            set {
+                PackageSessionData.GeneralPackageSettings["#Blocked"].BoolValue = value;
+            }
+        }
+
+        [Persistable]
+        public bool DoNotUpgrade {
+            get {
+                return PackageSessionData.GeneralPackageSettings["#DoNotUpgrade"].BoolValue;
+            }
+            set {
+                PackageSessionData.GeneralPackageSettings["#DoNotUpgrade"].BoolValue = value;
+            }
+        }
+
+
+        [NotPersistable]
+        public string Name { get { return CanonicalName.Name; } }
+        [NotPersistable]
+        public FlavorString Flavor { get { return CanonicalName.Flavor; } }
+        [NotPersistable]
+        public FourPartVersion Version { get { return CanonicalName.Version; } }
+        [NotPersistable]
+        public PackageType PackageType { get { return CanonicalName.PackageType; } }
+        [NotPersistable]
+        public Architecture Architecture { get { return CanonicalName.Architecture; } }
+        [NotPersistable]
+        public string PublicKeyToken { get { return CanonicalName.PublicKeyToken; } }
+
+        [NotPersistable]
         public IPackage SatisfiedBy {
             get { return InstalledVersions.FirstOrDefault(each => each.IsAnUpdateFor(this)) ?? (IsInstalled ? this : null); }
         }
 
-        public IEnumerable<Uri> Feeds { get { return FeedLocations; } }
-
+        [NotPersistable]
         IEnumerable<CanonicalName> IPackage.Dependencies { get { return Dependencies.Select(each => each.CanonicalName); } }
-        IEnumerable<Role> IPackage.Roles { get { return Roles; } }
-        IEnumerable<Uri> IPackage.RemoteLocations { get { return RemoteLocations; } }
-
+        
+        [NotPersistable]
         public IEnumerable<IPackage> NewerPackages {
             get { return PackageManagerImpl.Instance.SearchForPackages(CanonicalName.OtherVersionFilter).OrderByDescending(each => each.Version).Where(each => each.IsNewerThan(this)).ToArray(); }
         }
 
+        [NotPersistable]
         public IEnumerable<IPackage> UpdatePackages {
             get { return NewerPackages.Where(each => each.IsAnUpdateFor(this)).ToArray(); }
         }
-    
+
+        [NotPersistable]
         public IEnumerable<IPackage> UpgradePackages {
             get { return NewerPackages.Where(each => each.IsAnUpgradeFor(this)).ToArray(); }
         }
 
+        [NotPersistable]
         public IEnumerable<IPackage> InstalledVersions {
             get { return InstalledPackageFeed.Instance.FindPackages(CanonicalName.OtherVersionFilter).OrderByDescending(each => each.Version).ToArray(); }
         }
 
         internal IPackageFormatHandler PackageHandler;
         internal string Vendor { get; set; }
-        
-        public PackageDetails PackageDetails { get; set; }
+
         private bool? _isInstalled;
         private Composition _compositionData;
 
-        internal readonly XList<Uri> RemoteLocations = new XList<Uri>();
+        internal readonly XList<Uri> RemotePackageLocations = new XList<Uri>();
         internal readonly XList<Uri> FeedLocations = new XList<Uri>();
 
         internal readonly XList<string> LocalLocations = new XList<string>();
-        internal readonly XList<Role> Roles = new XList<Role>();
+        internal readonly XList<Role> PackageRoles = new XList<Role>();
         internal readonly XList<Feature> Features = new XList<Feature>();
         internal readonly XList<Feature> RequiredFeatures = new XList<Feature>();
 
@@ -189,6 +265,7 @@ namespace CoApp.Packaging.Service {
             }
         }
 
+        [Persistable]
         public bool IsInstalled {
             get {
                 if (!_isInstalled.HasValue) {
@@ -216,27 +293,22 @@ namespace CoApp.Packaging.Service {
                 _isInstalled = value;
             }
         }
-
-
-        public bool IsClientRequired {
-            get {
-                throw new NotImplementedException();
-            }
-        }
-
+        
+        [Persistable]
         public bool IsActive {
             get {
                 return GetCurrentPackageVersion(CanonicalName) == CanonicalName.Version;
             }
         }
 
+        [NotPersistable]
         public bool IsDependency {
             get {
                 throw new NotImplementedException();
             }
         }
 
-        public void Install() {
+        internal void Install() {
             try {
                 Engine.EnsureCanonicalFoldersArePresent();
 
@@ -268,7 +340,7 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        public void Remove() {
+        internal void Remove() {
             try {
                 Logger.Message("Attempting to undo package composition");
                 UndoPackageComposition();
@@ -364,9 +436,9 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        public IEnumerable<CompositionRule> ImplicitRules {
+        internal IEnumerable<CompositionRule> ImplicitRules {
             get {
-                foreach (var r in Roles) {
+                foreach (var r in PackageRoles) {
                     var role = r;
                     switch (role.PackageRole) {
                         case PackageRole.Application:
@@ -699,7 +771,7 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        public void UndoPackageComposition() {
+        internal void UndoPackageComposition() {
             var rules = ImplicitRules.Union(CompositionRules).ToArray();
 
             foreach (var link in from rule in rules.Where(r => r.Action == CompositionAction.Shortcut)
@@ -727,58 +799,9 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        /// <summary>
-        ///   Indicates that the client specifically requested the package, or is the dependency of a requested package
-        /// </summary>
-        public bool IsRequired {
-            get {
-                return IsClientRequested || PackageSessionData.IsDependency;
-            }
-            set {
-                IsClientRequested = value;
-            }
-        }
 
-        /// <summary>
-        ///   Indicates that the client specifically requested the package
-        /// </summary>
-        public bool IsClientRequested {
-            get {
-                return PackageSessionData.PackageSettings["#Requested"].BoolValue;
-            }
-            set {
-                PackageSessionData.PackageSettings["#Requested"].BoolValue = value;
-            }
-        }
 
-        public bool DoNotUpdate {
-            get {
-                return PackageSessionData.PackageSettings["#DoNotUpdate"].BoolValue;
-            }
-            set {
-                PackageSessionData.PackageSettings["#DoNotUpdate"].BoolValue = value;
-            }
-        }
-
-        public bool IsBlocked {
-            get {
-                return PackageSessionData.GeneralPackageSettings["#Blocked"].BoolValue;
-            }
-            set {
-                PackageSessionData.GeneralPackageSettings["#Blocked"].BoolValue = value;
-            }
-        }
-
-        public bool DoNotUpgrade {
-            get {
-                return PackageSessionData.GeneralPackageSettings["#DoNotUpgrade"].BoolValue;
-            }
-            set {
-                PackageSessionData.GeneralPackageSettings["#DoNotUpgrade"].BoolValue = value;
-            }
-        }
-
-        public void SetPackageCurrent() {
+        internal void SetPackageCurrent() {
             if (!IsInstalled) {
                 throw new PackageNotInstalledException(this);
             }
@@ -791,15 +814,15 @@ namespace CoApp.Packaging.Service {
             PackageSessionData.GeneralPackageSettings["#CurrentVersion"].LongValue = (long)(ulong)CanonicalName.Version;
         }
 
-        public bool HasLocalLocation {
+        internal bool HasLocalLocation {
             get {
                 return !LocalLocations.IsNullOrEmpty();
             }
         }
 
-        public bool HasRemoteLocation {
+        internal bool HasRemoteLocation {
             get {
-                return !RemoteLocations.IsNullOrEmpty();
+                return !RemotePackageLocations.IsNullOrEmpty();
             }
         }
 
@@ -809,42 +832,40 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        public IEnumerable<CompositionRule> CompositionRules {
+        internal IEnumerable<CompositionRule> CompositionRules {
             get {
                 return CompositionData.CompositionRules ?? Enumerable.Empty<CompositionRule>();
             }
         }
 
-        public IEnumerable<WebApplication> WebApplications {
+        internal IEnumerable<WebApplication> WebApplications {
             get {
                 return CompositionData.WebApplications ?? Enumerable.Empty<WebApplication>();
             }
         }
 
-        public IEnumerable<DeveloperLibrary> DeveloperLibraries {
+        internal IEnumerable<DeveloperLibrary> DeveloperLibraries {
             get {
                 return CompositionData.DeveloperLibraries ?? Enumerable.Empty<DeveloperLibrary>();
             }
         }
 
-        public IEnumerable<Service> Services {
+        internal IEnumerable<Service> Services {
             get {
                 return CompositionData.Services ?? Enumerable.Empty<Service>();
             }
         }
 
-        public IEnumerable<Driver> Drivers {
+        internal IEnumerable<Driver> Drivers {
             get {
                 return CompositionData.Drivers ?? Enumerable.Empty<Driver>();
             }
         }
 
-        public IEnumerable<SourceCode> SourceCodes {
+        internal IEnumerable<SourceCode> SourceCodes {
             get {
                 return CompositionData.SourceCodes ?? Enumerable.Empty<SourceCode>();
             }
         }
     }
-
-
 }

@@ -194,10 +194,10 @@ namespace CoApp.Toolkit.Extensions {
         }
 
         public static void AddUnique<TValue>(this IList<TValue> list, TValue value) {
-            if( value.Equals(default(TValue))) {
+            if(object.ReferenceEquals(null, value)) {
                 return;
             }
-
+            
             if( !list.Contains(value)) {
                 list.Add(value);
             }

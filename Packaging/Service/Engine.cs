@@ -250,15 +250,15 @@ namespace CoApp.Packaging.Service {
 
                                 // check for the required parameters. 
                                 // close the session if they are not here.
-                                if (string.IsNullOrEmpty(requestMessage.GetValueAsString("id")) || string.IsNullOrEmpty(requestMessage["client"])) {
+                                if (string.IsNullOrEmpty(requestMessage["id"]) || string.IsNullOrEmpty(requestMessage["client"])) {
                                     return;
                                 }
-                                var isAsync = requestMessage.GetValueAsNullable("async", typeof (bool)) as bool?;
+                                var isSync = requestMessage["async"].IsFalse();
 
-                                if (isAsync.HasValue && isAsync.Value == false) {
-                                    StartResponsePipeAndProcessMesages(requestMessage.GetValueAsString("client"), requestMessage.GetValueAsString("id"), serverPipe);
+                                if (isSync) {
+                                    StartResponsePipeAndProcessMesages(requestMessage["client"], requestMessage["id"], serverPipe);
                                 } else {
-                                    Session.Start(requestMessage.GetValueAsString("client"), requestMessage.GetValueAsString("id"), serverPipe, serverPipe);
+                                    Session.Start(requestMessage["client"], requestMessage["id"], serverPipe, serverPipe);
                                 }
                             }).Wait();
                         }

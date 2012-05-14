@@ -94,10 +94,10 @@ namespace CoApp.Packaging.Common.Model {
 #endif
 
         // soak up anything we don't recognize
-        [XmlAnyAttribute]
+        [XmlAnyAttribute, NotPersistable]
         public XmlAttribute[] UnknownAttributes;
 
-        [XmlAnyElement]
+        [XmlAnyElement, NotPersistable]
         public XmlElement[] UnknownElements;
     }
 }

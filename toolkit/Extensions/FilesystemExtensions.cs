@@ -881,7 +881,7 @@ namespace CoApp.Toolkit.Extensions {
                 return path;
             }
             try {
-                if( path.IndexOfAny(Path.GetInvalidPathChars()) == -1 ) {
+                if( path.IndexOfAny(Path.GetInvalidPathChars()) == -1 && path.IndexOf(':') <= 1 ) {
                     path = Path.GetFullPath(path.Trim('"'));
                     FullPathCache.Add(path);    
                 }

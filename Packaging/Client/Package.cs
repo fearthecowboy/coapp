@@ -26,9 +26,12 @@ namespace CoApp.Packaging.Client {
 
         public static Package GetPackage(CanonicalName canonicalName) {
             lock (AllPackages) {
-                return AllPackages.GetOrAdd(canonicalName, () => new Package {
-                    CanonicalName = canonicalName
-                });
+                if(null != canonicalName && canonicalName.IsCanonical) {
+                    return AllPackages.GetOrAdd(canonicalName, () => new Package {
+                        CanonicalName = canonicalName
+                    });
+                }
+                return null;
             }
         }
 
@@ -40,55 +43,72 @@ namespace CoApp.Packaging.Client {
             Feeds = Enumerable.Empty<Uri>();
             Dependencies = Enumerable.Empty<CanonicalName>();
         }
-
-        public CanonicalName CanonicalName { get; set; }
-        public string LocalPackagePath { get; set; }
-
-        public string Name { get { return CanonicalName.Name; } }
-        public FlavorString Flavor { get { return CanonicalName.Flavor; } }
-        public FourPartVersion Version { get { return CanonicalName.Version; } }
-        public PackageType PackageType { get { return CanonicalName.PackageType; } }
-        public Architecture Architecture { get { return CanonicalName.Architecture; } }
-        public string PublicKeyToken { get { return CanonicalName.PublicKeyToken; } }
-
-        public BindingPolicy BindingPolicy { get; set; }
-
-        public PackageDetails PackageDetails { get; set; }
-
-        public bool IsInstalled { get; set; }
-        public bool IsBlocked { get; set; }
-        public bool IsRequired { get; set; }
-        public bool IsClientRequired { get; set; }
-        public bool IsActive { get; set; }
-        public bool IsDependency { get; set; }
-
-        public string DisplayName { get; set; }
         
+        
+        public CanonicalName CanonicalName { get; set; }
+        [Persistable]
+        public BindingPolicy BindingPolicy { get; set; }
+        [Persistable]
+        public PackageDetails PackageDetails { get; set; }
+        [Persistable]
+        public bool IsInstalled { get; set; }
+        [Persistable]
+        public bool IsBlocked { get; set; }
+        [Persistable]
+        public bool IsRequired { get; set; }
+        [Persistable]
+        public bool IsClientRequired { get; set; }
+        [Persistable]
+        public bool IsActive { get; set; }
+        [Persistable]
+        public bool IsDependency { get; set; }
+        [Persistable]
+        public string DisplayName { get; set; }
+        [Persistable]
         public string PackageItemText { get; set; }
-
+        [Persistable]
         public bool DoNotUpdate { get; set; }
+        [Persistable]
         public bool DoNotUpgrade { get; set; }
-
-        public IPackage SatisfiedBy { get; set; }
+        [Persistable]
         public IEnumerable<Uri> RemoteLocations { get; set; }
+        [Persistable]
         public IEnumerable<Uri> Feeds { get; set; }
-        public IEnumerable<CanonicalName> Dependencies { get; set; }
-
-        public IEnumerable<IPackage> UpdatePackages { get; set; }
-        public IEnumerable<IPackage> UpgradePackages { get; set; }
-        public IEnumerable<IPackage> NewerPackages { get; set; }
+        [Persistable]
         public IEnumerable<Role> Roles { get; set; }
 
-        internal bool IsPackageInfoStale { get; set; }
-        internal bool IsPackageDetailsStale { get; set; }
-        
-        public new string ToString() {
-            return "TODO: IMPLEMENT";
-        }
+        public string LocalPackagePath { get; set; }
 
-        public static bool TryParse(string text, out IPackage details) {
-            details = null;
-            return false;
-        }
+        [NotPersistable]
+        public string Name { get { return CanonicalName.Name; } }
+        [NotPersistable]
+        public FlavorString Flavor { get { return CanonicalName.Flavor; } }
+        [NotPersistable]
+        public FourPartVersion Version { get { return CanonicalName.Version; } }
+        [NotPersistable]
+        public PackageType PackageType { get { return CanonicalName.PackageType; } }
+        [NotPersistable]
+        public Architecture Architecture { get { return CanonicalName.Architecture; } }
+        [NotPersistable]
+        public string PublicKeyToken { get { return CanonicalName.PublicKeyToken; } }
+
+
+        [NotPersistable]
+        public IPackage SatisfiedBy { get; set; }
+        [NotPersistable]
+        public IEnumerable<CanonicalName> Dependencies { get; set; }
+
+        [NotPersistable]
+        public IEnumerable<IPackage> UpdatePackages { get; set; }
+        [NotPersistable]
+        public IEnumerable<IPackage> UpgradePackages { get; set; }
+        [NotPersistable]
+        public IEnumerable<IPackage> NewerPackages { get; set; }
+
+        [NotPersistable]
+        internal bool IsPackageInfoStale { get; set; }
+
+        [NotPersistable]
+        internal bool IsPackageDetailsStale { get; set; }
     };
 }

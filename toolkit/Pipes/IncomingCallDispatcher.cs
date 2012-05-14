@@ -12,14 +12,12 @@
 
 namespace CoApp.Toolkit.Pipes {
     using System;
-    using System.Collections;
     using System.Collections.Generic;
     using System.Dynamic;
     using System.Linq;
     using System.Reflection;
     using System.Threading.Tasks;
     using Collections;
-    using Exceptions;
     using Extensions;
     using Logging;
 
@@ -36,36 +34,6 @@ namespace CoApp.Toolkit.Pipes {
 
         internal string Name { get; set; }
         internal PersistableInfo PersistableInfo { get; set; }
-
-
-        internal object FromString(UrlEncodedMessage message, string key) {
-            switch (PersistableInfo.PersistableType) {
-                case PersistableType.String:
-                    return message.GetValueAsString(key);
-
-                case PersistableType.Parseable:
-                    return message.GetValueAsPrimitive(key, PersistableInfo.Type);
-
-                case PersistableType.Nullable:
-                    return message.GetValueAsNullable(key, PersistableInfo.Type);
-
-                case PersistableType.Enumerable:
-                    return message.GetValueAsIEnumerable(key, PersistableInfo.ElementType, PersistableInfo.Type);
-
-                case PersistableType.Array:
-                    return message.GetValueAsArray(key, PersistableInfo.ElementType, PersistableInfo.Type);
-
-                case PersistableType.Dictionary:
-                    return message.GetValueAsDictionary(key, PersistableInfo.DictionaryKeyType, PersistableInfo.DictionaryValueType, PersistableInfo.Type);
-
-                case PersistableType.Enumeration:
-                    return message.GetValueAsEnum(key, PersistableInfo.Type);
-
-                case PersistableType.Other:
-                    return message.GetValue(key, PersistableInfo.Type);
-            }
-            return null;
-        }
     }
 
     public class IncomingCallDispatcher<T> {
@@ -127,7 +95,9 @@ namespace CoApp.Toolkit.Pipes {
         public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result) {
             var msg = new UrlEncodedMessage(binder.Name);
             for (int i = 0; i < binder.CallInfo.ArgumentCount; i++) {
-                msg.Add( binder.CallInfo.ArgumentNames[i], args[i], args[i].GetType() );
+                if (args[i] != null) {
+                    msg.Add(binder.CallInfo.ArgumentNames[i], args[i], args[i].GetType());
+                }
             }
             _writeAsync(msg);
 

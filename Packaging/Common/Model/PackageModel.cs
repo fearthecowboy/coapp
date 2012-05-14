@@ -191,10 +191,10 @@ namespace CoApp.Packaging.Common.Model {
         public XmlSerializer XmlSerializer;
 
         // soak up anything we don't recognize
-        [XmlAnyAttribute]
+        [XmlAnyAttribute, NotPersistable]
         public XmlAttribute[] UnknownAttributes;
 
-        [XmlAnyElement]
+        [XmlAnyElement, NotPersistable]
         public XmlElement[] UnknownElements;
     }
 }
