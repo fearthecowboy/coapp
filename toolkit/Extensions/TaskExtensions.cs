@@ -15,6 +15,7 @@ namespace CoApp.Toolkit.Extensions {
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading.Tasks;
+    using Exceptions;
     using Tasks;
 
     public static class TaskExtensions {
@@ -30,6 +31,9 @@ namespace CoApp.Toolkit.Extensions {
             if (antecedent.IsFaulted) {
                 throw antecedent.Exception.Unwrap();
             }
+
+            if (antecedent.IsCanceled)
+                throw new OperationCompletedBeforeResultException();
         }
 
         /// <summary>
@@ -45,6 +49,9 @@ namespace CoApp.Toolkit.Extensions {
             if (!exceptions.IsNullOrEmpty()) {
                 throw new AggregateException(exceptions);
             }
+
+            if (antecedents.Any(each => each.IsCompleted))
+                throw new OperationCompletedBeforeResultException();
         }
 
         public static void RethrowWhenFaulted(this IEnumerable<Task> antecedents) {
@@ -64,6 +71,9 @@ namespace CoApp.Toolkit.Extensions {
             if (!exceptions.IsNullOrEmpty()) {
                 throw new AggregateException(exceptions);
             }
+
+            if (antecedents.Any(each => each.IsCompleted))
+                throw new OperationCompletedBeforeResultException();
         }
 
         public static void RethrowWhenFaulted<T>(this IEnumerable<Task<T>> antecedents) {

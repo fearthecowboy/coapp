@@ -385,6 +385,14 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="Toolkit\Properties\Resources.Designer.cs" />
+    <Compile Include="Toolkit\Query\BooleanFilter.cs" />
+    <Compile Include="Toolkit\Query\Filter.cs" />
+    <Compile Include="Toolkit\Query\FilterComparison.cs" />
+    <Compile Include="Toolkit\Query\IInvokable.cs" />
+    <Compile Include="Toolkit\Query\PropRef.cs" />
+    <Compile Include="Toolkit\Query\Query.cs" />
+    <Compile Include="Toolkit\Query\QueryEnums.cs" />
+    <Compile Include="Toolkit\Query\UnaryFilter.cs" />
     <Compile Include="Toolkit\Shell\ColorTable.cs" />
     <Compile Include="Toolkit\Shell\ConsoleProperties.cs" />
     <Compile Include="Toolkit\Shell\Coordinate.cs" />

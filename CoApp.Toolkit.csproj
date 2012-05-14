@@ -194,6 +194,14 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="Toolkit\Query\BooleanFilter.cs" />
+    <Compile Include="Toolkit\Query\Filter.cs" />
+    <Compile Include="Toolkit\Query\FilterComparison.cs" />
+    <Compile Include="Toolkit\Query\IInvokable.cs" />
+    <Compile Include="Toolkit\Query\PropRef.cs" />
+    <Compile Include="Toolkit\Query\Query.cs" />
+    <Compile Include="Toolkit\Query\QueryEnums.cs" />
+    <Compile Include="Toolkit\Query\UnaryFilter.cs" />
     <Compile Include="Toolkit\TaskService\Action.cs" />
     <Compile Include="Toolkit\TaskService\ActionCollection.cs" />
     <Compile Include="Toolkit\TaskService\CultureSwitcher.cs" />
