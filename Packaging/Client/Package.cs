@@ -18,111 +18,97 @@ namespace CoApp.Packaging.Client {
     using Common.Model;
     using Toolkit.Collections;
     using Toolkit.Extensions;
+    using Toolkit.Pipes;
     using Toolkit.Win32;
 
-    public class Package {
+    public class Package : IPackage {
         private static readonly IDictionary<CanonicalName, Package> AllPackages = new XDictionary<CanonicalName, Package>();
 
         public static Package GetPackage(CanonicalName canonicalName) {
             lock (AllPackages) {
-                return AllPackages.GetOrAdd(canonicalName, () => new Package {
-                    CanonicalName = canonicalName
-                });
+                if(null != canonicalName && canonicalName.IsCanonical) {
+                    return AllPackages.GetOrAdd(canonicalName, () => new Package {
+                        CanonicalName = canonicalName
+                    });
+                }
+                return null;
             }
         }
 
-        protected Package() {
+
+        internal Package() {
             IsPackageInfoStale = true;
             IsPackageDetailsStale = true;
-            Tags = Enumerable.Empty<string>();
             RemoteLocations = Enumerable.Empty<Uri>();
             Feeds = Enumerable.Empty<Uri>();
             Dependencies = Enumerable.Empty<CanonicalName>();
-            SupercedentPackages = Enumerable.Empty<CanonicalName>();
         }
-
+        
+        
         public CanonicalName CanonicalName { get; set; }
-        public string LocalPackagePath { get; set; }
-
-        public string Name {
-            get {
-                return CanonicalName.Name;
-            }
-        }
-
-        public string Flavor {
-            get {
-                return CanonicalName.Flavor;
-            }
-        }
-
-        public FourPartVersion Version {
-            get {
-                return CanonicalName.Version;
-            }
-        }
-
-        public PackageType PackageType {
-            get {
-                return CanonicalName.PackageType;
-            }
-        }
-
-        public FourPartVersion MinPolicy { get; set; }
-        public FourPartVersion MaxPolicy { get; set; }
-
-        public Architecture Architecture {
-            get {
-                return CanonicalName.Architecture;
-            }
-        }
-
-        public string PublicKeyToken {
-            get {
-                return CanonicalName.PublicKeyToken;
-            }
-        }
-
+        [Persistable]
+        public BindingPolicy BindingPolicy { get; set; }
+        [Persistable]
+        public PackageDetails PackageDetails { get; set; }
+        [Persistable]
         public bool IsInstalled { get; set; }
+        [Persistable]
         public bool IsBlocked { get; set; }
+        [Persistable]
         public bool IsRequired { get; set; }
+        [Persistable]
         public bool IsClientRequired { get; set; }
+        [Persistable]
         public bool IsActive { get; set; }
+        [Persistable]
         public bool IsDependency { get; set; }
-        public string Description { get; set; }
-        public string Summary { get; set; }
+        [Persistable]
         public string DisplayName { get; set; }
-        public string Copyright { get; set; }
-        public string AuthorVersion { get; set; }
-        public string Icon { get; set; }
-        public string License { get; set; }
-        public string LicenseUrl { get; set; }
-        public string PublishDate { get; set; }
-        public string PublisherName { get; set; }
-        public string PublisherUrl { get; set; }
-        public string PublisherEmail { get; set; }
-        public string ProductCode { get; set; }
+        [Persistable]
         public string PackageItemText { get; set; }
-
+        [Persistable]
         public bool DoNotUpdate { get; set; }
+        [Persistable]
         public bool DoNotUpgrade { get; set; }
-
-        public Package SatisfiedBy { get; set; }
-
-        public IEnumerable<string> Tags { get; set; }
+        [Persistable]
         public IEnumerable<Uri> RemoteLocations { get; set; }
+        [Persistable]
         public IEnumerable<Uri> Feeds { get; set; }
-        public IEnumerable<CanonicalName> Dependencies { get; set; }
-        public IEnumerable<CanonicalName> SupercedentPackages { get; set; }
+        [Persistable]
         public IEnumerable<Role> Roles { get; set; }
 
-        internal bool IsPackageInfoStale { get; set; }
-        internal bool IsPackageDetailsStale { get; set; }
+        public string LocalPackagePath { get; set; }
 
-        public bool IsCompatableWith(Package package) {
-            return package.Version > Version
-                ? package.MinPolicy <= package.Version && package.MaxPolicy >= Version
-                : MinPolicy <= package.Version && MaxPolicy >= package.Version;
-        }
+        [NotPersistable]
+        public string Name { get { return CanonicalName.Name; } }
+        [NotPersistable]
+        public FlavorString Flavor { get { return CanonicalName.Flavor; } }
+        [NotPersistable]
+        public FourPartVersion Version { get { return CanonicalName.Version; } }
+        [NotPersistable]
+        public PackageType PackageType { get { return CanonicalName.PackageType; } }
+        [NotPersistable]
+        public Architecture Architecture { get { return CanonicalName.Architecture; } }
+        [NotPersistable]
+        public string PublicKeyToken { get { return CanonicalName.PublicKeyToken; } }
+
+
+        [NotPersistable]
+        public IPackage SatisfiedBy { get; set; }
+        [NotPersistable]
+        public IEnumerable<CanonicalName> Dependencies { get; set; }
+
+        [NotPersistable]
+        public IEnumerable<IPackage> UpdatePackages { get; set; }
+        [NotPersistable]
+        public IEnumerable<IPackage> UpgradePackages { get; set; }
+        [NotPersistable]
+        public IEnumerable<IPackage> NewerPackages { get; set; }
+
+        [NotPersistable]
+        internal bool IsPackageInfoStale { get; set; }
+
+        [NotPersistable]
+        internal bool IsPackageDetailsStale { get; set; }
     };
 }

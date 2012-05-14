@@ -14,6 +14,7 @@ namespace CoApp.Packaging.Common.Model {
     using System.Collections.Generic;
     using System.Xml;
     using System.Xml.Serialization;
+    using Toolkit.Extensions;
 
     [XmlRoot(ElementName = "Composition", Namespace = "http://coapp.org/atom-package-feed-1.0")]
     public class Composition {
@@ -36,10 +37,10 @@ namespace CoApp.Packaging.Common.Model {
         public List<Driver> Drivers { get; set; }
 
         // soak up anything we don't recognize
-        [XmlAnyAttribute]
+        [XmlAnyAttribute, NotPersistable]
         public XmlAttribute[] UnknownAttributes;
 
-        [XmlAnyElement]
+        [XmlAnyElement, NotPersistable]
         public XmlElement[] UnknownElements;
     }
 }

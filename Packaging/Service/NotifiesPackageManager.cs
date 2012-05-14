@@ -11,6 +11,9 @@
 //-----------------------------------------------------------------------
 
 namespace CoApp.Packaging.Service {
+    using System;
+
+    [Serializable]
     public class NotifiesPackageManager {
         internal static void Changed() {
             // notify the Registrar that a change has occured in a package.

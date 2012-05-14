@@ -17,6 +17,7 @@ namespace CoApp.Packaging.Service {
     using System.Collections.ObjectModel;
     using System.Linq;
     using System.Threading.Tasks;
+    using Common;
     using Feeds;
 
     /// <summary>
@@ -65,13 +66,8 @@ namespace CoApp.Packaging.Service {
             return from feed in feedCollection select feed.Location;
         }
 
-        /// <summary>
-        ///   This gets the highest version of all the packages in the set.
-        /// </summary>
-        /// <param name="packageSet"> The package set. </param>
-        /// <returns> the filtered colleciton of packages </returns>
-        /// <remarks>
-        /// </remarks>
+      
+
         internal static Package[] HighestPackages(this IEnumerable<Package> packageSet) {
             var all = packageSet.OrderByDescending(p => p.CanonicalName.Version).ToArray();
             if (all.Length > 1) {

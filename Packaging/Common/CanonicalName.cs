@@ -53,7 +53,7 @@ namespace CoApp.Packaging.Common {
         public bool MatchVersionOrGreater { get; private set; }
         public bool IsCanonical { get; private set; }
         private string _generalName;
-        private string _wholeName;
+        private string _simpleName;
         private string _canonicalName;
         private string _packageName;
         private int? _hashCode;
@@ -89,24 +89,24 @@ namespace CoApp.Packaging.Common {
             }
         }
 
-        public string LocalName {
+        public string SimpleName {
             get {
-                if (_wholeName == null) {
+                if (_simpleName == null) {
                     if (PackageType == PackageType.CoApp) {
-                        _wholeName = "{0}{1}".format(Name, Flavor);
+                        _simpleName = "{0}{1}".format(Name, Flavor);
                     } else if (PackageType == PackageType.NuGet) {
-                        _wholeName = "{0}:{1}".format(PackageType, "(NOT IMPLEMENTED)");
+                        _simpleName = "{0}:{1}".format(PackageType, "(NOT IMPLEMENTED)");
                     } else if (PackageType == PackageType.Chocolatey) {
-                        _wholeName = "{0}:{1}".format(PackageType, "(NOT IMPLEMENTED)");
+                        _simpleName = "{0}:{1}".format(PackageType, "(NOT IMPLEMENTED)");
                     } else if (PackageType == PackageType.Python) {
-                        _wholeName = "{0}:{1}".format(PackageType, "(NOT IMPLEMENTED)");
+                        _simpleName = "{0}:{1}".format(PackageType, "(NOT IMPLEMENTED)");
                     } else if (PackageType == PackageType.Perl) {
-                        _wholeName = "{0}:{1}".format(PackageType, "(NOT IMPLEMENTED)");
+                        _simpleName = "{0}:{1}".format(PackageType, "(NOT IMPLEMENTED)");
                     } else if (PackageType == PackageType.PHP) {
-                        _wholeName = "{0}:{1}".format(PackageType, "(NOT IMPLEMENTED)");
+                        _simpleName = "{0}:{1}".format(PackageType, "(NOT IMPLEMENTED)");
                     }
                 }
-                return _wholeName ?? (_wholeName = "");
+                return _simpleName ?? (_simpleName = "");
             }
         }
 
@@ -146,6 +146,14 @@ namespace CoApp.Packaging.Common {
         }
 
         public bool DiffersOnlyByVersion(CanonicalName otherPackage) {
+            if( IsPartial) {
+                return PackageType == otherPackage.PackageType &&
+                    Name == otherPackage.Name &&
+                        otherPackage.Flavor.IsWildcardMatch(Flavor) &&
+                            Architecture == otherPackage.Architecture &&
+                                PublicKeyToken == otherPackage.PublicKeyToken;
+            }
+
             return PackageType == otherPackage.PackageType &&
                 Name == otherPackage.Name &&
                     Flavor == otherPackage.Flavor &&

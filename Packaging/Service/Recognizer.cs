@@ -48,6 +48,16 @@ namespace CoApp.Packaging.Service {
                     // since we can't do anything with a remote item directly, 
                     // we have to issue a request to the client to get it for us
 
+                    // before we go down this, check to see if we asked for it in this session 
+                    // in the last five minutes or so. We don't need to pound away at a URL for
+                    // no reason.
+                    var peek = SessionCache<RecognitionInfo>.Value[location.AbsoluteUri];
+                    if( peek != null ) {
+                        if( DateTime.Now.Subtract(peek.LastAccessed) < new TimeSpan(0,5,0) ) {
+                            return peek.AsResultTask();
+                        }
+                    }
+
                     // since we're expecting that the canonicalname will be used as a filename 
                     // in the .cache directory, we need to generate a safe filename based on the 
                     // data in the URL
@@ -69,12 +79,15 @@ namespace CoApp.Packaging.Service {
                             if (state == null || string.IsNullOrEmpty(state.LocalLocation)) {
                                 // didn't fill in the local location? -- this happens when the client can't download.
                                 // PackageManagerMessages.Invoke.FileNotRecognized() ?
-                                return new RecognitionInfo {
+                                var rslt = new RecognitionInfo {
                                     FullPath = location.AbsoluteUri,
                                     FullUrl = location,
                                     IsURL = true,
                                     IsInvalid = true,
                                 };
+                                // session cache it 
+                                SessionCache<RecognitionInfo>.Value[location.AbsoluteUri] = rslt;
+                                return rslt;
                             }
                             var newLocation = new Uri(state.LocalLocation);
                             if (newLocation.IsFile) {
@@ -92,15 +105,19 @@ namespace CoApp.Packaging.Service {
 
                                 result.CopyDetailsFrom(continuedResult);
                                 result.IsURL = true;
-
+                                
                                 return Cache(item, result);
                             }
                             // so, the callback comes, but it's not a file. 
                             // 
-                            return new RecognitionInfo {
+                            var r = new RecognitionInfo {
                                 FullPath = location.AbsoluteUri,
                                 IsInvalid = true,
                             };
+
+                            // session cache it 
+                            SessionCache<RecognitionInfo>.Value[location.AbsoluteUri] = r;
+                            return r;
                         }, new RequestRemoteFileState {
                             OriginalUrl = location.AbsoluteUri
                         }, TaskCreationOptions.AttachedToParent);
@@ -111,8 +128,7 @@ namespace CoApp.Packaging.Service {
 
                     // GS01: Should we make a deeper path in the cache directory?
                     // perhaps that would let us use a cached version of the file we're looking for.
-                    Event<GetResponseInterface>.RaiseFirst().RequireRemoteFile(safeCanonicalName, location.SingleItemAsEnumerable(),
-                        PackageManagerSettings.CoAppPackageCache, forceRescan);
+                    Event<GetResponseInterface>.RaiseFirst().RequireRemoteFile(safeCanonicalName, location.SingleItemAsEnumerable(),PackageManagerSettings.CoAppPackageCache, forceRescan);
 
                     // return the completion task, as whatever is waiting for this 
                     // needs to continue on that.
@@ -225,6 +241,7 @@ namespace CoApp.Packaging.Service {
         #region Nested type: RecognitionInfo
 
         internal class RecognitionInfo {
+            internal DateTime LastAccessed = DateTime.Now;
             internal string Filter { get; set; }
             internal string FullPath { get; set; }
 
@@ -263,6 +280,7 @@ namespace CoApp.Packaging.Service {
 
             internal bool IsCoAppODataService { get; set; }
             internal bool IsNugetODataService { get; set; }
+
 
             internal void CopyDetailsFrom(RecognitionInfo fileInfo) {
                 FullPath = fileInfo.FullPath;

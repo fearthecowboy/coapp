@@ -9,6 +9,7 @@ namespace Scratch {
     using CoApp.Packaging.Common.Model;
     using CoApp.Toolkit.Collections;
     using CoApp.Toolkit.Extensions;
+    using CoApp.Toolkit.Pipes;
 
     [XmlRoot("Shoe", Namespace = "http://coapp.org/atom-package-feed-1.0")]
     public class Shoe {
@@ -53,94 +54,38 @@ namespace Scratch {
         [STAThread]
         static void Main(string[] args) {
 
-            
-            /*
-                        CanonicalName c = new CanonicalName("coapp.toolkit-1.2.0.203-any-1e373a58e25250cb");
-                        Console.WriteLine("{0} , {1}",c,c.GeneralName);
+            Test t = new Test();
+            t.Name = new CanonicalName("coapp.toolkit-1.2.0.203-any-1e373a58e25250cb");
+            t.somestrings.Add("Hello");
+            t.somestrings.Add("Garrett");
 
-                        c = new CanonicalName(CanonicalName.AllPackages);
-                        Console.WriteLine("{0} , {1}", c, c.GeneralName);
+            t.places.Add("http://slashdot.org".ToUri());
+            t.places.Add("http://coapp.org".ToUri());
 
-                        c = new CanonicalName(CanonicalName.CoAppDevtools);
-                        Console.WriteLine("{0} , {1}", c, c.GeneralName);
-
-                        c = new CanonicalName(CanonicalName.CoAppItself);
-                        Console.WriteLine("{0} , {1}", c, c.GeneralName);
-
-                        c = new CanonicalName(CanonicalName.CoAppPackages);
-                        Console.WriteLine("{0} , {1}", c, c.GeneralName);
-
-                        Test t = new Test();
-                        t.Name = new CanonicalName("coapp.toolkit-1.2.0.203-any-1e373a58e25250cb");
-                        t.somestrings.Add("Hello");
-                        t.somestrings.Add("Garrett");
-
-                        t.places.Add("http://slashdot.org".ToUri());
-                        t.places.Add("http://coapp.org".ToUri());
-
-                        t.Roles = new XList<Role> {new Role {Name = "RoleName", PackageRole = PackageRole.Application}};
+            t.Roles = new XList<Role> { new Role { Name = "RoleName", PackageRole = PackageRole.Application } };
 
 
-                        t.aDict.Add(new CanonicalName("coapp.devtools-1.2.0.2-any-1e373a58e25250cb"), new XList<Uri> {new Uri("http://coapp.org/current"), new Uri("http://coapp.org/old")});
+            t.aDict.Add(new CanonicalName("coapp.devtools-1.2.0.2-any-1e373a58e25250cb"), new XList<Uri> { new Uri("http://coapp.org/current"), new Uri("http://coapp.org/old") });
 
-                        t.shoe = new Shoe {Name = "Garrett", Age = 12, Weight = 15.7};
+            t.shoe = new Shoe { Name = "Garrett", Age = 12, Weight = 15.7 };
 
-                        t.shoes = new XList<Shoe> {
+            t.shoes = new XList<Shoe> {
                             new Shoe {Name = "Garrett", Age = 2, Weight = 1.7},
                             new Shoe {Name = "Serack", Age = 1, Weight = 5.7},
                         };
 
-                        // XmlSerializer xs = new XmlSerializer(typeof(Test));
 
-                        var output = t.ToXml();
-
-                        Console.WriteLine(output);
-
-                        var t2 = output.FromXml<Test>();
+            var msg = t.Serialize("\r\n");
             
+            Console.WriteLine(msg.ToString());
+            Console.WriteLine();
+            Console.WriteLine(msg.ToString().UrlDecode());
 
-                        Console.WriteLine(t2.ToXml());
-             * */
+            var TT = msg.DeserializeTo<Test>();
 
+            var msg2 = t.Serialize("\r\n");
 
-            var str =
-                @"<coapp:Package xmlns:coapp=""http://coapp.org/atom-package-feed-1.0"" xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"" Vendor=""OUTERCURVE FOUNDATION"" CanonicalName=""coapp:coapp.toolkit-1.2.0.215-any-1e373a58e25250cb"" Name=""coapp.toolkit"" Flavor="""" PackageType=""coapp"" Architecture=""any"" Version=""1.2.0.215"" PublicKeyToken=""1e373a58e25250cb"" DisplayName=""CoApp Package Manager"">
-      <coapp:BindingPolicy Minimum=""1.0.0.0"" Maximum=""1.2.0.214"" />
-      <coapp:Roles>
-        <coapp:Role Name="""" PackageRole=""Application"" />
-        <coapp:Role Name=""refasms"" PackageRole=""DeveloperLibrary"" />
-        <coapp:Role Name=""CoApp.Toolkit"" PackageRole=""Assembly"" />
-        <coapp:Role Name=""CoApp.Client"" PackageRole=""Assembly"" />
-      </coapp:Roles>
-      <coapp:Details>
-        <coapp:AuthorVersion>1.2 PRE-RC</coapp:AuthorVersion>
-        <coapp:BugTracker>https://github.com/organizations/coapp/dashboard/issues</coapp:BugTracker>
-        <coapp:IconLocations />
-        <coapp:Licenses>
-          <coapp:License>
-            <coapp:LicenseId>Apache20</coapp:LicenseId>
-            <coapp:Name>Apache License, 2.0 </coapp:Name>
-            <coapp:LicenseUrl>http://opensource.org/licenses/Apache-2.0</coapp:LicenseUrl>
-          </coapp:License>
-        </coapp:Licenses>
-        <coapp:IsNsfw>false</coapp:IsNsfw>
-        <coapp:Stability>0</coapp:Stability>
-      </coapp:Details>
-      <coapp:Feeds>
-        <coapp:Uri>http://coapp.org/current</coapp:Uri>
-      </coapp:Feeds>
-    </coapp:Package>";
-
-    var pm = str.FromXml<PackageModel>();
-
-
-
-
-
-
-
-
-
+            Console.WriteLine(msg2.ToString().UrlDecode());
 
             Console.ReadLine();
 

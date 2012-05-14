@@ -7,6 +7,17 @@
     packager: "garrett serack <garretts@microsoft.com>";
 }
 
+private { 
+    uses: install;
+    build-command: @"
+    for /F %%G in ('dir /s /b /o-n  coapp*.msi') do ( 
+        az copy %%G files:
+        echo http://coapp.blob.core.windows.net/files/%%~nxG
+        goto :eof
+    )
+    ";
+}
+
 release { 
     default: true;
     // builds the binaries in "Release" mode but does not sign them.
@@ -84,7 +95,7 @@ sign-anycpu {
     default: false;
     
     uses: {
-        anycpu
+        anycpu, resources
     };
     
     targets: {
@@ -96,6 +107,9 @@ sign-anycpu {
         
         REM sign files in release directory
         simplesigner --nologo --sign --strong-name  ""${release_dir}CoApp.Toolkit.dll"" ""${release_dir}CoApp.Client.dll"" ""${release_dir}CoApp.Service.exe"" ""${release_dir}CoApp.Cleaner.exe"" ""${release_dir}CoApp.exe"" || goto failed
+        
+        REM copy the cleaner up to the Azure CDN.
+        az copy ""${release_dir}CoApp.Cleaner.exe"" resources:
     ";
 }
 
@@ -119,27 +133,56 @@ anycpu {
     ";
 }
 
+resources {
+    set : cfg = "Release";
+    set : release_dir = @"output\any\Release\bin\";
+    default: false;
+    
+    platform : x86;
+    compiler: vc10;
+    uses: clean;
+    
+    targets: {
+        @"${release_dir}CoApp.Resources.dll"
+    };
+    
+    
+    build-command: @"REM Add the coapp tools folder to the end of the path, in case we don't have the tools in the path
+        PATH=%PATH%;%CD%\ext\tools
+    
+        msbuild  /p:Configuration=${cfg} ""/p:Platform=win32"" /p:SolutionDir=..\ resources\Resources.vcxproj  || goto failed
+        
+        REM sign files in release directory
+        simplesigner --nologo --sign --strong-name ""${release_dir}CoApp.Resources.dll""  || goto failed
+        
+        REM copy files to the .\binaries folder
+        copy ""${release_dir}CoApp.Resources.dll"" binaries\
+        
+        REM copy up to the Azure CDN too.
+        az copy ""${release_dir}CoApp.Resources.dll"" resources:
+    ";
+}
 
-// Prerequisites are only built explicitly -- since they must always be signed 
+
+// Rehash DLLs are only built explicitly -- since they must always be signed 
 // (and *rarely* ever need modification 
 // we only build and sign them if we really, really need to 
 // (they are picked up by the build from the .\binaries folder)
 // use:
-// ptk release-prerequisites
-release-prerequisites {
+// ptk rehash-prerequisites
+rehash-prerequisites {
     set : cfg = "Release";
     set : release_dir = @"output\any\Release\bin\";
     default: false;
     
     uses: {
-        x86,
-        x64,
+        rehash-x86,
+        rehash-x64,
     };
     
     targets: {
         @"${release_dir}CoApp.Rehash.x86.dll",
         @"${release_dir}CoApp.Rehash.x64.dll",
-        @"${release_dir}CoApp.Resources.dll"
     };
     
     
@@ -149,16 +192,15 @@ release-prerequisites {
         PATH=%PATH%;%CD%\ext\tools
     
         REM sign files in release directory
-        simplesigner --nologo --sign --strong-name ""${release_dir}CoApp.Rehash.x86.dll"" ""${release_dir}CoApp.Rehash.x64.dll"" ""${release_dir}CoApp.Resources.dll""  || goto failed
+        simplesigner --nologo --sign ""${release_dir}CoApp.Rehash.x86.dll"" ""${release_dir}CoApp.Rehash.x64.dll"" || goto failed
         
         REM copy files to the .\binaries folder
         copy /Y ""${release_dir}CoApp.Rehash.x86.dll""  binaries\
-        copy ""${release_dir}CoApp.Rehash.x64.dll"" binaries\
-        copy ""${release_dir}CoApp.Resources.dll"" binaries\
+        copy /Y ""${release_dir}CoApp.Rehash.x64.dll"" binaries\
     ";
 }
 
-x86 {
+rehash-x86 {
     default: false;
     platform : x86;
     compiler: vc10;
@@ -166,18 +208,14 @@ x86 {
     
     targets: { 
         @"output\any\${cfg}\bin\CoApp.Rehash.x86.dll",
-        @"output\any\${cfg}\bin\CoApp.Resources.dll",
     };
 
     build-command: @"
         msbuild  /p:Configuration=${cfg} ""/p:Platform=win32"" /p:SolutionDir=..\ rehash\CoApp.Rehash.x86.vcxproj  || goto failed
-    
-        REM Must build this one last, when done in release, it does the signing.
-        msbuild  /p:Configuration=${cfg} ""/p:Platform=win32"" /p:SolutionDir=..\ resources\Resources.vcxproj  || goto failed
     ";
 }
 
-x64 {
+rehash-x64 {
     default: false;
     platform : x64;
     compiler: vc10;

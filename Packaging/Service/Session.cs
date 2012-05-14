@@ -74,6 +74,10 @@ namespace CoApp.Packaging.Service {
         /// </summary>
         private NamedPipeServerStream _responsePipe;
 
+        static Session() {
+            TypeExtensions.TypeSubtitution.Add(typeof(IPackage), typeof(Package));
+        }
+
         private bool _ended;
 
         private readonly ManualResetEvent _resetEvent = new ManualResetEvent(true);
@@ -407,6 +411,23 @@ namespace CoApp.Packaging.Service {
                 return false;
             });
 
+            CurrentTask.Events += new QueryPermission(policy => {
+                try {
+                    var result = false;
+                    _serverPipe.RunAsClient(() => {
+                        result = policy.HasPermission;
+                    });
+                    return result;
+                }
+                catch {
+                    // may have been disconnected?
+                    if (!_serverPipe.IsConnected) {
+                        Disconnect();
+                    }
+                }
+                return false;
+            });
+
             CurrentTask.Events += new IsCancellationRequested(() => _cancellationTokenSource.Token.IsCancellationRequested);
             CurrentTask.Events += new GetCanonicalizedPath(path => {
                 var result = path;
@@ -492,11 +513,11 @@ namespace CoApp.Packaging.Service {
                                     if (IsCanceled) {
                                         Event<GetResponseInterface>.RaiseFirst().OperationCanceled("Service is shutting down");
                                     } else {
-                                        Logger.Message("Request:[{0}]{1}".format(requestMessage.GetValueAsString("rqid"), requestMessage.ToSmallerString()));
+                                        Logger.Message("Request:[{0}]{1}".format(requestMessage["rqid"], requestMessage.ToSmallerString()));
 
                                        
                                         var packageRequestData = new XDictionary<string, PackageRequestData>();
-                                        var rqid = requestMessage.GetValueAsString("rqid");
+                                        var rqid = requestMessage["rqid"];
 
                                         CurrentTask.Events += new GetCurrentRequestId(() => rqid );
                                         CurrentTask.Events += new GetResponseInterface(() => _dispatcher);

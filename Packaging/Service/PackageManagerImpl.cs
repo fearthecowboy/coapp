@@ -20,7 +20,6 @@ namespace CoApp.Packaging.Service {
     using Common;
     using Feeds;
     using PackageFormatHandlers;
-    using Toolkit.Collections;
     using Toolkit.Crypto;
     using Toolkit.Exceptions;
     using Toolkit.Extensions;
@@ -67,8 +66,8 @@ namespace CoApp.Packaging.Service {
                             "http://coapp.org/unstable"
                         };
 
-                        SetFeedFlags("http://coapp.org/archive", "Passive");
-                        SetFeedFlags("http://coapp.org/unstable", "Ignored");
+                        PackageManagerSettings.PerPackageSettings["http://coapp.org/archive", "state"].StringValue = "passive";
+                        PackageManagerSettings.PerPackageSettings["http://coapp.org/unstable", "state"].StringValue = "ignored";
                     }
                 }
 
@@ -131,25 +130,28 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        internal IEnumerable<Task> LoadSystemFeeds() {
-            // load system feeds
-
-            var systemCacheLoaded = SessionCache<string>.Value["system-cache-loaded"];
-            if (systemCacheLoaded.IsTrue()) {
-                yield break;
+        internal void EnsureSystemFeedsAreLoaded() {
+            // do a cheap check first (so that this session never gets blocked unnecessarily).
+            if (SessionCache<string>.Value["system-cache-loaded"].IsTrue()) {
+                return;
             }
 
-            SessionCache<string>.Value["system-cache-loaded"] = "true";
+            lock (this) {
+                if (SessionCache<string>.Value["system-cache-loaded"].IsTrue()) {
+                    return;
+                }
 
-            foreach (var f in SystemFeedLocations) {
-                var feedLocation = f;
-                yield return PackageFeed.GetPackageFeedFromLocation(feedLocation).ContinueWith(antecedent => {
+                Task.WaitAll(SystemFeedLocations.Select(each => PackageFeed.GetPackageFeedFromLocation(each).ContinueAlways(antecedent => {
                     if (antecedent.Result != null) {
-                        Cache<PackageFeed>.Value[feedLocation] = antecedent.Result;
-                    } else {
-                        Logger.Error("Feed {0} was unable to load.", feedLocation);
+                        Cache<PackageFeed>.Value[each] = antecedent.Result;
                     }
-                }, TaskContinuationOptions.AttachedToParent);
+                    else {
+                        Logger.Error("Feed {0} was unable to load.", each);
+                    }
+                })).ToArray());
+
+                // mark this session as 'yeah, done that already'
+                SessionCache<string>.Value["system-cache-loaded"] = "true";
             }
         }
 
@@ -280,7 +282,9 @@ namespace CoApp.Packaging.Service {
                             where p.IsAnUpdateFor(package)
                             select p).OrderByDescending(p => p.CanonicalName.Version).ToArray();
 
-                        PackageInformation(response, package, supercedents.Select(each => each.CanonicalName));
+                        IEnumerable<CanonicalName> supercedents1 = supercedents.Select(each => each.CanonicalName);
+                        // GS02: FIX THIS NOW. SUPERCEDENTS SHOULD BE PASSED BACK SOMEHOW.
+                        response.PackageInformation(package);
                     }
                 } else {
                     response.NoPackagesFound();
@@ -306,19 +310,7 @@ namespace CoApp.Packaging.Service {
             }
 
 
-            response.PackageDetails(package.CanonicalName, new XDictionary<string, string> {
-                {"description", package.PackageDetails.Description},
-                {"summary", package.PackageDetails.SummaryDescription},
-                {"display-name", package.DisplayName},
-                {"copyright", package.PackageDetails.CopyrightStatement},
-                {"author-version", package.PackageDetails.AuthorVersion},
-            },
-               package.PackageDetails.IconLocations,
-               package.PackageDetails.Licenses.ToXDictionary(each => each.Name, each => each.Text),
-               package.Roles.ToXDictionary(each => each.Name, each => each.PackageRole.ToString()),
-               package.PackageDetails.Tags,
-               package.PackageDetails.Contributors.ToXDictionary(each => each.Name, each => each.Location.AbsoluteUri),
-               package.PackageDetails.Contributors.ToXDictionary(each => each.Name, each => each.Email));
+            response.PackageDetails(package.CanonicalName, package.PackageDetails);
             return FinishedSynchronously;
         }
 
@@ -369,7 +361,7 @@ namespace CoApp.Packaging.Service {
                         return FinishedSynchronously;
                     }
 
-                    var installedPackages = SearchForInstalledPackages(package.CanonicalName.OtherVersionFilter).ToArray();
+                    var installedPackages = package.InstalledVersions.ToArray();
                     var installedCompatibleVersions = installedPackages.Where(package.IsAnUpdateFor).ToArray();
 
                     // is the user authorized to install this?
@@ -435,7 +427,7 @@ namespace CoApp.Packaging.Service {
                             // we can just return a bunch of foundpackage messages, since we're not going to be 
                             // actually installing anything, nor trying to download anything.
                             foreach (var p in installGraph) {
-                                PackageInformation(response, p);
+                                response.PackageInformation(p);
                             }
                             return FinishedSynchronously;
                         }
@@ -465,7 +457,7 @@ namespace CoApp.Packaging.Service {
                             // we've got some packages to install that don't have files.
                             foreach (var p in missingFiles.Where(p => !p.PackageSessionData.HasRequestedDownload)) {
                                 response.RequireRemoteFile(p.CanonicalName,
-                                    p.RemoteLocations, PackageManagerSettings.CoAppPackageCache, false);
+                                    p.RemotePackageLocations, PackageManagerSettings.CoAppPackageCache, false);
 
                                 p.PackageSessionData.HasRequestedDownload = true;
                             }
@@ -474,7 +466,7 @@ namespace CoApp.Packaging.Service {
                                 // we can just return a bunch of found-package messages, since we're not going to be 
                                 // actually installing anything, and everything we needed is downloaded.
                                 foreach (var p in installGraph) {
-                                    PackageInformation(response, p);
+                                    response.PackageInformation(p);
                                 }
                                 return FinishedSynchronously;
                             }
@@ -538,15 +530,15 @@ namespace CoApp.Packaging.Service {
                                 if (isUpdating == true) {
                                     // if this is marked as an update
                                     // remove REQUESTED flag from all older compatible version 
-                                    foreach (var eachPkg in installedCompatibleVersions) {
-                                        eachPkg.IsClientRequested = false;
+                                    foreach (Package eachPkg in installedCompatibleVersions) {
+                                        eachPkg.IsClientRequired= false;
                                     }
                                 }
                                 if (isUpgrading == true) {
                                     // if this is marked as an update
                                     // remove REQUESTED flag from all older compatible version 
-                                    foreach (var eachPkg in installedPackages) {
-                                        eachPkg.IsClientRequested = false;
+                                    foreach (Package eachPkg in installedPackages) {
+                                        eachPkg.IsClientRequired = false;
                                     }
                                 }
 
@@ -633,8 +625,8 @@ namespace CoApp.Packaging.Service {
                 return FinishedSynchronously;
             }
 
-            var canFilterSession = Event<CheckForPermission>.RaiseFirst(PermissionPolicy.EditSessionFeeds);
-            var canFilterSystem = Event<CheckForPermission>.RaiseFirst(PermissionPolicy.EditSystemFeeds);
+            var canFilterSession = Event<QueryPermission>.RaiseFirst(PermissionPolicy.EditSessionFeeds);
+            var canFilterSystem = Event<QueryPermission>.RaiseFirst(PermissionPolicy.EditSystemFeeds);
 
             var activeSessionFeeds = SessionCache<PackageFeed>.Value.SessionValues;
             var activeSystemFeeds = Cache<PackageFeed>.Value.Values;
@@ -842,7 +834,7 @@ namespace CoApp.Packaging.Service {
 
             if (false == active) {
                 if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.ChangeActivePackage)) {
-                    var pqg = SearchForInstalledPackages(package.CanonicalName.OtherVersionFilter).HighestPackages().FirstOrDefault();
+                    var pqg = package.InstalledVersions.HighestPackages().FirstOrDefault() as Package;
                     if (pqg != null) {
                         pqg.SetPackageCurrent();
                     }
@@ -894,7 +886,7 @@ namespace CoApp.Packaging.Service {
                     package.DoNotUpgrade = false;
                 }
             }
-            PackageInformation(response, package);
+            response.PackageInformation(package);
             return FinishedSynchronously;
         }
 
@@ -1071,7 +1063,7 @@ namespace CoApp.Packaging.Service {
 
                         SessionPackageFeed.Instance.Add(package);
 
-                        PackageInformation(response, package);
+                        response.PackageInformation(package);
                         response.Recognized(localLocation);
                     }
                     return;
@@ -1087,15 +1079,6 @@ namespace CoApp.Packaging.Service {
                 response.FileNotRecognized(location, "File isn't a package, and doesn't appear to have been requested. ");
             }, TaskContinuationOptions.AttachedToParent);
             return FinishedSynchronously;
-        }
-
-        private void PackageInformation(IPackageManagerResponse response, Package package, IEnumerable<CanonicalName> supercedents = null) {
-            if (package != null) {
-                supercedents = supercedents ?? Enumerable.Empty<CanonicalName>();
-                response.PackageInformation(package.CanonicalName, package.LocalLocations.FirstOrDefault(), package.IsInstalled, package.IsBlocked,
-                    package.IsRequired, package.IsClientRequested, package.IsActive, package.PackageSessionData.IsDependency, package.BindingPolicy.Minimum, package.BindingPolicy.Maximum,
-                    package.RemoteLocations, package.FeedLocations, package.Dependencies.Select(each => each.CanonicalName), supercedents);
-            }
         }
 
         public Task SetFeedFlags(string location, string activePassiveIgnored) {
@@ -1156,20 +1139,21 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        internal IEnumerable<PackageFeed> Feeds {
+        internal PackageFeed[] Feeds {
             get {
                 try {
-                    // ensure that the system feeds actually get loaded.
-                    Task.WaitAll(LoadSystemFeeds().ToArray());
+                    EnsureSystemFeedsAreLoaded();
 
-                    var canFilterSession = Event<CheckForPermission>.RaiseFirst(PermissionPolicy.EditSessionFeeds);
-                    var canFilterSystem = Event<CheckForPermission>.RaiseFirst(PermissionPolicy.EditSystemFeeds);
-                    var feedFilters = BlockedScanLocations;
-
+                    var canFilterSession = Event<QueryPermission>.RaiseFirst(PermissionPolicy.EditSessionFeeds);
+                    var canFilterSystem = Event<QueryPermission>.RaiseFirst(PermissionPolicy.EditSystemFeeds);
+                    var filters = BlockedScanLocations.ToArray();
+                    if( filters.IsNullOrEmpty()) {
+                        return new PackageFeed[] { SessionPackageFeed.Instance, InstalledPackageFeed.Instance}.Union(Cache<PackageFeed>.Value.Values).Union(SessionCache<PackageFeed>.Value.SessionValues).ToArray();
+                    }
                     return new PackageFeed[] {
                         SessionPackageFeed.Instance, InstalledPackageFeed.Instance
-                    }.Union(from feed in Cache<PackageFeed>.Value.Values where !canFilterSystem || !feed.IsLocationMatch(feedFilters) select feed).Union(
-                        from feed in SessionCache<PackageFeed>.Value.SessionValues where !canFilterSession || !feed.IsLocationMatch(feedFilters) select feed);
+                    }.Union(from feed in Cache<PackageFeed>.Value.Values where !canFilterSystem || !feed.IsLocationMatch(filters) select feed)
+                     .Union(from feed in SessionCache<PackageFeed>.Value.SessionValues where !canFilterSession || !feed.IsLocationMatch(filters) select feed).ToArray();
                 } catch (Exception e) {
                     Logger.Error(e);
                     throw;
@@ -1187,14 +1171,18 @@ namespace CoApp.Packaging.Service {
         /// <returns> </returns>
         internal IEnumerable<Package> SearchForPackages(CanonicalName canonicalName, string location = null) {
             try {
-                var feeds = string.IsNullOrEmpty(location) ? Feeds : Feeds.Where(each => each.IsLocationMatch(location));
-                if (location != null || canonicalName.IsCanonical) {
+                var allfeeds = Feeds;
+
+                // get the filtered list of feeds.
+                var feeds = string.IsNullOrEmpty(location) ? allfeeds : allfeeds.Where(each => each.IsLocationMatch(location)).ToArray();
+
+                if (!string.IsNullOrEmpty(location ) || canonicalName.IsCanonical) {
                     // asking a specific feed, or they are not asking for more than one version of a given package.
                     // or asking for a specific version.
                     return feeds.SelectMany(each => each.FindPackages(canonicalName)).Distinct().ToArray();
                 }
 
-                var feedLocations = Feeds.Select(each => each.Location);
+                var feedLocations = allfeeds.Select(each => each.Location);
                 var packages = feeds.SelectMany(each => each.FindPackages(canonicalName)).Distinct().ToArray();
 
                 var otherFeeds = packages.SelectMany(each => each.FeedLocations).Distinct().Where(each => !feedLocations.Contains(each.AbsoluteUri));
@@ -1205,6 +1193,7 @@ namespace CoApp.Packaging.Service {
                 // this can happen if the collection changes during the operation (and can actually happen in the middle of .ToArray() 
                 // since, locking the hell out of the collections isn't worth the effort, we'll just try again on this type of exception
                 // and pray the collection won't keep changing :)
+                Logger.Message("PERF HIT [REPORT THIS IF THIS IS CONSISTENT!]: Rerunning SearchForPackages!");
                 return SearchForPackages(canonicalName, location);
             }
         }
@@ -1225,27 +1214,11 @@ namespace CoApp.Packaging.Service {
             return tf.Where(each => locs.Contains(each.Location.ToUri()));
         }
 
-        /// <summary>
-        ///   Gets just installed packages based on criteria
-        /// </summary>
-        /// <param name="canonicalName"> </param>
-        /// <returns> </returns>
-        internal IEnumerable<Package> SearchForInstalledPackages(CanonicalName canonicalName) {
-            return InstalledPackageFeed.Instance.FindPackages(canonicalName);
-        }
-
         internal IEnumerable<Package> InstalledPackages {
             get {
                 return InstalledPackageFeed.Instance.FindPackages(CanonicalName.AllPackages);
             }
         }
-
-        internal IEnumerable<Package> AllPackages {
-            get {
-                return SearchForPackages(CanonicalName.AllPackages);
-            }
-        }
-
         #endregion
 
         /// <summary>
@@ -1268,32 +1241,23 @@ namespace CoApp.Packaging.Service {
 
             var packageData = package.PackageSessionData;
 
-            if (!package.PackageSessionData.IsPotentiallyInstallable) {
-                if (hypothetical) {
-                    yield break;
-                }
-
-                // otherwise
-                throw new OperationCompletedBeforeResultException();
-            }
-
             if (!packageData.DoNotSupercede) {
-                var installedSupercedents = SearchForInstalledPackages(package.CanonicalName.OtherVersionFilter);
+                IEnumerable<IPackage> installedSupercedents;
 
                 if (package.PackageSessionData.IsClientSpecified || hypothetical) {
                     // this means that we're talking about a requested package
                     // and not a dependent package and we can liberally construe supercedent 
                     // as anything with a highger version number
-                    installedSupercedents = (from p in installedSupercedents where p.CanonicalName.Version > package.CanonicalName.Version select p).OrderByDescending(p => p.CanonicalName.Version).ToArray();
+                    installedSupercedents = (from p in  package.InstalledVersions where p.CanonicalName.Version > package.CanonicalName.Version select p).OrderByDescending(p => p.CanonicalName.Version).ToArray();
                 } else {
                     // otherwise, we're installing a dependency, and we need something compatable.
-                    installedSupercedents = (from p in installedSupercedents where p.IsAnUpdateFor(package) select p).OrderByDescending(p => p.CanonicalName.Version).ToArray();
+                    installedSupercedents = (from p in  package.InstalledVersions where p.IsAnUpdateFor(package) select p).OrderByDescending(p => p.CanonicalName.Version).ToArray();
                 }
                 var installedSupercedent = installedSupercedents.FirstOrDefault();
                 if (installedSupercedent != null) {
-                    if (!installedSupercedent.PackageRequestData.NotifiedClientThisSupercedes) {
+                    if (!(installedSupercedent as Package).PackageRequestData.NotifiedClientThisSupercedes) {
                         response.PackageSatisfiedBy(package.CanonicalName, installedSupercedent.CanonicalName);
-                        installedSupercedent.PackageRequestData.NotifiedClientThisSupercedes = true;
+                        (installedSupercedent as Package).PackageRequestData.NotifiedClientThisSupercedes = true;
                     }
                     yield break; // a supercedent package is already installed.
                 }
@@ -1354,6 +1318,17 @@ namespace CoApp.Packaging.Service {
                     }
                 }
             }
+
+            // if this isn't potentially installable, 
+            if (!package.PackageSessionData.IsPotentiallyInstallable) {
+                if (hypothetical) {
+                    yield break;
+                }
+
+                // otherwise
+                throw new OperationCompletedBeforeResultException();
+            }
+
 
             if (packageData.CouldNotDownload) {
                 if (!hypothetical) {

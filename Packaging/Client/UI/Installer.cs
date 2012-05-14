@@ -284,19 +284,19 @@ namespace CoApp.Packaging.Client.UI {
 
         public string Organization {
             get {
-                return HasPackage ? SelectedPackage.PublisherName : string.Empty;
+                return HasPackage ? SelectedPackage.PackageDetails.Publisher.Name: string.Empty;
             }
         }
 
         public string Description {
             get {
-                return HasPackage ? SelectedPackage.Description : string.Empty;
+                return HasPackage ? SelectedPackage.PackageDetails.Description : string.Empty;
             }
         }
 
         public string Product {
             get {
-                return HasPackage ? "{0} - {1}".format(SelectedPackage.DisplayName, string.IsNullOrEmpty(SelectedPackage.AuthorVersion) ? (string)SelectedPackage.Version : SelectedPackage.AuthorVersion) : string.Empty;
+                return HasPackage ? "{0} - {1}".format(SelectedPackage.DisplayName, string.IsNullOrEmpty(SelectedPackage.PackageDetails.AuthorVersion) ? (string)SelectedPackage.Version : SelectedPackage.PackageDetails.AuthorVersion) : string.Empty;
             }
         }
 

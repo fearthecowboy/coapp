@@ -116,13 +116,24 @@
 
                 // we're gonna output this to dbgview too for now.
                 if (eventId == 0 && category == 0) {
-#if XCOAPP_ENGINE_CORE && DEBUG
+
+#if COAPP_ENGINE_CORE
+                    try {
+                        var rqid = Event<GetCurrentRequestId>.RaiseFirst();
+                        if( !string.IsNullOrEmpty(rqid)) {
+                            message = string.Format("[{0}]{1}", rqid, message);
+                        }
+                    } catch {
+                    }
+#endif
+
+#if COAPP_ENGINE_CORE && DEBUG
                     Console.WriteLine(string.Format("«{0}/{1}»-{2}", type, Source, message.Replace("\r\n", "\r\n»")));
 #endif
                     OutputDebugString(string.Format("«{0}/{1}»-{2}", type, Source, message.Replace("\r\n", "\r\n»")));
                 } else {
-#if XCOAPP_ENGINE_CORE && DEBUG
-                    Console.WriteLine(string.Format("«{0}/{1}»({2}/{3})-{4}", type, Source, eventID, category, message.Replace("\r\n", "\r\n»")));
+#if COAPP_ENGINE_CORE && DEBUG
+                    Console.WriteLine(string.Format("«{0}/{1}»({2}/{3})-{4}", type, Source, eventId, category, message.Replace("\r\n", "\r\n»")));
 #endif
                     OutputDebugString(string.Format("«{0}/{1}»({2}/{3})-{4}", type, Source, eventId, category, message.Replace("\r\n", "\r\n»")));
                 }

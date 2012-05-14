@@ -819,7 +819,7 @@ namespace CoApp.Toolkit.Extensions {
                 }
 
                 if (File.Exists(location)) {
-                    Logger.Error("Unable to forcably remove file '{0}'. This can't be good.", location);
+                    // Logger.Error("Unable to forcably remove file '{0}'. This can't be good.", location);
                 }
             }
             return;
@@ -881,7 +881,7 @@ namespace CoApp.Toolkit.Extensions {
                 return path;
             }
             try {
-                if( path.IndexOfAny(Path.GetInvalidPathChars()) == -1 ) {
+                if( path.IndexOfAny(Path.GetInvalidPathChars()) == -1 && path.IndexOf(':') <= 1 ) {
                     path = Path.GetFullPath(path.Trim('"'));
                     FullPathCache.Add(path);    
                 }

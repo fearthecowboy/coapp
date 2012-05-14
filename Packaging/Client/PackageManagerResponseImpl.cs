@@ -110,46 +110,17 @@ namespace CoApp.Packaging.Client {
             // throw new NotImplementedException();
         }
 
-        public void PackageInformation(CanonicalName canonicalName, string localLocation, bool installed, bool blocked, bool required, bool clientRequired, bool active, bool dependent, FourPartVersion minPolicy, FourPartVersion maxPolicy,
-            IEnumerable<Uri> remoteLocations, IEnumerable<Uri> feeds, IEnumerable<CanonicalName> dependencies, IEnumerable<CanonicalName> supercedentPackages) {
-            if (!Environment.Is64BitOperatingSystem && canonicalName.Architecture == Architecture.x64) {
+        public void PackageInformation(IPackage package) {
+            if (!Environment.Is64BitOperatingSystem && package.CanonicalName.Architecture == Architecture.x64) {
                 // skip x64 packages from the result set if you're not on an x64 system.
                 return;
             }
-
-            var result = Package.GetPackage(canonicalName);
-            result.LocalPackagePath = localLocation;
-
-            result.MinPolicy = minPolicy;
-            result.MaxPolicy = maxPolicy;
-
-            // result.ProductCode = prod
-            result.IsInstalled = installed;
-            result.IsBlocked = blocked;
-            result.IsRequired = required;
-            result.IsClientRequired = clientRequired;
-            result.IsActive = active;
-            result.IsDependency = dependent;
-            result.RemoteLocations = remoteLocations;
-            result.Feeds = feeds;
-            result.Dependencies = dependencies;
-            result.SupercedentPackages = supercedentPackages;
-            result.IsPackageInfoStale = false;
-            _packages.Value.Add(result);
+            _packages.Value.AddUnique(package as Package);
         }
 
-        public void PackageDetails(CanonicalName canonicalName, IDictionary<string, string> metadata, IEnumerable<string> iconLocations, IDictionary<string, string> licenses, IDictionary<string, string> roles, IEnumerable<string> tags,
-            IDictionary<string, string> contributorUrls, IDictionary<string, string> contributorEmails) {
+        public void PackageDetails(CanonicalName canonicalName, PackageDetails details) {
             var result = Package.GetPackage(canonicalName);
-            result.Icon = iconLocations.FirstOrDefault();
-            result.Roles = roles.Keys.Select(each => new Role {Name = each, PackageRole = (PackageRole)typeof (PackageRole).ParseString(roles[each])}); //? is this right?
-            result.Tags = tags;
-            // licenses not done yet.
-            result.Description = metadata["description"];
-            result.Summary = metadata["summary"];
-            result.DisplayName = metadata["display-name"];
-            result.Copyright = metadata["copyright"];
-            result.AuthorVersion = metadata["author-version"];
+            result.PackageDetails = details;
             result.IsPackageDetailsStale = false;
         }
 

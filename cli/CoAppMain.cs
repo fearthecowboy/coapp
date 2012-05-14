@@ -808,7 +808,7 @@ namespace CoApp.CLI {
                 PrintNoPackagesFound(parameters);
                 return;
             }
-
+#if BROKEN            
             packages.Select(package => _packageManager.GetPackageDetails(package.CanonicalName)).ToArray().Continue(detailedPackages => {
                 var length0 = detailedPackages.Max(each => Math.Max(Math.Max(each.Name.Length, each.Architecture.ToString().Length), each.PublisherName.Length)) + 1;
                 var length1 = detailedPackages.Max(each => Math.Max(Math.Max(((string)each.Version).Length, each.AuthorVersion.Length), each.PublisherUrl.Length)) + 1;
@@ -849,7 +849,7 @@ namespace CoApp.CLI {
                 }
                 Console.WriteLine("-----------------------------------------------------------");
             });
-            
+#endif             
         }
 
 

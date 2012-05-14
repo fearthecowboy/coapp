@@ -19,6 +19,7 @@ namespace CoApp.Packaging.Service.Feeds {
     using Common;
     using PackageFormatHandlers;
     using Toolkit.Extensions;
+    using Toolkit.Logging;
     using Toolkit.Tasks;
 
     internal class InstalledPackageFeed : PackageFeed {
@@ -34,7 +35,7 @@ namespace CoApp.Packaging.Service.Feeds {
         }
 
         internal void PackageRemoved(Package package) {
-            lock (this) {
+            lock (_packageList) {
                 if (_packageList.Contains(package)) {
                     _packageList.Remove(package);
                 }
@@ -42,7 +43,7 @@ namespace CoApp.Packaging.Service.Feeds {
         }
 
         internal void PackageInstalled(Package package) {
-            lock (this) {
+            lock (_packageList) {
                 if (!_packageList.Contains(package)) {
                     _packageList.Add(package);
                 }
@@ -56,8 +57,10 @@ namespace CoApp.Packaging.Service.Feeds {
                     var lookup = File.GetCreationTime(each).Ticks + each.GetHashCode();
                     if (!Cache.Contains(lookup)) {
                         var pkg = Package.GetPackageFromFilename(each);
-                        if (pkg != null && pkg.IsInstalled) {
-                            PackageInstalled(pkg);
+                        if (pkg != null ) {
+                            if (pkg.IsInstalled) {
+                                PackageInstalled(pkg);
+                            }
                         } else {
                             // doesn't appear to be a coapp package
                             lock (Cache) {
@@ -73,21 +76,28 @@ namespace CoApp.Packaging.Service.Feeds {
         protected void Scan() {
             lock (this) {
                 if (!Scanned || Stale) {
+                    Logger.Message("Starting 'installed packages' scan");
                     LastScanned = DateTime.Now;
                     _packageList.Clear();
                     ScanInstalledMSIs(); // kick off the system package task. It's ok if this doesn't get done in a hurry.
 
+
+                    Logger.Message("Getting List of cached package files");
                     // add the cached package directory, 'cause on backlevel platform, they taint the MSI in the installed files folder.
                     var coAppInstalledFiles = PackageManagerSettings.CoAppPackageCache.FindFilesSmarter("*.msi").ToArray();
 
-                    // coAppInstalledFiles.AsParallel().ForAll(each => {
-                    foreach (var each in coAppInstalledFiles) {
+                    Logger.Message("There are '{0}' cached package files", coAppInstalledFiles.Length );
+                    coAppInstalledFiles.AsParallel().ForAll(each => {
+                    // foreach (var each in coAppInstalledFiles) {
+                        Logger.Message("Checking cached package file '{0}'", each);
                         var lookup = File.GetCreationTime(each).Ticks + each.GetHashCode();
                         if (!Cache.Contains(lookup)) {
                             var pkg = Package.GetPackageFromFilename(each);
 
-                            if (pkg != null && pkg.IsInstalled) {
-                                PackageInstalled(pkg);
+                            if (pkg != null ) {
+                                if (pkg.IsInstalled) {
+                                    PackageInstalled(pkg);
+                                }
                             } else {
                                 // doesn't appear to be a coapp package
                                 lock (Cache) {
@@ -96,9 +106,11 @@ namespace CoApp.Packaging.Service.Feeds {
                                 }
                             }
                         }
-                        // });
-                    }
-                    
+                    });
+                    // }
+
+                    Logger.Message("COMPLETED 'installed packages' scan================================================");
+
                     Scanned = true;
                     Stale = false;
                 }

@@ -356,11 +356,11 @@ namespace CoApp.Packaging.Client {
 
                 result.InstalledOlderCompatable =
                     result.InstalledPackages.FirstOrDefault(
-                        each => each.Version < result.Package.Version && result.Package.MinPolicy <= each.Version && result.Package.MaxPolicy >= each.Version);
+                        each => each.Version < result.Package.Version && result.Package.BindingPolicy.Minimum <= each.Version && result.Package.BindingPolicy.Maximum >= each.Version);
 
                 result.InstalledOlder =
                     result.InstalledPackages.FirstOrDefault(
-                        each => each.Version < result.Package.Version && (result.Package.MinPolicy > each.Version || result.Package.MaxPolicy < each.Version));
+                        each => each.Version < result.Package.Version && (result.Package.BindingPolicy.Minimum > each.Version || result.Package.BindingPolicy.Maximum < each.Version));
 
                 if (result.AvailableNewerCompatible == result.Package) {
                     result.AvailableNewerCompatible = null;
@@ -432,7 +432,7 @@ namespace CoApp.Packaging.Client {
             var pkgs = packages.OrderBy(each => each.Version).ToArray();
             Package pk;
 
-            while ((pk = pkgs.FirstOrDefault(p => p.MinPolicy <= result.Version && p.MaxPolicy >= result.Version && result.Version < p.Version)) != null) {
+            while ((pk = pkgs.FirstOrDefault( p => p.BindingPolicy.Minimum <= result.Version && p.BindingPolicy.Maximum >= result.Version && result.Version < p.Version)) != null) {
                 result = pk;
             }
             return result;
