@@ -1,28 +1,36 @@
 namespace CoApp.Toolkit.Query
 {
+    using System;
+    using System.Linq.Expressions;
+    using SLE = System.Linq.Expressions;
     public class UnaryFilter<T> : Filter<T>
     {
-        public IInvokable<T> Left { get; set; }
-        public UnaryFilterOperator Operator { get; set; }
-
-
-        public override bool Invoke(T item) {
-            var left = Left.Invoke(item);
-
-            //the operator is always Not
-            
-            return !left;
-        }
-
-
-        public static bool TryParse(string input, out UnaryFilter<T> obj) {
-            obj = null;
-            return false;
-        }
-
-        public override string ToString()
+        public UnaryFilter(Filter<T> left, UnaryFilterOperator op)
         {
-            return base.ToString();
+            Left = left;
+            Operator = op;
+        }
+        private Filter<T> Left { get; set; }
+        private UnaryFilterOperator Operator { get; set; }
+
+        public override Expression<Func<T, bool>> Expression {
+            get {
+                ParameterExpression paramExpr = SLE.Expression.Parameter(typeof (T), "arg");
+                Expression e = null;
+                
+                switch (Operator)
+                {
+                    case UnaryFilterOperator.Not:
+                        e = SLE.Expression.Not(SLE.Expression.Invoke(Left, paramExpr));
+                        break;
+
+                }
+
+
+
+                return SLE.Expression.Lambda<Func<T, bool>>(e, paramExpr);
+                
+            }
         }
     }
     

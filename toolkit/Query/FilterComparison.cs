@@ -11,54 +11,76 @@
 //-----------------------------------------------------------------------
 
 namespace CoApp.Toolkit.Query {
+    using System;
+    using System.Linq;
+    using System.Linq.Expressions;
     using Extensions;
+    using SLE = System.Linq.Expressions;
+    
 
     public class FilterComparison<T, TProperty> : Filter<T> {
-        public PropRef<T, TProperty> Property { get; set; }
-        public FilterOp Comparison { get; set; }
-        public TProperty Value { get; set; }
 
-        public override bool Invoke(T item) {
-            // we need dynamic or the operators don't like us
-            dynamic propertyVal = Property.ToFunc()(item);
-            dynamic val = Value;
-            var ret = false;
-            switch (Comparison) {
-                case FilterOp.LT:
-                    ret = propertyVal < Value;
-                    break;
-                case FilterOp.LTE:
-                    ret = propertyVal <= Value;
-                    break;
-                case FilterOp.Contains:
+        public FilterComparison(PropertyExpression<T, TProperty> property, FilterOp comparison, TProperty value)
+        {
+            Property = property;
+            Comparison = comparison;
+            Value = value;
+        }
 
-                    ret = ((string)propertyVal).Contains((string)val);
-                    break;
-                case FilterOp.GT:
-                    ret = propertyVal > Value;
-                    break;
-                case FilterOp.GTE:
-                    ret = propertyVal >= Value;
-                    break;
-                case FilterOp.EQ:
-                    if (propertyVal is string) {
-                        ret = StringExtensions.NewIsWildcardMatch(propertyVal, (string)val);
-                    } else {
-                        ret = propertyVal == Value;
-                    }
-                    break;
+        private PropertyExpression<T, TProperty> Property { get; set; }
+        private FilterOp Comparison { get; set; }
+        private TProperty Value { get; set; }
+
+        public override Expression<Func<T, bool>> Expression {
+            get {
+                ParameterExpression p = SLE.Expression.Parameter(typeof (T));
+                var leftInvoke = SLE.Expression.Invoke(Property, p);
+                Expression e = null;
+
+                Expression value = SLE.Expression.Constant(Value, typeof(TProperty));
+                var stringType = typeof (string);
+                var containsMethod = stringType.GetMethod("Contains");
+                
+                
+
+                var stringExtensionsType = typeof (StringExtensions);
+                var newIsWildcardMatchMethod = stringExtensionsType.GetMethod("NewIsWildcardMatch");
+
+                switch (Comparison)
+                {
+                    case FilterOp.LT:
+                        e = SLE.Expression.LessThan(leftInvoke, value);
+                        break;
+                    case FilterOp.LTE:
+                        e = SLE.Expression.LessThanOrEqual(leftInvoke, value);
+                        break;
+                    case FilterOp.GT:
+                        e = SLE.Expression.GreaterThan(leftInvoke, value);
+                        break;
+                    case FilterOp.GTE:
+                        e = SLE.Expression.GreaterThanOrEqual(leftInvoke, value);
+                        break;
+                    case FilterOp.Contains:
+                        if (Value is string)
+                        {
+                            e = SLE.Expression.Call(leftInvoke, containsMethod, value);
+                        }
+                        break;
+                    case FilterOp.EQ:
+                      
+                        if (Value is string)
+                        {
+                            e = SLE.Expression.Call(newIsWildcardMatchMethod, leftInvoke, value, SLE.Expression.Constant(false), SLE.Expression.Constant(null, stringType));
+                        }
+                        else
+                        {
+                            e = SLE.Expression.Equal(leftInvoke, value);
+                        }
+                        break;
+                }
+
+                return SLE.Expression.Lambda<Func<T, bool>>(e, p);
             }
-
-            return ret;
-        }
-
-        public static bool TryParse(string input, out FilterComparison<T, TProperty> obj) {
-            obj = null;
-            return false;
-        }
-
-        public override string ToString() {
-            return base.ToString();
         }
     }
 }
