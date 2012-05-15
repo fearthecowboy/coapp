@@ -11,30 +11,50 @@
 //-----------------------------------------------------------------------
 
 namespace CoApp.Toolkit.Query {
+    using System;
+    using System.Linq.Expressions;
+
+    using SLE = System.Linq.Expressions;
+
     public class BooleanFilter<T> : Filter<T> {
-        public IInvokable<T> Left { get; set; }
-        public IInvokable<T> Right { get; set; }
-        public BooleanFilterOperator Operator { get; set; }
 
-        public override bool Invoke(T item) {
-            var left = Left.Invoke(item);
-            var right = Right.Invoke(item);
+        public BooleanFilter(Filter<T> left, Filter<T> right, BooleanFilterOperator op)
+        {
+            Left = left;
+            Right = right;
+            Operator = op;
+        }
 
-            var ret = false;
+        private Filter<T> Left { get; set; }
+        private Filter<T> Right { get; set; }
+        private BooleanFilterOperator Operator { get; set; }
 
-            switch (Operator) {
-                case BooleanFilterOperator.And:
-                    ret = left && right;
-                    break;
-                case BooleanFilterOperator.Or:
-                    ret = left || right;
-                    break;
-                case BooleanFilterOperator.Xor:
-                    ret = left ^ right;
-                    break;
+
+        public override Expression<Func<T, bool>> Expression {
+            get {
+
+                ParameterExpression p = SLE.Expression.Parameter(typeof (T), "arg");
+
+                var invokeLeft = SLE.Expression.Invoke(Left, p);
+                var invokeRight = SLE.Expression.Invoke(Right, p);
+                BinaryExpression bin = null;
+                switch (Operator) {
+                    case BooleanFilterOperator.And:
+                        bin = SLE.Expression.And(invokeLeft, invokeRight);
+                        break;
+                    case BooleanFilterOperator.Or:
+                        bin = SLE.Expression.Or(invokeLeft, invokeRight);
+                        break;
+                    case BooleanFilterOperator.Xor:
+                        bin = SLE.Expression.ExclusiveOr(invokeLeft, invokeRight);
+                        break;
+                }
+
+                if (bin == null)
+                    throw new Exception("This should never happen");
+
+                return SLE.Expression.Lambda<Func<T, bool>>(bin, p);
             }
-
-            return ret;
         }
     }
 }
