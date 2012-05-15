@@ -36,6 +36,7 @@ namespace CoApp.Packaging.Client {
             internal readonly ManualResetEvent ResetEvent = new ManualResetEvent(true);
             internal bool StillWorking;
 
+            
             public ManualEventQueue() {
                 var tid = Task.CurrentId.GetValueOrDefault();
                 if (tid == 0) {
@@ -85,7 +86,10 @@ namespace CoApp.Packaging.Client {
         private int _autoConnectionCount;
         private string PipeName = "CoAppInstaller";
         private NamedPipeClientStream _pipe;
-        
+
+        static Session() {
+            UrlEncodedMessage.AddTypeSubstitution<IPackage>((message, objectName, expectedType) => Package.GetPackage(message[objectName + ".CanonicalName"]));
+        }
 
         internal static int ActiveCalls {
             get {

@@ -24,9 +24,7 @@ namespace CoApp.Packaging.Client {
     public class Package : IPackage {
         private static readonly IDictionary<CanonicalName, Package> AllPackages = new XDictionary<CanonicalName, Package>();
 
-        static Package() {
-            UrlEncodedMessage.AddTypeSubstitution<IPackage>((message, objectName, expectedType) => GetPackage(message[objectName + ".CanonicalName"]));
-        }
+       
 
         public static Package GetPackage(CanonicalName canonicalName) {
             lock (AllPackages) {
