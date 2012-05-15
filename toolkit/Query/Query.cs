@@ -14,9 +14,9 @@ namespace CoApp.Toolkit.Query {
     using System.Collections.Generic;
     using System.ComponentModel;
     using System.Linq;
-
+    /*
     public class Query<T, TProperty> : Query<T> {
-        public PropRef<T, TProperty> SortProperty { get; set; }
+        public PropertyExpression<T, TProperty> SortProperty { get; set; }
         public ListSortDirection SortDirection { get; set; }
 
         public override IEnumerable<T> Invoke(IEnumerable<T> input) {
@@ -65,8 +65,8 @@ namespace CoApp.Toolkit.Query {
             return new Query<T> {Filter = filter};
         }
 
-        public static Query<T, TProperty> Create<T, TProperty>(IInvokable<T> filter, PropRef<T, TProperty> sortProperty, ListSortDirection sortDirection = ListSortDirection.Ascending) {
+        public static Query<T, TProperty> Create<T, TProperty>(IInvokable<T> filter, PropertyExpression<T, TProperty> sortProperty, ListSortDirection sortDirection = ListSortDirection.Ascending) {
             return new Query<T, TProperty> {Filter = filter, SortDirection = sortDirection, SortProperty = sortProperty};
         }
-    }
+    }*/
 }

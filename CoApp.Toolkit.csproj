@@ -196,6 +196,16 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+
+    <Compile Include="Toolkit\Query\BooleanFilter.cs" />
+    <Compile Include="Toolkit\Query\FilterBase.cs" />
+    <Compile Include="Toolkit\Query\Filter.cs" />
+    <Compile Include="Toolkit\Query\FilterComparison.cs" />
+    <Compile Include="Toolkit\Query\PropertyExpression.cs" />
+    <Compile Include="Toolkit\Query\Query.cs" />
+    <Compile Include="Toolkit\Query\QueryEnums.cs" />
+    <Compile Include="Toolkit\Query\UnaryFilter.cs" />
+
     <Compile Include="Toolkit\Linq\Serialization\Message\ExpressionMessageSerializer.cs" />
     <Compile Include="Toolkit\Linq\Serialization\Xml\CustomExpressionXmlConverter.cs" />
     <Compile Include="Toolkit\Linq\Serialization\Evaluator.cs" />
@@ -205,6 +215,7 @@
     <Compile Include="Toolkit\Linq\Serialization\LinqHelper.cs" />
     <Compile Include="Toolkit\Linq\Serialization\Query.cs" />
     <Compile Include="Toolkit\Linq\Serialization\Xml\TypeResolver.cs" />
+
     <Compile Include="Toolkit\TaskService\Action.cs" />
     <Compile Include="Toolkit\TaskService\ActionCollection.cs" />
     <Compile Include="Toolkit\TaskService\CultureSwitcher.cs" />
