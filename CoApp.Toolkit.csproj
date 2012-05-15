@@ -187,21 +187,24 @@
     <Compile Include="Toolkit\ImpromptuInterface\Optimization\Util.cs" />
     <Compile Include="Toolkit\Logging\Logger.cs" />
     <Compile Include="Toolkit\Pipes\AsyncPipeExtensions.cs" />
+    <Compile Include="Toolkit\Pipes\CustomSerializer.cs" />
     <Compile Include="Toolkit\Pipes\IncomingCallDispatcher.cs" />
+    <Compile Include="Toolkit\Pipes\SerializationExtensions.cs" />
     <Compile Include="Toolkit\Pipes\UrlEncodedMessage.cs" />
     <Compile Include="Toolkit\Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="Toolkit\Query\BooleanFilter.cs" />
-    <Compile Include="Toolkit\Query\Filter.cs" />
-    <Compile Include="Toolkit\Query\FilterComparison.cs" />
-    <Compile Include="Toolkit\Query\IInvokable.cs" />
-    <Compile Include="Toolkit\Query\PropRef.cs" />
-    <Compile Include="Toolkit\Query\Query.cs" />
-    <Compile Include="Toolkit\Query\QueryEnums.cs" />
-    <Compile Include="Toolkit\Query\UnaryFilter.cs" />
+    <Compile Include="Toolkit\Linq\Serialization\Message\ExpressionMessageSerializer.cs" />
+    <Compile Include="Toolkit\Linq\Serialization\Xml\CustomExpressionXmlConverter.cs" />
+    <Compile Include="Toolkit\Linq\Serialization\Evaluator.cs" />
+    <Compile Include="Toolkit\Linq\Serialization\Xml\ExpressionXmlSerializer.cs" />
+    <Compile Include="Toolkit\Linq\Serialization\Extn.cs" />
+    <Compile Include="Toolkit\Linq\Serialization\Xml\KnownTypeExpressionXmlConverter.cs" />
+    <Compile Include="Toolkit\Linq\Serialization\LinqHelper.cs" />
+    <Compile Include="Toolkit\Linq\Serialization\Query.cs" />
+    <Compile Include="Toolkit\Linq\Serialization\Xml\TypeResolver.cs" />
     <Compile Include="Toolkit\TaskService\Action.cs" />
     <Compile Include="Toolkit\TaskService\ActionCollection.cs" />
     <Compile Include="Toolkit\TaskService\CultureSwitcher.cs" />
@@ -402,6 +405,9 @@
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Toolkit\Query\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

@@ -24,6 +24,10 @@ namespace CoApp.Packaging.Client {
     public class Package : IPackage {
         private static readonly IDictionary<CanonicalName, Package> AllPackages = new XDictionary<CanonicalName, Package>();
 
+        static Package() {
+            UrlEncodedMessage.AddTypeSubstitution<IPackage>((message, objectName, expectedType) => GetPackage(message[objectName + ".CanonicalName"]));
+        }
+
         public static Package GetPackage(CanonicalName canonicalName) {
             lock (AllPackages) {
                 if(null != canonicalName && canonicalName.IsCanonical) {
@@ -35,7 +39,6 @@ namespace CoApp.Packaging.Client {
             }
         }
 
-
         internal Package() {
             IsPackageInfoStale = true;
             IsPackageDetailsStale = true;
@@ -43,7 +46,6 @@ namespace CoApp.Packaging.Client {
             Feeds = Enumerable.Empty<Uri>();
             Dependencies = Enumerable.Empty<CanonicalName>();
         }
-        
         
         public CanonicalName CanonicalName { get; set; }
         [Persistable]

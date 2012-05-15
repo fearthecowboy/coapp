@@ -109,13 +109,6 @@ namespace CoApp.Packaging.Client {
             }
         }
 
-        static Session() {
-            UrlEncodedMessage.ObjectCreationSubstitution[typeof (IPackage)] = (message, objectName, expectedType) => {
-                return Package.GetPackage(message[objectName + ".CanonicalName"]);
-            };
-            // UrlEncodedMessage.TypeSubtitution.Add(typeof(IPackage), typeof(Package));
-        }
-
         private Session() : base(WriteAsync) {
             _remoteService = this.ActLike();
         }

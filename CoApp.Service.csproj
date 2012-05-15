@@ -342,6 +342,15 @@
       <DependentUpon>InvokeHelper.tt</DependentUpon>
     </Compile>
     <Compile Include="Toolkit\ImpromptuInterface\Optimization\Util.cs" />
+    <Compile Include="Toolkit\Linq\Serialization\Evaluator.cs" />
+    <Compile Include="Toolkit\Linq\Serialization\Extn.cs" />
+    <Compile Include="Toolkit\Linq\Serialization\LinqHelper.cs" />
+    <Compile Include="Toolkit\Linq\Serialization\Message\ExpressionMessageSerializer.cs" />
+    <Compile Include="Toolkit\Linq\Serialization\Query.cs" />
+    <Compile Include="Toolkit\Linq\Serialization\Xml\CustomExpressionXmlConverter.cs" />
+    <Compile Include="Toolkit\Linq\Serialization\Xml\ExpressionXmlSerializer.cs" />
+    <Compile Include="Toolkit\Linq\Serialization\Xml\KnownTypeExpressionXmlConverter.cs" />
+    <Compile Include="Toolkit\Linq\Serialization\Xml\TypeResolver.cs" />
     <Compile Include="Toolkit\Logging\Logger.cs" />
     <Compile Include="Toolkit\Pipes\AsyncPipeExtensions.cs" />
     <Compile Include="Packaging\Service\Engine.cs" />
@@ -356,7 +365,9 @@
     <Compile Include="Packaging\Service\PermissionPolicy.cs" />
     <Compile Include="Packaging\Service\Recognizer.cs" />
     <Compile Include="Packaging\Service\Session.cs" />
+    <Compile Include="Toolkit\Pipes\CustomSerializer.cs" />
     <Compile Include="Toolkit\Pipes\IncomingCallDispatcher.cs" />
+    <Compile Include="Toolkit\Pipes\SerializationExtensions.cs" />
     <Compile Include="Toolkit\Pipes\UrlEncodedMessage.cs" />
     <Compile Include="Toolkit\Exceptions\ConflictingFileOrFolderException.cs">
       <SubType>Code</SubType>
