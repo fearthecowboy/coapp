@@ -19,14 +19,21 @@ namespace CoApp.Toolkit.Pipes {
     using Collections;
     using Extensions;
 
-    /// <summary>
+    /// <summary
     ///   UrlEncodedMessages
     /// </summary>
     public class UrlEncodedMessage : IEnumerable<string> {
+        private static readonly IDictionary<Type, TypeInstantiator> TypeSubstitution = new XDictionary<Type, TypeInstantiator>();
+
+        public delegate object TypeInstantiator(UrlEncodedMessage message, string key, Type t);
+        public static void AddTypeSubstitution<T>(TypeInstantiator typeInstantiator) {
+            TypeSubstitution.Add(typeof(T), typeInstantiator);
+        }
+
         /// <summary>
         /// </summary>
         private static readonly char[] Query = new[] { '?' };
-        public static IDictionary<Type, Func<UrlEncodedMessage,string,Type, object> > ObjectCreationSubstitution = new XDictionary<Type, Func<UrlEncodedMessage, string, Type, object>>();
+        
         /// <summary>
         /// </summary>
         private readonly char[] _separator = new[] {'&' };
@@ -60,7 +67,7 @@ namespace CoApp.Toolkit.Pipes {
             rawMessage = rawMessage ?? string.Empty;
 
             
-            var parts = (rawMessage ?? "" ).Split(Query, StringSplitOptions.RemoveEmptyEntries);
+            var parts = rawMessage.Split(Query, StringSplitOptions.RemoveEmptyEntries);
             switch( parts.Length ) {
                 case 0:
                     _data = new XDictionary<string, string>();
@@ -68,8 +75,8 @@ namespace CoApp.Toolkit.Pipes {
 
                 case 1:
                     if (rawMessage.IndexOf("=") > -1) {
-                        Command = "";
-                        _data = (parts.FirstOrDefault() ?? "").Split(_separator, StringSplitOptions.RemoveEmptyEntries).Select(
+                        Command = string.Empty;
+                        _data = (parts.FirstOrDefault() ?? string.Empty).Split(_separator, StringSplitOptions.RemoveEmptyEntries).Select(
                             p => p.Split(Equal, StringSplitOptions.RemoveEmptyEntries))
                                 .ToXDictionary(s => s[0].UrlDecode(), s => s.Length > 1 ? s[1].UrlDecode() : String.Empty);
                         break;
@@ -115,13 +122,13 @@ namespace CoApp.Toolkit.Pipes {
         /// </remarks>
         public override string ToString() {
             return _data.Any()
-                ? _data.Keys.Aggregate(string.IsNullOrEmpty(Command) ? "" : Command.UrlEncode() + "?", (current, k) => current + (!string.IsNullOrEmpty(_data[k]) ? (k.UrlEncode() + "=" + _data[k].UrlEncode() + _separatorString) : string.Empty))
+                ? _data.Keys.Aggregate(string.IsNullOrEmpty(Command) ? string.Empty : Command.UrlEncode() + "?", (current, k) => current + (!string.IsNullOrEmpty(_data[k]) ? (k.UrlEncode() + "=" + _data[k].UrlEncode() + _separatorString) : string.Empty))
                 : Command.UrlEncode();
         }
 
         public string ToSmallerString() {
             return _data.Any()
-                ? _data.Keys.Aggregate(string.IsNullOrEmpty(Command) ? "" : Command + "?", (current, k) => current + (!string.IsNullOrEmpty(_data[k]) ? (k + "=" + _data[k].Substring(0, Math.Min(_data[k].Length, 512)) + _separatorString) : string.Empty))
+                ? _data.Keys.Aggregate(string.IsNullOrEmpty(Command) ? string.Empty : Command + "?", (current, k) => current + (!string.IsNullOrEmpty(_data[k]) ? (k + "=" + _data[k].Substring(0, Math.Min(_data[k].Length, 512)) + _separatorString) : string.Empty))
                 : Command;
         }
 
@@ -270,6 +277,7 @@ namespace CoApp.Toolkit.Pipes {
         }
 
         private string GetValueAsString(string key) {
+            key = key ?? string.Empty;
             return _data.ContainsKey(key) ? _data[key] : string.Empty;
         }
 
@@ -277,14 +285,14 @@ namespace CoApp.Toolkit.Pipes {
             return primitiveType.ParseString(_data.ContainsKey(key) ? _data[key] : null);
         }
 
-        private object GetValueAsNullable(string key, Type primitiveType) {
-            return _data.ContainsKey(key) ? primitiveType.ParseString(_data[key]) : null;
+        private object GetValueAsNullable(string key, Type nullableType) {
+            return _data.ContainsKey(key) ? nullableType.ParseString(_data[key]) : null;
         }
 
         private object GetValueAsOther(string key, Type otherType, object o = null) {
             if (o == null) {
-                var noo = ObjectCreationSubstitution[otherType];
-                o = noo != null ? noo(this, key, otherType) : otherType.CreateInstance();
+                var instantiator = TypeSubstitution[otherType];
+                o = instantiator != null ? instantiator(this, key, otherType) : otherType.CreateInstance();
                 if( o == null ) {
                     return null;
                 }
@@ -295,18 +303,41 @@ namespace CoApp.Toolkit.Pipes {
 
             var persistable = otherType.GetPersistableElements();
             foreach (var f in persistable.Fields) {
-                f.SetValue(o, GetValue(key + "." + f.Name, f.FieldType));
+                f.SetValue(o, GetValue(FormatKey(key ,f.Name), f.FieldType));
             }
 
             foreach (var p in persistable.Properties) {
                 if (p.GetSetMethod(true) != null) {
-                    p.SetValue(o, GetValue(key + "." + p.Name, p.PropertyType), null);
+                    p.SetValue(o, GetValue(FormatKey(key , p.Name), p.PropertyType), null);
                 }
             }
 
             return o;
         }
 
+        private string FormatKey(string key, string subkey=null) {
+            if(string.IsNullOrEmpty(key)) {
+                key = ".";
+            }
+            if( !string.IsNullOrEmpty(subkey)) {
+                key = key.EndsWith(".") ? key + subkey : key + "." + subkey;
+            }
+            return key;
+        }
+
+        private string FormatKeyIndex(string key, int index ) {
+            if (string.IsNullOrEmpty(key)) {
+                key = ".";
+            }
+            return "{0}[{1}]".format(key, index);
+        }
+
+        private string FormatKeyIndex(string key, string index) {
+            if (string.IsNullOrEmpty(key)) {
+                key = ".";
+            }
+            return "{0}[{1}]".format(key, index.UrlEncode());
+        }
 
         /// <summary>
         ///   Adds the specified key.
@@ -316,22 +347,25 @@ namespace CoApp.Toolkit.Pipes {
         /// <remarks>
         /// </remarks>
         public void Add(string key, string value) {
+            key = FormatKey(key);
             if (!string.IsNullOrEmpty(value)) {
                 _data[key] = value;
             }
         }
 
         public void AddKeyValuePair(string key, string elementName, object elementValue) {
-            Add("{0}[{1}]".format(key, elementName.UrlEncode()), elementValue, elementValue.GetType());
+            Add(FormatKeyIndex(key, elementName), elementValue, elementValue.GetType());
         }
 
         public void AddKeyValueCollection(string key, IEnumerable<KeyValuePair<string, string>> collection) {
+            key = FormatKey(key);
             foreach (var each in collection) {
                 AddKeyValuePair(key, each.Key, each.Value);
             }
         }
 
         public void AddDictionary(string key, IDictionary collection) {
+            key = FormatKey(key);
             foreach (var each in collection.Keys) {
                 if( each.GetType().IsParsable() ) {
                     AddKeyValuePair(key, each.ToString(), collection[each]);
@@ -343,7 +377,7 @@ namespace CoApp.Toolkit.Pipes {
             if (values != null) {
                 var index = 0;
                 foreach (var s in values.Where(s => !string.IsNullOrEmpty(s))) {
-                    Add("{0}[{1}]".format(key, index++), s);
+                    Add(FormatKeyIndex(key, index++), s);
                 }
             }
         }
@@ -353,7 +387,7 @@ namespace CoApp.Toolkit.Pipes {
                 var index = 0;
                 for (var enmerator = values.GetEnumerator(); enmerator.MoveNext();) {
                     if (enmerator.Current != null ) {
-                        Add("{0}[{1}]".format(key, index++), enmerator.Current, enmerator.Current.GetType() );    
+                        Add(FormatKeyIndex(key, index++), enmerator.Current, enmerator.Current.GetType());    
                     }
                 }
             }
@@ -367,18 +401,25 @@ namespace CoApp.Toolkit.Pipes {
         /// <returns> </returns>
         /// <remarks>
         /// </remarks>
-        public IEnumerable<string> GetCollection(string collectionName) {
-            var rx = new Regex(@"^{0}\[\d*\]$".format(Regex.Escape(collectionName)));
+        public IEnumerable<string> GetCollection(string key) {
+            key = FormatKey(key);
+            var rx = new Regex(@"^{0}\[\d*\]$".format(Regex.Escape(key)));
             return from k in _data.Keys where rx.IsMatch(k) select _data[k];
         }
 
         public void Add(string argName, object arg, Type argType) {
+            argName = FormatKey(argName);
             if( arg == null ) {
                 return;
             }
            
             if (_storeTypeInformation) {
                 Add(argName+"$T$", argType.FullName);
+            }
+
+            var custom = CustomSerializer.GetCustomSerializer(argType);
+            if (custom != null) {
+                custom.SerializeObject(this, argName,arg );
             }
 
             if (argType == typeof(string) || argType.IsEnum || argType.IsParsable()) {
@@ -399,12 +440,12 @@ namespace CoApp.Toolkit.Pipes {
             // fall through to reflection-based serialization.
             var persistable = argType.GetPersistableElements();
             foreach( var f in persistable.Fields ) {
-                Add(argName+"."+f.Name, f.GetValue(arg), f.FieldType);
+                Add(FormatKey(argName,f.Name), f.GetValue(arg), f.FieldType);
             }
 
             foreach (var p in persistable.Properties) {
                 if (p.GetGetMethod(true) != null) {
-                    Add(argName + "." + p.Name, p.GetValue(arg, null), p.PropertyType);
+                    Add(FormatKey(argName,p.Name), p.GetValue(arg, null), p.PropertyType);
                 }
             }
             
@@ -418,7 +459,18 @@ namespace CoApp.Toolkit.Pipes {
             return value.ToString();
         }
 
-        public object GetValue( string key , Type argType, object o = null) {
+        public T GetValue<T>(string key) {
+            return (T)GetValue(key, typeof (T));
+        }
+
+        public object GetValue(string key , Type argType, object o = null) {
+            key = FormatKey(key);
+
+            var custom = CustomSerializer.GetCustomSerializer(argType);
+            if (custom != null) {
+                return custom.DeserializeObject(this, key);
+            }
+            
             var pi = (TypeExtensions.TypeSubtitution[argType] ?? argType).GetPersistableInfo();
 
             switch (pi.PersistableCategory) {
@@ -451,12 +503,6 @@ namespace CoApp.Toolkit.Pipes {
 
         public T DeserializeTo<T>(T intoInstance = default(T), string key = null) {
             return (T)GetValue(key, typeof(T), intoInstance);
-        }
-    }
-
-    public static class UEMSerializationExtensions {
-        public static UrlEncodedMessage Serialize( this object obj,string seperator = "&" , bool storeTypeNames = false) {
-            return new UrlEncodedMessage(null, seperator, storeTypeNames) { { "", obj, obj.GetType() } };
         }
     }
 }
