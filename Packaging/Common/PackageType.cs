@@ -144,6 +144,15 @@ namespace CoApp.Packaging.Common {
             return a._packageType > b._packageType;
         }
 
+        public static bool operator <=(PackageType a, PackageType b) {
+            return a._packageType <= b._packageType;
+        }
+
+        public static bool operator >=(PackageType a, PackageType b) {
+            return a._packageType >= b._packageType;
+        }
+
+
         public int CompareTo(object other) {
             if (other == null) {
                 return 1;

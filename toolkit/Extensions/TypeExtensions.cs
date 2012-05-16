@@ -15,15 +15,26 @@ namespace CoApp.Toolkit.Extensions {
     using System.Collections;
     using System.Collections.Generic;
     using System.Linq;
+    
     using System.Reflection;
     using Collections;
+    
 
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
     public class NotPersistableAttribute : Attribute {
     }
 
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property )]
-    public class PersistableAttribute : Attribute {
+    public class PersistableAttribute: Attribute {
+        internal string Name = null;
+        internal Type SerializeAsType = null;
+        internal Type DeserializeAsType = null;
+
+        public PersistableAttribute( string name = null, Type serializeAsType= null, Type deserializeAsType = null) {
+            Name = name;
+            SerializeAsType = serializeAsType;
+            DeserializeAsType = deserializeAsType;
+        }
     }
 
     internal enum PersistableCategory {
@@ -115,9 +126,12 @@ namespace CoApp.Toolkit.Extensions {
         }
     }
 
-    public class PersistableElements {
-        public FieldInfo[] Fields { get; set; }
-        public PropertyInfo[] Properties { get; set; }
+    public class PersistablePropertyInformation {
+        public string Name;
+        public Type SerializeAsType;
+        public Type DeserializeAsType;
+        public Action<object, object,object[]> SetValue;
+        public Func<object, object[], object> GetValue;
     }
 
     public static class TypeExtensions {
@@ -129,20 +143,49 @@ namespace CoApp.Toolkit.Extensions {
         private static readonly IDictionary<Type, MethodInfo> ToArrayMethods = new XDictionary<Type, MethodInfo>();
         public static readonly IDictionary<Type, Type> TypeSubtitution = new XDictionary<Type, Type>();
 
-
         public static PersistableInfo GetPersistableInfo(this Type t) {
             return AutoCache.Get(t, () => new PersistableInfo(t));
         }
 
-        public static PersistableElements GetPersistableElements(this Type type) {
+        public static PersistablePropertyInformation[] GetPersistableElements(this Type type) {
             return AutoCache.Get(type, () => 
-                new PersistableElements {
+                (from each in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                    let persistableAttribute = each.GetCustomAttributes(typeof (PersistableAttribute), true).FirstOrDefault() as PersistableAttribute
+                where
+                    !each.IsInitOnly && !each.GetCustomAttributes(typeof (NotPersistableAttribute), true).Any() && 
+                    (each.IsPublic || persistableAttribute != null)
+                select new PersistablePropertyInformation {
+                    SetValue = (o, o1, arg3) => each.SetValue(o, o1),
+                    GetValue = (o, objects) => each.GetValue(o),
+                    SerializeAsType = (persistableAttribute != null ? persistableAttribute.SerializeAsType : null) ?? each.FieldType,
+                    DeserializeAsType = (persistableAttribute != null ? persistableAttribute.DeserializeAsType : null) ?? each.FieldType,
+                    Name = (persistableAttribute != null ? persistableAttribute.Name : null) ?? each.Name
+                 }).Union((from each in type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                    let setMethodInfo = each.GetSetMethod(true)
+                    let getMethodInfo = each.GetGetMethod(true)
+                    let persistableAttribute = each.GetCustomAttributes(typeof (PersistableAttribute), true).FirstOrDefault() as PersistableAttribute
+                where
+                    ((setMethodInfo != null && getMethodInfo != null) &&
+                    !each.GetCustomAttributes(typeof (NotPersistableAttribute), true).Any() &&
+                    (each.GetSetMethod(true).IsPublic && each.GetGetMethod(true).IsPublic)) ||
+                    persistableAttribute != null
+                select new PersistablePropertyInformation {
+                    SetValue = setMethodInfo != null ? new Action<object, object, object[]>(each.SetValue) : null,
+                    GetValue = getMethodInfo != null ? new Func<object, object[], object>(each.GetValue) : null,
+                    SerializeAsType = (persistableAttribute != null ? persistableAttribute.SerializeAsType : null) ?? each.PropertyType,
+                    DeserializeAsType = (persistableAttribute != null ? persistableAttribute.DeserializeAsType : null) ?? each.PropertyType,
+                    Name = (persistableAttribute != null ? persistableAttribute.Name : null) ?? each.Name
+                })).ToArray()
+            );
+
+            /*
                     Fields = type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(each => 
                         !each.IsInitOnly && !each.GetCustomAttributes(typeof (NotPersistableAttribute), true).Any() && (
                             each.IsPublic || 
                             each.GetCustomAttributes(typeof (PersistableAttribute), true).Any())
                         ).ToArray(),
-
+                    */
+            /*
                     Properties = type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(each => {
 
                         var sm = each.GetSetMethod(true);
@@ -153,9 +196,9 @@ namespace CoApp.Toolkit.Extensions {
                                 !each.GetCustomAttributes(typeof (NotPersistableAttribute), true).Any() && 
                                 (each.GetSetMethod(true).IsPublic && each.GetGetMethod(true).IsPublic)) ||
                             each.GetCustomAttributes(typeof (PersistableAttribute), true).Any();
-                    }).ToArray()
-                });
-        
+                    }).ToArray()*/
+
+
         }
 
         public static object ToArrayOfType(this IEnumerable<object> enumerable, Type collectionType) {

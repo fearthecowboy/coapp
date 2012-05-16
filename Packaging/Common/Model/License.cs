@@ -26,7 +26,7 @@ namespace CoApp.Packaging.Common.Model {
         [XmlElement(IsNullable = false)]
         public string Text { get; set; }
 
-        [XmlElement(ElementName = "LicenseUrl")]
+        [XmlElement(ElementName = "LicenseUrl"),NotPersistable]
         public string _licenseUrl {
             get {
                 return Location.AbsoluteUri;

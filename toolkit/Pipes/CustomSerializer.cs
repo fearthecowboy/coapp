@@ -22,8 +22,8 @@ namespace CoApp.Toolkit.Pipes {
         internal abstract void SerializeObject(UrlEncodedMessage msg, string key, object obj);
         internal abstract object DeserializeObject(UrlEncodedMessage msg, string key);
 
-        private static readonly ExpressionXmlSerializer ExpressionXmlSerializer = new ExpressionXmlSerializer();
-        private static readonly IDictionary<Type, CustomSerializer> Serializers = new XDictionary<Type, CustomSerializer>();
+        public static readonly ExpressionXmlSerializer ExpressionXmlSerializer = new ExpressionXmlSerializer();
+        protected static readonly IDictionary<Type, CustomSerializer> Serializers = new XDictionary<Type, CustomSerializer>();
 
         public static void Add<T>(CustomSerializer<T> serializer) {
             Serializers.Add(typeof(T), serializer);

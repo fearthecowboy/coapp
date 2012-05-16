@@ -300,17 +300,22 @@ namespace CoApp.Toolkit.Pipes {
                 otherType = o.GetType();
             }
 
-
+            foreach( var p in otherType.GetPersistableElements()) {
+                if( p.SetValue != null ) {
+                    p.SetValue(o, GetValue(FormatKey(key, p.Name), p.DeserializeAsType), null);
+                }
+            }
+            /*
             var persistable = otherType.GetPersistableElements();
             foreach (var f in persistable.Fields) {
                 f.SetValue(o, GetValue(FormatKey(key ,f.Name), f.FieldType));
             }
 
             foreach (var p in persistable.Properties) {
-                if (p.GetSetMethod(true) != null) {
-                    p.SetValue(o, GetValue(FormatKey(key , p.Name), p.PropertyType), null);
+                if (p.SetValue != null) {
+                    p.SetValue(o, GetValue(FormatKey(key , p.Name), p.DeserializeAsType), null);
                 }
-            }
+            }*/
 
             return o;
         }
@@ -438,17 +443,24 @@ namespace CoApp.Toolkit.Pipes {
             }
 
             // fall through to reflection-based serialization.
+            foreach (var p in argType.GetPersistableElements()) {
+                if (p.GetValue != null) {
+                    Add(FormatKey(argName, p.Name), p.GetValue(arg, null), p.SerializeAsType);
+                }
+            }
+
+            /*
             var persistable = argType.GetPersistableElements();
             foreach( var f in persistable.Fields ) {
                 Add(FormatKey(argName,f.Name), f.GetValue(arg), f.FieldType);
             }
 
             foreach (var p in persistable.Properties) {
-                if (p.GetGetMethod(true) != null) {
-                    Add(FormatKey(argName,p.Name), p.GetValue(arg, null), p.PropertyType);
+                if (p.GetValue != null) {
+                    Add(FormatKey(argName,p.Name), p.GetValue(arg, null), p.SerializeAsType);
                 }
             }
-            
+            */
         }
 
         public void Add(string key, object value) {

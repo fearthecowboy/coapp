@@ -169,6 +169,14 @@ namespace CoApp.Toolkit.Win32 {
             return a._architecture > b._architecture;
         }
 
+        public static bool operator <=(Architecture a, Architecture b) {
+            return a._architecture <= b._architecture;
+        }
+
+        public static bool operator >=(Architecture a, Architecture b) {
+            return a._architecture >= b._architecture;
+        }
+
         public int CompareTo(object other) {
             if (other == null) {
                 return 1;
@@ -247,6 +255,14 @@ namespace CoApp.Toolkit.Win32 {
 
         public static bool operator >(TwoPartVersion a, TwoPartVersion b) {
             return a._version > b._version;
+        }
+
+        public static bool operator <=(TwoPartVersion a, TwoPartVersion b) {
+            return a._version <= b._version;
+        }
+
+        public static bool operator >=(TwoPartVersion a, TwoPartVersion b) {
+            return a._version >= b._version;
         }
 
         public override bool Equals(object o) {
@@ -360,6 +376,14 @@ namespace CoApp.Toolkit.Win32 {
 
         public static bool operator >(FourPartVersion a, FourPartVersion b) {
             return a._version > b._version;
+        }
+
+        public static bool operator <=(FourPartVersion a, FourPartVersion b) {
+            return a._version <= b._version;
+        }
+
+        public static bool operator >=(FourPartVersion a, FourPartVersion b) {
+            return a._version >= b._version;
         }
 
         public override bool Equals(object o) {

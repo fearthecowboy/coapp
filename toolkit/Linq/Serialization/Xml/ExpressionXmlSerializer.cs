@@ -24,6 +24,7 @@ namespace CoApp.Toolkit.Linq.Serialization.Xml {
     using System.Runtime.Serialization;
     using System.Text;
     using System.Xml.Linq;
+    using Extensions;
 
     public class ExpressionXmlSerializer {
         /// <summary>
@@ -394,6 +395,9 @@ namespace CoApp.Toolkit.Linq.Serialization.Xml {
        */
 
         public Expression Deserialize(string xmlText) {
+            if (string.IsNullOrEmpty(xmlText)) {
+                return null;
+            }
             return Deserialize(XElement.Parse(xmlText));
         }
 
@@ -851,7 +855,9 @@ namespace CoApp.Toolkit.Linq.Serialization.Xml {
             if (typeof (Enum).IsAssignableFrom(expectedType)) {
                 return Enum.Parse(expectedType, objectStringValue, false);
             }
-            return Convert.ChangeType(objectStringValue, expectedType, default(IFormatProvider));
+
+            return expectedType.ParseString(objectStringValue);
+            //return Convert.ChangeType(objectStringValue, expectedType, default(IFormatProvider));
         }
 
         public XElement     GenerateXmlFromExpressionCore(Expression e) {

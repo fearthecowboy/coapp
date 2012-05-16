@@ -18,15 +18,42 @@ namespace CoApp.Packaging.Client {
     using Common.Model;
     using Toolkit.Collections;
     using Toolkit.Extensions;
-    using Toolkit.Pipes;
+    using Toolkit.Linq;
     using Toolkit.Win32;
 
     public class Package : IPackage {
-        private static readonly IDictionary<CanonicalName, Package> AllPackages = new XDictionary<CanonicalName, Package>();
+        public static class Properties {
+            public static PropertyExpression<IPackage, CanonicalName> CanonicalName = PropertyExpression<IPackage>.Create(p => p.CanonicalName);
+            public static PropertyExpression<IPackage, string> Name = PropertyExpression<IPackage>.Create(p => p.Name);
+            public static PropertyExpression<IPackage, FlavorString> Flavor = PropertyExpression<IPackage>.Create(p => p.Flavor);
+            public static PropertyExpression<IPackage, FourPartVersion> Version = PropertyExpression<IPackage>.Create(p => p.Version);
+            public static PropertyExpression<IPackage, PackageType> PackageType = PropertyExpression<IPackage>.Create(p => p.PackageType);
+            public static PropertyExpression<IPackage, Architecture> Architecture = PropertyExpression<IPackage>.Create(p => p.Architecture);
+            public static PropertyExpression<IPackage, string> PublicKeyToken = PropertyExpression<IPackage>.Create(p => p.PublicKeyToken);
+            public static PropertyExpression<IPackage, BindingPolicy> BindingPolicy = PropertyExpression<IPackage>.Create(p => p.BindingPolicy);
 
-        static Package() {
-            UrlEncodedMessage.AddTypeSubstitution<IPackage>((message, objectName, expectedType) => GetPackage(message[objectName + ".CanonicalName"]));
+            public static PropertyExpression<IPackage, bool> Installed = PropertyExpression<IPackage>.Create(p => p.IsInstalled);
+            public static PropertyExpression<IPackage, bool> Blocked = PropertyExpression<IPackage>.Create(p => p.IsBlocked);
+            public static PropertyExpression<IPackage, bool> ClientRequired = PropertyExpression<IPackage>.Create(p => p.IsClientRequired);
+            public static PropertyExpression<IPackage, bool> Active = PropertyExpression<IPackage>.Create(p => p.IsActive);
+            public static PropertyExpression<IPackage, bool> Dependency = PropertyExpression<IPackage>.Create(p => p.IsDependency);
+
+            public static PropertyExpression<IPackage, bool> DoNotUpdate = PropertyExpression<IPackage>.Create(p => p.DoNotUpdate);
+            public static PropertyExpression<IPackage, bool> DoNotUpgrade = PropertyExpression<IPackage>.Create(p => p.DoNotUpgrade);
+
+            public static PropertyExpression<IPackage, string> DisplayName = PropertyExpression<IPackage>.Create(p => p.DisplayName);
+            public static PropertyExpression<IPackage, IPackage> SatisfiedBy = PropertyExpression<IPackage>.Create(p => p.SatisfiedBy);
+
+            public static PropertyExpression<IPackage, IEnumerable<Uri>> RemoteLocations = PropertyExpression<IPackage>.Create(p => p.RemoteLocations);
+            public static PropertyExpression<IPackage, IEnumerable<Uri>> Feeds = PropertyExpression<IPackage>.Create(p => p.Feeds);
+            public static PropertyExpression<IPackage, IEnumerable<CanonicalName>> Dependencies = PropertyExpression<IPackage>.Create(p => p.Dependencies);
+            public static PropertyExpression<IPackage, IEnumerable<IPackage>> UpdatePackages = PropertyExpression<IPackage>.Create(p => p.UpdatePackages);
+            public static PropertyExpression<IPackage, IEnumerable<IPackage>> UpgradePackages = PropertyExpression<IPackage>.Create(p => p.UpgradePackages);
+            public static PropertyExpression<IPackage, IEnumerable<IPackage>> NewerPackages = PropertyExpression<IPackage>.Create(p => p.NewerPackages);
+            public static PropertyExpression<IPackage, IEnumerable<Role>> Roles = PropertyExpression<IPackage>.Create(p => p.Roles);
         }
+
+        private static readonly IDictionary<CanonicalName, Package> AllPackages = new XDictionary<CanonicalName, Package>();
 
         public static Package GetPackage(CanonicalName canonicalName) {
             lock (AllPackages) {
@@ -96,16 +123,28 @@ namespace CoApp.Packaging.Client {
 
 
         [NotPersistable]
-        public IPackage SatisfiedBy { get; set; }
-        [NotPersistable]
+        public IPackage SatisfiedBy { get { return null != _satisfiedBy ? PackageManager.Instance.GetPackage(_satisfiedBy).Result : null; } }
+
+        [Persistable(name: "SatisfiedBy")]
+        private CanonicalName _satisfiedBy;
+        
+        [Persistable]
         public IEnumerable<CanonicalName> Dependencies { get; set; }
 
         [NotPersistable]
-        public IEnumerable<IPackage> UpdatePackages { get; set; }
+        public IEnumerable<IPackage> UpdatePackages { get { return PackageManager.Instance.GetPackages(_updatePackages).Result; } }
         [NotPersistable]
-        public IEnumerable<IPackage> UpgradePackages { get; set; }
+        public IEnumerable<IPackage> UpgradePackages { get { return PackageManager.Instance.GetPackages(_upgradePackages).Result; } }
         [NotPersistable]
-        public IEnumerable<IPackage> NewerPackages { get; set; }
+        public IEnumerable<IPackage> NewerPackages { get { return PackageManager.Instance.GetPackages(_newerPackages).Result; } }
+
+        [Persistable(name: "NewerPackages")]
+        private IEnumerable<CanonicalName> _newerPackages;
+        [Persistable(name: "UpdatePackages")]
+        private IEnumerable<CanonicalName> _updatePackages;
+        [Persistable(name: "UpgradePackages")]
+        private IEnumerable<CanonicalName> _upgradePackages;
+
 
         [NotPersistable]
         internal bool IsPackageInfoStale { get; set; }

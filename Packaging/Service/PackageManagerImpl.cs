@@ -15,8 +15,10 @@ namespace CoApp.Packaging.Service {
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
+    using System.Linq.Expressions;
     using System.Threading;
     using System.Threading.Tasks;
+    using System.Xml.Linq;
     using Common;
     using Feeds;
     using PackageFormatHandlers;
@@ -35,6 +37,12 @@ namespace CoApp.Packaging.Service {
                 return CoTask.AsResultTask<object>(null);
             }
         }
+
+        static PackageManagerImpl() {
+            // Serializer for System.Linq.Expressions.Expression
+            CustomSerializer.Add(new CustomSerializer<Expression<Func<IPackage, bool>>>((message, key, serialize) => message.Add(key, CustomSerializer.ExpressionXmlSerializer.Serialize(serialize).ToString(SaveOptions.OmitDuplicateNamespaces | SaveOptions.DisableFormatting)), (message, key) => (Expression<Func<IPackage, bool>>)CustomSerializer.ExpressionXmlSerializer.Deserialize(message[key])));
+        }
+
 
         public static PackageManagerImpl Instance = new PackageManagerImpl();
 
@@ -155,6 +163,50 @@ namespace CoApp.Packaging.Service {
             }
         }
 
+        public Task NewFindPackages(CanonicalName canonicalName, Expression<Func<IPackage, bool>> filter, int? index, int? maxResults, string location) {
+            var response = Event<GetResponseInterface>.RaiseFirst();
+
+            if (CancellationRequested) {
+                response.OperationCanceled("find-package");
+                return FinishedSynchronously;
+            }
+
+            canonicalName = canonicalName ?? CanonicalName.CoAppPackages;
+
+            if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.EnumeratePackages)) {
+                UpdateIsRequestedFlags();
+
+                var query = filter == null ? SearchForPackages(canonicalName, location) : SearchForPackages(canonicalName, location).Where(each => filter.Compile()(each));
+
+                Package[] results;
+                // paginate the results
+                if (index.HasValue && maxResults.HasValue ) {
+                    results = query.Skip(index.Value).Take(maxResults.Value).ToArray();
+                } else if (index.HasValue) {
+                    results = query.Skip(index.Value).ToArray();
+                } else if (maxResults.HasValue) {
+                    results = query.Take(maxResults.Value).ToArray();
+                } else {
+                    results = query.ToArray();
+                }
+
+                if (results.Length > 0 ) {
+                    foreach (var pkg in results) {
+                        if (CancellationRequested) {
+                            response.OperationCanceled("find-packages");
+                            return FinishedSynchronously;
+                        }
+                        response.PackageInformation(pkg);
+                    }
+                }
+                else {
+                    response.NoPackagesFound();
+                }
+            }
+            return FinishedSynchronously;
+        }
+
+
         public Task FindPackages(CanonicalName canonicalName, bool? dependencies, bool? installed, bool? active, bool? required, bool? blocked, bool? latest,
             int? index, int? maxResults, string location, bool? forceScan, bool? updates, bool? upgrades, bool? trimable) {
             var response = Event<GetResponseInterface>.RaiseFirst();
@@ -252,7 +304,7 @@ namespace CoApp.Packaging.Service {
                 // otherwise the client will get the names in 
                 if (dependencies == true) {
                     // grab the dependencies too.
-                    var deps = results.SelectMany(each => each.Dependencies).Distinct();
+                    var deps = results.SelectMany(each => each.PackageDependcies).Distinct();
 
                     if (latest == true) {
                         deps = deps.HighestPackages();
@@ -1345,7 +1397,7 @@ namespace CoApp.Packaging.Service {
             }
 
             var childrenFailed = false;
-            foreach (var d in package.Dependencies) {
+            foreach (var d in package.PackageDependcies) {
                 IEnumerable<Package> children;
                 try {
                     children = GenerateInstallGraph(d);

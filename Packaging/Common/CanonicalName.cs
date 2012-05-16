@@ -289,6 +289,14 @@ namespace CoApp.Packaging.Common {
             return a.CompareTo(b) > 0;
         }
 
+        public static bool operator <=(CanonicalName a, CanonicalName b) {
+            return a.CompareTo(b) <= 0;
+        }
+
+        public static bool operator >=(CanonicalName a, CanonicalName b) {
+            return a.CompareTo(b) >= 0;
+        }
+
         public int CompareTo(object other) {
             if (ReferenceEquals(other, null)) {
                 return 1;

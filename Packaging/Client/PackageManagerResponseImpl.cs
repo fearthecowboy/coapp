@@ -273,7 +273,7 @@ namespace CoApp.Packaging.Client {
 
         public void PackageSatisfiedBy(string requestedCanonicalName, string satisfiedByCanonicalName) {
             var pkg = Package.GetPackage(requestedCanonicalName);
-            pkg.SatisfiedBy = Package.GetPackage(satisfiedByCanonicalName);
+            // pkg.SatisfiedBy = Package.GetPackage(satisfiedByCanonicalName);
             _packages.Value.Add(pkg);
         }
 

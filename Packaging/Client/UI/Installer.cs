@@ -603,7 +603,7 @@ namespace CoApp.Packaging.Client.UI {
                                         Progress = (progress / taskCount) + taskNumber * 100 / taskCount;
                                     },
                                     RemovedPackage = (canonicalName) => {
-                                        Package.GetPackage(canonicalName).IsInstalled = false;
+                                        Package.GetPackage(canonicalName).Installed = false;
                                     },
                                     OperationCanceled = CancellationRequestedDuringRemove,
                                 }).Wait();

@@ -65,7 +65,7 @@ namespace CoApp.Packaging.Service {
 
         /// <summary>
         /// </summary>
-        internal const int BufferSize = 8192;
+        internal const int BufferSize = 2 * 1024 * 1024;
 
         /// <summary>
         /// </summary>
