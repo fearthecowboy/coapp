@@ -12,6 +12,7 @@
 
 namespace CoApp.Packaging.Common {
     using System;
+    using System.Linq.Expressions;
     using System.Threading.Tasks;
     using Toolkit.ImpromptuInterface.Dynamic;
 
@@ -19,6 +20,8 @@ namespace CoApp.Packaging.Common {
     public interface IPackageManager {
         Task FindPackages(CanonicalName canonicalName, bool? dependencies = null, bool? installed = null, bool? active = null, bool? required = null, bool? blocked = null, bool? latest = null,
             int? index = null, int? maxResults = null, string location = null, bool? forceScan = null, bool? updates = null, bool? upgrades = null, bool? trimable = null);
+
+        Task NewFindPackages(CanonicalName canonicalName, Expression<Func<IPackage, bool>> filter = null, int? index = null, int? maxResults = null, string location = null);
 
         Task GetPackageDetails(CanonicalName canonicalName);
         Task InstallPackage(CanonicalName canonicalName, bool? autoUpgrade, bool? force, bool? download, bool? pretend, bool? isUpdating, bool? isUpgrading);

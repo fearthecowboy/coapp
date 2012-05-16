@@ -10,18 +10,13 @@
 // </license>
 //-----------------------------------------------------------------------
 
-namespace CoApp.Toolkit.Query {
+namespace CoApp.Toolkit.Linq {
     using System;
-    using System.Linq;
     using System.Linq.Expressions;
     using Extensions;
-    using SLE = System.Linq.Expressions;
-    
 
     public class FilterComparison<T, TProperty> : Filter<T> {
-
-        public FilterComparison(PropertyExpression<T, TProperty> property, FilterOp comparison, TProperty value)
-        {
+        public FilterComparison(PropertyExpression<T, TProperty> property, FilterOp comparison, TProperty value) {
             Property = property;
             Comparison = comparison;
             Value = value;
@@ -33,53 +28,45 @@ namespace CoApp.Toolkit.Query {
 
         public override Expression<Func<T, bool>> Expression {
             get {
-                ParameterExpression p = SLE.Expression.Parameter(typeof (T));
-                var leftInvoke = SLE.Expression.Invoke(Property, p);
+                var p = System.Linq.Expressions.Expression.Parameter(typeof (T));
+                var leftInvoke = System.Linq.Expressions.Expression.Invoke(Property, p);
                 Expression e = null;
 
-                Expression value = SLE.Expression.Constant(Value, typeof(TProperty));
+                Expression value = System.Linq.Expressions.Expression.Constant(Value, typeof (TProperty));
                 var stringType = typeof (string);
                 var containsMethod = stringType.GetMethod("Contains");
-                
-                
 
                 var stringExtensionsType = typeof (StringExtensions);
                 var newIsWildcardMatchMethod = stringExtensionsType.GetMethod("NewIsWildcardMatch");
 
-                switch (Comparison)
-                {
+                switch (Comparison) {
                     case FilterOp.LT:
-                        e = SLE.Expression.LessThan(leftInvoke, value);
+                        e = System.Linq.Expressions.Expression.LessThan(leftInvoke, value);
                         break;
                     case FilterOp.LTE:
-                        e = SLE.Expression.LessThanOrEqual(leftInvoke, value);
+                        e = System.Linq.Expressions.Expression.LessThanOrEqual(leftInvoke, value);
                         break;
                     case FilterOp.GT:
-                        e = SLE.Expression.GreaterThan(leftInvoke, value);
+                        e = System.Linq.Expressions.Expression.GreaterThan(leftInvoke, value);
                         break;
                     case FilterOp.GTE:
-                        e = SLE.Expression.GreaterThanOrEqual(leftInvoke, value);
+                        e = System.Linq.Expressions.Expression.GreaterThanOrEqual(leftInvoke, value);
                         break;
                     case FilterOp.Contains:
-                        if (Value is string)
-                        {
-                            e = SLE.Expression.Call(leftInvoke, containsMethod, value);
+                        if (Value is string) {
+                            e = System.Linq.Expressions.Expression.Call(leftInvoke, containsMethod, value);
                         }
                         break;
                     case FilterOp.EQ:
-                      
-                        if (Value is string)
-                        {
-                            e = SLE.Expression.Call(newIsWildcardMatchMethod, leftInvoke, value, SLE.Expression.Constant(false), SLE.Expression.Constant(null, stringType));
-                        }
-                        else
-                        {
-                            e = SLE.Expression.Equal(leftInvoke, value);
+                        if (Value is string) {
+                            e = System.Linq.Expressions.Expression.Call(newIsWildcardMatchMethod, leftInvoke, value, System.Linq.Expressions.Expression.Constant(false), System.Linq.Expressions.Expression.Constant(null, stringType));
+                        } else {
+                            e = System.Linq.Expressions.Expression.Equal(leftInvoke, value);
                         }
                         break;
                 }
 
-                return SLE.Expression.Lambda<Func<T, bool>>(e, p);
+                return System.Linq.Expressions.Expression.Lambda<Func<T, bool>>(e, p);
             }
         }
     }

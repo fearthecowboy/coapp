@@ -513,7 +513,7 @@ namespace CoApp.Packaging.Service {
                                     if (IsCanceled) {
                                         Event<GetResponseInterface>.RaiseFirst().OperationCanceled("Service is shutting down");
                                     } else {
-                                        Logger.Message("Request:[{0}]{1}".format(requestMessage["rqid"], requestMessage.ToSmallerString()));
+                                        Logger.Message("Request:[{0}]{1}".format(requestMessage["rqid"], requestMessage.ToString()));
 
                                        
                                         var packageRequestData = new XDictionary<string, PackageRequestData>();

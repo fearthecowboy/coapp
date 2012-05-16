@@ -10,16 +10,12 @@
 // </license>
 //-----------------------------------------------------------------------
 
-namespace CoApp.Toolkit.Query {
+namespace CoApp.Toolkit.Linq {
     using System;
     using System.Linq.Expressions;
 
-    using SLE = System.Linq.Expressions;
-
     public class BooleanFilter<T> : Filter<T> {
-
-        public BooleanFilter(Filter<T> left, Filter<T> right, BooleanFilterOperator op)
-        {
+        public BooleanFilter(Filter<T> left, Filter<T> right, BooleanFilterOperator op) {
             Left = left;
             Right = right;
             Operator = op;
@@ -29,31 +25,30 @@ namespace CoApp.Toolkit.Query {
         private Filter<T> Right { get; set; }
         private BooleanFilterOperator Operator { get; set; }
 
-
         public override Expression<Func<T, bool>> Expression {
             get {
+                var p = System.Linq.Expressions.Expression.Parameter(typeof (T), "arg");
 
-                ParameterExpression p = SLE.Expression.Parameter(typeof (T), "arg");
-
-                var invokeLeft = SLE.Expression.Invoke(Left, p);
-                var invokeRight = SLE.Expression.Invoke(Right, p);
+                var invokeLeft = System.Linq.Expressions.Expression.Invoke(Left, p);
+                var invokeRight = System.Linq.Expressions.Expression.Invoke(Right, p);
                 BinaryExpression bin = null;
                 switch (Operator) {
                     case BooleanFilterOperator.And:
-                        bin = SLE.Expression.And(invokeLeft, invokeRight);
+                        bin = System.Linq.Expressions.Expression.And(invokeLeft, invokeRight);
                         break;
                     case BooleanFilterOperator.Or:
-                        bin = SLE.Expression.Or(invokeLeft, invokeRight);
+                        bin = System.Linq.Expressions.Expression.Or(invokeLeft, invokeRight);
                         break;
                     case BooleanFilterOperator.Xor:
-                        bin = SLE.Expression.ExclusiveOr(invokeLeft, invokeRight);
+                        bin = System.Linq.Expressions.Expression.ExclusiveOr(invokeLeft, invokeRight);
                         break;
                 }
 
-                if (bin == null)
+                if (bin == null) {
                     throw new Exception("This should never happen");
+                }
 
-                return SLE.Expression.Lambda<Func<T, bool>>(bin, p);
+                return System.Linq.Expressions.Expression.Lambda<Func<T, bool>>(bin, p);
             }
         }
     }

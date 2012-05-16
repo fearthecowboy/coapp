@@ -154,6 +154,15 @@ namespace CoApp.Packaging.Common {
             return a.CompareTo(b) > 0;
         }
 
+        public static bool operator <=(FlavorString a, FlavorString b) {
+            return a.CompareTo(b) <= 0;
+        }
+
+        public static bool operator >=(FlavorString a, FlavorString b) {
+            return a.CompareTo(b) >= 0;
+        }
+
+
         public override int GetHashCode() {
             if (_hashCode == null) {
                 _hashCode = 0;
