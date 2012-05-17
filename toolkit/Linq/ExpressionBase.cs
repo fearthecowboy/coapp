@@ -14,14 +14,14 @@ namespace CoApp.Toolkit.Linq {
     using System;
     using System.Linq.Expressions;
 
-    public abstract class FilterBase<T, TOut> {
+    public abstract class ExpressionBase<T, TOut> {
         public abstract Expression<Func<T, TOut>> Expression { get; }
 
-        public static implicit operator Expression<Func<T, TOut>>(FilterBase<T, TOut> filter) {
+        public static implicit operator Expression<Func<T, TOut>>(ExpressionBase<T, TOut> filter) {
             return filter != null ? filter.Expression: null;
         }
 
-        public static implicit operator FilterBase<T, TOut>(Expression<Func<T, TOut>> exp) {
+        public static implicit operator ExpressionBase<T, TOut>(Expression<Func<T, TOut>> exp) {
             throw new NotImplementedException("We can't implement this right now");
         }
     }

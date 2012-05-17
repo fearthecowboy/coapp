@@ -14,8 +14,8 @@ namespace CoApp.Toolkit.Linq {
     using System;
     using System.Linq.Expressions;
 
-    public class BooleanFilter<T> : Filter<T> {
-        public BooleanFilter(Filter<T> left, Filter<T> right, BooleanFilterOperator op) {
+    public class BooleanExpression<T> : Filter<T> {
+        public BooleanExpression(Filter<T> left, Filter<T> right, BooleanOperation op) {
             Left = left;
             Right = right;
             Operator = op;
@@ -23,7 +23,7 @@ namespace CoApp.Toolkit.Linq {
 
         private Filter<T> Left { get; set; }
         private Filter<T> Right { get; set; }
-        private BooleanFilterOperator Operator { get; set; }
+        private BooleanOperation Operator { get; set; }
 
         public override Expression<Func<T, bool>> Expression {
             get {
@@ -33,13 +33,13 @@ namespace CoApp.Toolkit.Linq {
                 var invokeRight = System.Linq.Expressions.Expression.Invoke(Right, p);
                 BinaryExpression bin = null;
                 switch (Operator) {
-                    case BooleanFilterOperator.And:
+                    case BooleanOperation.And:
                         bin = System.Linq.Expressions.Expression.And(invokeLeft, invokeRight);
                         break;
-                    case BooleanFilterOperator.Or:
+                    case BooleanOperation.Or:
                         bin = System.Linq.Expressions.Expression.Or(invokeLeft, invokeRight);
                         break;
-                    case BooleanFilterOperator.Xor:
+                    case BooleanOperation.Xor:
                         bin = System.Linq.Expressions.Expression.ExclusiveOr(invokeLeft, invokeRight);
                         break;
                 }

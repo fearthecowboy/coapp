@@ -185,6 +185,9 @@
       <DependentUpon>InvokeHelper.tt</DependentUpon>
     </Compile>
     <Compile Include="Toolkit\ImpromptuInterface\Optimization\Util.cs" />
+    <Compile Include="Toolkit\Linq\BooleanOperation.cs" />
+    <Compile Include="Toolkit\Linq\FilterOperation.cs" />
+    <Compile Include="Toolkit\Linq\QualifierOperation.cs" />
     <Compile Include="Toolkit\Logging\Logger.cs" />
     <Compile Include="Toolkit\Pipes\AsyncPipeExtensions.cs" />
     <Compile Include="Toolkit\Pipes\CustomSerializer.cs" />
@@ -196,14 +199,14 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="Toolkit\Linq\BooleanFilter.cs" />
-    <Compile Include="Toolkit\Linq\FilterBase.cs" />
+    <Compile Include="Toolkit\Linq\BooleanExpression.cs" />
+    <Compile Include="Toolkit\Linq\ExpressionBase.cs" />
     <Compile Include="Toolkit\Linq\Filter.cs" />
-    <Compile Include="Toolkit\Linq\FilterComparison.cs" />
+    <Compile Include="Toolkit\Linq\FilterExpression.cs" />
     <Compile Include="Toolkit\Linq\PropertyExpression.cs" />
     <Compile Include="Toolkit\Linq\Query.cs" />
-    <Compile Include="Toolkit\Linq\QueryEnums.cs" />
-    <Compile Include="Toolkit\Linq\UnaryFilter.cs" />
+    <Compile Include="Toolkit\Linq\UnaryOperation.cs" />
+    <Compile Include="Toolkit\Linq\UnaryExpression.cs" />
     <Compile Include="Toolkit\Linq\Serialization\Message\ExpressionMessageSerializer.cs" />
     <Compile Include="Toolkit\Linq\Serialization\Xml\CustomExpressionXmlConverter.cs" />
     <Compile Include="Toolkit\Linq\Serialization\Evaluator.cs" />

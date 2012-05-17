@@ -81,18 +81,6 @@ namespace CoApp.Packaging.Common.Model {
         [XmlIgnore]
         public string Description { get; set; }
 
-#if COAPP_ENGINE_CORE_DEPRECATED
-        internal string GetAtomItemText(Package package) {
-            var item = new AtomItem(package);
-            using (var sw = new StringWriter()) {
-                using (var xw = XmlWriter.Create(sw)) {
-                    item.SaveAsAtom10(xw);
-                }
-                return sw.ToString();
-            }
-        }
-#endif
-
         // soak up anything we don't recognize
         [XmlAnyAttribute, NotPersistable]
         public XmlAttribute[] UnknownAttributes;

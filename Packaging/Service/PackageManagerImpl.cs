@@ -163,7 +163,7 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        public Task NewFindPackages(CanonicalName canonicalName, Expression<Func<IPackage, bool>> filter, int? index, int? maxResults, string location) {
+        public Task FindPackages(CanonicalName canonicalName, Expression<Func<IPackage, bool>> filter, Expression<Func<IEnumerable<IPackage>, IEnumerable<IPackage>>> collectionFilter, string location) {
             var response = Event<GetResponseInterface>.RaiseFirst();
 
             if (CancellationRequested) {
@@ -176,20 +176,14 @@ namespace CoApp.Packaging.Service {
             if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.EnumeratePackages)) {
                 UpdateIsRequestedFlags();
 
-                var query = filter == null ? SearchForPackages(canonicalName, location) : SearchForPackages(canonicalName, location).Where(each => filter.Compile()(each));
+                IEnumerable<IPackage> query = filter == null ? SearchForPackages(canonicalName, location) : SearchForPackages(canonicalName, location).Where(each => filter.Compile()(each));
 
-                Package[] results;
-                // paginate the results
-                if (index.HasValue && maxResults.HasValue ) {
-                    results = query.Skip(index.Value).Take(maxResults.Value).ToArray();
-                } else if (index.HasValue) {
-                    results = query.Skip(index.Value).ToArray();
-                } else if (maxResults.HasValue) {
-                    results = query.Take(maxResults.Value).ToArray();
-                } else {
-                    results = query.ToArray();
+                if( collectionFilter != null ) {
+                    query = collectionFilter.Compile()(query);
                 }
 
+                var results = (Package[]) query.ToArrayOfType(typeof(Package));
+                
                 if (results.Length > 0 ) {
                     foreach (var pkg in results) {
                         if (CancellationRequested) {
@@ -206,7 +200,7 @@ namespace CoApp.Packaging.Service {
             return FinishedSynchronously;
         }
 
-
+#if DEPRECATED
         public Task FindPackages(CanonicalName canonicalName, bool? dependencies, bool? installed, bool? active, bool? required, bool? blocked, bool? latest,
             int? index, int? maxResults, string location, bool? forceScan, bool? updates, bool? upgrades, bool? trimable) {
             var response = Event<GetResponseInterface>.RaiseFirst();
@@ -304,7 +298,7 @@ namespace CoApp.Packaging.Service {
                 // otherwise the client will get the names in 
                 if (dependencies == true) {
                     // grab the dependencies too.
-                    var deps = results.SelectMany(each => each.PackageDependcies).Distinct();
+                    var deps = results.SelectMany(each => each.PackageDependencies).Distinct();
 
                     if (latest == true) {
                         deps = deps.HighestPackages();
@@ -344,6 +338,7 @@ namespace CoApp.Packaging.Service {
             }
             return FinishedSynchronously;
         }
+#endif
 
         public Task GetPackageDetails(CanonicalName canonicalName) {
             var response = Event<GetResponseInterface>.RaiseFirst();
@@ -413,7 +408,7 @@ namespace CoApp.Packaging.Service {
                         return FinishedSynchronously;
                     }
 
-                    var installedPackages = package.InstalledVersions.ToArray();
+                    var installedPackages = package.InstalledPackages.ToArray();
                     var installedCompatibleVersions = installedPackages.Where(package.IsAnUpdateFor).ToArray();
 
                     // is the user authorized to install this?
@@ -669,7 +664,7 @@ namespace CoApp.Packaging.Service {
             return FinishedSynchronously;
         }
 
-        public Task ListFeeds(int? index, int? maxResults) {
+        public Task ListFeeds() {
             var response = Event<GetResponseInterface>.RaiseFirst();
 
             if (CancellationRequested) {
@@ -706,17 +701,8 @@ namespace CoApp.Packaging.Service {
                 };
 
             var results = x.Union(y).ToArray();
-
-            // paginate the results
-            if (index.HasValue) {
-                results = results.Skip(index.Value).ToArray();
-            }
-
-            if (maxResults.HasValue) {
-                results = results.Take(maxResults.Value).ToArray();
-            }
-
-            if (results.Any()) {
+           
+            if (results.Length > 0 ) {
                 foreach (var f in results) {
                     var state = PackageManagerSettings.PerPackageSettings[f.feed, "state"].StringValue;
                     if (string.IsNullOrEmpty(state)) {
@@ -886,7 +872,7 @@ namespace CoApp.Packaging.Service {
 
             if (false == active) {
                 if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.ChangeActivePackage)) {
-                    var pqg = package.InstalledVersions.HighestPackages().FirstOrDefault() as Package;
+                    var pqg = package.InstalledPackages.HighestPackages().FirstOrDefault() as Package;
                     if (pqg != null) {
                         pqg.SetPackageCurrent();
                     }
@@ -1300,10 +1286,10 @@ namespace CoApp.Packaging.Service {
                     // this means that we're talking about a requested package
                     // and not a dependent package and we can liberally construe supercedent 
                     // as anything with a highger version number
-                    installedSupercedents = (from p in  package.InstalledVersions where p.CanonicalName.Version > package.CanonicalName.Version select p).OrderByDescending(p => p.CanonicalName.Version).ToArray();
+                    installedSupercedents = (from p in package.InstalledPackages where p.CanonicalName.Version > package.CanonicalName.Version select p).OrderByDescending(p => p.CanonicalName.Version).ToArray();
                 } else {
                     // otherwise, we're installing a dependency, and we need something compatable.
-                    installedSupercedents = (from p in  package.InstalledVersions where p.IsAnUpdateFor(package) select p).OrderByDescending(p => p.CanonicalName.Version).ToArray();
+                    installedSupercedents = (from p in package.InstalledPackages where p.IsAnUpdateFor(package) select p).OrderByDescending(p => p.CanonicalName.Version).ToArray();
                 }
                 var installedSupercedent = installedSupercedents.FirstOrDefault();
                 if (installedSupercedent != null) {
@@ -1397,7 +1383,7 @@ namespace CoApp.Packaging.Service {
             }
 
             var childrenFailed = false;
-            foreach (var d in package.PackageDependcies) {
+            foreach (var d in package.PackageDependencies) {
                 IEnumerable<Package> children;
                 try {
                     children = GenerateInstallGraph(d);

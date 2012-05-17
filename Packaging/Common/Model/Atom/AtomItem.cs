@@ -163,7 +163,7 @@ namespace CoApp.Packaging.Common.Model.Atom {
                 Vendor = package.Vendor, 
                 BindingPolicy = package.BindingPolicy, 
                 Roles = package.PackageRoles,
-                Dependencies = package.PackageDependcies.ToXDictionary(each => each.CanonicalName, each => each.FeedLocations), 
+                Dependencies = package.PackageDependencies.ToXDictionary(each => each.CanonicalName, each => each.FeedLocations), 
                 Features = package.Features, 
                 RequiredFeatures = package.RequiredFeatures, 
                 Feeds = package.FeedLocations,
@@ -189,7 +189,7 @@ namespace CoApp.Packaging.Common.Model.Atom {
                     // lets copy what details we have into that package.
 
                     if (!Model.Dependencies.IsNullOrEmpty()) {
-                        package.PackageDependcies.AddRange(Model.Dependencies.Keys.Select(each => {
+                        package.PackageDependencies.AddRange(Model.Dependencies.Keys.Select(each => {
                             var result = Package.GetPackage(each);
                             result.FeedLocations.AddRangeUnique(Model.Dependencies[each]);
                             return result;

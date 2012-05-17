@@ -40,14 +40,75 @@ namespace CoApp.Packaging.Common {
         string DisplayName { get;}
 
         IPackage SatisfiedBy { get; }
-
         IEnumerable<Uri> RemoteLocations { get; }
         IEnumerable<Uri> Feeds { get; }
-        IEnumerable<CanonicalName> Dependencies { get; }
-        IEnumerable<IPackage> UpdatePackages { get; }
-        IEnumerable<IPackage> UpgradePackages { get; }
-        IEnumerable<IPackage> NewerPackages { get; }
         IEnumerable<Role> Roles { get; }
+
+        /// <summary>
+        ///   The newest version of this package that is installed and newer than the given package and is binary compatible.
+        /// </summary>
+        IPackage InstalledNewerCompatable { get; }
+
+        /// <summary>
+        ///   The newest version of this package that is installed, and newer than the given package
+        /// </summary>
+        IPackage InstalledNewer { get; }
+
+        /// <summary>
+        ///   The newest package that is currently installed, that the given package is a compatible update for.
+        /// </summary>
+        IPackage InstalledOlderCompatable { get; }
+
+        /// <summary>
+        ///   The newest package that is currently installed, that the give package is an upgrade for.
+        /// </summary>
+        IPackage InstalledOlder { get; }
+
+        /// <summary>
+        ///   The latest version of the package that is available that is newer than the current package.
+        /// </summary>
+        IPackage AvailableNewer { get; }
+
+        /// <summary>
+        ///   The latest version of the package that is available and is binary compatable with the given package
+        /// </summary>
+        IPackage AvailableNewerCompatible { get; }
+
+        /// <summary>
+        ///   The latest version that is installed.
+        /// </summary>
+        IPackage InstalledNewest { get; }
+
+        /// <summary>
+        ///   All Installed versions of this package
+        /// </summary>
+        IEnumerable<IPackage> InstalledPackages { get; }
+
+        /// <summary>
+        ///   The list of packages that are an update for this package
+        /// </summary>
+        IEnumerable<IPackage> UpdatePackages { get; }
+
+        /// <summary>
+        ///   The list of packages that are an upgrade for this package
+        /// </summary>
+        IEnumerable<IPackage> UpgradePackages { get; }
+
+        /// <summary>
+        ///   The list of packages that are newer than this package (Updates+Upgrades)
+        /// </summary>
+        IEnumerable<IPackage> NewerPackages { get; }
+
+        /// <summary>
+        /// The packages that this package depends on.
+        /// </summary>
+        IEnumerable<IPackage> Dependencies { get; }
+
+        /// <summary>
+        ///   All the trimable packages for this package
+        /// </summary>
+        IEnumerable<IPackage> Trimable { get; }
+
     }
 
     public static class PackageExtensions {
@@ -81,7 +142,7 @@ namespace CoApp.Packaging.Common {
         /// <returns> the filtered colleciton of packages </returns>
         /// <remarks>
         /// </remarks>
-        internal static IPackage[] HighestPackages(this IEnumerable<IPackage> packageSet) {
+        public static IEnumerable<IPackage> HighestPackages(this IEnumerable<IPackage> packageSet) {
             var all = packageSet.OrderByDescending(p => p.CanonicalName.Version).ToArray();
             if (all.Length > 1) {
                 var filters = all.Select(each => each.CanonicalName.OtherVersionFilter).Distinct().ToArray();

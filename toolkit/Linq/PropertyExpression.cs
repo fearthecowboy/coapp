@@ -14,7 +14,7 @@ namespace CoApp.Toolkit.Linq {
     using System;
     using System.Linq.Expressions;
 
-    public class PropertyExpression<T, TProperty> : FilterBase<T, TProperty> {
+    public class PropertyExpression<T, TProperty> : ExpressionBase<T, TProperty> {
         private readonly Expression<Func<T, TProperty>> _expression;
 
         public PropertyExpression(Expression<Func<T, TProperty>> expression) {

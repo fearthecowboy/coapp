@@ -12,22 +12,21 @@
 
 namespace CoApp.Packaging.Common {
     using System;
+    using System.Collections.Generic;
     using System.Linq.Expressions;
     using System.Threading.Tasks;
     using Toolkit.ImpromptuInterface.Dynamic;
 
     [UseNamedArgument]
     public interface IPackageManager {
-        Task FindPackages(CanonicalName canonicalName, bool? dependencies = null, bool? installed = null, bool? active = null, bool? required = null, bool? blocked = null, bool? latest = null,
-            int? index = null, int? maxResults = null, string location = null, bool? forceScan = null, bool? updates = null, bool? upgrades = null, bool? trimable = null);
 
-        Task NewFindPackages(CanonicalName canonicalName, Expression<Func<IPackage, bool>> filter = null, int? index = null, int? maxResults = null, string location = null);
+        Task FindPackages(CanonicalName canonicalName, Expression<Func<IPackage, bool>> filter, Expression<Func<IEnumerable<IPackage>,IEnumerable<IPackage>>> collectionFilter,string location);
 
         Task GetPackageDetails(CanonicalName canonicalName);
         Task InstallPackage(CanonicalName canonicalName, bool? autoUpgrade, bool? force, bool? download, bool? pretend, bool? isUpdating, bool? isUpgrading);
         Task RemovePackage(CanonicalName canonicalName, bool? force);
 
-        Task ListFeeds(int? index = null, int? maxResults = null);
+        Task ListFeeds();
         Task RemoveFeed(string location, bool? session);
         Task AddFeed(string location, bool? session);
         Task SetFeedFlags(string location, string activePassiveIgnored);

@@ -209,14 +209,9 @@ namespace CoApp.Toolkit.Extensions {
         public static object CastToIEnumerableOfType(this IEnumerable<object> enumerable, Type collectionType  ) {
             return CastMethods.GetOrAdd(collectionType, () => CastMethod.MakeGenericMethod(collectionType)).Invoke(null, new object[] { enumerable });
         }
-#if REMOVED
-        public static bool IsCreateable(this Type type) {
-            return AutoCache.Get(type, () => type.GetConstructor(BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null)) != null;
-        }
-#endif 
+
         public static object CreateInstance(this Type type) {
             return Activator.CreateInstance(TypeSubtitution[type] ?? type, true);
-            // return AutoCache.Get(type, () => type.GetConstructor(BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null)).Invoke(null);
         }
 
         private static MethodInfo GetTryParse(Type parsableType) {

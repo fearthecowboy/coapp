@@ -12,7 +12,6 @@
 
 namespace CoApp.Packaging.Service {
     using System;
-    using System.Collections;
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
     using System.IO;
@@ -58,12 +57,58 @@ namespace CoApp.Packaging.Service {
         public BindingPolicy BindingPolicy { get; set; }
         [Persistable]
         public IEnumerable<Role> Roles { get { return PackageRoles; } }
+
         [Persistable]
         public IEnumerable<Uri> RemoteLocations { get { return RemotePackageLocations; } }
         [Persistable]
         public PackageDetails PackageDetails { get; set; }
         [Persistable]
         public IEnumerable<Uri> Feeds { get { return FeedLocations; } }
+
+        public IPackage InstalledNewest { get { return InstalledPackages.FirstOrDefault(); } }
+        public IPackage InstalledNewestUpdate { get { return InstalledPackages.FirstOrDefault(each => each.IsAnUpdateFor(this)); } }
+        public IPackage InstalledNewestUpgrade { get { return InstalledPackages.FirstOrDefault(each => each.IsAnUpgradeFor(this)); } }
+
+        public IPackage LatestInstalledThatUpdatesToThis { get { } }
+        public IPackage LatestInstalledThatUpgradesToThis { get { } }
+        
+        public IPackage AvailableNewest { get { } }
+        public IPackage AvailableNewestUpdate { get { } }
+        public IPackage AvailableNewestUpgrade { get { } }
+
+
+        public IEnumerable<IPackage> InstalledPackages { get { return PackageRequestData.InstalledPackages; } }
+
+        public IEnumerable<IPackage> Dependencies { get { } }
+
+        public IEnumerable<IPackage> Trimable { get { } }
+
+        [NotPersistable]
+        public IPackage SatisfiedBy {
+            get { return InstalledPackages.FirstOrDefault(each => each.IsAnUpdateFor(this)) ?? (IsInstalled ? this : null); }
+        }
+
+        [NotPersistable]
+        public IEnumerable<IPackage> NewerPackages {
+            get { return PackageManagerImpl.Instance.SearchForPackages(CanonicalName.OtherVersionFilter).Where(each => each.IsNewerThan(this)).OrderByDescending(each => each.Version).ToArray(); }
+        }
+
+        [NotPersistable]
+        public IEnumerable<IPackage> UpdatePackages {
+            get { return NewerPackages.Where(each => each.IsAnUpdateFor(this)).ToArray(); }
+        }
+
+        [NotPersistable]
+        public IEnumerable<IPackage> UpgradePackages {
+            get { return NewerPackages.Where(each => each.IsAnUpgradeFor(this)).ToArray(); }
+        }
+
+
+
+        [NotPersistable]
+        public bool IsDependency { get { } }
+
+       
 
         /// <summary>
         ///   Indicates that the client specifically requested the package, or is the dependency of a requested package
@@ -77,6 +122,8 @@ namespace CoApp.Packaging.Service {
                 IsClientRequired = value;
             }
         }
+
+     
 
         /// <summary>
         ///   Indicates that the client specifically requested the package
@@ -135,48 +182,28 @@ namespace CoApp.Packaging.Service {
         [NotPersistable]
         public string PublicKeyToken { get { return CanonicalName.PublicKeyToken; } }
 
-        [NotPersistable]
-        public IPackage SatisfiedBy {
-            get { return InstalledVersions.FirstOrDefault(each => each.IsAnUpdateFor(this)) ?? (IsInstalled ? this : null); }
-        }
-
-        [Persistable(name:"SatisfiedBy")]
-        private CanonicalName _satisfiedBy { get { return SatisfiedBy != null ? SatisfiedBy.CanonicalName : null; } }
-
-        [Persistable]
-        public IEnumerable<CanonicalName> Dependencies { get { return PackageDependcies.Select(each => each.CanonicalName); } }
         
-        [NotPersistable]
-        public IEnumerable<IPackage> NewerPackages {
-            get { return PackageManagerImpl.Instance.SearchForPackages(CanonicalName.OtherVersionFilter).OrderByDescending(each => each.Version).Where(each => each.IsNewerThan(this)).ToArray(); }
-        }
+      
 
+        // ReSharper disable InconsistentNaming
+        // ReSharper disable UnusedMember.Local
+        [Persistable(name: "SatisfiedBy")]
+        private CanonicalName _satisfiedBy { get { return SatisfiedBy != null ? SatisfiedBy.CanonicalName : null; } }
+        [Persistable(name:"Dependencies")]
+        public IEnumerable<CanonicalName> _dependencies { get { return PackageDependencies.Select(each => each.CanonicalName); } }
         [Persistable(name:"NewerPackages")]
         private IEnumerable<CanonicalName> _newerPackages { get { return NewerPackages.Select(each => each.CanonicalName); }}
 
-        [NotPersistable]
-        public IEnumerable<IPackage> UpdatePackages {
-            get { return NewerPackages.Where(each => each.IsAnUpdateFor(this)).ToArray(); }
-        }
-
         [Persistable(name: "UpdatePackages")]
         private IEnumerable<CanonicalName> _updatePackages { get { return UpdatePackages.Select(each => each.CanonicalName); } }
-
-        [NotPersistable]
-        public IEnumerable<IPackage> UpgradePackages {
-            get { return NewerPackages.Where(each => each.IsAnUpgradeFor(this)).ToArray(); }
-        }
-
         [Persistable(name: "UpgradePackages")]
         private IEnumerable<CanonicalName> _upgradePackages { get { return UpgradePackages.Select(each => each.CanonicalName); } }
-
-        [NotPersistable]
-        public IEnumerable<IPackage> InstalledVersions {
-            get { return InstalledPackageFeed.Instance.FindPackages(CanonicalName.OtherVersionFilter).OrderByDescending(each => each.Version).ToArray(); }
-        }
-
         [Persistable(name: "InstalledVersions")]
-        private IEnumerable<CanonicalName> _installedVersions { get { return InstalledVersions.Select(each => each.CanonicalName); } }
+        private IEnumerable<CanonicalName> _installedVersions { get { return InstalledPackages.Select(each => each.CanonicalName); } }
+        // ReSharper restore UnusedMember.Local
+        // ReSharper restore InconsistentNaming
+
+
 
         internal IPackageFormatHandler PackageHandler;
         internal string Vendor { get; set; }
@@ -192,11 +219,11 @@ namespace CoApp.Packaging.Service {
         internal readonly XList<Feature> Features = new XList<Feature>();
         internal readonly XList<Feature> RequiredFeatures = new XList<Feature>();
 
-        internal readonly ObservableCollection<Package> PackageDependcies = new ObservableCollection<Package>();
+        internal readonly ObservableCollection<Package> PackageDependencies = new ObservableCollection<Package>();
         
         private Package(CanonicalName canonicalName) {
             Packages.Changed += x => Changed();
-            PackageDependcies.CollectionChanged += (x, y) => Changed();
+            PackageDependencies.CollectionChanged += (x, y) => Changed();
             CanonicalName = canonicalName;
         }
 
@@ -317,13 +344,7 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        [NotPersistable]
-        public bool IsDependency {
-            get {
-                throw new NotImplementedException();
-            }
-        }
-
+       
         internal void Install() {
             try {
                 Engine.EnsureCanonicalFoldersArePresent();
@@ -436,11 +457,11 @@ namespace CoApp.Packaging.Service {
         }
 
         internal void UpdateDependencyFlags() {
-            foreach (var dpkg in PackageDependcies.Where(each => !each.IsRequired)) {
+            foreach (var dpkg in PackageDependencies.Where(each => !each.IsRequired)) {
                 var dependentPackage = dpkg;
 
                 // find each dependency that is the policy-preferred version, and mark it as currentlyrequested.
-                var supercedentPackage = (from supercedent in InstalledVersions
+                var supercedentPackage = (from supercedent in InstalledPackages
                     where supercedent.IsAnUpdateFor(dependentPackage)
                     select supercedent).OrderByDescending(p => p.CanonicalName.Version).FirstOrDefault();
 

@@ -114,6 +114,38 @@ namespace CoApp.Toolkit.Extensions {
             return collection.Union(new[] {newItem});
         }
 
+        public static IEnumerable<TSource> SortBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector) {
+            return source.OrderBy(keySelector);
+        }
+
+        public static IEnumerable<TSource> SortBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector, IComparer<TKey> comparer) {
+            return source.OrderBy(keySelector, comparer);
+        }
+
+        public static IEnumerable<TSource> SortByDescending<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector) {
+            return source.OrderByDescending(keySelector);
+        }
+
+        public static IEnumerable<TSource> SortByDescending<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector, IComparer<TKey> comparer) {
+            return source.OrderByDescending(keySelector, comparer);
+        }
+
+        public static IEnumerable<TSource> ThenBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector) {
+            return Enumerable.ThenBy((IOrderedEnumerable<TSource>)source, keySelector);
+        }
+
+        public static IEnumerable<TSource> ThenBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector, IComparer<TKey> comparer) {
+            return Enumerable.ThenBy((IOrderedEnumerable<TSource>)source, keySelector, comparer);
+        }
+
+        public static IEnumerable<TSource> ThenByDescending<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector) {
+            return Enumerable.ThenByDescending((IOrderedEnumerable<TSource>)source, keySelector);
+        }
+
+        public static IEnumerable<TSource> ThenByDescending<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector, IComparer<TKey> comparer) {
+            return Enumerable.ThenByDescending((IOrderedEnumerable<TSource>)source, keySelector, comparer);
+        }
+
         #region Don't test this crap.
 
         /// <summary>
