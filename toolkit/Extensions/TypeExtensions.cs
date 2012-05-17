@@ -14,6 +14,7 @@ namespace CoApp.Toolkit.Extensions {
     using System;
     using System.Collections;
     using System.Collections.Generic;
+    using System.ComponentModel;
     using System.Linq;
     
     using System.Reflection;
@@ -130,6 +131,7 @@ namespace CoApp.Toolkit.Extensions {
         public string Name;
         public Type SerializeAsType;
         public Type DeserializeAsType;
+        public Type ActualType;
         public Action<object, object,object[]> SetValue;
         public Func<object, object[], object> GetValue;
     }
@@ -141,6 +143,7 @@ namespace CoApp.Toolkit.Extensions {
         private static readonly MethodInfo ToArrayMethod = typeof(Enumerable).GetMethod("ToArray");
         private static readonly IDictionary<Type, MethodInfo> CastMethods = new XDictionary<Type, MethodInfo>();
         private static readonly IDictionary<Type, MethodInfo> ToArrayMethods = new XDictionary<Type, MethodInfo>();
+        private static readonly IDictionary<Type, MethodInfo> OpImplicitMethods = new XDictionary<Type, MethodInfo>();
         public static readonly IDictionary<Type, Type> TypeSubtitution = new XDictionary<Type, Type>();
 
         public static PersistableInfo GetPersistableInfo(this Type t) {
@@ -159,6 +162,7 @@ namespace CoApp.Toolkit.Extensions {
                     GetValue = (o, objects) => each.GetValue(o),
                     SerializeAsType = (persistableAttribute != null ? persistableAttribute.SerializeAsType : null) ?? each.FieldType,
                     DeserializeAsType = (persistableAttribute != null ? persistableAttribute.DeserializeAsType : null) ?? each.FieldType,
+                    ActualType = each.FieldType,
                     Name = (persistableAttribute != null ? persistableAttribute.Name : null) ?? each.Name
                  }).Union((from each in type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
                     let setMethodInfo = each.GetSetMethod(true)
@@ -174,6 +178,7 @@ namespace CoApp.Toolkit.Extensions {
                     GetValue = getMethodInfo != null ? new Func<object, object[], object>(each.GetValue) : null,
                     SerializeAsType = (persistableAttribute != null ? persistableAttribute.SerializeAsType : null) ?? each.PropertyType,
                     DeserializeAsType = (persistableAttribute != null ? persistableAttribute.DeserializeAsType : null) ?? each.PropertyType,
+                    ActualType = each.PropertyType,
                     Name = (persistableAttribute != null ? persistableAttribute.Name : null) ?? each.Name
                 })).ToArray()
             );
@@ -199,6 +204,47 @@ namespace CoApp.Toolkit.Extensions {
                     }).ToArray()*/
 
 
+        }
+
+        private static MethodInfo GetOpImplicit(Type sourceType, Type destinationType) {
+            lock( OpImplicitMethods ) {
+                if( !OpImplicitMethods.ContainsKey(sourceType) ) {
+                    var opImplicit = 
+                        (from method in sourceType.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+                            where method.Name == "op_Implicit" && method.ReturnType == destinationType && method.GetParameters()[0].ParameterType == sourceType
+                            select method).Union(
+                        (from method in destinationType.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+                            where method.Name == "op_Implicit" && method.ReturnType == destinationType && method.GetParameters()[0].ParameterType == sourceType
+                            select method
+                        )).FirstOrDefault();
+
+                    OpImplicitMethods.Add(sourceType, opImplicit);
+                    return opImplicit;
+                }
+                return OpImplicitMethods[sourceType];
+            }
+        }
+
+        public static object ImplicitlyConvert(this object obj, Type destinationType) {
+            if( obj == null ) {
+                return null;
+            }
+            if( destinationType == typeof(string)) {
+                return obj.ToString();
+            }
+            
+            var opImplicit = GetOpImplicit(obj.GetType(), destinationType);
+            if( opImplicit != null ) {
+                return opImplicit.Invoke(null, new[] {obj});
+            }
+            return obj;
+        }
+
+        public static bool ImplicitlyConvertsTo(this Type type, Type destinationType) {
+            if (type == destinationType || typeof(string) == destinationType) {
+                return true;
+            }
+            return GetOpImplicit(type, destinationType) != null;
         }
 
         public static object ToArrayOfType(this IEnumerable<object> enumerable, Type collectionType) {

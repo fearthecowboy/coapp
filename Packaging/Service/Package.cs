@@ -48,7 +48,15 @@ namespace CoApp.Packaging.Service {
                 {"etc", Path.Combine(PackageManagerSettings.CoAppRootDirectory, "etc")},
                 {"allprograms", KnownFolders.GetFolderPath(KnownFolder.CommonPrograms)},
             };
-        
+
+        public static implicit operator CanonicalName(Package package) {
+            return package.CanonicalName;
+        }
+
+        public static implicit operator Package(CanonicalName name) {
+            return GetPackage(name);
+        }
+
         [Persistable]
         public CanonicalName CanonicalName { get; private set; }
         [Persistable]
@@ -65,48 +73,52 @@ namespace CoApp.Packaging.Service {
         [Persistable]
         public IEnumerable<Uri> Feeds { get { return FeedLocations; } }
 
-        public IPackage InstalledNewest { get { return InstalledPackages.FirstOrDefault(); } }
-        public IPackage InstalledNewestUpdate { get { return InstalledPackages.FirstOrDefault(each => each.IsAnUpdateFor(this)); } }
-        public IPackage InstalledNewestUpgrade { get { return InstalledPackages.FirstOrDefault(each => each.IsAnUpgradeFor(this)); } }
+        [Persistable(serializeAsType:typeof(CanonicalName))]
+        public IPackage InstalledNewest { get { return PackageRequestData.InstalledNewest.Value; } }
 
-        public IPackage LatestInstalledThatUpdatesToThis { get { } }
-        public IPackage LatestInstalledThatUpgradesToThis { get { } }
-        
-        public IPackage AvailableNewest { get { } }
-        public IPackage AvailableNewestUpdate { get { } }
-        public IPackage AvailableNewestUpgrade { get { } }
+        [Persistable(serializeAsType: typeof(CanonicalName))]
+        public IPackage InstalledNewestUpdate { get { return PackageRequestData.InstalledNewestUpdate.Value; } }
+        [Persistable(serializeAsType: typeof(CanonicalName))]
+        public IPackage InstalledNewestUpgrade { get { return PackageRequestData.InstalledNewestUpgrade.Value; } }
 
+        [Persistable(serializeAsType: typeof(CanonicalName))]
+        public IPackage LatestInstalledThatUpdatesToThis { get { return PackageRequestData.LatestInstalledThatUpdatesToThis.Value; } }
+        [Persistable(serializeAsType: typeof(CanonicalName))]
+        public IPackage LatestInstalledThatUpgradesToThis { get { return PackageRequestData.LatestInstalledThatUpgradesToThis.Value; } }
 
-        public IEnumerable<IPackage> InstalledPackages { get { return PackageRequestData.InstalledPackages; } }
+        [Persistable(serializeAsType: typeof(CanonicalName))]
+        public IPackage AvailableNewest { get { return PackageRequestData.AvailableNewest.Value; } }
+        [Persistable(serializeAsType: typeof(CanonicalName))]
+        public IPackage AvailableNewestUpdate { get { return PackageRequestData.AvailableNewestUpdate.Value; } }
+        [Persistable(serializeAsType: typeof(CanonicalName))]
+        public IPackage AvailableNewestUpgrade { get { return PackageRequestData.AvailableNewestUpgrade.Value; } }
 
-        public IEnumerable<IPackage> Dependencies { get { } }
+        [Persistable(serializeAsType: typeof(IEnumerable<CanonicalName>))]
+        public IEnumerable<IPackage> InstalledPackages { get { return PackageRequestData.InstalledPackages.Value; } }
 
-        public IEnumerable<IPackage> Trimable { get { } }
+        [Persistable(serializeAsType: typeof(IEnumerable<CanonicalName>))]
+        public IEnumerable<IPackage> Dependencies { get { return PackageDependencies; } }
+
+        [Persistable(serializeAsType: typeof(IEnumerable<CanonicalName>))]
+        public IEnumerable<IPackage> Trimable { get { return PackageRequestData.Trimable.Value; } }
+
+        [Persistable(serializeAsType: typeof(CanonicalName))]
+        public IPackage SatisfiedBy { get { return PackageRequestData.SatisfiedBy.Value; } }
+
+        [Persistable(serializeAsType: typeof(IEnumerable<CanonicalName>))]
+        public IEnumerable<IPackage> NewerPackages { get { return PackageRequestData.NewerPackages.Value; } }
+
+        [Persistable(serializeAsType: typeof(IEnumerable<CanonicalName>))]
+        public IEnumerable<IPackage> UpdatePackages { get { return PackageRequestData.UpdatePackages.Value; } }
+
+        [Persistable(serializeAsType: typeof(IEnumerable<CanonicalName>))]
+        public IEnumerable<IPackage> UpgradePackages { get { return PackageRequestData.UpgradePackages.Value; } }
+
 
         [NotPersistable]
-        public IPackage SatisfiedBy {
-            get { return InstalledPackages.FirstOrDefault(each => each.IsAnUpdateFor(this)) ?? (IsInstalled ? this : null); }
-        }
-
-        [NotPersistable]
-        public IEnumerable<IPackage> NewerPackages {
-            get { return PackageManagerImpl.Instance.SearchForPackages(CanonicalName.OtherVersionFilter).Where(each => each.IsNewerThan(this)).OrderByDescending(each => each.Version).ToArray(); }
-        }
-
-        [NotPersistable]
-        public IEnumerable<IPackage> UpdatePackages {
-            get { return NewerPackages.Where(each => each.IsAnUpdateFor(this)).ToArray(); }
-        }
-
-        [NotPersistable]
-        public IEnumerable<IPackage> UpgradePackages {
-            get { return NewerPackages.Where(each => each.IsAnUpgradeFor(this)).ToArray(); }
-        }
-
-
-
-        [NotPersistable]
-        public bool IsDependency { get { } }
+        public bool IsDependency { get {
+            return PackageSessionData.IsDependency;
+        } }
 
        
 
@@ -181,29 +193,6 @@ namespace CoApp.Packaging.Service {
         public Architecture Architecture { get { return CanonicalName.Architecture; } }
         [NotPersistable]
         public string PublicKeyToken { get { return CanonicalName.PublicKeyToken; } }
-
-        
-      
-
-        // ReSharper disable InconsistentNaming
-        // ReSharper disable UnusedMember.Local
-        [Persistable(name: "SatisfiedBy")]
-        private CanonicalName _satisfiedBy { get { return SatisfiedBy != null ? SatisfiedBy.CanonicalName : null; } }
-        [Persistable(name:"Dependencies")]
-        public IEnumerable<CanonicalName> _dependencies { get { return PackageDependencies.Select(each => each.CanonicalName); } }
-        [Persistable(name:"NewerPackages")]
-        private IEnumerable<CanonicalName> _newerPackages { get { return NewerPackages.Select(each => each.CanonicalName); }}
-
-        [Persistable(name: "UpdatePackages")]
-        private IEnumerable<CanonicalName> _updatePackages { get { return UpdatePackages.Select(each => each.CanonicalName); } }
-        [Persistable(name: "UpgradePackages")]
-        private IEnumerable<CanonicalName> _upgradePackages { get { return UpgradePackages.Select(each => each.CanonicalName); } }
-        [Persistable(name: "InstalledVersions")]
-        private IEnumerable<CanonicalName> _installedVersions { get { return InstalledPackages.Select(each => each.CanonicalName); } }
-        // ReSharper restore UnusedMember.Local
-        // ReSharper restore InconsistentNaming
-
-
 
         internal IPackageFormatHandler PackageHandler;
         internal string Vendor { get; set; }

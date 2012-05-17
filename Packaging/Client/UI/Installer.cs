@@ -103,13 +103,13 @@ namespace CoApp.Packaging.Client.UI {
                 if (HasPackage) {
                     // When there isn't anything at all installed already
                     if (PackageSet.InstalledNewest == null) {
-                        if (PackageSet.AvailableNewer != null) {
-                            yield return new InstSelection(InstallChoice.AutoInstallLatest, "Install the latest version of this package ({0})", PackageSet.AvailableNewer.Version);
+                        if (PackageSet.AvailableNewest != null) {
+                            yield return new InstSelection(InstallChoice.AutoInstallLatest, "Install the latest version of this package ({0})", PackageSet.AvailableNewest.Version);
                             _choice = InstallChoice.AutoInstallLatest;
                         }
 
-                        if (PackageSet.AvailableNewerCompatible != null && PackageSet.AvailableNewerCompatible != PackageSet.AvailableNewer) {
-                            yield return new InstSelection(InstallChoice.AutoInstallLatestCompatible, "Install the latest compatible version of this package ({0})", PackageSet.AvailableNewerCompatible.Version);
+                        if (PackageSet.AvailableNewestUpdate != null && PackageSet.AvailableNewestUpdate != PackageSet.AvailableNewest) {
+                            yield return new InstSelection(InstallChoice.AutoInstallLatestCompatible, "Install the latest compatible version of this package ({0})", PackageSet.AvailableNewestUpdate.Version);
                             if (_choice == InstallChoice._Unknown) {
                                 _choice = InstallChoice.AutoInstallLatest;
                             }
@@ -125,28 +125,28 @@ namespace CoApp.Packaging.Client.UI {
                             yield return new InstSelection(InstallChoice.ThisVersionAlreadyInstalled, "This version is currently installed ({0})", PackageSet.Package.Version);
                             _choice = InstallChoice.ThisVersionAlreadyInstalled;
 
-                            if (PackageSet.AvailableNewerCompatible != null && PackageSet.AvailableNewer == null) {
-                                yield return new InstSelection(InstallChoice.UpdateToLatestVersion, "Update to the latest compatible version ({0})", PackageSet.AvailableNewerCompatible.Version);
+                            if (PackageSet.AvailableNewestUpdate != null && PackageSet.AvailableNewest == null) {
+                                yield return new InstSelection(InstallChoice.UpdateToLatestVersion, "Update to the latest compatible version ({0})", PackageSet.AvailableNewestUpdate.Version);
                             }
 
-                            if (PackageSet.AvailableNewerCompatible != null && PackageSet.AvailableNewer != null) {
-                                yield return new InstSelection(InstallChoice.UpdateToLatestVersionNotUpgrade, "Update to the latest compatible version ({0})", PackageSet.AvailableNewerCompatible.Version);
+                            if (PackageSet.AvailableNewestUpdate != null && PackageSet.AvailableNewest != null) {
+                                yield return new InstSelection(InstallChoice.UpdateToLatestVersionNotUpgrade, "Update to the latest compatible version ({0})", PackageSet.AvailableNewestUpdate.Version);
                             }
 
-                            if (PackageSet.AvailableNewer != null) {
-                                yield return new InstSelection(InstallChoice.UpgradeToLatestVersion, "Upgrade to the latest version ({0})", PackageSet.AvailableNewer.Version);
+                            if (PackageSet.AvailableNewest != null) {
+                                yield return new InstSelection(InstallChoice.UpgradeToLatestVersion, "Upgrade to the latest version ({0})", PackageSet.AvailableNewest.Version);
                             }
                         } else if (PackageSet.InstalledNewest.Version > PackageSet.Package.Version) {
                             // a newer version is already installed    
                             yield return new InstSelection(InstallChoice.NewerVersionAlreadyInstalled, "A newer version is currently installed ({0})", PackageSet.InstalledNewest.Version);
                             _choice = InstallChoice.NewerVersionAlreadyInstalled;
 
-                            if (PackageSet.AvailableNewer != null) {
-                                yield return new InstSelection(InstallChoice.UpgradeToLatestVersion2, "Upgrade to the latest version ({0})", PackageSet.AvailableNewer.Version);
+                            if (PackageSet.AvailableNewest != null) {
+                                yield return new InstSelection(InstallChoice.UpgradeToLatestVersion2, "Upgrade to the latest version ({0})", PackageSet.AvailableNewest.Version);
                             }
 
-                            if (PackageSet.AvailableNewerCompatible != null) {
-                                yield return new InstSelection(InstallChoice.UpdateToLatestVersionNotUpgrade2, "Install the latest compatible version ({0})", PackageSet.AvailableNewerCompatible.Version);
+                            if (PackageSet.AvailableNewestUpdate != null) {
+                                yield return new InstSelection(InstallChoice.UpdateToLatestVersionNotUpgrade2, "Install the latest compatible version ({0})", PackageSet.AvailableNewestUpdate.Version);
                             }
 
                             if (PackageSet.Package.IsInstalled) {
@@ -159,12 +159,12 @@ namespace CoApp.Packaging.Client.UI {
                             yield return new InstSelection(InstallChoice.OlderVersionAlreadyInstalled, "A older version is currently installed ({0})", PackageSet.InstalledNewest.Version);
                             _choice = InstallChoice.OlderVersionAlreadyInstalled;
 
-                            if (PackageSet.AvailableNewer != null) {
-                                yield return new InstSelection(InstallChoice.UpgradeToLatestVersion2, "Upgrade to the latest version of this package ({0})", PackageSet.AvailableNewer.Version);
+                            if (PackageSet.AvailableNewest != null) {
+                                yield return new InstSelection(InstallChoice.UpgradeToLatestVersion2, "Upgrade to the latest version of this package ({0})", PackageSet.AvailableNewest.Version);
                             }
 
-                            if (PackageSet.AvailableNewerCompatible != null) {
-                                yield return new InstSelection(InstallChoice.AutoInstallLatestCompatible3, "Install the latest version of this package ({0})", PackageSet.AvailableNewer.Version);
+                            if (PackageSet.AvailableNewestUpdate != null) {
+                                yield return new InstSelection(InstallChoice.AutoInstallLatestCompatible3, "Install the latest version of this package ({0})", PackageSet.AvailableNewest.Version);
                             }
 
                             yield return new InstSelection(InstallChoice.InstallSpecificVersion2, "Install this version of package ({0})", PackageSet.Package.Version);
@@ -201,11 +201,11 @@ namespace CoApp.Packaging.Client.UI {
                 }
 
                 if (Choice == InstallChoice.NewerVersionAlreadyInstalled) {
-                    return PackageSet.InstalledNewer ?? PackageSet.InstalledNewerCompatable;
+                    return PackageSet.InstalledNewest ?? PackageSet.InstalledNewestUpdate;
                 }
 
                 if (Choice == InstallChoice.OlderVersionAlreadyInstalled) {
-                    return PackageSet.InstalledOlder ?? PackageSet.InstalledOlderCompatable;
+                    return PackageSet.LatestInstalledThatUpgradesToThis ?? PackageSet.LatestInstalledThatUpdatesToThis;
                 }
 
                 if (Choice == InstallChoice.ThisVersionAlreadyInstalled) {
@@ -217,11 +217,11 @@ namespace CoApp.Packaging.Client.UI {
                 }
 
                 if (Choice.HasFlag(InstallChoice._InstallLatestUpgrade)) {
-                    return PackageSet.AvailableNewer;
+                    return PackageSet.AvailableNewest;
                 }
 
                 if (Choice.HasFlag(InstallChoice._InstallLatestUpdate)) {
-                    return PackageSet.AvailableNewerCompatible;
+                    return PackageSet.AvailableNewestUpdate;
                 }
 
                 return PackageSet.InstalledNewest ?? PackageSet.Package;

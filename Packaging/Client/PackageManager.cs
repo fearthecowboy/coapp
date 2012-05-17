@@ -258,76 +258,76 @@ namespace CoApp.Packaging.Client {
                 var allPackages = GetAllVersionsOfPackage(canonicalName).Result.OrderByDescending(each => each.Version);
 
                 result.InstalledPackages = allPackages.Where(each => each.IsInstalled).ToArray();
-                result.InstalledNewerCompatable = NewestCompatablePackageIn(result.Package, result.InstalledPackages);
-                result.InstalledNewer = result.InstalledPackages.FirstOrDefault(each => each.Version > result.Package.Version);
+                result.InstalledNewestUpdate = NewestCompatablePackageIn(result.Package, result.InstalledPackages);
+                result.InstalledNewest = result.InstalledPackages.FirstOrDefault(each => each.Version > result.Package.Version);
 
                 result.InstalledNewest = result.InstalledPackages.FirstOrDefault();
 
                 var notInstalledPackges = allPackages.Where(each => !each.IsInstalled).ToArray();
-                result.AvailableNewerCompatible = NewestCompatablePackageIn(result.Package, notInstalledPackges);
-                result.AvailableNewer = notInstalledPackges.FirstOrDefault(each => each.Version > result.Package.Version);
+                result.AvailableNewestUpdate = NewestCompatablePackageIn(result.Package, notInstalledPackges);
+                result.AvailableNewest = notInstalledPackges.FirstOrDefault(each => each.Version > result.Package.Version);
 
-                result.InstalledOlderCompatable =
+                result.LatestInstalledThatUpdatesToThis =
                     result.InstalledPackages.FirstOrDefault(
                         each => each.Version < result.Package.Version && result.Package.BindingPolicy.Minimum <= each.Version && result.Package.BindingPolicy.Maximum >= each.Version);
 
-                result.InstalledOlder =
+                result.LatestInstalledThatUpgradesToThis =
                     result.InstalledPackages.FirstOrDefault(
                         each => each.Version < result.Package.Version && (result.Package.BindingPolicy.Minimum > each.Version || result.Package.BindingPolicy.Maximum < each.Version));
 
-                if (result.AvailableNewerCompatible == result.Package) {
-                    result.AvailableNewerCompatible = null;
+                if (result.AvailableNewestUpdate == result.Package) {
+                    result.AvailableNewestUpdate = null;
                 }
-                if (result.AvailableNewer == result.Package) {
-                    result.AvailableNewer = null;
+                if (result.AvailableNewest == result.Package) {
+                    result.AvailableNewest = null;
                 }
-                if (result.InstalledNewerCompatable == result.Package) {
-                    result.InstalledNewerCompatable = null;
+                if (result.InstalledNewestUpdate == result.Package) {
+                    result.InstalledNewestUpdate = null;
                 }
-                if (result.InstalledOlderCompatable == result.Package) {
-                    result.InstalledOlderCompatable = null;
+                if (result.LatestInstalledThatUpdatesToThis == result.Package) {
+                    result.LatestInstalledThatUpdatesToThis = null;
                 }
-                if (result.InstalledOlder == result.Package) {
-                    result.InstalledOlder = null;
+                if (result.LatestInstalledThatUpgradesToThis == result.Package) {
+                    result.LatestInstalledThatUpgradesToThis = null;
                 }
-                if (result.InstalledNewer == result.Package) {
-                    result.InstalledNewer = null;
+                if (result.InstalledNewest == result.Package) {
+                    result.InstalledNewest = null;
                 }
 #if NOT_READY
                 tasks.Add(GetTrimablePackages(canonicalName).ContinueWith(a2 => {
                     result.Trimable = !a2.IsFaulted ? a2.Result : Enumerable.Empty<Package>();
                 }));
 #endif 
-                if (result.InstalledNewer != null) {
-                    tasks.Add(GetPackageDetails(result.InstalledNewer));
+                if (result.InstalledNewest != null) {
+                    tasks.Add(GetPackageDetails(result.InstalledNewest));
                 }
 
                 if (result.InstalledNewest != null) {
                     tasks.Add(GetPackageDetails(result.InstalledNewest));
                 }
 
-                if (result.InstalledNewerCompatable != null) {
-                    tasks.Add(GetPackageDetails(result.InstalledNewerCompatable));
+                if (result.InstalledNewestUpdate != null) {
+                    tasks.Add(GetPackageDetails(result.InstalledNewestUpdate));
                 }
 
                 if (result.InstalledNewest != null) {
                     tasks.Add(GetPackageDetails(result.InstalledNewest));
                 }
 
-                if (result.InstalledOlder != null) {
-                    tasks.Add(GetPackageDetails(result.InstalledOlder));
+                if (result.LatestInstalledThatUpgradesToThis != null) {
+                    tasks.Add(GetPackageDetails(result.LatestInstalledThatUpgradesToThis));
                 }
 
-                if (result.InstalledOlderCompatable != null) {
-                    tasks.Add(GetPackageDetails(result.InstalledOlderCompatable));
+                if (result.LatestInstalledThatUpdatesToThis != null) {
+                    tasks.Add(GetPackageDetails(result.LatestInstalledThatUpdatesToThis));
                 }
 
-                if (result.AvailableNewer != null) {
-                    tasks.Add(GetPackageDetails(result.AvailableNewer));
+                if (result.AvailableNewest != null) {
+                    tasks.Add(GetPackageDetails(result.AvailableNewest));
                 }
 
-                if (result.AvailableNewerCompatible != null) {
-                    tasks.Add(GetPackageDetails(result.AvailableNewerCompatible));
+                if (result.AvailableNewestUpdate != null) {
+                    tasks.Add(GetPackageDetails(result.AvailableNewestUpdate));
                 }
 
                 if (result.Package != null) {
@@ -680,11 +680,11 @@ namespace CoApp.Packaging.Client {
         }
 
         public Task<Package> GetPackageDetails(Package package) {
-            if (package.IsPackageDetailsStale) {
+            if (package.IsPackageInfoStale) {
                 return GetPackage(package.CanonicalName).Continue(pkg => RefreshPackageDetails(pkg.CanonicalName).Result);
             }
 
-            return package.Roles.IsNullOrEmpty() ? RefreshPackageDetails(package.CanonicalName) : package.AsResultTask();
+            return package.IsPackageDetailsStale ? RefreshPackageDetails(package.CanonicalName) : package.AsResultTask();
         }
 
         public Task<bool> GetTelemetry() {

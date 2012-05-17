@@ -302,7 +302,18 @@ namespace CoApp.Toolkit.Pipes {
 
             foreach( var p in otherType.GetPersistableElements()) {
                 if( p.SetValue != null ) {
-                    p.SetValue(o, GetValue(FormatKey(key, p.Name), p.DeserializeAsType), null);
+                    var v = GetValue(FormatKey(key, p.Name), p.DeserializeAsType);
+                    if( v == null ) {
+                        p.SetValue(o, GetValue(FormatKey(key, p.Name), p.DeserializeAsType), null);
+                        continue;
+                    }
+
+                    if(!p.ActualType.IsAssignableFrom(v.GetType())) {
+                        if( p.DeserializeAsType.ImplicitlyConvertsTo(p.ActualType )) {
+                            v = v.ImplicitlyConvert(p.ActualType);
+                        }
+                    }
+                    p.SetValue(o, v, null);
                 }
             }
 
@@ -406,7 +417,11 @@ namespace CoApp.Toolkit.Pipes {
             if( arg == null ) {
                 return;
             }
-           
+
+            if (argType.ImplicitlyConvertsTo(arg.GetType())) {
+                arg = arg.ImplicitlyConvert(argType);
+            }
+
             if (_storeTypeInformation) {
                 Add(argName+"$T$", argType.FullName);
             }

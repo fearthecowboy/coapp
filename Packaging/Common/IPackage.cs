@@ -47,37 +47,46 @@ namespace CoApp.Packaging.Common {
         /// <summary>
         ///   The newest version of this package that is installed and newer than the given package and is binary compatible.
         /// </summary>
-        IPackage InstalledNewerCompatable { get; }
+        IPackage InstalledNewestUpdate { get; }
+
+        /// <summary>
+        ///   The newest version of this package that is installed and newer than the given package and is not binary compatible.
+        /// </summary>
+        IPackage InstalledNewestUpgrade { get; }
 
         /// <summary>
         ///   The newest version of this package that is installed, and newer than the given package
         /// </summary>
-        IPackage InstalledNewer { get; }
+        IPackage InstalledNewest { get; }
+
 
         /// <summary>
         ///   The newest package that is currently installed, that the given package is a compatible update for.
         /// </summary>
-        IPackage InstalledOlderCompatable { get; }
+        IPackage LatestInstalledThatUpdatesToThis { get; }
+
 
         /// <summary>
-        ///   The newest package that is currently installed, that the give package is an upgrade for.
+        ///   The newest package that is currently installed, that the given package is a non-compatible update for.
         /// </summary>
-        IPackage InstalledOlder { get; }
+        IPackage LatestInstalledThatUpgradesToThis { get; }
+
 
         /// <summary>
         ///   The latest version of the package that is available that is newer than the current package.
         /// </summary>
-        IPackage AvailableNewer { get; }
+        IPackage AvailableNewest { get; }
 
         /// <summary>
         ///   The latest version of the package that is available and is binary compatable with the given package
         /// </summary>
-        IPackage AvailableNewerCompatible { get; }
+        IPackage AvailableNewestUpdate { get; }
 
         /// <summary>
-        ///   The latest version that is installed.
+        ///   The latest version of the package that is available and is binary compatable with the given package
         /// </summary>
-        IPackage InstalledNewest { get; }
+        IPackage AvailableNewestUpgrade { get; }
+
 
         /// <summary>
         ///   All Installed versions of this package
@@ -109,6 +118,7 @@ namespace CoApp.Packaging.Common {
         /// </summary>
         IEnumerable<IPackage> Trimable { get; }
 
+        
     }
 
     public static class PackageExtensions {

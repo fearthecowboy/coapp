@@ -22,6 +22,465 @@ namespace CoApp.Packaging.Client {
     using Toolkit.Win32;
 
     public class Package : IPackage {
+        private static readonly IDictionary<CanonicalName, Package> AllPackages = new XDictionary<CanonicalName, Package>();
+
+        private BindingPolicy _bindingPolicy;
+        private PackageDetails _packageDetails;
+
+        private string _displayName;
+        private bool _doNotUpdate;
+        private bool _doNotUpgrade;
+        private bool _isActive;
+        private bool _isBlocked;
+        private bool _isClientRequired;
+        private bool _isDependency;
+        private bool _isInstalled;
+        private bool _isRequired;
+        private string _packageItemText;
+
+        private IPackage _availableNewest;
+        private IPackage _availableNewestUpdate;
+        private IPackage _availableNewestUpgrade;
+        private IPackage _installedNewest;
+        private IPackage _installedNewestUpdate;
+        private IPackage _installedNewestUpgrade;
+        private IPackage _latestInstalledThatUpdatesToThis;
+        private IPackage _latestInstalledThatUpgradesToThis;
+        private IPackage _satisfiedBy;
+
+        private IEnumerable<IPackage> _newerPackages;
+        private IEnumerable<IPackage> _dependencies;
+        private IEnumerable<Uri> _feeds;
+        private IEnumerable<IPackage> _installedPackages;
+        private IEnumerable<Uri> _remoteLocations;
+        private IEnumerable<Role> _roles;
+        private IEnumerable<IPackage> _trimable;
+        private IEnumerable<IPackage> _updatePackages;
+        private IEnumerable<IPackage> _upgradePackages;
+
+        internal Package() {
+            IsPackageInfoStale = true;
+            IsPackageDetailsStale = true;
+            RemoteLocations = Enumerable.Empty<Uri>();
+            Feeds = Enumerable.Empty<Uri>();
+        }
+
+        [Persistable]
+        public bool IsRequired {
+            get {
+                DemandLoad();
+                return _isRequired;
+            }
+            internal set {
+                _isRequired = value;
+            }
+        }
+
+        [Persistable]
+        public string PackageItemText {
+            get {
+                DemandLoad();
+                return _packageItemText;
+            }
+            internal set {
+                _packageItemText = value;
+            }
+        }
+
+        [NotPersistable]
+        internal bool IsPackageInfoStale { get; set; }
+
+        [NotPersistable]
+        internal bool IsPackageDetailsStale { get; set; }
+
+        public string LocalPackagePath { get; set; }
+
+        #region IPackage Members
+
+        [Persistable]
+        public CanonicalName CanonicalName { get; internal set; }
+
+        [Persistable]
+        public BindingPolicy BindingPolicy {
+            get {
+                DemandLoad();
+                return _bindingPolicy;
+            }
+            internal set {
+                _bindingPolicy = value;
+            }
+        }
+
+        [Persistable]
+        public PackageDetails PackageDetails {
+            get {
+                if (IsPackageDetailsStale) {
+                    PackageManager.Instance.GetPackageDetails(this);
+                }
+                return _packageDetails;
+            }
+            internal set {
+                _packageDetails = value;
+            }
+        }
+
+        [Persistable]
+        public bool IsInstalled {
+            get {
+                DemandLoad();
+                return _isInstalled;
+            }
+            internal set {
+                _isInstalled = value;
+            }
+        }
+
+        [Persistable]
+        public bool IsBlocked {
+            get {
+                DemandLoad();
+                return _isBlocked;
+            }
+            internal set {
+                _isBlocked = value;
+            }
+        }
+
+        [Persistable]
+        public bool IsClientRequired {
+            get {
+                DemandLoad();
+                return _isClientRequired;
+            }
+            internal set {
+                _isClientRequired = value;
+            }
+        }
+
+        [Persistable]
+        public bool IsActive {
+            get {
+                DemandLoad();
+                return _isActive;
+            }
+            internal set {
+                _isActive = value;
+            }
+        }
+
+        [Persistable]
+        public bool IsDependency {
+            get {
+                DemandLoad();
+                return _isDependency;
+            }
+            internal set {
+                _isDependency = value;
+            }
+        }
+
+        [Persistable]
+        public string DisplayName {
+            get {
+                DemandLoad();
+                return _displayName;
+            }
+            internal set {
+                _displayName = value;
+            }
+        }
+
+        [Persistable]
+        public bool DoNotUpdate {
+            get {
+                DemandLoad();
+                return _doNotUpdate;
+            }
+            internal set {
+                _doNotUpdate = value;
+            }
+        }
+
+        [Persistable]
+        public bool DoNotUpgrade {
+            get {
+                DemandLoad();
+                return _doNotUpgrade;
+            }
+            internal set {
+                _doNotUpgrade = value;
+            }
+        }
+
+        [Persistable]
+        public IEnumerable<Uri> RemoteLocations {
+            get {
+                DemandLoad();
+                return _remoteLocations ?? Enumerable.Empty<Uri>();
+            }
+            internal set {
+                _remoteLocations = value;
+            }
+        }
+
+        [Persistable]
+        public IEnumerable<Uri> Feeds {
+            get {
+                DemandLoad();
+                return _feeds ?? Enumerable.Empty<Uri>();
+            }
+            internal set {
+                _feeds = value;
+            }
+        }
+
+        [Persistable]
+        public IEnumerable<Role> Roles {
+            get {
+                DemandLoad();
+                return _roles ?? Enumerable.Empty<Role>();
+            }
+            internal set {
+                _roles = value;
+            }
+        }
+
+        [Persistable(deserializeAsType: typeof (CanonicalName))]
+        public IPackage InstalledNewestUpdate {
+            get {
+                DemandLoad();
+                return _installedNewestUpdate;
+            }
+            internal set {
+                _installedNewestUpdate = value;
+            }
+        }
+
+        [Persistable(deserializeAsType: typeof (CanonicalName))]
+        public IPackage InstalledNewestUpgrade {
+            get {
+                DemandLoad();
+                return _installedNewestUpgrade;
+            }
+            internal set {
+                _installedNewestUpgrade = value;
+            }
+        }
+
+        [Persistable(deserializeAsType: typeof (CanonicalName))]
+        public IPackage InstalledNewest {
+            get {
+                DemandLoad();
+                return _installedNewest;
+            }
+            internal set {
+                _installedNewest = value;
+            }
+        }
+
+        [Persistable(deserializeAsType: typeof (CanonicalName))]
+        public IPackage LatestInstalledThatUpdatesToThis {
+            get {
+                DemandLoad();
+                return _latestInstalledThatUpdatesToThis;
+            }
+            internal set {
+                _latestInstalledThatUpdatesToThis = value;
+            }
+        }
+
+        [Persistable(deserializeAsType: typeof (CanonicalName))]
+        public IPackage LatestInstalledThatUpgradesToThis {
+            get {
+                DemandLoad();
+                return _latestInstalledThatUpgradesToThis;
+            }
+            internal set {
+                _latestInstalledThatUpgradesToThis = value;
+            }
+        }
+
+        [Persistable(deserializeAsType: typeof (CanonicalName))]
+        public IPackage AvailableNewest {
+            get {
+                DemandLoad();
+                return _availableNewest;
+            }
+            internal set {
+                _availableNewest = value;
+            }
+        }
+
+        [Persistable(deserializeAsType: typeof (CanonicalName))]
+        public IPackage AvailableNewestUpdate {
+            get {
+                DemandLoad();
+                return _availableNewestUpdate;
+            }
+            internal set {
+                _availableNewestUpdate = value;
+            }
+        }
+
+        [Persistable(deserializeAsType: typeof (CanonicalName))]
+        public IPackage AvailableNewestUpgrade {
+            get {
+                DemandLoad();
+                return _availableNewestUpgrade;
+            }
+            internal set {
+                _availableNewestUpgrade = value;
+            }
+        }
+
+        [NotPersistable]
+        public string Name {
+            get {
+                return CanonicalName.Name;
+            }
+        }
+
+        [NotPersistable]
+        public FlavorString Flavor {
+            get {
+                return CanonicalName.Flavor;
+            }
+        }
+
+        [NotPersistable]
+        public FourPartVersion Version {
+            get {
+                return CanonicalName.Version;
+            }
+        }
+
+        [NotPersistable]
+        public PackageType PackageType {
+            get {
+                return CanonicalName.PackageType;
+            }
+        }
+
+        [NotPersistable]
+        public Architecture Architecture {
+            get {
+                return CanonicalName.Architecture;
+            }
+        }
+
+        [NotPersistable]
+        public string PublicKeyToken {
+            get {
+                return CanonicalName.PublicKeyToken;
+            }
+        }
+
+        [Persistable(deserializeAsType: typeof (CanonicalName))]
+        public IPackage SatisfiedBy {
+            get {
+                DemandLoad();
+                return _satisfiedBy;
+            }
+            internal set {
+                _satisfiedBy = value;
+            }
+        }
+
+        [Persistable(deserializeAsType: typeof (IEnumerable<CanonicalName>))]
+        public IEnumerable<IPackage> UpdatePackages {
+            get {
+                DemandLoad();
+                return _updatePackages ?? Enumerable.Empty<IPackage>();
+            }
+            internal set {
+                _updatePackages = value;
+            }
+        }
+
+        [Persistable(deserializeAsType: typeof (IEnumerable<CanonicalName>))]
+        public IEnumerable<IPackage> UpgradePackages {
+            get {
+                DemandLoad();
+                return _upgradePackages ?? Enumerable.Empty<IPackage>();
+            }
+            internal set {
+                _upgradePackages = value;
+            }
+        }
+
+        [Persistable(deserializeAsType: typeof (IEnumerable<CanonicalName>))]
+        public IEnumerable<IPackage> NewerPackages {
+            get {
+                DemandLoad();
+                return _newerPackages ?? Enumerable.Empty<IPackage>();
+            }
+            internal set {
+                _newerPackages = value;
+            }
+        }
+
+        [Persistable(deserializeAsType: typeof (IEnumerable<CanonicalName>))]
+        public IEnumerable<IPackage> InstalledPackages {
+            get {
+                DemandLoad();
+                return _installedPackages ?? Enumerable.Empty<IPackage>();
+            }
+            internal set {
+                _installedPackages = value;
+            }
+        }
+
+        [Persistable(deserializeAsType: typeof (IEnumerable<CanonicalName>))]
+        public IEnumerable<IPackage> Dependencies {
+            get {
+                DemandLoad();
+                return _dependencies ?? Enumerable.Empty<IPackage>();
+            }
+            internal set {
+                _dependencies = value;
+            }
+        }
+
+        [Persistable(deserializeAsType: typeof (IEnumerable<CanonicalName>))]
+        public IEnumerable<IPackage> Trimable {
+            get {
+                DemandLoad();
+                return _trimable ?? Enumerable.Empty<IPackage>();
+            }
+            internal set {
+                _trimable = value;
+            }
+        }
+
+        #endregion
+
+        public static implicit operator CanonicalName(Package package) {
+            return package.CanonicalName;
+        }
+
+        public static implicit operator Package(CanonicalName name) {
+            return GetPackage(name);
+        }
+
+        public static Package GetPackage(CanonicalName canonicalName) {
+            lock (AllPackages) {
+                if (null != canonicalName && canonicalName.IsCanonical) {
+                    return AllPackages.GetOrAdd(canonicalName, () => new Package {
+                        CanonicalName = canonicalName
+                    });
+                }
+                return null;
+            }
+        }
+
+        private void DemandLoad() {
+            if (IsPackageInfoStale) {
+                PackageManager.Instance.GetPackage(CanonicalName);
+            }
+        }
+
+        #region Nested type: Properties
+
         public static class Properties {
             public static PropertyExpression<IPackage, CanonicalName> CanonicalName = PropertyExpression<IPackage>.Create(p => p.CanonicalName);
             public static PropertyExpression<IPackage, string> Name = PropertyExpression<IPackage>.Create(p => p.Name);
@@ -61,12 +520,14 @@ namespace CoApp.Packaging.Client {
             public static PropertyExpression<IPackage, string> CopyrightStatement = PropertyExpression<IPackage>.Create(p => p.PackageDetails.CopyrightStatement);
             public static PropertyExpression<IPackage, string> Description = PropertyExpression<IPackage>.Create(p => p.PackageDetails.Description);
 
-            public static PropertyExpression<IPackage, IPackage> InstalledNewerCompatable = PropertyExpression<IPackage>.Create(p => p.InstalledNewerCompatable);
-            public static PropertyExpression<IPackage, IPackage> InstalledNewer = PropertyExpression<IPackage>.Create(p => p.InstalledNewer);
-            public static PropertyExpression<IPackage, IPackage> InstalledOlderCompatable = PropertyExpression<IPackage>.Create(p => p.InstalledOlderCompatable);
-            public static PropertyExpression<IPackage, IPackage> InstalledOlder = PropertyExpression<IPackage>.Create(p => p.InstalledOlder);
-            public static PropertyExpression<IPackage, IPackage> AvailableNewer = PropertyExpression<IPackage>.Create(p => p.AvailableNewer);
-            public static PropertyExpression<IPackage, IPackage> AvailableNewerCompatible = PropertyExpression<IPackage>.Create(p => p.AvailableNewerCompatible);
+            public static PropertyExpression<IPackage, IPackage> InstalledNewestUpdate = PropertyExpression<IPackage>.Create(p => p.InstalledNewestUpdate);
+            public static PropertyExpression<IPackage, IPackage> InstalledNewestUpgrade = PropertyExpression<IPackage>.Create(p => p.InstalledNewestUpgrade);
+
+            public static PropertyExpression<IPackage, IPackage> LatestInstalledThatUpdatesToThis = PropertyExpression<IPackage>.Create(p => p.LatestInstalledThatUpdatesToThis);
+            public static PropertyExpression<IPackage, IPackage> LatestInstalledThatUpgradesToThis = PropertyExpression<IPackage>.Create(p => p.LatestInstalledThatUpgradesToThis);
+            public static PropertyExpression<IPackage, IPackage> AvailableNewest = PropertyExpression<IPackage>.Create(p => p.AvailableNewest);
+            public static PropertyExpression<IPackage, IPackage> AvailableNewestUpdate = PropertyExpression<IPackage>.Create(p => p.AvailableNewestUpdate);
+            public static PropertyExpression<IPackage, IPackage> AvailableNewestUpgrade = PropertyExpression<IPackage>.Create(p => p.AvailableNewestUpgrade);
             public static PropertyExpression<IPackage, IPackage> InstalledNewest = PropertyExpression<IPackage>.Create(p => p.InstalledNewest);
 
             public static PropertyExpression<IPackage, IEnumerable<IPackage>> InstalledPackages = PropertyExpression<IPackage>.Create(p => p.InstalledPackages);
@@ -79,141 +540,8 @@ namespace CoApp.Packaging.Client {
             // public static PropertyExpression<IPackage, Identity> Publisher = PropertyExpression<IPackage>.Create(p => p.PackageDetails.Publisher);
             // public static PropertyExpression<IPackage, XList<License>> Licenses = PropertyExpression<IPackage>.Create(p => p.PackageDetails.Licenses);
             // public static PropertyExpression<IPackage, XList<Identity>> Contributors = PropertyExpression<IPackage>.Create(p => p.PackageDetails.Contributors);
-
-
-
         }
 
-        private static readonly IDictionary<CanonicalName, Package> AllPackages = new XDictionary<CanonicalName, Package>();
-
-        public static Package GetPackage(CanonicalName canonicalName) {
-            lock (AllPackages) {
-                if(null != canonicalName && canonicalName.IsCanonical) {
-                    return AllPackages.GetOrAdd(canonicalName, () => new Package {
-                        CanonicalName = canonicalName
-                    });
-                }
-                return null;
-            }
-        }
-
-        internal Package() {
-            IsPackageInfoStale = true;
-            IsPackageDetailsStale = true;
-            RemoteLocations = Enumerable.Empty<Uri>();
-            Feeds = Enumerable.Empty<Uri>();
-        }
-        
-        public CanonicalName CanonicalName { get; set; }
-        [Persistable]
-        public BindingPolicy BindingPolicy { get; set; }
-        [Persistable]
-        public PackageDetails PackageDetails { get; set; }
-        [Persistable]
-        public bool IsInstalled { get; set; }
-        [Persistable]
-        public bool IsBlocked { get; set; }
-        [Persistable]
-        public bool IsRequired { get; set; }
-        [Persistable]
-        public bool IsClientRequired { get; set; }
-        [Persistable]
-        public bool IsActive { get; set; }
-        [Persistable]
-        public bool IsDependency { get; set; }
-        [Persistable]
-        public string DisplayName { get; set; }
-        [Persistable]
-        public string PackageItemText { get; set; }
-        [Persistable]
-        public bool DoNotUpdate { get; set; }
-        [Persistable]
-        public bool DoNotUpgrade { get; set; }
-        [Persistable]
-        public IEnumerable<Uri> RemoteLocations { get; set; }
-        [Persistable]
-        public IEnumerable<Uri> Feeds { get; set; }
-        [Persistable]
-        public IEnumerable<Role> Roles { get; set; }
-        
-        [NotPersistable]
-        public IPackage InstalledNewerCompatable { get { return PackageManager.Instance.GetPackage(_installedNewerCompatable).Result; } } 
-        [NotPersistable]
-        public IPackage InstalledNewer { get { return PackageManager.Instance.GetPackage(_installedNewer).Result; } }
-        [NotPersistable]
-        public IPackage InstalledOlderCompatable { get { return PackageManager.Instance.GetPackage(_installedOlderCompatable).Result; } }
-        [NotPersistable]
-        public IPackage InstalledOlder { get { return PackageManager.Instance.GetPackage(_installedOlder).Result; } }
-        [NotPersistable] 
-        public IPackage AvailableNewer { get { return PackageManager.Instance.GetPackage(_availableNewer).Result; } }
-        [NotPersistable]
-        public IPackage AvailableNewerCompatible { get { return PackageManager.Instance.GetPackage(_availableNewerCompatible).Result; } }
-        [NotPersistable]
-        public IPackage InstalledNewest { get { return PackageManager.Instance.GetPackage(_installedNewest).Result; } }
-
-        [NotPersistable]
-        public string Name { get { return CanonicalName.Name; } }
-        [NotPersistable]
-        public FlavorString Flavor { get { return CanonicalName.Flavor; } }
-        [NotPersistable]
-        public FourPartVersion Version { get { return CanonicalName.Version; } }
-        [NotPersistable]
-        public PackageType PackageType { get { return CanonicalName.PackageType; } }
-        [NotPersistable]
-        public Architecture Architecture { get { return CanonicalName.Architecture; } }
-        [NotPersistable]
-        public string PublicKeyToken { get { return CanonicalName.PublicKeyToken; } }
-        [NotPersistable]
-        public IPackage SatisfiedBy { get { return null != _satisfiedBy ? PackageManager.Instance.GetPackage(_satisfiedBy).Result : null; } }
-        [NotPersistable]
-        public IEnumerable<IPackage> UpdatePackages { get { return PackageManager.Instance.GetPackages(_updatePackages).Result; } }
-        [NotPersistable]
-        public IEnumerable<IPackage> UpgradePackages { get { return PackageManager.Instance.GetPackages(_upgradePackages).Result; } }
-        [NotPersistable]
-        public IEnumerable<IPackage> NewerPackages { get { return PackageManager.Instance.GetPackages(_newerPackages).Result; } }
-        [NotPersistable]
-        public IEnumerable<IPackage> InstalledPackages { get { return PackageManager.Instance.GetPackages(_installedPackages).Result; } }
-        [NotPersistable]
-        public IEnumerable<IPackage> Dependencies { get { return PackageManager.Instance.GetPackages(_dependencies).Result; } }
-        [NotPersistable]
-        public IEnumerable<IPackage> Trimable { get { return PackageManager.Instance.GetPackages(_trimable).Result; } }
-
-        [Persistable(name: "NewerPackages")]
-        private IEnumerable<CanonicalName> _newerPackages;
-        [Persistable(name: "UpdatePackages")]
-        private IEnumerable<CanonicalName> _updatePackages;
-        [Persistable(name: "UpgradePackages")]
-        private IEnumerable<CanonicalName> _upgradePackages;
-        [Persistable(name: "Dependencies")]
-        private IEnumerable<CanonicalName> _dependencies;
-        [Persistable(name: "InstalledPackages")]
-        private IEnumerable<CanonicalName> _installedPackages;
-        [Persistable(name: "Trimable")]
-        private IEnumerable<CanonicalName> _trimable;
-        [Persistable(name: "InstalledNewerCompatable")]
-        private CanonicalName _installedNewerCompatable;
-        [Persistable(name: "InstalledNewer")]
-        private CanonicalName _installedNewer;
-        [Persistable(name: "InstalledOlderCompatable")]
-        private CanonicalName _installedOlderCompatable;
-        [Persistable(name: "InstalledOlder")]
-        private CanonicalName _installedOlder;
-        [Persistable(name: "AvailableNewer")]
-        private CanonicalName _availableNewer;
-        [Persistable(name: "AvailableNewerCompatible")]
-        private CanonicalName _availableNewerCompatible;
-        [Persistable(name: "InstalledNewest")]
-        private CanonicalName _installedNewest;
-        [Persistable(name: "SatisfiedBy")]
-        private CanonicalName _satisfiedBy;
-       
-
-        [NotPersistable]
-        internal bool IsPackageInfoStale { get; set; }
-
-        [NotPersistable]
-        internal bool IsPackageDetailsStale { get; set; }
-
-        public string LocalPackagePath { get; set; }
+        #endregion
     };
 }
