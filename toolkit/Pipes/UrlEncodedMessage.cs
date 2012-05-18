@@ -308,11 +308,10 @@ namespace CoApp.Toolkit.Pipes {
                         continue;
                     }
 
-                    if(!p.ActualType.IsAssignableFrom(v.GetType())) {
-                        if( p.DeserializeAsType.ImplicitlyConvertsTo(p.ActualType )) {
-                            v = v.ImplicitlyConvert(p.ActualType);
-                        }
+                    if ( (!p.ActualType.IsInstanceOfType(v)) && p.DeserializeAsType.ImplicitlyConvertsTo(p.ActualType)) {
+                        v = v.ImplicitlyConvert(p.ActualType);
                     }
+
                     p.SetValue(o, v, null);
                 }
             }
@@ -387,12 +386,12 @@ namespace CoApp.Toolkit.Pipes {
             }
         }
 
-        public void AddCollection(string key, IEnumerable values) {
+        public void AddCollection(string key, IEnumerable values, Type serializeElementAsType) {
             if (values != null) {
                 var index = 0;
                 for (var enmerator = values.GetEnumerator(); enmerator.MoveNext();) {
                     if (enmerator.Current != null ) {
-                        Add(FormatKeyIndex(key, index++), enmerator.Current, enmerator.Current.GetType());    
+                        Add(FormatKeyIndex(key, index++), enmerator.Current, serializeElementAsType);    
                     }
                 }
             }
@@ -418,7 +417,7 @@ namespace CoApp.Toolkit.Pipes {
                 return;
             }
 
-            if (argType.ImplicitlyConvertsTo(arg.GetType())) {
+            if (arg.GetType().ImplicitlyConvertsTo(argType)) {
                 arg = arg.ImplicitlyConvert(argType);
             }
 
@@ -442,7 +441,7 @@ namespace CoApp.Toolkit.Pipes {
             }
 
             if (argType.IsArray || argType.IsIEnumerable()) {
-                AddCollection(argName, (IEnumerable)arg);
+                AddCollection(argName, (IEnumerable)arg, argType.GetPersistableInfo().ElementType);
                 return;
             }
 

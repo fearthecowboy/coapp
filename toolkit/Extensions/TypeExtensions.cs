@@ -27,15 +27,14 @@ namespace CoApp.Toolkit.Extensions {
 
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property )]
     public class PersistableAttribute: Attribute {
-        internal string Name = null;
-        internal Type SerializeAsType = null;
-        internal Type DeserializeAsType = null;
+        public string Name { get; set; }
+        public Type SerializeAsType { get; set; }
+        public Type DeserializeAsType { get; set; }
+    }
 
-        public PersistableAttribute( string name = null, Type serializeAsType= null, Type deserializeAsType = null) {
-            Name = name;
-            SerializeAsType = serializeAsType;
-            DeserializeAsType = deserializeAsType;
-        }
+    [AttributeUsage(AttributeTargets.Interface)]
+    public class ImplementedByAttribute: Attribute {
+        public Type[] Types;
     }
 
     internal enum PersistableCategory {
@@ -76,6 +75,13 @@ namespace CoApp.Toolkit.Extensions {
                 return;
             }
 
+            if (type.IsArray) {
+                // an array of soemthing.
+                PersistableCategory = PersistableCategory.Array;
+                ElementType = type.GetElementType();
+                return;
+            }
+
             if (typeof(IEnumerable).IsAssignableFrom(type)) {
                 PersistableCategory = PersistableCategory.Enumerable;
                 ElementType = type.IsGenericType ? type.GetGenericArguments()[0] : typeof(object);
@@ -92,13 +98,7 @@ namespace CoApp.Toolkit.Extensions {
                 }
             }
 
-            if (type.IsArray) {
-                // an array of soemthing.
-                PersistableCategory = PersistableCategory.Array;
-                ElementType = type.GetElementType();
-                return;
-            }
-
+            
             if (type.IsParsable()) {
                 PersistableCategory = PersistableCategory.Parseable;
                 return;
@@ -143,7 +143,7 @@ namespace CoApp.Toolkit.Extensions {
         private static readonly MethodInfo ToArrayMethod = typeof(Enumerable).GetMethod("ToArray");
         private static readonly IDictionary<Type, MethodInfo> CastMethods = new XDictionary<Type, MethodInfo>();
         private static readonly IDictionary<Type, MethodInfo> ToArrayMethods = new XDictionary<Type, MethodInfo>();
-        private static readonly IDictionary<Type, MethodInfo> OpImplicitMethods = new XDictionary<Type, MethodInfo>();
+        private static readonly IDictionary<Type, Func<object,object>> OpImplicitMethods = new XDictionary<Type, Func<object,object>>();
         public static readonly IDictionary<Type, Type> TypeSubtitution = new XDictionary<Type, Type>();
 
         public static PersistableInfo GetPersistableInfo(this Type t) {
@@ -206,7 +206,7 @@ namespace CoApp.Toolkit.Extensions {
 
         }
 
-        private static MethodInfo GetOpImplicit(Type sourceType, Type destinationType) {
+        private static Func<object,object> GetOpImplicit(Type sourceType, Type destinationType) {
             lock( OpImplicitMethods ) {
                 if( !OpImplicitMethods.ContainsKey(sourceType) ) {
                     var opImplicit = 
@@ -218,8 +218,41 @@ namespace CoApp.Toolkit.Extensions {
                             select method
                         )).FirstOrDefault();
 
-                    OpImplicitMethods.Add(sourceType, opImplicit);
-                    return opImplicit;
+                    if (opImplicit != null) {
+                        OpImplicitMethods.Add(sourceType, obj => opImplicit.Invoke(null, new[] { obj }));
+                    } else {
+                        // let's 'try harder'
+                        var result = destinationType.GetCustomAttributes(typeof(ImplementedByAttribute), false).Select(i => i as ImplementedByAttribute).SelectMany(attribute => attribute.Types).Select(target => GetOpImplicit(sourceType, target)).FirstOrDefault();
+                        if (result == null) {
+                            // still not found one? is it an IEnumerable conversion?
+                            if (sourceType.IsIEnumerable() && destinationType.IsIEnumerable()) {
+                                var sourceElementType = sourceType.GetPersistableInfo().ElementType;
+                                var destElementType = destinationType.GetPersistableInfo().ElementType;
+                                var elemConversion = GetOpImplicit(sourceElementType, destElementType);
+                                if (elemConversion != null) {
+                                    // it looks like we can translate the elements of the collection.
+                                    if (destinationType.IsArray) {
+                                        // get an array of converted values.
+                                        result = obj => ((IEnumerable<object>)(obj)).Select(each => each.ImplicitlyConvert(destElementType)).ToArrayOfType(destElementType);
+
+                                    } else if (destinationType.Name.StartsWith("IEnumerable")) {
+                                        // just get an IEnumerable of the converted elements
+                                        result = obj => ((IEnumerable<object>)(obj)).Select(each => each.ImplicitlyConvert(destElementType)).CastToIEnumerableOfType(destElementType);
+                                    } else {
+                                        // create the target collection type, and stuff the values into that.
+                                        result = obj => {
+                                            var v = (IList)destinationType.CreateInstance();
+                                            foreach (object each in ((IEnumerable<object>)(obj))) {
+                                                v.Add(each.ImplicitlyConvert(destElementType));
+                                            }
+                                            return v;
+                                        };
+                                    }
+                                }
+                            }
+                        }
+                        OpImplicitMethods.Add(sourceType, result);
+                    } 
                 }
                 return OpImplicitMethods[sourceType];
             }
@@ -235,13 +268,17 @@ namespace CoApp.Toolkit.Extensions {
             
             var opImplicit = GetOpImplicit(obj.GetType(), destinationType);
             if( opImplicit != null ) {
-                return opImplicit.Invoke(null, new[] {obj});
+                // return opImplicit.Invoke(null, new[] {obj});
+                return opImplicit(obj);
             }
             return obj;
         }
 
         public static bool ImplicitlyConvertsTo(this Type type, Type destinationType) {
-            if (type == destinationType || typeof(string) == destinationType) {
+            if (type == destinationType ) {
+                return false;
+            }
+            if (typeof(string) == destinationType) {
                 return true;
             }
             return GetOpImplicit(type, destinationType) != null;

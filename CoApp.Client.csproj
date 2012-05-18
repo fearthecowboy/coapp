@@ -69,7 +69,6 @@
     <Compile Include="Packaging\Client\Session.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Packaging\Client\PackageSet.cs" />
     <Compile Include="Packaging\Client\Policy.cs" />
     <Compile Include="Packaging\Client\Publisher.cs" />
     <Compile Include="Packaging\Client\RemoteFile.cs" />

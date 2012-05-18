@@ -73,45 +73,45 @@ namespace CoApp.Packaging.Service {
         [Persistable]
         public IEnumerable<Uri> Feeds { get { return FeedLocations; } }
 
-        [Persistable(serializeAsType:typeof(CanonicalName))]
+        [Persistable(SerializeAsType = typeof(CanonicalName))]
         public IPackage InstalledNewest { get { return PackageRequestData.InstalledNewest.Value; } }
 
-        [Persistable(serializeAsType: typeof(CanonicalName))]
+        [Persistable(SerializeAsType= typeof(CanonicalName))]
         public IPackage InstalledNewestUpdate { get { return PackageRequestData.InstalledNewestUpdate.Value; } }
-        [Persistable(serializeAsType: typeof(CanonicalName))]
+        [Persistable(SerializeAsType= typeof(CanonicalName))]
         public IPackage InstalledNewestUpgrade { get { return PackageRequestData.InstalledNewestUpgrade.Value; } }
 
-        [Persistable(serializeAsType: typeof(CanonicalName))]
+        [Persistable(SerializeAsType= typeof(CanonicalName))]
         public IPackage LatestInstalledThatUpdatesToThis { get { return PackageRequestData.LatestInstalledThatUpdatesToThis.Value; } }
-        [Persistable(serializeAsType: typeof(CanonicalName))]
+        [Persistable(SerializeAsType= typeof(CanonicalName))]
         public IPackage LatestInstalledThatUpgradesToThis { get { return PackageRequestData.LatestInstalledThatUpgradesToThis.Value; } }
 
-        [Persistable(serializeAsType: typeof(CanonicalName))]
+        [Persistable(SerializeAsType= typeof(CanonicalName))]
         public IPackage AvailableNewest { get { return PackageRequestData.AvailableNewest.Value; } }
-        [Persistable(serializeAsType: typeof(CanonicalName))]
+        [Persistable(SerializeAsType= typeof(CanonicalName))]
         public IPackage AvailableNewestUpdate { get { return PackageRequestData.AvailableNewestUpdate.Value; } }
-        [Persistable(serializeAsType: typeof(CanonicalName))]
+        [Persistable(SerializeAsType= typeof(CanonicalName))]
         public IPackage AvailableNewestUpgrade { get { return PackageRequestData.AvailableNewestUpgrade.Value; } }
 
-        [Persistable(serializeAsType: typeof(IEnumerable<CanonicalName>))]
+        [Persistable(SerializeAsType= typeof(IEnumerable<CanonicalName>))]
         public IEnumerable<IPackage> InstalledPackages { get { return PackageRequestData.InstalledPackages.Value; } }
 
-        [Persistable(serializeAsType: typeof(IEnumerable<CanonicalName>))]
+        [Persistable(SerializeAsType= typeof(IEnumerable<CanonicalName>))]
         public IEnumerable<IPackage> Dependencies { get { return PackageDependencies; } }
 
-        [Persistable(serializeAsType: typeof(IEnumerable<CanonicalName>))]
+        [Persistable(SerializeAsType= typeof(IEnumerable<CanonicalName>))]
         public IEnumerable<IPackage> Trimable { get { return PackageRequestData.Trimable.Value; } }
 
-        [Persistable(serializeAsType: typeof(CanonicalName))]
+        [Persistable(SerializeAsType= typeof(CanonicalName))]
         public IPackage SatisfiedBy { get { return PackageRequestData.SatisfiedBy.Value; } }
 
-        [Persistable(serializeAsType: typeof(IEnumerable<CanonicalName>))]
+        [Persistable(SerializeAsType= typeof(IEnumerable<CanonicalName>))]
         public IEnumerable<IPackage> NewerPackages { get { return PackageRequestData.NewerPackages.Value; } }
 
-        [Persistable(serializeAsType: typeof(IEnumerable<CanonicalName>))]
+        [Persistable(SerializeAsType= typeof(IEnumerable<CanonicalName>))]
         public IEnumerable<IPackage> UpdatePackages { get { return PackageRequestData.UpdatePackages.Value; } }
 
-        [Persistable(serializeAsType: typeof(IEnumerable<CanonicalName>))]
+        [Persistable(SerializeAsType= typeof(IEnumerable<CanonicalName>))]
         public IEnumerable<IPackage> UpgradePackages { get { return PackageRequestData.UpgradePackages.Value; } }
 
 

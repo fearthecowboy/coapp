@@ -72,6 +72,7 @@ namespace CoApp.Packaging.Client {
                 return _isRequired;
             }
             internal set {
+                IsPackageInfoStale = false;
                 _isRequired = value;
             }
         }
@@ -83,6 +84,7 @@ namespace CoApp.Packaging.Client {
                 return _packageItemText;
             }
             internal set {
+                IsPackageInfoStale = false;
                 _packageItemText = value;
             }
         }
@@ -107,6 +109,7 @@ namespace CoApp.Packaging.Client {
                 return _bindingPolicy;
             }
             internal set {
+                IsPackageInfoStale = false;
                 _bindingPolicy = value;
             }
         }
@@ -120,6 +123,7 @@ namespace CoApp.Packaging.Client {
                 return _packageDetails;
             }
             internal set {
+                IsPackageDetailsStale = false;
                 _packageDetails = value;
             }
         }
@@ -131,6 +135,7 @@ namespace CoApp.Packaging.Client {
                 return _isInstalled;
             }
             internal set {
+                IsPackageInfoStale = false;
                 _isInstalled = value;
             }
         }
@@ -142,6 +147,7 @@ namespace CoApp.Packaging.Client {
                 return _isBlocked;
             }
             internal set {
+                IsPackageInfoStale = false;
                 _isBlocked = value;
             }
         }
@@ -153,6 +159,7 @@ namespace CoApp.Packaging.Client {
                 return _isClientRequired;
             }
             internal set {
+                IsPackageInfoStale = false;
                 _isClientRequired = value;
             }
         }
@@ -164,6 +171,7 @@ namespace CoApp.Packaging.Client {
                 return _isActive;
             }
             internal set {
+                IsPackageInfoStale = false;
                 _isActive = value;
             }
         }
@@ -175,6 +183,7 @@ namespace CoApp.Packaging.Client {
                 return _isDependency;
             }
             internal set {
+                IsPackageInfoStale = false;
                 _isDependency = value;
             }
         }
@@ -186,6 +195,7 @@ namespace CoApp.Packaging.Client {
                 return _displayName;
             }
             internal set {
+                IsPackageInfoStale = false;
                 _displayName = value;
             }
         }
@@ -197,6 +207,7 @@ namespace CoApp.Packaging.Client {
                 return _doNotUpdate;
             }
             internal set {
+                IsPackageInfoStale = false;
                 _doNotUpdate = value;
             }
         }
@@ -208,6 +219,7 @@ namespace CoApp.Packaging.Client {
                 return _doNotUpgrade;
             }
             internal set {
+                IsPackageInfoStale = false;
                 _doNotUpgrade = value;
             }
         }
@@ -219,6 +231,7 @@ namespace CoApp.Packaging.Client {
                 return _remoteLocations ?? Enumerable.Empty<Uri>();
             }
             internal set {
+                IsPackageInfoStale = false;
                 _remoteLocations = value;
             }
         }
@@ -230,6 +243,7 @@ namespace CoApp.Packaging.Client {
                 return _feeds ?? Enumerable.Empty<Uri>();
             }
             internal set {
+                IsPackageInfoStale = false;
                 _feeds = value;
             }
         }
@@ -241,94 +255,103 @@ namespace CoApp.Packaging.Client {
                 return _roles ?? Enumerable.Empty<Role>();
             }
             internal set {
+                IsPackageInfoStale = false;
                 _roles = value;
             }
         }
 
-        [Persistable(deserializeAsType: typeof (CanonicalName))]
+        [Persistable(DeserializeAsType = typeof (CanonicalName))]
         public IPackage InstalledNewestUpdate {
             get {
                 DemandLoad();
                 return _installedNewestUpdate;
             }
             internal set {
+                IsPackageInfoStale = false;
                 _installedNewestUpdate = value;
             }
         }
 
-        [Persistable(deserializeAsType: typeof (CanonicalName))]
+        [Persistable(DeserializeAsType = typeof (CanonicalName))]
         public IPackage InstalledNewestUpgrade {
             get {
                 DemandLoad();
                 return _installedNewestUpgrade;
             }
             internal set {
+                IsPackageInfoStale = false;
                 _installedNewestUpgrade = value;
             }
         }
 
-        [Persistable(deserializeAsType: typeof (CanonicalName))]
+        [Persistable(DeserializeAsType = typeof (CanonicalName))]
         public IPackage InstalledNewest {
             get {
                 DemandLoad();
                 return _installedNewest;
             }
             internal set {
+                IsPackageInfoStale = false;
                 _installedNewest = value;
             }
         }
 
-        [Persistable(deserializeAsType: typeof (CanonicalName))]
+        [Persistable(DeserializeAsType = typeof (CanonicalName))]
         public IPackage LatestInstalledThatUpdatesToThis {
             get {
                 DemandLoad();
                 return _latestInstalledThatUpdatesToThis;
             }
             internal set {
+                IsPackageInfoStale = false;
                 _latestInstalledThatUpdatesToThis = value;
             }
         }
 
-        [Persistable(deserializeAsType: typeof (CanonicalName))]
+        [Persistable(DeserializeAsType = typeof (CanonicalName))]
         public IPackage LatestInstalledThatUpgradesToThis {
             get {
                 DemandLoad();
                 return _latestInstalledThatUpgradesToThis;
             }
             internal set {
+                IsPackageInfoStale = false;
                 _latestInstalledThatUpgradesToThis = value;
             }
         }
 
-        [Persistable(deserializeAsType: typeof (CanonicalName))]
+        [Persistable(DeserializeAsType = typeof (CanonicalName))]
         public IPackage AvailableNewest {
             get {
                 DemandLoad();
                 return _availableNewest;
             }
             internal set {
+                IsPackageInfoStale = false;
                 _availableNewest = value;
             }
         }
 
-        [Persistable(deserializeAsType: typeof (CanonicalName))]
+        [Persistable(DeserializeAsType = typeof (CanonicalName))]
         public IPackage AvailableNewestUpdate {
             get {
                 DemandLoad();
                 return _availableNewestUpdate;
             }
             internal set {
+                IsPackageInfoStale = false;
                 _availableNewestUpdate = value;
             }
         }
 
-        [Persistable(deserializeAsType: typeof (CanonicalName))]
+        [Persistable(DeserializeAsType = typeof (CanonicalName))]
         public IPackage AvailableNewestUpgrade {
             get {
                 DemandLoad();
                 return _availableNewestUpgrade;
             }
             internal set {
+                IsPackageInfoStale = false;
                 _availableNewestUpgrade = value;
             }
         }
@@ -375,79 +398,86 @@ namespace CoApp.Packaging.Client {
             }
         }
 
-        [Persistable(deserializeAsType: typeof (CanonicalName))]
+        [Persistable(DeserializeAsType = typeof (CanonicalName))]
         public IPackage SatisfiedBy {
             get {
                 DemandLoad();
                 return _satisfiedBy;
             }
             internal set {
+                IsPackageInfoStale = false;
                 _satisfiedBy = value;
             }
         }
 
-        [Persistable(deserializeAsType: typeof (IEnumerable<CanonicalName>))]
+        [Persistable(DeserializeAsType = typeof (IEnumerable<CanonicalName>))]
         public IEnumerable<IPackage> UpdatePackages {
             get {
                 DemandLoad();
                 return _updatePackages ?? Enumerable.Empty<IPackage>();
             }
             internal set {
+                IsPackageInfoStale = false;
                 _updatePackages = value;
             }
         }
 
-        [Persistable(deserializeAsType: typeof (IEnumerable<CanonicalName>))]
+        [Persistable(DeserializeAsType = typeof (IEnumerable<CanonicalName>))]
         public IEnumerable<IPackage> UpgradePackages {
             get {
                 DemandLoad();
                 return _upgradePackages ?? Enumerable.Empty<IPackage>();
             }
             internal set {
+                IsPackageInfoStale = false;
                 _upgradePackages = value;
             }
         }
 
-        [Persistable(deserializeAsType: typeof (IEnumerable<CanonicalName>))]
+        [Persistable(DeserializeAsType = typeof (IEnumerable<CanonicalName>))]
         public IEnumerable<IPackage> NewerPackages {
             get {
                 DemandLoad();
                 return _newerPackages ?? Enumerable.Empty<IPackage>();
             }
             internal set {
+                IsPackageInfoStale = false;
                 _newerPackages = value;
             }
         }
 
-        [Persistable(deserializeAsType: typeof (IEnumerable<CanonicalName>))]
+        [Persistable(DeserializeAsType = typeof (IEnumerable<CanonicalName>))]
         public IEnumerable<IPackage> InstalledPackages {
             get {
                 DemandLoad();
                 return _installedPackages ?? Enumerable.Empty<IPackage>();
             }
             internal set {
+                IsPackageInfoStale = false;
                 _installedPackages = value;
             }
         }
 
-        [Persistable(deserializeAsType: typeof (IEnumerable<CanonicalName>))]
+        [Persistable(DeserializeAsType = typeof (IEnumerable<CanonicalName>))]
         public IEnumerable<IPackage> Dependencies {
             get {
                 DemandLoad();
                 return _dependencies ?? Enumerable.Empty<IPackage>();
             }
             internal set {
+                IsPackageInfoStale = false;
                 _dependencies = value;
             }
         }
 
-        [Persistable(deserializeAsType: typeof (IEnumerable<CanonicalName>))]
+        [Persistable(DeserializeAsType = typeof (IEnumerable<CanonicalName>))]
         public IEnumerable<IPackage> Trimable {
             get {
                 DemandLoad();
                 return _trimable ?? Enumerable.Empty<IPackage>();
             }
             internal set {
+                IsPackageInfoStale = false;
                 _trimable = value;
             }
         }
@@ -540,6 +570,10 @@ namespace CoApp.Packaging.Client {
             // public static PropertyExpression<IPackage, Identity> Publisher = PropertyExpression<IPackage>.Create(p => p.PackageDetails.Publisher);
             // public static PropertyExpression<IPackage, XList<License>> Licenses = PropertyExpression<IPackage>.Create(p => p.PackageDetails.Licenses);
             // public static PropertyExpression<IPackage, XList<Identity>> Contributors = PropertyExpression<IPackage>.Create(p => p.PackageDetails.Contributors);
+        }
+
+        public static class Filters {
+
         }
 
         #endregion

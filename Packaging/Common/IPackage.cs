@@ -15,8 +15,15 @@ namespace CoApp.Packaging.Common {
     using System.Collections.Generic;
     using System.Linq;
     using Model;
+    using Toolkit.Extensions;
     using Toolkit.Win32;
+#if COAPP_ENGINE_CORE
+    using Service;
+#else
+    using Client;
+#endif
 
+    [ImplementedBy(Types = new Type[1]{typeof(Package)})]
     public interface IPackage {
         CanonicalName CanonicalName { get; }
         string Name { get; }
@@ -117,8 +124,6 @@ namespace CoApp.Packaging.Common {
         ///   All the trimable packages for this package
         /// </summary>
         IEnumerable<IPackage> Trimable { get; }
-
-        
     }
 
     public static class PackageExtensions {

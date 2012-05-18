@@ -40,6 +40,7 @@ namespace CoApp.Packaging.Client {
         static PackageManager() {
             // Serializer for System.Linq.Expressions.Expression
             CustomSerializer.Add(new CustomSerializer<Expression<Func<IPackage, bool>>>((message, key, serialize) => message.Add(key, CustomSerializer.ExpressionXmlSerializer.Serialize(serialize).ToString(SaveOptions.OmitDuplicateNamespaces | SaveOptions.DisableFormatting)), (message, key) => (Expression<Func<IPackage, bool>>)CustomSerializer.ExpressionXmlSerializer.Deserialize(message[key])));
+            CustomSerializer.Add(new CustomSerializer<Expression<Func<IEnumerable<IPackage>, IEnumerable<IPackage>>>>((message, key, serialize) => message.Add(key, CustomSerializer.ExpressionXmlSerializer.Serialize(serialize).ToString(SaveOptions.OmitDuplicateNamespaces | SaveOptions.DisableFormatting)), (message, key) => (Expression<Func<IEnumerable<IPackage>, IEnumerable<IPackage>>>)CustomSerializer.ExpressionXmlSerializer.Deserialize(message[key])));
         }
 
         public Task<IEnumerable<Package>> QueryPackages(string query, PkgFilter pkgFilter, CollectionFilter collectionFilter ,string location) {
@@ -244,100 +245,6 @@ namespace CoApp.Packaging.Client {
 
         public Task<Package> GetLatestInstalledVersion(CanonicalName canonicalName) {
             return GetInstalledPackages(canonicalName).Continue(packages => packages.OrderByDescending(each => each.Version).FirstOrDefault());
-        }
-
-        public Task<PackageSet> GetPackageSet(CanonicalName canonicalName) {
-            var result = new PackageSet();
-
-            return GetPackage(canonicalName).Continue(package => {
-                var tasks = new List<Task>();
-                // the given package.
-                result.Package = package;
-
-                // get all the related packages
-                var allPackages = GetAllVersionsOfPackage(canonicalName).Result.OrderByDescending(each => each.Version);
-
-                result.InstalledPackages = allPackages.Where(each => each.IsInstalled).ToArray();
-                result.InstalledNewestUpdate = NewestCompatablePackageIn(result.Package, result.InstalledPackages);
-                result.InstalledNewest = result.InstalledPackages.FirstOrDefault(each => each.Version > result.Package.Version);
-
-                result.InstalledNewest = result.InstalledPackages.FirstOrDefault();
-
-                var notInstalledPackges = allPackages.Where(each => !each.IsInstalled).ToArray();
-                result.AvailableNewestUpdate = NewestCompatablePackageIn(result.Package, notInstalledPackges);
-                result.AvailableNewest = notInstalledPackges.FirstOrDefault(each => each.Version > result.Package.Version);
-
-                result.LatestInstalledThatUpdatesToThis =
-                    result.InstalledPackages.FirstOrDefault(
-                        each => each.Version < result.Package.Version && result.Package.BindingPolicy.Minimum <= each.Version && result.Package.BindingPolicy.Maximum >= each.Version);
-
-                result.LatestInstalledThatUpgradesToThis =
-                    result.InstalledPackages.FirstOrDefault(
-                        each => each.Version < result.Package.Version && (result.Package.BindingPolicy.Minimum > each.Version || result.Package.BindingPolicy.Maximum < each.Version));
-
-                if (result.AvailableNewestUpdate == result.Package) {
-                    result.AvailableNewestUpdate = null;
-                }
-                if (result.AvailableNewest == result.Package) {
-                    result.AvailableNewest = null;
-                }
-                if (result.InstalledNewestUpdate == result.Package) {
-                    result.InstalledNewestUpdate = null;
-                }
-                if (result.LatestInstalledThatUpdatesToThis == result.Package) {
-                    result.LatestInstalledThatUpdatesToThis = null;
-                }
-                if (result.LatestInstalledThatUpgradesToThis == result.Package) {
-                    result.LatestInstalledThatUpgradesToThis = null;
-                }
-                if (result.InstalledNewest == result.Package) {
-                    result.InstalledNewest = null;
-                }
-#if NOT_READY
-                tasks.Add(GetTrimablePackages(canonicalName).ContinueWith(a2 => {
-                    result.Trimable = !a2.IsFaulted ? a2.Result : Enumerable.Empty<Package>();
-                }));
-#endif 
-                if (result.InstalledNewest != null) {
-                    tasks.Add(GetPackageDetails(result.InstalledNewest));
-                }
-
-                if (result.InstalledNewest != null) {
-                    tasks.Add(GetPackageDetails(result.InstalledNewest));
-                }
-
-                if (result.InstalledNewestUpdate != null) {
-                    tasks.Add(GetPackageDetails(result.InstalledNewestUpdate));
-                }
-
-                if (result.InstalledNewest != null) {
-                    tasks.Add(GetPackageDetails(result.InstalledNewest));
-                }
-
-                if (result.LatestInstalledThatUpgradesToThis != null) {
-                    tasks.Add(GetPackageDetails(result.LatestInstalledThatUpgradesToThis));
-                }
-
-                if (result.LatestInstalledThatUpdatesToThis != null) {
-                    tasks.Add(GetPackageDetails(result.LatestInstalledThatUpdatesToThis));
-                }
-
-                if (result.AvailableNewest != null) {
-                    tasks.Add(GetPackageDetails(result.AvailableNewest));
-                }
-
-                if (result.AvailableNewestUpdate != null) {
-                    tasks.Add(GetPackageDetails(result.AvailableNewestUpdate));
-                }
-
-                if (result.Package != null) {
-                    tasks.Add(GetPackageDetails(result.Package));
-                }
-
-                Task.WaitAll(tasks.ToArray());
-
-                return result;
-            });
         }
 
         private Package NewestCompatablePackageIn(Package aPackage, IEnumerable<Package> packages) {
