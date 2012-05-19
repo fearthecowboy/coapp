@@ -27,7 +27,7 @@ namespace CoApp.Packaging.Client.UI {
     /// </summary>
     public partial class InstallerMainWindow : Window {
         private bool _actionTaken;
-        public Installer Installer;
+        public Installer Installer { get; set; }
 
         public InstallerMainWindow(Installer installer) {
             Opacity = 0;
@@ -67,7 +67,7 @@ namespace CoApp.Packaging.Client.UI {
                 VisibilityAnimation.SetAnimationType(CancelButton, VisibilityAnimation.AnimationType.Fade);
             } catch {
             }
-
+            
             Loaded += (x, y) => {
                 Installer.Ping = true;
                 ShowInTaskbar = true;

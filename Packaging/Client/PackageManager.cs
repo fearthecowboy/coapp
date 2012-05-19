@@ -228,9 +228,8 @@ namespace CoApp.Packaging.Client {
         public Task<IEnumerable<Package>> IdentifyPackageAndDependenciesToInstall(IEnumerable<Package> packages, bool? autoUpgrade = null, bool? download = null) {
             var pTasks = packages.Select(package => Install(package.CanonicalName, autoUpgrade, pretend: true, download: download)).ToArray();
 
-            return pTasks.ContinueAlways(antecedentTasks => {
-                antecedentTasks.RethrowWhenFaulted();
-                return antecedentTasks.SelectMany(each => each.Result).Distinct();
+            return pTasks.Continue(pkgsToinstall => {
+                return pkgsToinstall.SelectMany(each => each).Distinct();
             });
         }
 
@@ -241,10 +240,6 @@ namespace CoApp.Packaging.Client {
         public Task<bool> VerifyFileSignature(string filename) {
             // make the remote call via the interface.
             return (Remote.VerifyFileSignature(filename) as Task<PackageManagerResponseImpl>).Continue(response => response.IsSignatureValid);
-        }
-
-        public Task<Package> GetLatestInstalledVersion(CanonicalName canonicalName) {
-            return GetInstalledPackages(canonicalName).Continue(packages => packages.OrderByDescending(each => each.Version).FirstOrDefault());
         }
 
         private Package NewestCompatablePackageIn(Package aPackage, IEnumerable<Package> packages) {
@@ -258,32 +253,6 @@ namespace CoApp.Packaging.Client {
             return result;
         }
 
-        public Task<Package> GetLatestInstalledCompatableVersion(CanonicalName canonicalName) {
-            return GetPackage(canonicalName).Continue(package => {
-                var result = NewestCompatablePackageIn(package, GetInstalledPackages(canonicalName).Result);
-                return result.IsInstalled ? result : null;
-            });
-        }
-
-        public Task<bool> IsPackageBlocked(CanonicalName packageName) {
-            return GetPackage(packageName).Continue(pkg => pkg.IsBlocked);
-        }
-
-        public Task<bool> IsPackageMarkedRequested(CanonicalName canonicalName) {
-            return GetPackage(canonicalName).Continue(package => package.IsClientRequired);
-        }
-
-        public Task<bool> IsPackageMarkedDoNotUpgrade(CanonicalName canonicalName) {
-            return GetPackage(canonicalName).Continue(package => package.DoNotUpgrade);
-        }
-
-        public Task<bool> IsPackageMarkedDoNotUpdate(CanonicalName canonicalName) {
-            return GetPackage(canonicalName).Continue(package => package.DoNotUpdate);
-        }
-
-        public Task<bool> IsPackageActive(CanonicalName canonicalName) {
-            return GetPackage(canonicalName).Continue(package => package.IsActive);
-        }
 
         public Task BlockPackage(CanonicalName packageName) {
             return SetPackageFlags(packageName, blocked: true);
@@ -325,7 +294,6 @@ namespace CoApp.Packaging.Client {
             // you can actually use a partial package name for this call.
             return Remote.SetPackage(canonicalName, active, requested, blocked, doNotUpdate, doNotUpgrade);
         }
-
 
         public Task<IEnumerable<Package>> GetActiveVersion(CanonicalName packageName) {
             return FindPackages(packageName, Package.Properties.Active.Is(true));

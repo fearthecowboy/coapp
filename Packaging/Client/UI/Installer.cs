@@ -61,9 +61,13 @@ namespace CoApp.Packaging.Client.UI {
                         // we'd better make sure that the most recent version of the service is running.
                         EngineServiceManager.InstallAndStartService();
                     }
+                    bool wasCreated;
+                    var ewhSec = new EventWaitHandleSecurity();
+                    ewhSec.AddAccessRule(new EventWaitHandleAccessRule(new SecurityIdentifier(WellKnownSidType.WorldSid, null), EventWaitHandleRights.FullControl, AccessControlType.Allow));
+                    _ping = new EventWaitHandle(false, EventResetMode.ManualReset, "BootstrapperPing", out wasCreated, ewhSec);
                 });
 
-                tsk.Continue(() => {
+                var ts2= tsk.Continue(() => {
                     _packageManager.GetPackageFromFile(Path.GetFullPath(MsiFilename)).Continue(pkg => {
                         _packageManager.GetPackageDetails(pkg).Continue(() => {
                             PackageSet = pkg;
@@ -82,12 +86,7 @@ namespace CoApp.Packaging.Client.UI {
                 catch {
                 }
 
-                bool wasCreated;
-                var ewhSec = new EventWaitHandleSecurity();
-                ewhSec.AddAccessRule(new EventWaitHandleAccessRule(new SecurityIdentifier(WellKnownSidType.WorldSid, null), EventWaitHandleRights.FullControl, AccessControlType.Allow));
-                _ping = new EventWaitHandle(false, EventResetMode.ManualReset, "BootstrapperPing", out wasCreated, ewhSec);
-
-                tsk.Wait();
+                ts2.Wait();
 
                 _window = new InstallerMainWindow(this);
                 _window.ShowDialog();
@@ -420,7 +419,7 @@ namespace CoApp.Packaging.Client.UI {
         }
 
         private readonly PackageManager _packageManager = new PackageManager();
-        private readonly EventWaitHandle _ping;
+        private EventWaitHandle _ping;
 
         internal bool Ping {
             get {

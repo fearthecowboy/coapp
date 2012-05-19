@@ -573,7 +573,9 @@ namespace CoApp.Packaging.Client {
         }
 
         public static class Filters {
-
+            public static Filter<IPackage> InstalledPackages = Properties.Installed.Is(true);
+            public static Filter<IPackage> PackagesWithUpdateAvailable = InstalledPackages & Properties.UpdatePackages.Any();
+            public static Filter<IPackage> PackagesWithUpgradeAvailable = InstalledPackages & Properties.UpdatePackages.Any();
         }
 
         #endregion

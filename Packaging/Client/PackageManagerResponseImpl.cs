@@ -27,6 +27,7 @@ namespace CoApp.Packaging.Client {
     using Toolkit.Tasks;
     using Toolkit.Win32;
 
+
     public class PackageManagerResponseImpl : IPackageManagerResponse {
         private static readonly IPackageManager Remote = Session.RemoteService;
 
@@ -345,7 +346,7 @@ namespace CoApp.Packaging.Client {
         public void Restarting() {
             EngineRestarting = true;
             // throw an exception here to quickly short circuit the rest of this call
-            throw new Exception("restarting");
+            throw new RestartingException();
         }
 
         public void SendShuttingDown() {
