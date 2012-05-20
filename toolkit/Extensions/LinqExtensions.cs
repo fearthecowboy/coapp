@@ -146,6 +146,10 @@ namespace CoApp.Toolkit.Extensions {
             return Enumerable.ThenByDescending((IOrderedEnumerable<TSource>)source, keySelector, comparer);
         }
 
+        public static IEnumerable<TSource> WhereDistinct<TSource,TKey>(this IEnumerable<TSource> source , Func<TSource, TKey> each ) {
+            return source.GroupBy(each).Select(x => x.First());
+        }
+
         #region Don't test this crap.
 
         /// <summary>

@@ -99,6 +99,7 @@
     <Compile Include="Packaging\Common\ServiceAccess.cs" />
     <Compile Include="Packaging\Service\Delegates.cs" />
     <Compile Include="Packaging\Service\Exceptions\InvalidReason.cs" />
+    <Compile Include="Packaging\Service\GeneralPackageSettings.cs" />
     <Compile Include="Packaging\Service\NotifiesPackageManager.cs" />
     <Compile Include="Packaging\Service\PackageRequestData.cs" />
     <Compile Include="Packaging\Service\PackageSessionData.cs" />

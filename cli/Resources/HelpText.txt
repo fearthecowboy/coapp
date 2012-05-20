@@ -60,16 +60,6 @@ Commands:
     delete-feed         delete      -D    removes a feed from the system
 
     get-packageinfo     info        -g    shows extended package information
-    
-    activate-package    activate    -a    makes specific package the 'current'
-    block-package       block       -b    marks a package as 'blocked'
-    unblock-package     unblock     -B    unblocks a package
-    require-package     require     -w    marks a package as 'required'
-    unrequire-package   unrequire   -W    unmarks a package as 'required'
-    do-not-update       hold              marks a package as 'do-not-update'
-    do-not-upgrade      freeze            marks a package as 'do-not-upgrade'
-    do-update           release           marks a package as 'do-not-update'
-    do-upgrade          thaw              marks a package as 'do-not-upgrade'
 
     enable-telemetry                      enables anonymous feedback
     disable-telemetry                     disables anonymous feedback
@@ -77,3 +67,20 @@ Commands:
     list-policies       policies    -p    lists the security policies
     add-to-policy                         adds a user/group to a policy
     remove-from-policy                    removes a user/group from a policy
+
+
+coapp [--priority=<N>] set <pkgName>  -- sets the "win" flag
+coapp [--priority=<N>] unset <pkgName> -- clears the "win" flag
+
+coapp [--priority=<N>] block <pkgName>	-- sets PackageState to "blocked"
+coapp [--priority=<N>] noremove <pkgName>
+coapp [--priority=<N>] upgradable <pkgName>
+coapp [--priority=<N>] updateable <pkgName>
+
+coapp show-settings						-- lists the packagestate & win filters.
+
+
+coapp want <pkgName>					-- sets the wanted flag to true
+coapp drop/notwanted <pkgName>			-- clears the wanted flag
+
+

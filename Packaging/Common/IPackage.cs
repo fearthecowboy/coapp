@@ -37,12 +37,9 @@ namespace CoApp.Packaging.Common {
 
         bool IsInstalled { get; }
         bool IsBlocked { get; }
-        bool IsClientRequired { get; }
+        bool IsWanted { get; }
         bool IsActive { get;  }
         bool IsDependency { get;  }
-
-        bool DoNotUpdate { get; }
-        bool DoNotUpgrade { get;}
 
         string DisplayName { get;}
 
@@ -124,6 +121,8 @@ namespace CoApp.Packaging.Common {
         ///   All the trimable packages for this package
         /// </summary>
         IEnumerable<IPackage> Trimable { get; }
+
+        PackageState PackageState { get; }
     }
 
     public static class PackageExtensions {
@@ -168,5 +167,12 @@ namespace CoApp.Packaging.Common {
             }
             return all;
         }
+    }
+
+    public enum PackageState {
+        Blocked,
+        DoNotChange,
+        Updatable,
+        Upgradable,
     }
 }

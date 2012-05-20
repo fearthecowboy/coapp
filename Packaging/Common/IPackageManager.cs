@@ -34,7 +34,9 @@ namespace CoApp.Packaging.Common {
         Task SetFeedStale(string feedLocation);
 
         Task VerifyFileSignature(string filename);
-        Task SetPackage(CanonicalName canonicalName, bool? active, bool? required, bool? blocked, bool? doNotUpdate, bool? doNotUpgrade);
+
+        Task SetGeneralPackageInformation(int priority, CanonicalName canonicalName, string key, string value);
+        Task GetGeneralPackageInformation();
         
         Task RecognizeFile(string requestReference, string localLocation, string remoteLocation);
         Task UnableToAcquire(string requestReference);

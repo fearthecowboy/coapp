@@ -369,6 +369,10 @@ namespace CoApp.Packaging.Client {
             // nothing to do here but smile!
         }
 
+        public void GeneralPackageSetting(int priority, CanonicalName canonicalName, string key, string value) {
+            throw new NotImplementedException();
+        }
+
         public void LoggingSettings(bool messages, bool warnings, bool errors) {
             LoggingSettingsResult = new LoggingSettings {Messages = messages, Warnings = warnings, Errors = errors};
         }

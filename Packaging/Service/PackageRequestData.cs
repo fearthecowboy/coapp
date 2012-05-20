@@ -42,7 +42,8 @@ namespace CoApp.Packaging.Service {
         internal readonly Lazy<IPackage> AvailableNewest;
         internal readonly Lazy<IPackage> AvailableNewestUpdate;
         internal readonly Lazy<IPackage> AvailableNewestUpgrade;
-
+        internal readonly Lazy<Package> ActivePackage;
+        internal readonly Lazy<PackageState> State;
 
         internal bool NotifiedClientThisSupercedes;
 
@@ -53,8 +54,8 @@ namespace CoApp.Packaging.Service {
             NewerPackages = new Lazy<IEnumerable<IPackage>>(() => OtherVersions.Value.TakeWhile(each => each.IsNewerThan(_package)).ToArray());
             AvailableVersions = new Lazy<IEnumerable<IPackage>>(() => OtherVersions.Value.Where(each => each.IsInstalled == false).ToArray());
 
-            UpdatePackages = new Lazy<IEnumerable<IPackage>>(() => NewerPackages.Value.Where(each => each.IsAnUpdateFor(_package)).ToArray());
-            UpgradePackages = new Lazy<IEnumerable<IPackage>>(() => NewerPackages.Value.Where(each => each.IsAnUpgradeFor(_package)).ToArray());
+            UpdatePackages = new Lazy<IEnumerable<IPackage>>(() => State.Value >= PackageState.Updatable ? NewerPackages.Value.Where(each => each.IsAnUpdateFor(_package)).ToArray() : Enumerable.Empty<IPackage>());
+            UpgradePackages = new Lazy<IEnumerable<IPackage>>(() => State.Value >= PackageState.Upgradable ? NewerPackages.Value.Where(each => each.IsAnUpgradeFor(_package)).ToArray() : Enumerable.Empty<IPackage>());
 
             InstalledNewest = new Lazy<IPackage>(() => InstalledPackages.Value.FirstOrDefault());
             InstalledNewestUpdate = new Lazy<IPackage>(() => InstalledPackages.Value.FirstOrDefault(each => each.IsAnUpdateFor(_package)));
@@ -64,13 +65,22 @@ namespace CoApp.Packaging.Service {
             LatestInstalledThatUpdatesToThis = new Lazy<IPackage>(() => InstalledPackages.Value.FirstOrDefault(each => each.IsAnUpgradeFor(_package)));
             LatestInstalledThatUpgradesToThis = new Lazy<IPackage>(() => InstalledPackages.Value.FirstOrDefault(each => each.IsAnUpgradeFor(_package)));
 
-            AvailableNewest = new Lazy<IPackage>(() => AvailableVersions.Value.FirstOrDefault());
+            AvailableNewest = new Lazy<IPackage>(() =>  AvailableVersions.Value.FirstOrDefault());
             AvailableNewestUpdate = new Lazy<IPackage>(() => UpdatePackages.Value.FirstOrDefault());
             AvailableNewestUpgrade = new Lazy<IPackage>(() => UpgradePackages.Value.FirstOrDefault());
 
             Trimable = new Lazy<IEnumerable<IPackage>>(() => {
                 // GS02: trimable alg?
                 return Enumerable.Empty<IPackage>();
+            });
+
+            ActivePackage = new Lazy<Package>(() => {
+                return InstalledPackages.Value.Select(each => (Package)each).OrderBy(each => each, new Toolkit.Extensions.Comparer<Package>((packageA, packageB) => GeneralPackageSettings.Instance.WhoWins(packageA, packageB))).FirstOrDefault();
+            });
+
+            State = new Lazy<PackageState>(() => {
+                PackageState state;
+                return Enum.TryParse(GeneralPackageSettings.Instance.GetValue(package.CanonicalName, "state"), true, out state) ? state : (package.IsWanted ? PackageState.Upgradable : PackageState.Updatable);
             });
         }
 

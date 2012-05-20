@@ -28,15 +28,14 @@ namespace CoApp.Packaging.Client {
         private PackageDetails _packageDetails;
 
         private string _displayName;
-        private bool _doNotUpdate;
-        private bool _doNotUpgrade;
+
         private bool _isActive;
         private bool _isBlocked;
-        private bool _isClientRequired;
+        private bool _isWanted;
         private bool _isDependency;
         private bool _isInstalled;
-        private bool _isRequired;
         private string _packageItemText;
+        private PackageState _packageState;
 
         private IPackage _availableNewest;
         private IPackage _availableNewestUpdate;
@@ -65,17 +64,6 @@ namespace CoApp.Packaging.Client {
             Feeds = Enumerable.Empty<Uri>();
         }
 
-        [Persistable]
-        public bool IsRequired {
-            get {
-                DemandLoad();
-                return _isRequired;
-            }
-            internal set {
-                IsPackageInfoStale = false;
-                _isRequired = value;
-            }
-        }
 
         [Persistable]
         public string PackageItemText {
@@ -153,14 +141,14 @@ namespace CoApp.Packaging.Client {
         }
 
         [Persistable]
-        public bool IsClientRequired {
+        public bool IsWanted {
             get {
                 DemandLoad();
-                return _isClientRequired;
+                return _isWanted;
             }
             internal set {
                 IsPackageInfoStale = false;
-                _isClientRequired = value;
+                _isWanted = value;
             }
         }
 
@@ -200,30 +188,7 @@ namespace CoApp.Packaging.Client {
             }
         }
 
-        [Persistable]
-        public bool DoNotUpdate {
-            get {
-                DemandLoad();
-                return _doNotUpdate;
-            }
-            internal set {
-                IsPackageInfoStale = false;
-                _doNotUpdate = value;
-            }
-        }
-
-        [Persistable]
-        public bool DoNotUpgrade {
-            get {
-                DemandLoad();
-                return _doNotUpgrade;
-            }
-            internal set {
-                IsPackageInfoStale = false;
-                _doNotUpgrade = value;
-            }
-        }
-
+        
         [Persistable]
         public IEnumerable<Uri> RemoteLocations {
             get {
@@ -482,6 +447,18 @@ namespace CoApp.Packaging.Client {
             }
         }
 
+        [Persistable]
+        public PackageState PackageState {
+            get {
+                DemandLoad();
+                return _packageState;
+            }
+            internal set {
+                IsPackageInfoStale = false;
+                _packageState = value;
+            }
+        }
+
         #endregion
 
         public static implicit operator CanonicalName(Package package) {
@@ -523,12 +500,9 @@ namespace CoApp.Packaging.Client {
 
             public static PropertyExpression<IPackage, bool> Installed = PropertyExpression<IPackage>.Create(p => p.IsInstalled);
             public static PropertyExpression<IPackage, bool> Blocked = PropertyExpression<IPackage>.Create(p => p.IsBlocked);
-            public static PropertyExpression<IPackage, bool> ClientRequired = PropertyExpression<IPackage>.Create(p => p.IsClientRequired);
+            public static PropertyExpression<IPackage, bool> ClientRequired = PropertyExpression<IPackage>.Create(p => p.IsWanted);
             public static PropertyExpression<IPackage, bool> Active = PropertyExpression<IPackage>.Create(p => p.IsActive);
             public static PropertyExpression<IPackage, bool> Dependency = PropertyExpression<IPackage>.Create(p => p.IsDependency);
-
-            public static PropertyExpression<IPackage, bool> DoNotUpdate = PropertyExpression<IPackage>.Create(p => p.DoNotUpdate);
-            public static PropertyExpression<IPackage, bool> DoNotUpgrade = PropertyExpression<IPackage>.Create(p => p.DoNotUpgrade);
 
             public static PropertyExpression<IPackage, string> DisplayName = PropertyExpression<IPackage>.Create(p => p.DisplayName);
             public static PropertyExpression<IPackage, IPackage> SatisfiedBy = PropertyExpression<IPackage>.Create(p => p.SatisfiedBy);
@@ -566,6 +540,8 @@ namespace CoApp.Packaging.Client {
             public static PropertyExpression<IPackage, IEnumerable<IPackage>> NewerPackages = PropertyExpression<IPackage>.Create(p => p.NewerPackages);
             public static PropertyExpression<IPackage, IEnumerable<IPackage>> Dependencies = PropertyExpression<IPackage>.Create(p => p.Dependencies);
             public static PropertyExpression<IPackage, IEnumerable<IPackage>> Trimable = PropertyExpression<IPackage>.Create(p => p.Trimable);
+
+            public static PropertyExpression<IPackage, PackageState> PackageState = PropertyExpression<IPackage>.Create(p => p.PackageState);
 
             // public static PropertyExpression<IPackage, Identity> Publisher = PropertyExpression<IPackage>.Create(p => p.PackageDetails.Publisher);
             // public static PropertyExpression<IPackage, XList<License>> Licenses = PropertyExpression<IPackage>.Create(p => p.PackageDetails.Licenses);

@@ -24,7 +24,7 @@ namespace CoApp.Packaging.Service {
     internal class PackageSessionData : NotifiesPackageManager {
         internal bool DoNotSupercede; // TODO: it's possible these could be contradictory
         internal bool UpgradeAsNeeded; // TODO: it's possible these could be contradictory
-        internal bool IsClientSpecified;
+        internal bool IsWanted;
         internal bool HasRequestedDownload;
 
         internal bool IsDependency;
@@ -87,7 +87,7 @@ namespace CoApp.Packaging.Service {
 
         public bool AllowedToSupercede {
             get {
-                return UpgradeAsNeeded || (!IsClientSpecified && !DoNotSupercede) && IsPotentiallyInstallable;
+                return UpgradeAsNeeded || (!IsWanted && !DoNotSupercede) && IsPotentiallyInstallable;
             }
         }
 
@@ -126,15 +126,6 @@ namespace CoApp.Packaging.Service {
 
                 // there are no local locations at all for this package?
                 return null;
-            }
-        }
-
-        private RegistryView _generalPackageSettings;
-
-        internal RegistryView GeneralPackageSettings {
-            get {
-                return
-                    _generalPackageSettings ?? (_generalPackageSettings = PackageManagerSettings.PerPackageSettings[_package.CanonicalName.GeneralName]);
             }
         }
 

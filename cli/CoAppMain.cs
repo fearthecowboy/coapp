@@ -414,7 +414,7 @@ namespace CoApp.CLI {
                             feeds.Select(each => _packageManager.SetFeed(each, FeedState.Ignored)).ToArray();
                         });
                         break;
-
+#if DEPRECATED
                     case "-a":
                     case "activate":
                     case "activate-package":
@@ -423,14 +423,14 @@ namespace CoApp.CLI {
                             .Continue(packages => Activate(parameters, packages)));
 
                         break;
-
+#endif
                     case "-g":
                     case "get-packageinfo":
                     case "info":
                         task = preCommandTasks.Continue(() => _packageManager.QueryPackages(parameters,pkgFilter,null, _location)
                             .Continue(packages => GetPackageInfo(parameters,packages)));
                         break;
-
+#if DEPRECATED
                     case "-b":
                     case "block-packages":
                     case "block-package":
@@ -489,6 +489,7 @@ namespace CoApp.CLI {
                         task = preCommandTasks.Continue(() => _packageManager.QueryPackages(parameters,pkgFilter & Package.Properties.Installed.Is(true),null, _location)
                            .Continue(packages => DoUpgrade(parameters, packages)));
                         break;
+#endif
 
                     case "enable-telemetry":
                         task = preCommandTasks.Continue(() => _packageManager.SetTelemetry(true)).ContinueAlways((a)=> {
@@ -597,7 +598,7 @@ namespace CoApp.CLI {
             }
             return 0;
         }
-
+#if DEPRECATED
         private Task DoNotUpdate(IEnumerable<string> parameters, IEnumerable<Package> packages) {
             if (!packages.Any()) {
                 PrintNoPackagesFound(parameters);
@@ -613,6 +614,7 @@ namespace CoApp.CLI {
                 }
             });
         }
+
         private Task DoUpdate(IEnumerable<string> parameters, IEnumerable<Package> packages) {
             if (!packages.Any()) {
                 PrintNoPackagesFound(parameters);
@@ -658,7 +660,7 @@ namespace CoApp.CLI {
                 }
             });
         }
-
+#endif
         private Task AddFeed(IEnumerable<string> feeds) {
             var tasks = feeds.Select(each => _packageManager.AddSystemFeed(each));
             return tasks.ContinueAlways(antecedents => {
@@ -712,7 +714,7 @@ namespace CoApp.CLI {
                 }
             });
         }
-
+#if DEPRECATED
         private Task Require(IEnumerable<string> parameters, IEnumerable<Package> packages) {
             if (!packages.Any()) {
                 PrintNoPackagesFound(parameters);
@@ -792,7 +794,7 @@ namespace CoApp.CLI {
                 }
             });
         }
-
+#endif
         private void FailOnExceptions(Exception exception) {
             if (exception is OperationCanceledException) {
                 // it's been dealt with.
@@ -882,7 +884,7 @@ namespace CoApp.CLI {
                         pkg.Name,
                         Version = pkg.Version,
                         Arch = pkg.Architecture,
-                        Status = (pkg.IsInstalled ? "Installed " + (pkg.IsBlocked ? "Blocked " : "") + (pkg.IsClientRequired ? "Required ": pkg.IsRequired ? "Dependency " : "")+ (pkg.IsActive ? "Active " : "" ) : ""),
+                        Status = (pkg.IsInstalled ? "Installed " + (pkg.IsBlocked ? "Blocked " : "") + (pkg.IsWanted ? "Required ": pkg.IsDependency ? "Dependency " : "")+ (pkg.IsActive ? "Active " : "" ) : ""),
                         Location = pkg.IsInstalled ? "(installed)" : !string.IsNullOrEmpty(pkg.LocalPackagePath) ? pkg.LocalPackagePath : (pkg.RemoteLocations.IsNullOrEmpty() ? "<unknown>" :  pkg.RemoteLocations.FirstOrDefault().AbsoluteUri.UrlDecode()),
                     }).ToTable().ConsoleOut();
             }

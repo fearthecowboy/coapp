@@ -253,7 +253,7 @@ namespace CoApp.Packaging.Client {
             return result;
         }
 
-
+#if DEPRECATED
         public Task BlockPackage(CanonicalName packageName) {
             return SetPackageFlags(packageName, blocked: true);
         }
@@ -294,6 +294,7 @@ namespace CoApp.Packaging.Client {
             // you can actually use a partial package name for this call.
             return Remote.SetPackage(canonicalName, active, requested, blocked, doNotUpdate, doNotUpgrade);
         }
+#endif
 
         public Task<IEnumerable<Package>> GetActiveVersion(CanonicalName packageName) {
             return FindPackages(packageName, Package.Properties.Active.Is(true));

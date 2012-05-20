@@ -31,6 +31,7 @@ namespace CoApp.Packaging.Service {
     using Toolkit.Tasks;
     using Toolkit.Win32;
 
+
     public class Package : NotifiesPackageManager, IPackage {
         private static readonly XDictionary<CanonicalName, Package> Packages = new XDictionary<CanonicalName, Package>();
        
@@ -121,65 +122,27 @@ namespace CoApp.Packaging.Service {
         } }
 
        
-
-        /// <summary>
-        ///   Indicates that the client specifically requested the package, or is the dependency of a requested package
-        /// </summary>
-        [Persistable]
-        public bool IsRequired {
-            get {
-                return IsClientRequired || PackageSessionData.IsDependency;
-            }
-            set {
-                IsClientRequired = value;
-            }
-        }
-
      
 
         /// <summary>
         ///   Indicates that the client specifically requested the package
         /// </summary>
         [Persistable]
-        public bool IsClientRequired {
+        public bool IsWanted {
             get {
-                return PackageSessionData.PackageSettings["#Requested"].BoolValue;
+                return PackageSessionData.PackageSettings["#Wanted"].BoolValue;
             }
             set {
-                PackageSessionData.PackageSettings["#Requested"].BoolValue = value;
-            }
-        }
-
-        [Persistable]
-        public bool DoNotUpdate {
-            get {
-                return PackageSessionData.PackageSettings["#DoNotUpdate"].BoolValue;
-            }
-            set {
-                PackageSessionData.PackageSettings["#DoNotUpdate"].BoolValue = value;
+                PackageSessionData.PackageSettings["#Wanted"].BoolValue = value;
             }
         }
 
         [Persistable]
         public bool IsBlocked {
             get {
-                return PackageSessionData.GeneralPackageSettings["#Blocked"].BoolValue;
-            }
-            set {
-                PackageSessionData.GeneralPackageSettings["#Blocked"].BoolValue = value;
+                return PackageState == PackageState.Blocked;
             }
         }
-
-        [Persistable]
-        public bool DoNotUpgrade {
-            get {
-                return PackageSessionData.GeneralPackageSettings["#DoNotUpgrade"].BoolValue;
-            }
-            set {
-                PackageSessionData.GeneralPackageSettings["#DoNotUpgrade"].BoolValue = value;
-            }
-        }
-
 
         [NotPersistable]
         public string Name { get { return CanonicalName.Name; } }
@@ -252,24 +215,9 @@ namespace CoApp.Packaging.Service {
         }
 
         internal static FourPartVersion GetCurrentPackageVersion(CanonicalName canonicalName) {
-            var installedVersionsOfPackage = PackageManagerImpl.Instance.InstalledPackages.Where(each => canonicalName.DiffersOnlyByVersion(each.CanonicalName)).OrderByDescending(each => each.CanonicalName.Version);
-            var latestPackage = installedVersionsOfPackage.FirstOrDefault();
-
-            // clean as we go...
-            if (latestPackage == null) {
-                PackageManagerSettings.PerPackageSettings[canonicalName.GeneralName, "CurrentVersion"].Value = null;
-                return 0;
-            }
-
-            // is there a version set?
-            FourPartVersion ver = (ulong)PackageManagerSettings.PerPackageSettings[canonicalName.GeneralName, "CurrentVersion"].LongValue;
-
-            // if not (or it's not set to an installed package), let's set it to the latest version of the package.
-            if (ver == 0 || installedVersionsOfPackage.FirstOrDefault(p => p.CanonicalName.Version == ver) == null) {
-                latestPackage.SetPackageCurrent();
-                return latestPackage.CanonicalName.Version;
-            }
-            return ver;
+            var Active = PackageManagerImpl.Instance.InstalledPackages.Where(each => canonicalName.DiffersOnlyByVersion(each.CanonicalName)).OrderBy(each => each,
+                new Toolkit.Extensions.Comparer<Package>((packageA, packageB) => GeneralPackageSettings.Instance.WhoWins(packageA, packageB))).FirstOrDefault();
+            return Active == null ? 0 : Active.Version;
         }
 
         internal string PackageDirectory {
@@ -329,33 +277,23 @@ namespace CoApp.Packaging.Service {
         [Persistable]
         public bool IsActive {
             get {
-                return GetCurrentPackageVersion(CanonicalName) == CanonicalName.Version;
+                return PackageRequestData.ActivePackage.Value == this;
             }
         }
-
        
         internal void Install() {
             try {
                 Engine.EnsureCanonicalFoldersArePresent();
 
-                var currentVersion = GetCurrentPackageVersion(CanonicalName);
-
                 PackageHandler.Install(this);
+                if (PackageSessionData.IsWanted) {
+                    IsWanted = true;
+                }
                 IsInstalled = true;
-
                 Logger.Message("MSI Install of package [{0}] SUCCEEDED.", CanonicalName);
+                DoPackageComposition();
+                Logger.Message("Package Composition [{0}] SUCCEEDED.", CanonicalName);
 
-                if (CanonicalName.Version > currentVersion) {
-                    SetPackageCurrent();
-                    DoPackageComposition(true);
-                    Logger.Message("Set Current Version [{0}] SUCCEEDED.", CanonicalName);
-                } else {
-                    DoPackageComposition(false);
-                    Logger.Message("Package Composition [{0}] SUCCEEDED.", CanonicalName);
-                }
-                if (PackageSessionData.IsClientSpecified) {
-                    IsRequired = true;
-                }
             } catch (Exception e) {
                 Logger.Error("Package Install Failure [{0}] => [{1}].\r\n{2}", CanonicalName, e.Message, e.StackTrace);
 
@@ -381,18 +319,7 @@ namespace CoApp.Packaging.Service {
                 Logger.Error(e);
                 Event<GetResponseInterface>.RaiseFirst().FailedPackageRemoval(CanonicalName, "GS01: I'm not sure of the reason... ");
                 throw new OperationCompletedBeforeResultException();
-            } finally {
-                try {
-                    // this will activate the next one in line
-                    GetCurrentPackageVersion(CanonicalName);
-                    // GS01: fix this to rerun package composition on prior version.
-                } catch (Exception e) {
-                    // boooo!
-                    Logger.Error(e);
-                    Logger.Error("failed setting active package for {0}", CanonicalName.GeneralName);
-                    PackageManagerSettings.PerPackageSettings.DeleteSubkey(CanonicalName.GeneralName);
-                }
-            }
+            } 
         }
 
         /// <summary>
@@ -446,7 +373,7 @@ namespace CoApp.Packaging.Service {
         }
 
         internal void UpdateDependencyFlags() {
-            foreach (var dpkg in PackageDependencies.Where(each => !each.IsRequired)) {
+            foreach (var dpkg in PackageDependencies.Where(each => !each.IsWanted)) {
                 var dependentPackage = dpkg;
 
                 // find each dependency that is the policy-preferred version, and mark it as currentlyrequested.
@@ -457,7 +384,7 @@ namespace CoApp.Packaging.Service {
                 ((supercedentPackage ?? dependentPackage) as Package).UpdateDependencyFlags();
             }
             // if this isn't already set, do it.
-            if (!IsRequired) {
+            if (!IsWanted) {
                 PackageSessionData.IsDependency = true;
             }
         }
@@ -585,259 +512,294 @@ namespace CoApp.Packaging.Service {
             return null;
         }
 
-        internal void DoPackageComposition(bool makeCurrent) {
-            // GS01: if package composition fails, and we're in the middle of installing a package
-            // we should roll back the package install.
-            var rules = ImplicitRules.Union(CompositionRules).ToArray();
+        private IEnumerable<CompositionRule> ResolvedRules { 
+            get {
+                var packagedir = ResolveVariables("${packagedir}\\");
+                var appsdir = ResolveVariables("${apps}\\");
 
-            var packagedir = ResolveVariables("${packagedir}\\");
-            var appsdir = ResolveVariables("${apps}\\");
+                foreach( var rule in ImplicitRules.Union(CompositionRules)) {
+                    switch( rule.Action) {
+                        case CompositionAction.FileCopy :
+                        case CompositionAction.SymlinkFile:
+                        case CompositionAction.FileRewrite:
+                            yield return new CompositionRule {
+                                Action = rule.Action,
+                                Destination = ResolveVariablesAndEnsurePathParentage(appsdir, rule.Destination),
+                                Source = ResolveVariablesAndEnsurePathParentage(packagedir, rule.Source)
+                            };
+                            break;
+                        
+                        case CompositionAction.Shortcut:
+                            yield return new CompositionRule {
+                                Action = rule.Action,
+                                Destination = ResolveVariablesAndEnsurePathParentage(appsdir, rule.Destination).GetFullPath(),
+                                Source = ResolveVariablesAndEnsurePathParentage(packagedir, rule.Source )
+                            };
+                            break;
+                        case CompositionAction.SymlinkFolder:
+                            yield return new CompositionRule {
+                                Action = rule.Action,
+                                Destination = ResolveVariablesAndEnsurePathParentage(appsdir, rule.Destination),
+                                Source = ResolveVariablesAndEnsurePathParentage(packagedir, rule.Source + "\\")
+                            };
+                            break;
 
-            foreach (var rule in rules.Where(r => r.Action == CompositionAction.FileCopy)) {
-                var destination = ResolveVariablesAndEnsurePathParentage(appsdir, rule.Destination);
-                var source = ResolveVariablesAndEnsurePathParentage(packagedir, rule.Source);
+                        case CompositionAction.EnvironmentVariable:
+                        case CompositionAction.Registry:
+                            yield return new CompositionRule {
+                                Action = rule.Action,
+                                Destination = ResolveVariables(rule.Key),
+                                Source = ResolveVariables(rule.Value)
+                            };
+                            break;
 
-                // file copy operations may only manipulate files in the package directory.
-                if (string.IsNullOrEmpty(source)) {
-                    Logger.Error("ERROR: Illegal file copy rule. Source must be in package directory [{0}] => [{1}]", rule.Destination, destination);
-                    continue;
-                }
-
-                if (string.IsNullOrEmpty(destination)) {
-                    Logger.Error("ERROR: Illegal file copy rule. Destination must be in package directory [{0}] => [{1}]", source, rule.Source);
-                    continue;
-                }
-
-                if (!File.Exists(source)) {
-                    Logger.Error("ERROR: Illegal file copy rule. Source file does not exist [{0}] => [{1}]", source, destination);
-                    continue;
-                }
-                try {
-                    var destParent = Path.GetDirectoryName(destination);
-                    if (!string.IsNullOrEmpty(destParent)) {
-                        if (!Directory.Exists(destParent)) {
-                            Directory.CreateDirectory(destParent);
-                        }
-                        File.Copy(source, destination, true);
                     }
-                } catch (Exception e) {
-                    Logger.Error(e);
                 }
+                
             }
+        }
 
-            foreach (var rule in rules.Where(r => r.Action == CompositionAction.FileRewrite)) {
-                var destination = ResolveVariablesAndEnsurePathParentage(appsdir, rule.Destination);
-                var source = ResolveVariablesAndEnsurePathParentage(packagedir, rule.Source);
+        private void ApplyRule( CompositionRule rule ) {
+            switch (rule.Action) {
+                case CompositionAction.FileCopy:
+                    // file copy operations may only manipulate files in the package directory.
+                    if (string.IsNullOrEmpty(rule.Source)) {
+                        Logger.Error("ERROR: Illegal file copy rule. Source must be in package directory [{0}] => [{1}]", rule.Source, rule.Destination);
+                        return;
+                    }
 
-                // file copy operations may only manipulate files in the package directory.
-                if (string.IsNullOrEmpty(source)) {
-                    Logger.Error("ERROR: Illegal file rewrite rule. Source must be in package directory [{0}] => [{1}]", rule.Destination, destination);
-                    continue;
-                }
+                    if (string.IsNullOrEmpty(rule.Destination)) {
+                        Logger.Error("ERROR: Illegal file copy rule. Destination must be in package directory [{0}] => [{1}]", rule.Source, rule.Destination);
+                        return;
+                    }
 
-                if (string.IsNullOrEmpty(destination)) {
-                    Logger.Error("ERROR: Illegal file rewrite rule. Destination must be in package directory [{0}] => [{1}]", source, rule.Source);
-                    continue;
-                }
-
-                if (!File.Exists(source)) {
-                    Logger.Error("ERROR: Illegal file rewrite rule. Source file does not exist [{0}] => [{1}]", source, destination);
-                    continue;
-                }
-
-                File.WriteAllText(destination, ResolveVariables(File.ReadAllText(source)));
-            }
-
-            foreach (var rule in rules.Where(r => r.Action == CompositionAction.SymlinkFolder)) {
-                var link = ResolveVariablesAndEnsurePathParentage(appsdir, rule.Destination);
-                var dir = ResolveVariablesAndEnsurePathParentage(packagedir, rule.Source + "\\");
-
-                if (string.IsNullOrEmpty(link)) {
-                    Logger.Error("ERROR: Illegal folder symlink rule. Destination location '{0}' must be a subpath of {1}", rule.Destination, appsdir);
-                    continue;
-                }
-
-                if (string.IsNullOrEmpty(dir)) {
-                    Logger.Error("ERROR: Illegal folder symlink rule. Source folder '{0}' must be a subpath of {1}", rule.Source, packagedir);
-                    continue;
-                }
-
-                if (!Directory.Exists(dir)) {
-                    Logger.Error("ERROR: Illegal folder symlink rule. Source folder '{0}' does not exist.", dir);
-                    continue;
-                }
-
-                if (makeCurrent || !Directory.Exists(link)) {
+                    if (!File.Exists(rule.Source)) {
+                        Logger.Error("ERROR: Illegal file copy rule. Source file does not exist [{0}] => [{1}]", rule.Source, rule.Destination);
+                        return;
+                    }
                     try {
-                        Logger.Message("Creatign Directory Symlink [{0}] => [{1}]", link, dir);
-                        Symlink.MakeDirectoryLink(link, dir);
-                    } catch (Exception) {
-                        Logger.Error("Warning: Directory Symlink Link Failed. [{0}] => [{1}]", link, dir);
+                        var destParent = Path.GetDirectoryName(rule.Destination);
+                        if (!string.IsNullOrEmpty(destParent)) {
+                            if (!Directory.Exists(destParent)) {
+                                Directory.CreateDirectory(destParent);
+                            }
+                            File.Copy(rule.Source, rule.Destination, true);
+                        }
                     }
-                }
-            }
+                    catch (Exception e) {
+                        Logger.Error(e);
+                    }
+                    break;
 
-            foreach (var rule in rules.Where(r => r.Action == CompositionAction.SymlinkFile)) {
-                var link = ResolveVariablesAndEnsurePathParentage(appsdir, rule.Destination);
-                var file = ResolveVariablesAndEnsurePathParentage(packagedir, rule.Source);
+                case CompositionAction.FileRewrite:
+                    // file copy operations may only manipulate files in the package directory.
+                    if (string.IsNullOrEmpty(rule.Source)) {
+                        Logger.Error("ERROR: Illegal file rewrite rule. Source must be in package directory [{0}] => [{1}]", rule.Source, rule.Destination);
+                        return;
+                    }
 
-                if (string.IsNullOrEmpty(link)) {
-                    Logger.Error("ERROR: Illegal file symlink rule. Destination location '{0}' must be a subpath of {1}", rule.Destination, appsdir);
-                    continue;
-                }
+                    if (string.IsNullOrEmpty(rule.Destination)) {
+                        Logger.Error("ERROR: Illegal file rewrite rule. Destination must be in package directory [{0}] => [{1}]", rule.Source, rule.Destination);
+                        return;
+                    }
 
-                if (string.IsNullOrEmpty(file)) {
-                    Logger.Error("ERROR: Illegal file symlink rule. Source file '{0}' must be a subpath of {1}", rule.Source, packagedir);
-                    continue;
-                }
+                    if (!File.Exists(rule.Source)) {
+                        Logger.Error("ERROR: Illegal file rewrite rule. Source file does not exist [{0}] => [{1}]", rule.Source, rule.Destination);
+                        return;
+                    }
+                    File.WriteAllText(rule.Destination, ResolveVariables(File.ReadAllText(rule.Source)));
+                    break;
 
-                if (!File.Exists(file)) {
-                    Logger.Error("ERROR: Illegal folder symlink rule. Source file '{0}' does not exist.", file);
-                    continue;
-                }
+                case CompositionAction.SymlinkFile:
+                    if (string.IsNullOrEmpty(rule.Destination)) {
+                        Logger.Error("ERROR: Illegal file symlink rule. Destination location '{0}' must be a subpath of apps dir", rule.Destination);
+                        return;
+                    }
 
-                if (makeCurrent || !File.Exists(link)) {
-                    var parentDir = Path.GetDirectoryName(link);
+                    if (string.IsNullOrEmpty(rule.Source)) {
+                        Logger.Error("ERROR: Illegal file symlink rule. Source file '{0}' must be a subpath of package directory", rule.Source);
+                        return;
+                    }
+
+                    if (!File.Exists(rule.Source)) {
+                        Logger.Error("ERROR: Illegal folder symlink rule. Source file '{0}' does not exist.", rule.Source);
+                        return;
+                    }
+
+                    var parentDir = Path.GetDirectoryName(rule.Destination);
                     if (!string.IsNullOrEmpty(parentDir)) {
                         if (!Directory.Exists(parentDir)) {
                             Directory.CreateDirectory(parentDir);
                         }
                         try {
-                            Logger.Message("Creating file Symlink [{0}] => [{1}]", link, file);
-                            Symlink.MakeFileLink(link, file);
-                        } catch (Exception) {
-                            Logger.Error("Warning: File Symlink Link Failed. [{0}] => [{1}]", link, file);
+                            Logger.Message("Creating file Symlink [{0}] => [{1}]", rule.Destination, rule.Source);
+                            Symlink.MakeFileLink(rule.Destination, rule.Source);
+                        }
+                        catch (Exception) {
+                            Logger.Error("Warning: File Symlink Link Failed. [{0}] => [{1}]", rule.Destination, rule.Source);
                         }
                     }
-                }
-            }
+                    break;
 
-            foreach (var rule in rules.Where(r => r.Action == CompositionAction.Shortcut)) {
-                var shortcutPath = ResolveVariables(rule.Destination).GetFullPath();
-                var target = ResolveVariablesAndEnsurePathParentage(packagedir, rule.Source);
-
-                if (string.IsNullOrEmpty(target)) {
-                    Logger.Error("ERROR: Illegal shortcut rule. Source file '{0}' must be a subpath of {1}", rule.Source, packagedir);
-                    continue;
-                }
-
-                if (!File.Exists(target)) {
-                    Logger.Error("ERROR: Illegal shortcut rule. Source file '{0}' does not exist.", target);
-                    continue;
-                }
-
-                if (makeCurrent || !File.Exists(shortcutPath)) {
-                    var parentDir = Path.GetDirectoryName(shortcutPath);
-                    if (!string.IsNullOrEmpty(parentDir)) {
-                        if (!Directory.Exists(parentDir)) {
-                            Directory.CreateDirectory(parentDir);
-                        }
-                        Logger.Message("Creating Shortcut [{0}] => [{1}]", shortcutPath, target);
-                        ShellLink.CreateShortcut(shortcutPath, target);
+                case CompositionAction.SymlinkFolder:
+                    if (string.IsNullOrEmpty(rule.Destination)) {
+                        Logger.Error("ERROR: Illegal folder symlink rule. Destination location '{0}' must be a subpath of appsdir", rule.Destination);
+                        return;
                     }
-                }
+
+                    if (string.IsNullOrEmpty(rule.Source)) {
+                        Logger.Error("ERROR: Illegal folder symlink rule. Source folder '{0}' must be a subpath of package directory{1}", rule.Source);
+                        return;
+                    }
+
+                    if (!Directory.Exists(rule.Source)) {
+                        Logger.Error("ERROR: Illegal folder symlink rule. Source folder '{0}' does not exist.", rule.Source);
+                        return;
+                    }
+
+                    try {
+                        Logger.Message("Creatign Directory Symlink [{0}] => [{1}]", rule.Destination, rule.Source);
+                        Symlink.MakeDirectoryLink(rule.Destination, rule.Source);
+                    }
+                    catch (Exception) {
+                        Logger.Error("Warning: Directory Symlink Link Failed. [{0}] => [{1}]", rule.Destination, rule.Source);
+                    }
+                    break;
+
+                case CompositionAction.Shortcut:
+                    if (string.IsNullOrEmpty(rule.Source)) {
+                        Logger.Error("ERROR: Illegal shortcut rule. Source file '{0}' must be a subpath of package directory", rule.Source);
+                        return;
+                    }
+
+                    if (!File.Exists(rule.Source)) {
+                        Logger.Error("ERROR: Illegal shortcut rule. Source file '{0}' does not exist.", rule.Source);
+                        return;
+                    }
+
+                    var pDir = Path.GetDirectoryName(rule.Destination);
+                    if (!string.IsNullOrEmpty(pDir)) {
+                        if (!Directory.Exists(pDir)) {
+                            Directory.CreateDirectory(pDir);
+                        }
+                        Logger.Message("Creating Shortcut [{0}] => [{1}]", rule.Destination, rule.Source);
+                        ShellLink.CreateShortcut(rule.Destination, rule.Source);
+                    }
+
+                    break;
+
+                case CompositionAction.EnvironmentVariable:
+                    switch (rule.Key.ToLower()) {
+                        case "path":
+                        case "pathext":
+                        case "psmodulepath":
+                        case "comspec":
+                        case "temp":
+                        case "tmp":
+                        case "username":
+                        case "windir":
+                        case "allusersprofile":
+                        case "appdata":
+                        case "commonprogramfiles":
+                        case "commonprogramfiles(x86)":
+                        case "commonprogramw6432":
+                        case "computername":
+                        case "current_cpu":
+                        case "FrameworkVersion":
+                        case "homedrive":
+                        case "homepath":
+                        case "logonserver":
+                        case "number_of_processors":
+                        case "os":
+                        case "processor_architecture":
+                        case "processor_identifier":
+                        case "processor_level":
+                        case "processor_revision":
+                        case "programdata":
+                        case "programfiles":
+                        case "programfiles(x86)":
+                        case "programw6432":
+                        case "prompt":
+                        case "public":
+                        case "systemdrive":
+                        case "systemroot":
+                        case "userdomain":
+                        case "userprofile":
+                            Logger.Message("Package may not set environment variable '{0}'", rule.Key);
+                            break;
+
+                        default:
+                            EnvironmentUtility.SetSystemEnvironmentVariable(rule.Key, rule.Value);
+                            break;
+                    }
+                    break;
+
+                case CompositionAction.Registry:
+                    if( CanonicalName.Architecture == Architecture.x64 && Environment.Is64BitOperatingSystem ) {
+                        RegistryView.System["SOFTWARE"][rule.Key].StringValue = rule.Value;
+                    } else {
+                        RegistryView.System["SOFTWARE\\Wow6432Node"][rule.Key].StringValue = rule.Value;
+                    }
+                    break;
             }
+        }
 
-            foreach (var rule in rules.Where(r => r.Action == CompositionAction.EnvironmentVariable)) {
-                var environmentVariable = ResolveVariables(rule.Key);
-                var environmentValue = ResolveVariables(rule.Value);
+        internal void DoPackageComposition() {
+            // GS01: if package composition fails, and we're in the middle of installing a package
+            // we should roll back the package install.
+            var rulesThatSuperceedMine = InstalledPackageFeed.Instance.FindPackages(CanonicalName.AllPackages).Where(package => !WinsVersus(package)).SelectMany(package => package.ResolvedRules).ToArray();
 
-                switch (environmentVariable.ToLower()) {
-                    case "path":
-                    case "pathext":
-                    case "psmodulepath":
-                    case "comspec":
-                    case "temp":
-                    case "tmp":
-                    case "username":
-                    case "windir":
-                    case "allusersprofile":
-                    case "appdata":
-                    case "commonprogramfiles":
-                    case "commonprogramfiles(x86)":
-                    case "commonprogramw6432":
-                    case "computername":
-                    case "current_cpu":
-                    case "FrameworkVersion":
-                    case "homedrive":
-                    case "homepath":
-                    case "logonserver":
-                    case "number_of_processors":
-                    case "os":
-                    case "processor_architecture":
-                    case "processor_identifier":
-                    case "processor_level":
-                    case "processor_revision":
-                    case "programdata":
-                    case "programfiles":
-                    case "programfiles(x86)":
-                    case "programw6432":
-                    case "prompt":
-                    case "public":
-                    case "systemdrive":
-                    case "systemroot":
-                    case "userdomain":
-                    case "userprofile":
-                        Logger.Message("Package may not set environment variable '{0}'", environmentValue);
-                        break;
-
-                    default:
-                        EnvironmentUtility.SetSystemEnvironmentVariable(environmentVariable, environmentValue);
-                        break;
-                }
-            }
-
-            var view = CanonicalName.Architecture == Architecture.x64 ? RegistryView.System["SOFTWARE"] : RegistryView.System["SOFTWARE\\Wow6432Node"];
-
-            foreach (var rule in rules.Where(r => r.Action == CompositionAction.Registry)) {
-                var regKey = ResolveVariables(rule.Key);
-                var regValue = ResolveVariables(rule.Value);
-
-                view[regKey].StringValue = regValue;
+            foreach (var rule in ResolvedRules.Where(rule => !rulesThatSuperceedMine.Any(each => each.Destination.Equals(rule.Destination, StringComparison.CurrentCultureIgnoreCase))).OrderBy(rule => rule.Action)) {
+                ApplyRule(rule);
             }
         }
 
         internal void UndoPackageComposition() {
-            var rules = ImplicitRules.Union(CompositionRules).ToArray();
+            var rulesThatISuperceed = InstalledPackageFeed.Instance.FindPackages(CanonicalName.AllPackages)
+                .Except(this.SingleItemAsEnumerable())
+                .OrderBy( each => each , new Toolkit.Extensions.Comparer<Package>((packageA, packageB) => GeneralPackageSettings.Instance.WhoWins(packageA, packageB)))
+                .Where(WinsVersus)
+                .SelectMany(package => package.ResolvedRules.Select( rule => new { package, rule }))
+                .WhereDistinct(each => each.rule.Destination)
+                .ToArray();
 
-            foreach (var link in from rule in rules.Where(r => r.Action == CompositionAction.Shortcut)
-                let target = ResolveVariables(rule.Source).GetFullPath()
-                let link = ResolveVariables(rule.Destination).GetFullPath()
-                where ShellLink.PointsTo(link, target)
-                select link) {
-                link.TryHardToDelete();
+            foreach (var rule in ResolvedRules) {
+                var runRule = rulesThatISuperceed.FirstOrDefault(each => each.rule.Destination.Equals(rule.Destination, StringComparison.CurrentCultureIgnoreCase));
+                if( runRule != null) {
+                    runRule.package.ApplyRule(runRule.rule);
+                    continue;
+                } 
+
+                switch (rule.Action) {
+                    case CompositionAction.Shortcut:
+                         if( ShellLink.PointsTo(rule.Destination, rule.Source)) {
+                             rule.Destination.TryHardToDelete();
+                         }
+                        break;
+                    case CompositionAction.SymlinkFile:
+                        if( File.Exists(rule.Destination) && Symlink.IsSymlink(rule.Destination) && Symlink.GetActualPath(rule.Destination).Equals(rule.Source)) {
+                            Symlink.DeleteSymlink(rule.Destination);
+                        }
+                        break;
+
+                    case CompositionAction.SymlinkFolder:
+                        if (Symlink.IsSymlink(rule.Destination) && Symlink.GetActualPath(rule.Destination).Equals(rule.Source)) {
+                            Symlink.DeleteSymlink(rule.Destination);
+                        }
+                        break;
+                    case CompositionAction.Registry:
+                        if (CanonicalName.Architecture == Architecture.x64 && Environment.Is64BitOperatingSystem) {
+                            RegistryView.System["SOFTWARE"][rule.Key].StringValue = null;
+                        }
+                        else {
+                            RegistryView.System["SOFTWARE\\Wow6432Node"][rule.Key].StringValue = null;
+                        }
+                        break;
+                    case CompositionAction.EnvironmentVariable:
+                        // not implemented yet.
+                        break;
+                }
             }
-
-            foreach (var link in from rule in rules.Where(r => r.Action == CompositionAction.SymlinkFile)
-                let target = ResolveVariables(rule.Source).GetFullPath()
-                let link = ResolveVariables(rule.Destination).GetFullPath()
-                where File.Exists(target) && File.Exists(link) && Symlink.IsSymlink(link) && Symlink.GetActualPath(link).Equals(target)
-                select link) {
-                Symlink.DeleteSymlink(link);
-            }
-
-            foreach (var link in from rule in rules.Where(r => r.Action == CompositionAction.SymlinkFolder)
-                let target = ResolveVariables(rule.Source).GetFullPath()
-                let link = ResolveVariables(rule.Destination).GetFullPath()
-                where File.Exists(target) && Symlink.IsSymlink(link) && Symlink.GetActualPath(link).Equals(target)
-                select link) {
-                Symlink.DeleteSymlink(link);
-            }
-        }
-
-
-
-        internal void SetPackageCurrent() {
-            if (!IsInstalled) {
-                throw new PackageNotInstalledException(this);
-            }
-
-            if (CanonicalName.Version == (ulong)PackageSessionData.GeneralPackageSettings["#CurrentVersion"].LongValue) {
-                return; // it's already set to the current version.
-            }
-
-            DoPackageComposition(true);
-            PackageSessionData.GeneralPackageSettings["#CurrentVersion"].LongValue = (long)(ulong)CanonicalName.Version;
         }
 
         internal bool HasLocalLocation {
@@ -893,5 +855,13 @@ namespace CoApp.Packaging.Service {
                 return CompositionData.SourceCodes ?? Enumerable.Empty<SourceCode>();
             }
         }
+
+        [Persistable]
+        public PackageState PackageState { get { return PackageRequestData.State.Value; } }
+
+        internal bool WinsVersus(Package vsPackage) {
+            return GeneralPackageSettings.Instance.WhoWins(CanonicalName, vsPackage.CanonicalName) >= 0;
+        }
+        
     }
 }
