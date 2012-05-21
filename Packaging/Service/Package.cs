@@ -19,7 +19,6 @@ namespace CoApp.Packaging.Service {
     using Common;
     using Common.Exceptions;
     using Common.Model;
-    using Exceptions;
     using Feeds;
     using PackageFormatHandlers;
     using Toolkit.Collections;
@@ -30,8 +29,7 @@ namespace CoApp.Packaging.Service {
     using Toolkit.Shell;
     using Toolkit.Tasks;
     using Toolkit.Win32;
-
-
+    
     public class Package : NotifiesPackageManager, IPackage {
         private static readonly XDictionary<CanonicalName, Package> Packages = new XDictionary<CanonicalName, Package>();
        
@@ -120,9 +118,6 @@ namespace CoApp.Packaging.Service {
         public bool IsDependency { get {
             return PackageSessionData.IsDependency;
         } }
-
-       
-     
 
         /// <summary>
         ///   Indicates that the client specifically requested the package
@@ -862,6 +857,5 @@ namespace CoApp.Packaging.Service {
         internal bool WinsVersus(Package vsPackage) {
             return GeneralPackageSettings.Instance.WhoWins(CanonicalName, vsPackage.CanonicalName) >= 0;
         }
-        
     }
 }

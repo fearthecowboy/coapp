@@ -306,6 +306,14 @@ namespace CoApp.Toolkit.Extensions {
             return source.Any(wildcard => value.NewIsWildcardMatch(wildcard, wildcard.Contains(@"\\"), ignorePrefix));
         }
 
+        public static bool ContainsAnyAsWildcards(this IEnumerable<string> source, params string[] wildcards) {
+            return wildcards.Any(wildcard => source.Any(each => each.NewIsWildcardMatch(wildcard)));
+        }
+
+        public static bool ContainsAllAsWildcards(this IEnumerable<string> source, params string[] wildcards) {
+            return wildcards.All(wildcard => source.Any(each => each.NewIsWildcardMatch(wildcard)));
+        }
+
         /// <summary>
         ///   Determines whether the specified input has wildcards.
         /// </summary>

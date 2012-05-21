@@ -150,6 +150,10 @@ namespace CoApp.Toolkit.Extensions {
             return source.GroupBy(each).Select(x => x.First());
         }
 
+        public static bool ContainsAll<TSource>( this IEnumerable<TSource> source , IEnumerable<TSource> matchItems ) {
+            return matchItems.All(source.Contains);
+        }
+
         #region Don't test this crap.
 
         /// <summary>

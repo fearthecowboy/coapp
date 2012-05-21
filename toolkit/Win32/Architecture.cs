@@ -20,6 +20,8 @@ namespace CoApp.Toolkit.Win32 {
         public static readonly Architecture x86 = new Architecture {_architecture = ArchType.x86};
         public static readonly Architecture x64 = new Architecture {_architecture = ArchType.x64};
         public static readonly Architecture arm = new Architecture {_architecture = ArchType.arm};
+        public static readonly Architecture[] Architectures = new[] {Any, x64, x86, Unknown};
+
 
         private enum ArchType {
             Unknown = 0,
