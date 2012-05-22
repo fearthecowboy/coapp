@@ -24,7 +24,7 @@ namespace CoApp.Packaging.Service {
         private Package _package;
         internal readonly Lazy<IPackage> SatisfiedBy;
 
-        internal readonly Lazy<IEnumerable<IPackage>> Trimable;
+        internal readonly Lazy<IEnumerable<IPackage>> TrimablePackages;
         internal readonly Lazy<IEnumerable<IPackage>> InstalledPackages;
         internal readonly Lazy<IEnumerable<IPackage>> OtherVersions;
         internal readonly Lazy<IEnumerable<IPackage>> AvailableVersions;
@@ -69,14 +69,10 @@ namespace CoApp.Packaging.Service {
             AvailableNewestUpdate = new Lazy<IPackage>(() => UpdatePackages.Value.FirstOrDefault());
             AvailableNewestUpgrade = new Lazy<IPackage>(() => UpgradePackages.Value.FirstOrDefault());
 
-            Trimable = new Lazy<IEnumerable<IPackage>>(() => {
-                // GS02: trimable alg?
-                return Enumerable.Empty<IPackage>();
-            });
+            TrimablePackages = new Lazy<IEnumerable<IPackage>>(() => InstalledPackages.Value.Where(each => each.IsTrimable));
 
-            ActivePackage = new Lazy<Package>(() => {
-                return InstalledPackages.Value.Select(each => (Package)each).OrderBy(each => each, new Toolkit.Extensions.Comparer<Package>((packageA, packageB) => GeneralPackageSettings.Instance.WhoWins(packageA, packageB))).FirstOrDefault();
-            });
+            ActivePackage = new Lazy<Package>(() => InstalledPackages.Value.Select(each =>
+                (Package)each).OrderBy(each => each, new Toolkit.Extensions.Comparer<Package>((packageA, packageB) => GeneralPackageSettings.Instance.WhoWins(packageA, packageB))).FirstOrDefault());
 
             State = new Lazy<PackageState>(() => {
                 PackageState state;

@@ -23,7 +23,7 @@ namespace CoApp.Packaging.Common {
         Task FindPackages(CanonicalName canonicalName, Expression<Func<IPackage, bool>> filter, Expression<Func<IEnumerable<IPackage>,IEnumerable<IPackage>>> collectionFilter,string location);
 
         Task GetPackageDetails(CanonicalName canonicalName);
-        Task InstallPackage(CanonicalName canonicalName, bool? autoUpgrade, bool? force, bool? download, bool? pretend, bool? isUpdating, bool? isUpgrading);
+        Task InstallPackage(CanonicalName canonicalName, bool? autoUpgrade, bool? force, bool? download, bool? pretend, CanonicalName replacingPackage);
         Task RemovePackage(CanonicalName canonicalName, bool? force);
 
         Task ListFeeds();
@@ -37,7 +37,9 @@ namespace CoApp.Packaging.Common {
 
         Task SetGeneralPackageInformation(int priority, CanonicalName canonicalName, string key, string value);
         Task GetGeneralPackageInformation();
-        
+
+        Task SetPackageWanted(CanonicalName canonicalName, bool wanted);
+
         Task RecognizeFile(string requestReference, string localLocation, string remoteLocation);
         Task UnableToAcquire(string requestReference);
         Task DownloadProgress(string requestReference, int? downloadProgress);

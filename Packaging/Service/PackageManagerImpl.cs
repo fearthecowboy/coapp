@@ -175,7 +175,7 @@ namespace CoApp.Packaging.Service {
             canonicalName = canonicalName ?? CanonicalName.CoAppPackages;
 
             if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.EnumeratePackages)) {
-                UpdateIsRequestedFlags();
+                UpdateDependencyFlags();
 
                 IEnumerable<IPackage> query = filter == null ? SearchForPackages(canonicalName, location) : SearchForPackages(canonicalName, location).Where(each => filter.Compile()(each));
 
@@ -222,7 +222,7 @@ namespace CoApp.Packaging.Service {
             return FinishedSynchronously;
         }
 
-        public Task InstallPackage(CanonicalName canonicalName, bool? autoUpgrade, bool? force, bool? download, bool? pretend, bool? isUpdating, bool? isUpgrading) {
+        public Task InstallPackage(CanonicalName canonicalName, bool? autoUpgrade, bool? force, bool? download, bool? pretend, CanonicalName replacingPackage) {
             var response = Event<GetResponseInterface>.RaiseFirst();
 
             if (CancellationRequested) {
@@ -246,6 +246,13 @@ namespace CoApp.Packaging.Service {
                 // ReSharper restore AccessToModifiedClosure
                 // ReSharper restore PossibleNullReferenceException
             });
+
+            var unwantedPackages = new List<Package>();
+            if( null != replacingPackage ) {
+                if( replacingPackage.DiffersOnlyByVersion(canonicalName)) {
+                    unwantedPackages.AddRange(SearchForPackages(replacingPackage));
+                }
+            }
 
             using (var manualResetEvent = new ManualResetEvent(true)) {
                 try {
@@ -285,18 +292,13 @@ namespace CoApp.Packaging.Service {
                         }
                     }
 
-                    // if this is an update, 
+                    // if this is an explicit update or upgrade, 
                     //      - check to see if there is a compatible package already installed that is marked do-not-update
                     //        fail if so.
-                    if (isUpdating == true && package.LatestInstalledThatUpdatesToThis != null && package.LatestInstalledThatUpdatesToThis.UpgradePackages.Any() ) {
+                    if (null != replacingPackage && unwantedPackages.Any( each => each.IsBlocked )) {
                         response.PackageBlocked(canonicalName);
                     }
 
-                    // if this is an upgrade, 
-                    //      - check to see if this package has the do-not-upgrade flag.
-                    if (isUpgrading == true && package.LatestInstalledThatUpgradesToThis != null && package.LatestInstalledThatUpgradesToThis.UpgradePackages.Any()) {
-                        response.PackageBlocked(canonicalName);
-                    }
 
                     // mark the package as the client requested.
                     package.PackageSessionData.DoNotSupercede = (false == autoUpgrade);
@@ -316,6 +318,7 @@ namespace CoApp.Packaging.Service {
 
                         IEnumerable<Package> installGraph;
                         try {
+                            UpdateDependencyFlags();
                             installGraph = GenerateInstallGraph(package).ToArray();
                         } catch (OperationCompletedBeforeResultException) {
                             // we encountered an unresolvable condition in the install graph.
@@ -435,20 +438,29 @@ namespace CoApp.Packaging.Service {
                                 }
                             }
                             if (!failed) {
-                                if (isUpdating == true) {
-                                    // if this is marked as an update
-                                    // remove REQUESTED flag from all older compatible version 
-                                    foreach (Package eachPkg in installedCompatibleVersions) {
-                                        eachPkg.IsWanted= false;
-                                    }
-                                }
-                                if (isUpgrading == true) {
-                                    // if this is marked as an update
-                                    // remove REQUESTED flag from all older compatible version 
-                                    foreach (Package eachPkg in installedPackages) {
+                                if( unwantedPackages.Any()) {
+                                    foreach (Package eachPkg in unwantedPackages) {
                                         eachPkg.IsWanted = false;
                                     }
+                                } else {
+                                    var olderpkgs = package.InstalledPackages.Where(each => each.IsWanted && package.IsNewerThan(each)).ToArray();
+                                    if( olderpkgs.Length > 0 ) {
+                                        //anthing older? 
+
+                                        if( olderpkgs.Length > 1) {
+                                            // hmm. more than one.
+                                            // is there just a single thing we're updating?
+                                            olderpkgs = olderpkgs.Where(package.IsAnUpdateFor).ToArray();
+                                        }
+
+                                        // if we can get down to one, let's unwant that.
+                                        if (olderpkgs.Length == 1) {
+                                            ((Package)olderpkgs[0]).IsWanted = false;
+                                        } 
+                                    }
+
                                 }
+                                
 
                                 // W00T ... We did it!
                                 // check for restart required...
@@ -731,7 +743,7 @@ namespace CoApp.Packaging.Service {
                     return FinishedSynchronously;
                 }
                 if (true != force) {
-                    UpdateIsRequestedFlags();
+                    UpdateDependencyFlags();
                     if (package.PackageSessionData.IsDependency) {
                         response.FailedPackageRemoval(canonicalName,
                             "Package '{0}' is a required dependency of another package.".format(canonicalName));
@@ -1176,7 +1188,7 @@ namespace CoApp.Packaging.Service {
             yield return package;
         }
 
-        private void UpdateIsRequestedFlags() {
+        private void UpdateDependencyFlags() {
             lock (this) {
                 var installedPackages = InstalledPackages.ToArray();
 
@@ -1185,7 +1197,7 @@ namespace CoApp.Packaging.Service {
                 }
 
                 foreach (var package in installedPackages.Where(each => each.IsWanted)) {
-                    package.UpdateDependencyFlags();
+                    package.MarkDependenciesAsDepenency();
                 }
             }
         }
@@ -1328,6 +1340,11 @@ namespace CoApp.Packaging.Service {
 
         public Task GetGeneralPackageInformation() {
             GeneralPackageSettings.Instance.GetSettingsData(Event<GetResponseInterface>.RaiseFirst());
+            return FinishedSynchronously;
+        }
+
+        public Task SetPackageWanted(CanonicalName canonicalName, bool wanted) {
+            Package.GetPackage(canonicalName).IsWanted = wanted;
             return FinishedSynchronously;
         }
 

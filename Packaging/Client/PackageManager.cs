@@ -29,6 +29,13 @@ namespace CoApp.Packaging.Client {
     using PkgFilter = System.Linq.Expressions.Expression<System.Func<Common.IPackage, bool>>;
     using CollectionFilter = System.Linq.Expressions.Expression<System.Func<System.Collections.Generic.IEnumerable<Common.IPackage>,System.Collections.Generic.IEnumerable<Common.IPackage>>>;
 
+    public class GeneralPackageInformation {
+        public int Priority { get; set; }
+        public CanonicalName CanonicalName { get; set; }
+        public string Key { get; set; }
+        public string Value { get; set; }
+    }
+
     public class PackageManager {
         private static readonly IPackageManager Remote = Session.RemoteService;
         internal static PackageManager Instance;
@@ -242,6 +249,17 @@ namespace CoApp.Packaging.Client {
             return (Remote.VerifyFileSignature(filename) as Task<PackageManagerResponseImpl>).Continue(response => response.IsSignatureValid);
         }
 
+        public Task SetGeneralPackageInformation(int priority, CanonicalName canonicalName, string key, string value) {
+            return Remote.SetGeneralPackageInformation(priority, canonicalName, key, value);
+        }
+        public Task<IEnumerable<GeneralPackageInformation>>  GeneralPackageInformation { get {
+            return (Remote.GetGeneralPackageInformation() as Task<PackageManagerResponseImpl>).Continue(response => response.GeneralPackageInformation);
+        }}
+
+        public Task SetPackageWanted(CanonicalName canonicalName, bool wanted) {
+            return Remote.SetPackageWanted(canonicalName, wanted);
+        }
+
         private Package NewestCompatablePackageIn(Package aPackage, IEnumerable<Package> packages) {
             var result = aPackage;
             var pkgs = packages.OrderBy(each => each.Version).ToArray();
@@ -338,7 +356,7 @@ namespace CoApp.Packaging.Client {
             return failedResult.Task;
         }
 
-        private Task<IEnumerable<Package>> Install(CanonicalName canonicalName, bool? autoUpgrade = null, bool? isUpdate = null, bool? isUpgrade = null, bool? pretend = null, bool? download = null) {
+        private Task<IEnumerable<Package>> Install(CanonicalName canonicalName, bool? autoUpgrade = null, bool? force = null, bool? download = null, bool? pretend = null, CanonicalName replacingPackage = null) {
             if (!canonicalName.IsCanonical) {
                 return InvalidCanonicalNameResult<IEnumerable<Package>>(canonicalName);
             }
@@ -351,7 +369,7 @@ namespace CoApp.Packaging.Client {
                 }
             });
 
-            return (Remote.InstallPackage(canonicalName, autoUpgrade, false, download, pretend, isUpdate, isUpgrade) as Task<PackageManagerResponseImpl>).Continue(response => {
+            return (Remote.InstallPackage(canonicalName, autoUpgrade, force, download, pretend, replacingPackage) as Task<PackageManagerResponseImpl>).Continue(response => {
                 if (response.PotentialUpgrades != null) {
                     throw new PackageHasPotentialUpgradesException(response.UpgradablePackage, response.PotentialUpgrades);
                 }
@@ -371,12 +389,8 @@ namespace CoApp.Packaging.Client {
             return Install(canonicalName, autoUpgrade, true, false, false);
         }
 
-        public Task<IEnumerable<Package>> EnsurePackagesAndDependenciesAreLocal(CanonicalName canonicalName, bool? autoUpgrade = null) {
-            return Install(canonicalName, autoUpgrade, false, false, true, true);
-        }
-
         public Task<IEnumerable<Package>> WhatWouldBeInstalled(CanonicalName canonicalName, bool? autoUpgrade = null) {
-            return Install(canonicalName, autoUpgrade, false, false, false, false);
+            return Install(canonicalName, autoUpgrade, false, false, false, null);
         }
 
         public Task<int> RemovePackages(IEnumerable<CanonicalName> canonicalNames, bool forceRemoval) {
@@ -523,7 +537,7 @@ namespace CoApp.Packaging.Client {
             return (Remote.GetPackageDetails(canonicalName) as Task<PackageManagerResponseImpl>).Continue(response => Package.GetPackage(canonicalName));
         }
 
-        public Task<Package> GetPackage(CanonicalName canonicalName) {
+        public Task<Package> GetPackage(CanonicalName canonicalName, bool forceRefresh = false) {
             if( null == canonicalName) {
                 return CoTask.AsResultTask<Package>(null);
             }
@@ -533,18 +547,18 @@ namespace CoApp.Packaging.Client {
 
             var pkg = Package.GetPackage(canonicalName);
 
-            if (pkg.IsPackageInfoStale) {
+            if (forceRefresh || pkg.IsPackageInfoStale) {
                 return (Remote.FindPackages(canonicalName,null,null,null) as Task<PackageManagerResponseImpl>).Continue(response => Package.GetPackage(canonicalName));
             }
 
             return pkg.AsResultTask();
         }
 
-        public Task<IEnumerable<Package>> GetPackages(IEnumerable<CanonicalName> canonicalNames) {
+        public Task<IEnumerable<Package>> GetPackages(IEnumerable<CanonicalName> canonicalNames, bool forceRefresh = false) {
             if(canonicalNames.IsNullOrEmpty()) {
                 return Enumerable.Empty<Package>().AsResultTask();
             }
-            return canonicalNames.Select(GetPackage).Continue(all => all);
+            return canonicalNames.Select(c => GetPackage(c, true)).Continue(all => all);
         }
 
         public Task<Package> GetPackageDetails(CanonicalName canonicalName) {

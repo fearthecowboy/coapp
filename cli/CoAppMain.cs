@@ -35,12 +35,13 @@ namespace CoApp.CLI {
     public class CoAppMain : AsyncConsoleProgram {
         private bool _terse = false;
         private bool _verbose = false;
-
+        
         private bool? _force = null;
         
         private string _location = null;
         private bool? _pretend = null;
         private bool? _autoUpgrade = null;
+        private int _priority = 50;
 
         private bool? _x64 = null;
         private bool? _x86 = null;
@@ -130,12 +131,16 @@ namespace CoApp.CLI {
                             pkgFilter &= Package.Properties.Active.Is(lastAsBool);
                             break;
 
-                        case "required":
-                            pkgFilter &= Package.Properties.ClientRequired.Is(lastAsBool);
+                        case "wanted":
+                            pkgFilter &= Package.Properties.Wanted.Is(lastAsBool);
                             break;
 
                         case "blocked":
                             pkgFilter &= Package.Properties.Blocked.Is(lastAsBool);
+                            break;
+
+                        case "trimable":
+                            pkgFilter &= Package.Filters.Trimable;
                             break;
 
                         case "latest":
@@ -212,6 +217,30 @@ namespace CoApp.CLI {
                             _x64 = true;
                             _x86 = true;
                             _cpuany = true;
+                            break;
+
+                        case "priority":
+                            switch( last ) {
+                                case "highest":
+                                    _priority = 100;
+                                    break;
+                                case "high":
+                                    _priority = 75;
+                                    break;
+                                case "normal":
+                                case "default":
+                                    _priority = 50;
+                                    break;
+                                case "low":
+                                    _priority = 25;
+                                    break;
+                                case "lowest":
+                                    _priority = 0;
+                                    break;
+                                default:
+                                    _priority = last.ToInt32(50);
+                                    break;
+                            }
                             break;
 
                         case "help":
@@ -303,6 +332,95 @@ namespace CoApp.CLI {
                             }));
                         break;
 
+                    case "-w":
+                    case "wanted":
+                    case "want":
+                        task = preCommandTasks.Continue(() => _packageManager.QueryPackages(parameters, pkgFilter & Package.Filters.InstalledPackages, collectionFilter, _location)
+                            .Continue(packages => {
+                                if (packages.IsNullOrEmpty()) {
+                                    PrintNoPackagesFound(parameters);
+                                    return;
+                                }
+                                var pkgs = packages.ToArray();
+
+                                Console.WriteLine("Setting {0} packages to 'wanted':", pkgs.Length);
+
+                                foreach( var p in packages ) {
+                                    _packageManager.SetPackageWanted(p.CanonicalName, true);
+                                }
+
+                                // refresh
+                                pkgs.Select(each => _packageManager.GetPackage(each.CanonicalName)).Continue( p => PrintPackages(p));
+                            }));
+                        break;
+
+                    case "-W":
+                    case "drop":
+                    case "unwanted":
+                    case "unwant":
+                    case "donotwant":
+                        task = preCommandTasks.Continue(() => _packageManager.QueryPackages(parameters, pkgFilter & Package.Filters.InstalledPackages, collectionFilter, _location)
+                            .Continue(packages => {
+                                if (packages.IsNullOrEmpty()) {
+                                    PrintNoPackagesFound(parameters);
+                                    return;
+                                }
+                                var pkgs = packages.ToArray();
+
+                                Console.WriteLine("Setting {0} packages to 'unwanted':", pkgs.Length);
+
+                                foreach (var p in packages) {
+                                    _packageManager.SetPackageWanted(p.CanonicalName, false);
+                                }
+
+                                // refresh
+                                pkgs.Select(each => _packageManager.GetPackage(each.CanonicalName)).Continue(p => PrintPackages(p));
+                            }));
+                        break;
+
+                    case "block":
+                    case "block-package":
+                    case "-b":
+                        task = preCommandTasks.Continue(() => {
+                                foreach (var cn in parameters.Select(v => (CanonicalName)v)) {
+                                    _packageManager.SetGeneralPackageInformation(_priority, cn, "state", PackageState.Blocked.ToString());
+                                    Console.WriteLine("Blocking '{0}' at priority {1}.",cn.ToString(), _priority  );
+                                }
+                            });
+                        break;
+
+                    case "lock-package":
+                    case "lock":
+                    case "-B":
+                        task = preCommandTasks.Continue(() => {
+                            foreach (var cn in parameters.Select(v => (CanonicalName)v)) {
+                                _packageManager.SetGeneralPackageInformation(_priority, cn, "state", PackageState.DoNotChange.ToString());
+                                Console.WriteLine("Locking '{0}' at priority {1}.", cn.ToString(), _priority);
+                            }
+                        });
+                        break;
+
+                    case "updateable":
+                    case "-d":
+                        task = preCommandTasks.Continue(() => {
+                            foreach (var cn in parameters.Select(v => (CanonicalName)v)) {
+                                _packageManager.SetGeneralPackageInformation(_priority, cn, "state", PackageState.Updatable.ToString());
+                                Console.WriteLine("Setting updatable on '{0}' at priority {1}.", cn.ToString(), _priority);
+                            }
+                        });
+                        break;
+
+                    case "upgradable":
+                    case "-G":
+                        task = preCommandTasks.Continue(() => {
+                            foreach (var cn in parameters.Select(v => (CanonicalName)v)) {
+                                _packageManager.SetGeneralPackageInformation(_priority, cn, "state", PackageState.Updatable.ToString());
+                                Console.WriteLine("Setting upgradable on '{0}' at priority {1}.", cn.ToString(), _priority);
+                            }
+                        });
+                        break;
+
+
                     case "-i":
                     case "install":
                     case "install-package":
@@ -379,15 +497,8 @@ namespace CoApp.CLI {
                     case "trim-packages":
                     case "trim-package":
                     case "trim":
-
-                        Console.WriteLine("TRIM CURRENTLY DISABLED. CHECK BACK SOON");
-                        /*
-                        if (parameters.Count() != 0) {
-                            throw new ConsoleException(Resources.TrimErrorMessage);
-                        }
-
-                        task = preCommandTasks.Continue(() => _pm.GetPackages("*", _minVersion, _maxVersion, _dependencies, true, false, false, _blocked, _latest, _location, null, messages: _messages).ContinueWith(antecedent => Remove(antecedent.Result), TaskContinuationOptions.AttachedToParent));
-                         * */
+                        pkgFilter &= Package.Filters.Trimable;
+                        task = preCommandTasks.Continue(() =>RemovePackages(parameters));
                         break;
 
                     case "set-feed-active":
@@ -430,66 +541,6 @@ namespace CoApp.CLI {
                         task = preCommandTasks.Continue(() => _packageManager.QueryPackages(parameters,pkgFilter,null, _location)
                             .Continue(packages => GetPackageInfo(parameters,packages)));
                         break;
-#if DEPRECATED
-                    case "-b":
-                    case "block-packages":
-                    case "block-package":
-                    case "block":
-                        task = preCommandTasks.Continue(() => _packageManager.QueryPackages(parameters, pkgFilter,null, _location)
-                            .Continue(packages=> Block(parameters, packages)));
-
-                        break;
-
-                    case "-B":
-                    case "unblock-packages":
-                    case "unblock-package":
-                    case "unblock":
-                        task = preCommandTasks.Continue(() => _packageManager.QueryPackages(parameters, pkgFilter,null, _location)
-                            .Continue(packages => UnBlock(parameters,packages)));
-                        break;
-
-                    case "-w":
-                    case "require-package":
-                    case "require-packages":
-                    case "require":
-                        task = preCommandTasks.Continue(() => _packageManager.QueryPackages(parameters, pkgFilter & Package.Properties.Installed.Is(true),null, _location)
-                            .Continue(packages => Require(parameters, packages)));
-                        
-                        break;
-
-                    case "-W":
-                    case "unrequire-package":
-                    case "unrequire-packages":
-                    case "unrequire":
-                    case "notrequire":
-                        task = preCommandTasks.Continue(() => _packageManager.QueryPackages(parameters,pkgFilter & Package.Properties.Installed.Is(true),null, _location)
-                            .Continue(packages => UnRequire(parameters, packages)));
-                        break;
-
-                    case "do-not-update":
-                    case "hold":
-                        task = preCommandTasks.Continue(() => _packageManager.QueryPackages(parameters,pkgFilter & Package.Properties.Installed.Is(true),null, _location)
-                            .Continue(packages => DoNotUpdate(parameters, packages)));
-                        break;
-
-                    case "do-update":
-                    case "release":
-                        task = preCommandTasks.Continue(() => _packageManager.QueryPackages(parameters,pkgFilter & Package.Properties.Installed.Is(true),null, _location)
-                           .Continue(packages => DoUpdate(parameters, packages)));
-                        break;
-
-                    case "do-not-upgrade":
-                    case "freeze":
-                        task = preCommandTasks.Continue(() => _packageManager.QueryPackages(parameters,pkgFilter & Package.Properties.Installed.Is(true),null, _location)
-                           .Continue(packages => DoNotUpgrade(parameters, packages)));
-                        break;
-
-                    case "do-upgrade":
-                    case "thaw":
-                        task = preCommandTasks.Continue(() => _packageManager.QueryPackages(parameters,pkgFilter & Package.Properties.Installed.Is(true),null, _location)
-                           .Continue(packages => DoUpgrade(parameters, packages)));
-                        break;
-#endif
 
                     case "enable-telemetry":
                         task = preCommandTasks.Continue(() => _packageManager.SetTelemetry(true)).ContinueAlways((a)=> {
@@ -884,7 +935,7 @@ namespace CoApp.CLI {
                         pkg.Name,
                         Version = pkg.Version,
                         Arch = pkg.Architecture,
-                        Status = (pkg.IsInstalled ? "Installed " + (pkg.IsBlocked ? "Blocked " : "") + (pkg.IsWanted ? "Required ": pkg.IsDependency ? "Dependency " : "")+ (pkg.IsActive ? "Active " : "" ) : ""),
+                        Status = (pkg.IsInstalled ? "Installed " + (pkg.IsBlocked ? "Blocked " : "") + (pkg.IsWanted ? "Wanted ": pkg.IsDependency ? "Dependency " : "")+ (pkg.IsActive ? "Active " : "" ) : ""),
                         Location = pkg.IsInstalled ? "(installed)" : !string.IsNullOrEmpty(pkg.LocalPackagePath) ? pkg.LocalPackagePath : (pkg.RemoteLocations.IsNullOrEmpty() ? "<unknown>" :  pkg.RemoteLocations.FirstOrDefault().AbsoluteUri.UrlDecode()),
                     }).ToTable().ConsoleOut();
             }

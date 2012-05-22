@@ -52,5 +52,20 @@ namespace CoApp.Packaging.Common.Model {
         ///   Creates a registry key
         /// </summary>
         Registry,
+
+        /// <summary>
+        /// TrustedAction: Downloads a file
+        /// </summary>
+        DownloadFile,
+
+        /// <summary>
+        /// TrustedAction: Allows arbitrary code to execute at install
+        /// </summary>
+        InstallScript,
+
+        /// <summary>
+        /// TrustedAction: Allows arbitrary code to execute at remove
+        /// </summary>
+        RemoveScript,
     }
 }

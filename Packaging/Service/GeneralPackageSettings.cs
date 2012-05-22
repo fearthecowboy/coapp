@@ -36,7 +36,7 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        internal int WhoWins(CanonicalName positive, CanonicalName negative) {
+        internal int WhoWins(CanonicalName negative, CanonicalName positive) {
             if( positive == negative ) {
                 return 0;
             }
@@ -44,7 +44,7 @@ namespace CoApp.Packaging.Service {
             foreach( var p in Priorities) {
                 int pos = 0;
                 int neg = 0;
-                foreach (var key in GetCanonicalNames(p)) {
+                foreach (var key in GetCanonicalNames(p).Where(each=> this[p, each, null].IsTrue())) {
                     pos = Math.Max(positive.MatchQuality(key), pos);
                     neg = Math.Max(negative.MatchQuality(key), neg);
                 }
@@ -57,7 +57,7 @@ namespace CoApp.Packaging.Service {
             // didn't find a rule that can distinguish.
             // if the packages differ by version only, use that to decide
             if( positive.DiffersOnlyByVersion(negative) ) {
-                return ((positive.Version - negative.Version) > 0 ? 1 :-1);
+                return (((long)(ulong)positive.Version - (long)(ulong)negative.Version) > 0 ? 1 : -1);
             }
 
             // nothing to decide with!

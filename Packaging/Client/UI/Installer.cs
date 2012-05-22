@@ -115,10 +115,10 @@ namespace CoApp.Packaging.Client.UI {
                             CommandParam = () => RemovePackage(PackageSet.InstalledNewest.CanonicalName)
                         };
                     } else {
-                        if (!PackageSet.Trimable.IsNullOrEmpty()) {
+                        if (!PackageSet.TrimablePackages.IsNullOrEmpty()) {
                             yield return new RemoveCommand {
-                                Text = "Trim {0} unused versions".format(PackageSet.Trimable.Count()),
-                                CommandParam = () => RemovePackages(PackageSet.Trimable.Select(each => each.CanonicalName).ToArray())
+                                Text = "Trim {0} unused versions".format(PackageSet.TrimablePackages.Count()),
+                                CommandParam = () => RemovePackages(PackageSet.TrimablePackages.Select(each => each.CanonicalName).ToArray())
                             };
                         }
 

@@ -33,6 +33,7 @@ namespace CoApp.Packaging.Client {
 
         private readonly Lazy<List<Package>> _packages = new Lazy<List<Package>>(() => new List<Package>());
         private readonly Lazy<List<Feed>> _feeds = new Lazy<List<Feed>>(() => new List<Feed>());
+        private readonly Lazy<List<GeneralPackageInformation>> _gpi = new Lazy<List<GeneralPackageInformation>>(() => new List<GeneralPackageInformation>());
         private readonly Lazy<List<Policy>> _policies = new Lazy<List<Policy>>(() => new List<Policy>());
         private readonly Lazy<List<ScheduledTask>> _scheduledTasks = new Lazy<List<ScheduledTask>>(() => new List<ScheduledTask>());
 
@@ -53,6 +54,12 @@ namespace CoApp.Packaging.Client {
         internal IEnumerable<Feed> Feeds {
             get {
                 return _feeds.IsValueCreated ? _feeds.Value.Distinct() : Enumerable.Empty<Feed>();
+            }
+        }
+
+        internal IEnumerable<GeneralPackageInformation> GeneralPackageInformation {
+            get {
+                return _gpi.IsValueCreated ? _gpi.Value : Enumerable.Empty<GeneralPackageInformation>();
             }
         }
 
@@ -370,7 +377,12 @@ namespace CoApp.Packaging.Client {
         }
 
         public void GeneralPackageSetting(int priority, CanonicalName canonicalName, string key, string value) {
-            throw new NotImplementedException();
+            _gpi.Value.Add(new GeneralPackageInformation() {
+                Priority = priority,
+                CanonicalName = canonicalName,
+                Key = key,
+                Value = value
+            });
         }
 
         public void LoggingSettings(bool messages, bool warnings, bool errors) {

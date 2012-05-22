@@ -99,7 +99,7 @@ namespace CoApp.Packaging.Service {
         public IEnumerable<IPackage> Dependencies { get { return PackageDependencies; } }
 
         [Persistable(SerializeAsType= typeof(IEnumerable<CanonicalName>))]
-        public IEnumerable<IPackage> Trimable { get { return PackageRequestData.Trimable.Value; } }
+        public IEnumerable<IPackage> TrimablePackages { get { return PackageRequestData.TrimablePackages.Value; } }
 
         [Persistable(SerializeAsType= typeof(CanonicalName))]
         public IPackage SatisfiedBy { get { return PackageRequestData.SatisfiedBy.Value; } }
@@ -136,6 +136,13 @@ namespace CoApp.Packaging.Service {
         public bool IsBlocked {
             get {
                 return PackageState == PackageState.Blocked;
+            }
+        }
+
+        [Persistable]
+        public bool IsTrimable {
+            get {
+                return (!(IsWanted || IsDependency)) && PackageState > PackageState.DoNotChange;
             }
         }
 
@@ -210,9 +217,10 @@ namespace CoApp.Packaging.Service {
         }
 
         internal static FourPartVersion GetCurrentPackageVersion(CanonicalName canonicalName) {
-            var Active = PackageManagerImpl.Instance.InstalledPackages.Where(each => canonicalName.DiffersOnlyByVersion(each.CanonicalName)).OrderBy(each => each,
-                new Toolkit.Extensions.Comparer<Package>((packageA, packageB) => GeneralPackageSettings.Instance.WhoWins(packageA, packageB))).FirstOrDefault();
-            return Active == null ? 0 : Active.Version;
+            var activePkg = PackageManagerImpl.Instance.InstalledPackages.Where(each => canonicalName.DiffersOnlyByVersion(each.CanonicalName))
+                .OrderBy(each => each, new Toolkit.Extensions.Comparer<Package>((packageA, packageB) => GeneralPackageSettings.Instance.WhoWins(packageA, packageB)))
+                .FirstOrDefault();
+            return activePkg == null ? 0 : activePkg.Version;
         }
 
         internal string PackageDirectory {
@@ -367,16 +375,13 @@ namespace CoApp.Packaging.Service {
             });
         }
 
-        internal void UpdateDependencyFlags() {
+        internal void MarkDependenciesAsDepenency() {
             foreach (var dpkg in PackageDependencies.Where(each => !each.IsWanted)) {
-                var dependentPackage = dpkg;
-
-                // find each dependency that is the policy-preferred version, and mark it as currentlyrequested.
-                var supercedentPackage = (from supercedent in InstalledPackages
-                    where supercedent.IsAnUpdateFor(dependentPackage)
-                    select supercedent).OrderByDescending(p => p.CanonicalName.Version).FirstOrDefault();
-
-                ((supercedentPackage ?? dependentPackage) as Package).UpdateDependencyFlags();
+                var dependentPackage = (dpkg.SatisfiedBy as Package);
+                if (dependentPackage != null) {
+                    // find each dependency that is the policy-preferred version, and mark it as currently requested.
+                    dependentPackage.MarkDependenciesAsDepenency();
+                }
             }
             // if this isn't already set, do it.
             if (!IsWanted) {
@@ -736,6 +741,13 @@ namespace CoApp.Packaging.Service {
                         RegistryView.System["SOFTWARE\\Wow6432Node"][rule.Key].StringValue = rule.Value;
                     }
                     break;
+
+                case CompositionAction.DownloadFile:
+                    break;
+
+                case CompositionAction.InstallScript:
+                    break; 
+
             }
         }
 
@@ -750,6 +762,7 @@ namespace CoApp.Packaging.Service {
         }
 
         internal void UndoPackageComposition() {
+            
             var rulesThatISuperceed = InstalledPackageFeed.Instance.FindPackages(CanonicalName.AllPackages)
                 .Except(this.SingleItemAsEnumerable())
                 .OrderBy( each => each , new Toolkit.Extensions.Comparer<Package>((packageA, packageB) => GeneralPackageSettings.Instance.WhoWins(packageA, packageB)))
@@ -757,14 +770,24 @@ namespace CoApp.Packaging.Service {
                 .SelectMany(package => package.ResolvedRules.Select( rule => new { package, rule }))
                 .WhereDistinct(each => each.rule.Destination)
                 .ToArray();
+            
+            var rulesThatSuperceedMine = InstalledPackageFeed.Instance.FindPackages(CanonicalName.AllPackages).Where(package => !WinsVersus(package)).SelectMany(package => package.ResolvedRules).ToArray();
 
             foreach (var rule in ResolvedRules) {
+                // there are three possibilities
+                // 1. my rule was superceding another: run that rule.
                 var runRule = rulesThatISuperceed.FirstOrDefault(each => each.rule.Destination.Equals(rule.Destination, StringComparison.CurrentCultureIgnoreCase));
-                if( runRule != null) {
+                if (runRule != null) {
                     runRule.package.ApplyRule(runRule.rule);
                     continue;
                 } 
 
+                // 2. my rule was already superceded by another rule: do nothing.
+                if( rulesThatSuperceedMine.Any( each => each.Destination.Equals(rule.Destination, StringComparison.CurrentCultureIgnoreCase) ) ) {
+                    continue;
+                }
+
+                // 3. my rule should be the current rule, let's undo it.
                 switch (rule.Action) {
                     case CompositionAction.Shortcut:
                          if( ShellLink.PointsTo(rule.Destination, rule.Source)) {
@@ -855,7 +878,7 @@ namespace CoApp.Packaging.Service {
         public PackageState PackageState { get { return PackageRequestData.State.Value; } }
 
         internal bool WinsVersus(Package vsPackage) {
-            return GeneralPackageSettings.Instance.WhoWins(CanonicalName, vsPackage.CanonicalName) >= 0;
+            return GeneralPackageSettings.Instance.WhoWins(CanonicalName, vsPackage.CanonicalName) <= 0;
         }
     }
 }

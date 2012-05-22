@@ -40,6 +40,7 @@ namespace CoApp.Packaging.Common {
         bool IsWanted { get; }
         bool IsActive { get;  }
         bool IsDependency { get;  }
+        bool IsTrimable { get; }
 
         string DisplayName { get;}
 
@@ -120,7 +121,7 @@ namespace CoApp.Packaging.Common {
         /// <summary>
         ///   All the trimable packages for this package
         /// </summary>
-        IEnumerable<IPackage> Trimable { get; }
+        IEnumerable<IPackage> TrimablePackages { get; }
 
         PackageState PackageState { get; }
     }

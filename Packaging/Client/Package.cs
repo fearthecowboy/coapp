@@ -33,6 +33,7 @@ namespace CoApp.Packaging.Client {
         private bool _isBlocked;
         private bool _isWanted;
         private bool _isDependency;
+        private bool _isTrimable;
         private bool _isInstalled;
         private string _packageItemText;
         private PackageState _packageState;
@@ -53,7 +54,7 @@ namespace CoApp.Packaging.Client {
         private IEnumerable<IPackage> _installedPackages;
         private IEnumerable<Uri> _remoteLocations;
         private IEnumerable<Role> _roles;
-        private IEnumerable<IPackage> _trimable;
+        private IEnumerable<IPackage> _trimablePackages;
         private IEnumerable<IPackage> _updatePackages;
         private IEnumerable<IPackage> _upgradePackages;
 
@@ -173,6 +174,18 @@ namespace CoApp.Packaging.Client {
             internal set {
                 IsPackageInfoStale = false;
                 _isDependency = value;
+            }
+        }
+
+         [Persistable]
+        public bool IsTrimable {
+            get {
+                DemandLoad();
+                return _isTrimable;
+            }
+            internal set {
+                IsPackageInfoStale = false;
+                _isTrimable = value;
             }
         }
 
@@ -436,14 +449,14 @@ namespace CoApp.Packaging.Client {
         }
 
         [Persistable(DeserializeAsType = typeof (IEnumerable<CanonicalName>))]
-        public IEnumerable<IPackage> Trimable {
+        public IEnumerable<IPackage> TrimablePackages {
             get {
                 DemandLoad();
-                return _trimable ?? Enumerable.Empty<IPackage>();
+                return _trimablePackages ?? Enumerable.Empty<IPackage>();
             }
             internal set {
                 IsPackageInfoStale = false;
-                _trimable = value;
+                _trimablePackages = value;
             }
         }
 
@@ -500,9 +513,10 @@ namespace CoApp.Packaging.Client {
 
             public static PropertyExpression<IPackage, bool> Installed = PropertyExpression<IPackage>.Create(p => p.IsInstalled);
             public static PropertyExpression<IPackage, bool> Blocked = PropertyExpression<IPackage>.Create(p => p.IsBlocked);
-            public static PropertyExpression<IPackage, bool> ClientRequired = PropertyExpression<IPackage>.Create(p => p.IsWanted);
+            public static PropertyExpression<IPackage, bool> Wanted = PropertyExpression<IPackage>.Create(p => p.IsWanted);
             public static PropertyExpression<IPackage, bool> Active = PropertyExpression<IPackage>.Create(p => p.IsActive);
             public static PropertyExpression<IPackage, bool> Dependency = PropertyExpression<IPackage>.Create(p => p.IsDependency);
+            public static PropertyExpression<IPackage, bool> Trimable = PropertyExpression<IPackage>.Create(p => p.IsTrimable);
 
             public static PropertyExpression<IPackage, string> DisplayName = PropertyExpression<IPackage>.Create(p => p.DisplayName);
             public static PropertyExpression<IPackage, IPackage> SatisfiedBy = PropertyExpression<IPackage>.Create(p => p.SatisfiedBy);
@@ -539,7 +553,7 @@ namespace CoApp.Packaging.Client {
             public static PropertyExpression<IPackage, IEnumerable<IPackage>> UpgradePackages = PropertyExpression<IPackage>.Create(p => p.UpgradePackages);
             public static PropertyExpression<IPackage, IEnumerable<IPackage>> NewerPackages = PropertyExpression<IPackage>.Create(p => p.NewerPackages);
             public static PropertyExpression<IPackage, IEnumerable<IPackage>> Dependencies = PropertyExpression<IPackage>.Create(p => p.Dependencies);
-            public static PropertyExpression<IPackage, IEnumerable<IPackage>> Trimable = PropertyExpression<IPackage>.Create(p => p.Trimable);
+            public static PropertyExpression<IPackage, IEnumerable<IPackage>> TrimablePackages = PropertyExpression<IPackage>.Create(p => p.TrimablePackages);
 
             public static PropertyExpression<IPackage, PackageState> PackageState = PropertyExpression<IPackage>.Create(p => p.PackageState);
 
@@ -550,6 +564,7 @@ namespace CoApp.Packaging.Client {
 
         public static class Filters {
             public static Filter<IPackage> InstalledPackages = Properties.Installed.Is(true);
+            public static Filter<IPackage> Trimable = InstalledPackages & Properties.Trimable.Is(true);
             public static Filter<IPackage> PackagesWithUpdateAvailable = InstalledPackages & Properties.UpdatePackages.Any();
             public static Filter<IPackage> PackagesWithUpgradeAvailable = InstalledPackages & Properties.UpdatePackages.Any();
         }
