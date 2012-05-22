@@ -23,6 +23,7 @@ namespace CoApp.Packaging.Service {
     using System.Threading;
     using System.Threading.Tasks;
     using Common;
+    using Feeds;
     using Toolkit.Extensions;
     using Toolkit.Logging;
     using Toolkit.Pipes;
@@ -151,6 +152,12 @@ namespace CoApp.Packaging.Service {
                     EnsureCanonicalFoldersArePresent();
                     Signals.EngineStartupStatus = 10;
                     var v = Package.GetCurrentPackageVersion(CanonicalName.CoAppItself);
+                    if( v > 0 ) {
+                        var p = InstalledPackageFeed.Instance.FindPackages(CanonicalName.CoAppItself).HighestPackages().FirstOrDefault();
+                        if( p != null ) {
+                            p.DoPackageComposition();
+                        }
+                    }
                     Signals.EngineStartupStatus = 95;
                     Logger.Warning("CoApp Version : " + v);
 

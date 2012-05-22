@@ -41,6 +41,7 @@ namespace CoApp.Packaging.Service {
         static PackageManagerImpl() {
             // Serializer for System.Linq.Expressions.Expression
             CustomSerializer.Add(new CustomSerializer<Expression<Func<IPackage, bool>>>((message, key, serialize) => message.Add(key, CustomSerializer.ExpressionXmlSerializer.Serialize(serialize).ToString(SaveOptions.OmitDuplicateNamespaces | SaveOptions.DisableFormatting)), (message, key) => (Expression<Func<IPackage, bool>>)CustomSerializer.ExpressionXmlSerializer.Deserialize(message[key])));
+            CustomSerializer.Add(new CustomSerializer<Expression<Func<IEnumerable<IPackage>, IEnumerable<IPackage>>>>((message, key, serialize) => message.Add(key, CustomSerializer.ExpressionXmlSerializer.Serialize(serialize).ToString(SaveOptions.OmitDuplicateNamespaces | SaveOptions.DisableFormatting)), (message, key) => (Expression<Func<IEnumerable<IPackage>, IEnumerable<IPackage>>>)CustomSerializer.ExpressionXmlSerializer.Deserialize(message[key])));
         }
 
 
@@ -163,7 +164,7 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        public Task NewFindPackages(CanonicalName canonicalName, Expression<Func<IPackage, bool>> filter, int? index, int? maxResults, string location) {
+        public Task FindPackages(CanonicalName canonicalName, Expression<Func<IPackage, bool>> filter, Expression<Func<IEnumerable<IPackage>, IEnumerable<IPackage>>> collectionFilter, string location) {
             var response = Event<GetResponseInterface>.RaiseFirst();
 
             if (CancellationRequested) {
@@ -174,22 +175,16 @@ namespace CoApp.Packaging.Service {
             canonicalName = canonicalName ?? CanonicalName.CoAppPackages;
 
             if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.EnumeratePackages)) {
-                UpdateIsRequestedFlags();
+                UpdateDependencyFlags();
 
-                var query = filter == null ? SearchForPackages(canonicalName, location) : SearchForPackages(canonicalName, location).Where(each => filter.Compile()(each));
+                IEnumerable<IPackage> query = filter == null ? SearchForPackages(canonicalName, location) : SearchForPackages(canonicalName, location).Where(each => filter.Compile()(each));
 
-                Package[] results;
-                // paginate the results
-                if (index.HasValue && maxResults.HasValue ) {
-                    results = query.Skip(index.Value).Take(maxResults.Value).ToArray();
-                } else if (index.HasValue) {
-                    results = query.Skip(index.Value).ToArray();
-                } else if (maxResults.HasValue) {
-                    results = query.Take(maxResults.Value).ToArray();
-                } else {
-                    results = query.ToArray();
+                if( collectionFilter != null ) {
+                    query = collectionFilter.Compile()(query);
                 }
 
+                var results = (Package[]) query.ToArrayOfType(typeof(Package));
+                
                 if (results.Length > 0 ) {
                     foreach (var pkg in results) {
                         if (CancellationRequested) {
@@ -200,145 +195,6 @@ namespace CoApp.Packaging.Service {
                     }
                 }
                 else {
-                    response.NoPackagesFound();
-                }
-            }
-            return FinishedSynchronously;
-        }
-
-
-        public Task FindPackages(CanonicalName canonicalName, bool? dependencies, bool? installed, bool? active, bool? required, bool? blocked, bool? latest,
-            int? index, int? maxResults, string location, bool? forceScan, bool? updates, bool? upgrades, bool? trimable) {
-            var response = Event<GetResponseInterface>.RaiseFirst();
-
-            if (CancellationRequested) {
-                response.OperationCanceled("find-package");
-                return FinishedSynchronously;
-            }
-
-            canonicalName = canonicalName ?? CanonicalName.CoAppPackages;
-
-            if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.EnumeratePackages)) {
-                UpdateIsRequestedFlags();
-
-                if (forceScan == true) {
-                    foreach (var feed in Feeds) {
-                        feed.Stale = true;
-                    }
-                }
-
-                var results = SearchForPackages(canonicalName, location).ToArray();
-                // filter results of list based on secondary filters
-
-                // if we are upgrading or installing, we need to find packages that are already installed.
-                var i = (upgrades == true || updates == true);
-                if (i) {
-                    installed = installed ?? i;
-                }
-
-                results = (from package in results
-                    where
-                        (installed == null || package.IsInstalled == installed) && (active == null || package.IsActive == active) &&
-                            (required == null || package.IsRequired == required) && (blocked == null || package.IsBlocked == blocked)
-                    select package).ToArray();
-
-                if (updates == true) {
-                    // if the client is asking for Updates:
-                    //      - get the packages that match the search criteria. 'pkgs'
-                    //      - filter 'pkgs' so that every package in the list is the most recent binary compatible one.
-                    //      - filter out 'do-not-update' and 'blocked' packages (unless passing in blocked flag)
-                    //      - for each package in 'pkgs', find out if there is a higher binary compatible one available that is not installed.
-                    //          - add that to the list of results; return the distinct results
-
-                    var tmp = results.ToArray();
-
-                    results = tmp.Where(each =>
-                        !tmp.Any(x => x.IsAnUpdateFor(each)) &&
-                            !each.DoNotUpdate &&
-                                (blocked ?? !each.IsBlocked)).ToArray();
-
-                    // set the new results set 
-                    results =
-                        (from r in results
-                            let familyPackages = SearchForPackages(r.CanonicalName.OtherVersionFilter).Where(each => !each.IsInstalled).OrderByDescending(each => each.CanonicalName.Version)
-                            select familyPackages.FirstOrDefault(each => each.IsAnUpdateFor(r))
-                            into updatePkg
-                            where updatePkg != null
-                            select updatePkg).ToArray();
-                } else if (upgrades == true) {
-                    // if the client is asking for Upgrades:
-                    //      - get list packages that meet the search criteria. 'pkgs'. 
-                    //      - filter out 'do-not-upgrade' and 'do-not-update' and 'blocked' packages--(unless passing in blocked flag)
-                    //      - (by definition upgrades exclude updates)
-                    //      - for each packge in 'pkgs' find out if ther is a higher (non-compatible) version that is not installed.
-                    //          - add that to the list of results; return the distinct results
-                    results = results.Where(each =>
-                        !each.DoNotUpgrade &&
-                            !each.DoNotUpdate &&
-                                (blocked ?? !each.IsBlocked)).ToArray();
-
-                    results =
-                        (from r in results
-                            let familyPackages = SearchForPackages(r.CanonicalName.OtherVersionFilter).Where(each => !each.IsInstalled).OrderByDescending(each => each.CanonicalName.Version)
-                            select familyPackages.FirstOrDefault(each => each.IsAnUpgradeFor(r))
-                            into upgradePkg
-                            where upgradePkg != null
-                            select upgradePkg).ToArray();
-                } else if (trimable == true) {
-                }
-
-                // if the client is asking for Trimable packages
-                //      -  get the list of packages that meet the search criteria. 'pkgs'.
-                //      -  a package is not 'trimable' if:
-                //          - if it is marked client-requested 
-                //          - if it is a required dependency of another package that is client requested and that doesn't have a binary compatible update insatlled.
-                //          - it is blocked (unless passing in the blocked flag)
-                //          - it is marked 'do-not-update'
-
-                // only the latest?
-                if (latest == true) {
-                    results = results.HighestPackages();
-                }
-
-                // if the client has asked for the dependencies as well, include them in the result set.
-                // otherwise the client will get the names in 
-                if (dependencies == true) {
-                    // grab the dependencies too.
-                    var deps = results.SelectMany(each => each.PackageDependcies).Distinct();
-
-                    if (latest == true) {
-                        deps = deps.HighestPackages();
-                    }
-
-                    results = results.Union(deps).Distinct().ToArray();
-                }
-
-                // paginate the results
-                if (index.HasValue) {
-                    results = results.Skip(index.Value).ToArray();
-                }
-
-                if (maxResults.HasValue) {
-                    results = results.Take(maxResults.Value).ToArray();
-                }
-
-                if (results.Any()) {
-                    foreach (var pkg in results) {
-                        var package = pkg;
-                        if (CancellationRequested) {
-                            response.OperationCanceled("find-packages");
-                            return FinishedSynchronously;
-                        }
-
-                        var supercedents = (from p in SearchForPackages(package.CanonicalName.OtherVersionFilter)
-                            where p.IsAnUpdateFor(package)
-                            select p).OrderByDescending(p => p.CanonicalName.Version).ToArray();
-
-                        IEnumerable<CanonicalName> supercedents1 = supercedents.Select(each => each.CanonicalName);
-                        // GS02: FIX THIS NOW. SUPERCEDENTS SHOULD BE PASSED BACK SOMEHOW.
-                        response.PackageInformation(package);
-                    }
-                } else {
                     response.NoPackagesFound();
                 }
             }
@@ -366,7 +222,7 @@ namespace CoApp.Packaging.Service {
             return FinishedSynchronously;
         }
 
-        public Task InstallPackage(CanonicalName canonicalName, bool? autoUpgrade, bool? force, bool? download, bool? pretend, bool? isUpdating, bool? isUpgrading) {
+        public Task InstallPackage(CanonicalName canonicalName, bool? autoUpgrade, bool? force, bool? download, bool? pretend, CanonicalName replacingPackage) {
             var response = Event<GetResponseInterface>.RaiseFirst();
 
             if (CancellationRequested) {
@@ -391,6 +247,13 @@ namespace CoApp.Packaging.Service {
                 // ReSharper restore PossibleNullReferenceException
             });
 
+            var unwantedPackages = new List<Package>();
+            if( null != replacingPackage ) {
+                if( replacingPackage.DiffersOnlyByVersion(canonicalName)) {
+                    unwantedPackages.AddRange(SearchForPackages(replacingPackage));
+                }
+            }
+
             using (var manualResetEvent = new ManualResetEvent(true)) {
                 try {
                     lock (_manualResetEvents) {
@@ -413,8 +276,8 @@ namespace CoApp.Packaging.Service {
                         return FinishedSynchronously;
                     }
 
-                    var installedPackages = package.InstalledVersions.ToArray();
-                    var installedCompatibleVersions = installedPackages.Where(package.IsAnUpdateFor).ToArray();
+                    var installedPackages = package.InstalledPackages.ToArray();
+                    var installedCompatibleVersions = package.InstalledPackages;
 
                     // is the user authorized to install this?
                     var highestInstalledPackage = installedPackages.HighestPackages().FirstOrDefault();
@@ -429,23 +292,18 @@ namespace CoApp.Packaging.Service {
                         }
                     }
 
-                    // if this is an update, 
+                    // if this is an explicit update or upgrade, 
                     //      - check to see if there is a compatible package already installed that is marked do-not-update
                     //        fail if so.
-                    if (isUpdating == true && installedCompatibleVersions.Any(each => each.DoNotUpdate)) {
+                    if (null != replacingPackage && unwantedPackages.Any( each => each.IsBlocked )) {
                         response.PackageBlocked(canonicalName);
                     }
 
-                    // if this is an upgrade, 
-                    //      - check to see if this package has the do-not-upgrade flag.
-                    if (isUpgrading == true && package.DoNotUpgrade) {
-                        response.PackageBlocked(canonicalName);
-                    }
 
                     // mark the package as the client requested.
                     package.PackageSessionData.DoNotSupercede = (false == autoUpgrade);
                     package.PackageSessionData.UpgradeAsNeeded = (true == autoUpgrade);
-                    package.PackageSessionData.IsClientSpecified = true;
+                    package.PackageSessionData.IsWanted = true;
 
                     // the resolve-acquire-install-loop
                     do {
@@ -460,6 +318,7 @@ namespace CoApp.Packaging.Service {
 
                         IEnumerable<Package> installGraph;
                         try {
+                            UpdateDependencyFlags();
                             installGraph = GenerateInstallGraph(package).ToArray();
                         } catch (OperationCompletedBeforeResultException) {
                             // we encountered an unresolvable condition in the install graph.
@@ -579,20 +438,29 @@ namespace CoApp.Packaging.Service {
                                 }
                             }
                             if (!failed) {
-                                if (isUpdating == true) {
-                                    // if this is marked as an update
-                                    // remove REQUESTED flag from all older compatible version 
-                                    foreach (Package eachPkg in installedCompatibleVersions) {
-                                        eachPkg.IsClientRequired= false;
+                                if( unwantedPackages.Any()) {
+                                    foreach (Package eachPkg in unwantedPackages) {
+                                        eachPkg.IsWanted = false;
                                     }
-                                }
-                                if (isUpgrading == true) {
-                                    // if this is marked as an update
-                                    // remove REQUESTED flag from all older compatible version 
-                                    foreach (Package eachPkg in installedPackages) {
-                                        eachPkg.IsClientRequired = false;
+                                } else {
+                                    var olderpkgs = package.InstalledPackages.Where(each => each.IsWanted && package.IsNewerThan(each)).ToArray();
+                                    if( olderpkgs.Length > 0 ) {
+                                        //anthing older? 
+
+                                        if( olderpkgs.Length > 1) {
+                                            // hmm. more than one.
+                                            // is there just a single thing we're updating?
+                                            olderpkgs = olderpkgs.Where(package.IsAnUpdateFor).ToArray();
+                                        }
+
+                                        // if we can get down to one, let's unwant that.
+                                        if (olderpkgs.Length == 1) {
+                                            ((Package)olderpkgs[0]).IsWanted = false;
+                                        } 
                                     }
+
                                 }
+                                
 
                                 // W00T ... We did it!
                                 // check for restart required...
@@ -669,7 +537,7 @@ namespace CoApp.Packaging.Service {
             return FinishedSynchronously;
         }
 
-        public Task ListFeeds(int? index, int? maxResults) {
+        public Task ListFeeds() {
             var response = Event<GetResponseInterface>.RaiseFirst();
 
             if (CancellationRequested) {
@@ -706,17 +574,8 @@ namespace CoApp.Packaging.Service {
                 };
 
             var results = x.Union(y).ToArray();
-
-            // paginate the results
-            if (index.HasValue) {
-                results = results.Skip(index.Value).ToArray();
-            }
-
-            if (maxResults.HasValue) {
-                results = results.Take(maxResults.Value).ToArray();
-            }
-
-            if (results.Any()) {
+           
+            if (results.Length > 0 ) {
                 foreach (var f in results) {
                     var state = PackageManagerSettings.PerPackageSettings[f.feed, "state"].StringValue;
                     if (string.IsNullOrEmpty(state)) {
@@ -849,98 +708,6 @@ namespace CoApp.Packaging.Service {
             return FinishedSynchronously;
         }
 
-        public Task SetPackage(CanonicalName canonicalName, bool? active, bool? required, bool? blocked, bool? doNotUpdate, bool? doNotUpgrade) {
-            var response = Event<GetResponseInterface>.RaiseFirst();
-
-            if (CancellationRequested) {
-                response.OperationCanceled("set-package");
-                return FinishedSynchronously;
-            }
-
-            if (canonicalName.IsPartial) {
-                response.Error("Invalid Canonical Name", "SetPackage", "Canonical name '{0}' is not a complete canonical name".format(canonicalName));
-            }
-            var package = SearchForPackages(canonicalName).FirstOrDefault();
-
-            if (package == null) {
-                response.UnknownPackage(canonicalName);
-                return FinishedSynchronously;
-            }
-
-            if (!package.IsInstalled) {
-                response.Error("set-package", "canonical-name", "package '{0}' is not installed.".format(canonicalName));
-                return FinishedSynchronously;
-            }
-
-            // seems like a good time to check if we're supposed to bail...
-            if (CancellationRequested) {
-                response.OperationCanceled("set-package");
-                return FinishedSynchronously;
-            }
-
-            if (true == active) {
-                if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.ChangeActivePackage)) {
-                    package.SetPackageCurrent();
-                }
-            }
-
-            if (false == active) {
-                if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.ChangeActivePackage)) {
-                    var pqg = package.InstalledVersions.HighestPackages().FirstOrDefault() as Package;
-                    if (pqg != null) {
-                        pqg.SetPackageCurrent();
-                    }
-                }
-            }
-
-            if (true == required) {
-                if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.ChangeRequiredState)) {
-                    package.IsRequired = true;
-                }
-            }
-
-            if (false == required) {
-                if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.ChangeRequiredState)) {
-                    package.IsRequired = false;
-                }
-            }
-
-            if (true == blocked) {
-                if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.ChangeBlockedState)) {
-                    package.IsBlocked = true;
-                }
-            }
-
-            if (false == blocked) {
-                if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.ChangeBlockedState)) {
-                    package.IsBlocked = false;
-                }
-            }
-
-            if (true == doNotUpdate) {
-                if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.InstallPackage)) {
-                    package.DoNotUpdate = true;
-                }
-            }
-            if (false == doNotUpdate) {
-                if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.InstallPackage)) {
-                    package.DoNotUpdate = false;
-                }
-            }
-
-            if (true == doNotUpgrade) {
-                if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.InstallPackage)) {
-                    package.DoNotUpgrade = true;
-                }
-            }
-            if (false == doNotUpgrade) {
-                if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.InstallPackage)) {
-                    package.DoNotUpgrade = false;
-                }
-            }
-            response.PackageInformation(package);
-            return FinishedSynchronously;
-        }
 
         public Task RemovePackage(CanonicalName canonicalName, bool? force) {
             var response = Event<GetResponseInterface>.RaiseFirst();
@@ -976,7 +743,7 @@ namespace CoApp.Packaging.Service {
                     return FinishedSynchronously;
                 }
                 if (true != force) {
-                    UpdateIsRequestedFlags();
+                    UpdateDependencyFlags();
                     if (package.PackageSessionData.IsDependency) {
                         response.FailedPackageRemoval(canonicalName,
                             "Package '{0}' is a required dependency of another package.".format(canonicalName));
@@ -1296,14 +1063,14 @@ namespace CoApp.Packaging.Service {
             if (!packageData.DoNotSupercede) {
                 IEnumerable<IPackage> installedSupercedents;
 
-                if (package.PackageSessionData.IsClientSpecified || hypothetical) {
+                if (package.PackageSessionData.IsWanted || hypothetical) {
                     // this means that we're talking about a requested package
                     // and not a dependent package and we can liberally construe supercedent 
                     // as anything with a highger version number
-                    installedSupercedents = (from p in  package.InstalledVersions where p.CanonicalName.Version > package.CanonicalName.Version select p).OrderByDescending(p => p.CanonicalName.Version).ToArray();
+                    installedSupercedents = (from p in package.InstalledPackages where p.CanonicalName.Version > package.CanonicalName.Version select p).OrderByDescending(p => p.CanonicalName.Version).ToArray();
                 } else {
                     // otherwise, we're installing a dependency, and we need something compatable.
-                    installedSupercedents = (from p in  package.InstalledVersions where p.IsAnUpdateFor(package) select p).OrderByDescending(p => p.CanonicalName.Version).ToArray();
+                    installedSupercedents = (from p in package.InstalledPackages where p.IsAnUpdateFor(package) select p).OrderByDescending(p => p.CanonicalName.Version).ToArray();
                 }
                 var installedSupercedent = installedSupercedents.FirstOrDefault();
                 if (installedSupercedent != null) {
@@ -1319,7 +1086,7 @@ namespace CoApp.Packaging.Service {
 
                 var supercedents = SearchForPackages(package.CanonicalName.OtherVersionFilter).ToArray();
 
-                if (package.PackageSessionData.IsClientSpecified || hypothetical) {
+                if (package.PackageSessionData.IsWanted || hypothetical) {
                     // this means that we're talking about a requested package
                     // and not a dependent package and we can liberally construe supercedent 
                     // as anything with a highger version number
@@ -1348,7 +1115,7 @@ namespace CoApp.Packaging.Service {
                             }
 
                             if (supercedent.CanonicalName.DiffersOnlyByVersion(package.CanonicalName)) {
-                                supercedent.PackageSessionData.IsClientSpecified = package.PackageSessionData.IsClientSpecified;
+                                supercedent.PackageSessionData.IsWanted = package.PackageSessionData.IsWanted;
                             }
 
                             // since we got to this spot, we can assume that we can 
@@ -1397,7 +1164,7 @@ namespace CoApp.Packaging.Service {
             }
 
             var childrenFailed = false;
-            foreach (var d in package.PackageDependcies) {
+            foreach (var d in package.PackageDependencies) {
                 IEnumerable<Package> children;
                 try {
                     children = GenerateInstallGraph(d);
@@ -1421,7 +1188,7 @@ namespace CoApp.Packaging.Service {
             yield return package;
         }
 
-        private void UpdateIsRequestedFlags() {
+        private void UpdateDependencyFlags() {
             lock (this) {
                 var installedPackages = InstalledPackages.ToArray();
 
@@ -1429,8 +1196,8 @@ namespace CoApp.Packaging.Service {
                     p.PackageSessionData.IsDependency = false;
                 }
 
-                foreach (var package in installedPackages.Where(each => each.IsRequired)) {
-                    package.UpdateDependencyFlags();
+                foreach (var package in installedPackages.Where(each => each.IsWanted)) {
+                    package.MarkDependenciesAsDepenency();
                 }
             }
         }
@@ -1563,6 +1330,21 @@ namespace CoApp.Packaging.Service {
                 SessionCache<string>.Value["LogWarnings"] = warnings.ToString();
             }
             response.LoggingSettings(Logger.Messages, Logger.Warnings, Logger.Errors);
+            return FinishedSynchronously;
+        }
+
+        public Task SetGeneralPackageInformation(int priority, CanonicalName canonicalName, string key, string value){
+            GeneralPackageSettings.Instance[priority, canonicalName, key] = value;
+            return FinishedSynchronously;
+        }
+
+        public Task GetGeneralPackageInformation() {
+            GeneralPackageSettings.Instance.GetSettingsData(Event<GetResponseInterface>.RaiseFirst());
+            return FinishedSynchronously;
+        }
+
+        public Task SetPackageWanted(CanonicalName canonicalName, bool wanted) {
+            Package.GetPackage(canonicalName).IsWanted = wanted;
             return FinishedSynchronously;
         }
 

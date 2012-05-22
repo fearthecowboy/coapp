@@ -72,14 +72,21 @@ namespace CoApp.Toolkit.Pipes {
         /// <param name="message"> </param>
         /// <returns> </returns>
         public bool DispatchSynchronous(UrlEncodedMessage message) {
-            _methodTargets[message.Command].With(method => {
-                // method.MethodInfo.Invoke(_targetObject, method.Parameters.Select(each => each.FromString(message, each.Name)).ToArray());
-                method.MethodInfo.Invoke(_targetObject, method.Parameters.Select(each => message.GetValue(each.Name, each.PersistableInfo.Type)).ToArray());
+            return _methodTargets[message.Command].With(method => {
+                try {
+                    method.MethodInfo.Invoke(_targetObject, method.Parameters.Select(each => message.GetValue(each.Name, each.PersistableInfo.Type)).ToArray());
+                }
+                catch (TargetInvocationException exception) {
+                    if (exception.InnerException is RestartingException) {
+                        return false;
+                    }
+                    throw exception.InnerException;
+                }
+
+                return !(message.Command.Equals("TaskComplete") || message.Command.Equals("OperationCanceled") || message.Command.Equals("Restarting"));
             }, () => {
                 throw new MissingMethodException("Method '{0}' does not exist in this interface", message.Command);
             });
-
-            return !(message.Command.Equals("TaskComplete") || message.Command.Equals("OperationCanceled") || message.Command.Equals("Restarting"));
         }
     }
 
@@ -109,4 +116,9 @@ namespace CoApp.Toolkit.Pipes {
             return true;
         }
     }
+    public class RestartingException : Exception {
+
+    }
+
 }
+

@@ -14,14 +14,14 @@ namespace CoApp.Toolkit.Linq {
     using System;
     using System.Linq.Expressions;
 
-    public class UnaryFilter<T> : Filter<T> {
-        public UnaryFilter(Filter<T> left, UnaryFilterOperator op) {
+    public class UnaryExpression<T> : Filter<T> {
+        public UnaryExpression(Filter<T> left, UnaryOperation op) {
             Left = left;
             Operator = op;
         }
 
         private Filter<T> Left { get; set; }
-        private UnaryFilterOperator Operator { get; set; }
+        private UnaryOperation Operator { get; set; }
 
         public override Expression<Func<T, bool>> Expression {
             get {
@@ -29,7 +29,7 @@ namespace CoApp.Toolkit.Linq {
                 Expression e = null;
 
                 switch (Operator) {
-                    case UnaryFilterOperator.Not:
+                    case UnaryOperation.Not:
                         e = System.Linq.Expressions.Expression.Not(System.Linq.Expressions.Expression.Invoke(Left, paramExpr));
                         break;
                 }

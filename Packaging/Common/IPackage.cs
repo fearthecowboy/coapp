@@ -15,8 +15,15 @@ namespace CoApp.Packaging.Common {
     using System.Collections.Generic;
     using System.Linq;
     using Model;
+    using Toolkit.Extensions;
     using Toolkit.Win32;
+#if COAPP_ENGINE_CORE
+    using Service;
+#else
+    using Client;
+#endif
 
+    [ImplementedBy(Types = new Type[1]{typeof(Package)})]
     public interface IPackage {
         CanonicalName CanonicalName { get; }
         string Name { get; }
@@ -30,24 +37,93 @@ namespace CoApp.Packaging.Common {
 
         bool IsInstalled { get; }
         bool IsBlocked { get; }
-        bool IsClientRequired { get; }
+        bool IsWanted { get; }
         bool IsActive { get;  }
         bool IsDependency { get;  }
-
-        bool DoNotUpdate { get; }
-        bool DoNotUpgrade { get;}
+        bool IsTrimable { get; }
 
         string DisplayName { get;}
 
         IPackage SatisfiedBy { get; }
-
         IEnumerable<Uri> RemoteLocations { get; }
         IEnumerable<Uri> Feeds { get; }
-        IEnumerable<CanonicalName> Dependencies { get; }
-        IEnumerable<IPackage> UpdatePackages { get; }
-        IEnumerable<IPackage> UpgradePackages { get; }
-        IEnumerable<IPackage> NewerPackages { get; }
         IEnumerable<Role> Roles { get; }
+
+        /// <summary>
+        ///   The newest version of this package that is installed and newer than the given package and is binary compatible.
+        /// </summary>
+        IPackage InstalledNewestUpdate { get; }
+
+        /// <summary>
+        ///   The newest version of this package that is installed and newer than the given package and is not binary compatible.
+        /// </summary>
+        IPackage InstalledNewestUpgrade { get; }
+
+        /// <summary>
+        ///   The newest version of this package that is installed, and newer than the given package
+        /// </summary>
+        IPackage InstalledNewest { get; }
+
+
+        /// <summary>
+        ///   The newest package that is currently installed, that the given package is a compatible update for.
+        /// </summary>
+        IPackage LatestInstalledThatUpdatesToThis { get; }
+
+
+        /// <summary>
+        ///   The newest package that is currently installed, that the given package is a non-compatible update for.
+        /// </summary>
+        IPackage LatestInstalledThatUpgradesToThis { get; }
+
+
+        /// <summary>
+        ///   The latest version of the package that is available that is newer than the current package.
+        /// </summary>
+        IPackage AvailableNewest { get; }
+
+        /// <summary>
+        ///   The latest version of the package that is available and is binary compatable with the given package
+        /// </summary>
+        IPackage AvailableNewestUpdate { get; }
+
+        /// <summary>
+        ///   The latest version of the package that is available and is binary compatable with the given package
+        /// </summary>
+        IPackage AvailableNewestUpgrade { get; }
+
+
+        /// <summary>
+        ///   All Installed versions of this package
+        /// </summary>
+        IEnumerable<IPackage> InstalledPackages { get; }
+
+        /// <summary>
+        ///   The list of packages that are an update for this package
+        /// </summary>
+        IEnumerable<IPackage> UpdatePackages { get; }
+
+        /// <summary>
+        ///   The list of packages that are an upgrade for this package
+        /// </summary>
+        IEnumerable<IPackage> UpgradePackages { get; }
+
+        /// <summary>
+        ///   The list of packages that are newer than this package (Updates+Upgrades)
+        /// </summary>
+        IEnumerable<IPackage> NewerPackages { get; }
+
+        /// <summary>
+        /// The packages that this package depends on.
+        /// </summary>
+        IEnumerable<IPackage> Dependencies { get; }
+
+        /// <summary>
+        ///   All the trimable packages for this package
+        /// </summary>
+        IEnumerable<IPackage> TrimablePackages { get; }
+
+        PackageState PackageState { get; }
     }
 
     public static class PackageExtensions {
@@ -81,7 +157,7 @@ namespace CoApp.Packaging.Common {
         /// <returns> the filtered colleciton of packages </returns>
         /// <remarks>
         /// </remarks>
-        internal static IPackage[] HighestPackages(this IEnumerable<IPackage> packageSet) {
+        public static IEnumerable<IPackage> HighestPackages(this IEnumerable<IPackage> packageSet) {
             var all = packageSet.OrderByDescending(p => p.CanonicalName.Version).ToArray();
             if (all.Length > 1) {
                 var filters = all.Select(each => each.CanonicalName.OtherVersionFilter).Distinct().ToArray();
@@ -92,5 +168,12 @@ namespace CoApp.Packaging.Common {
             }
             return all;
         }
+    }
+
+    public enum PackageState {
+        Blocked,
+        DoNotChange,
+        Updatable,
+        Upgradable,
     }
 }

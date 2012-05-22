@@ -14,6 +14,7 @@ namespace CoApp.Toolkit.Extensions {
     using System;
     using System.Collections;
     using System.Collections.Generic;
+    using System.ComponentModel;
     using System.Linq;
     
     using System.Reflection;
@@ -26,15 +27,14 @@ namespace CoApp.Toolkit.Extensions {
 
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property )]
     public class PersistableAttribute: Attribute {
-        internal string Name = null;
-        internal Type SerializeAsType = null;
-        internal Type DeserializeAsType = null;
+        public string Name { get; set; }
+        public Type SerializeAsType { get; set; }
+        public Type DeserializeAsType { get; set; }
+    }
 
-        public PersistableAttribute( string name = null, Type serializeAsType= null, Type deserializeAsType = null) {
-            Name = name;
-            SerializeAsType = serializeAsType;
-            DeserializeAsType = deserializeAsType;
-        }
+    [AttributeUsage(AttributeTargets.Interface)]
+    public class ImplementedByAttribute: Attribute {
+        public Type[] Types;
     }
 
     internal enum PersistableCategory {
@@ -75,6 +75,13 @@ namespace CoApp.Toolkit.Extensions {
                 return;
             }
 
+            if (type.IsArray) {
+                // an array of soemthing.
+                PersistableCategory = PersistableCategory.Array;
+                ElementType = type.GetElementType();
+                return;
+            }
+
             if (typeof(IEnumerable).IsAssignableFrom(type)) {
                 PersistableCategory = PersistableCategory.Enumerable;
                 ElementType = type.IsGenericType ? type.GetGenericArguments()[0] : typeof(object);
@@ -91,13 +98,7 @@ namespace CoApp.Toolkit.Extensions {
                 }
             }
 
-            if (type.IsArray) {
-                // an array of soemthing.
-                PersistableCategory = PersistableCategory.Array;
-                ElementType = type.GetElementType();
-                return;
-            }
-
+            
             if (type.IsParsable()) {
                 PersistableCategory = PersistableCategory.Parseable;
                 return;
@@ -130,6 +131,7 @@ namespace CoApp.Toolkit.Extensions {
         public string Name;
         public Type SerializeAsType;
         public Type DeserializeAsType;
+        public Type ActualType;
         public Action<object, object,object[]> SetValue;
         public Func<object, object[], object> GetValue;
     }
@@ -141,6 +143,7 @@ namespace CoApp.Toolkit.Extensions {
         private static readonly MethodInfo ToArrayMethod = typeof(Enumerable).GetMethod("ToArray");
         private static readonly IDictionary<Type, MethodInfo> CastMethods = new XDictionary<Type, MethodInfo>();
         private static readonly IDictionary<Type, MethodInfo> ToArrayMethods = new XDictionary<Type, MethodInfo>();
+        private static readonly IDictionary<Type, Func<object,object>> OpImplicitMethods = new XDictionary<Type, Func<object,object>>();
         public static readonly IDictionary<Type, Type> TypeSubtitution = new XDictionary<Type, Type>();
 
         public static PersistableInfo GetPersistableInfo(this Type t) {
@@ -159,6 +162,7 @@ namespace CoApp.Toolkit.Extensions {
                     GetValue = (o, objects) => each.GetValue(o),
                     SerializeAsType = (persistableAttribute != null ? persistableAttribute.SerializeAsType : null) ?? each.FieldType,
                     DeserializeAsType = (persistableAttribute != null ? persistableAttribute.DeserializeAsType : null) ?? each.FieldType,
+                    ActualType = each.FieldType,
                     Name = (persistableAttribute != null ? persistableAttribute.Name : null) ?? each.Name
                  }).Union((from each in type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
                     let setMethodInfo = each.GetSetMethod(true)
@@ -174,6 +178,7 @@ namespace CoApp.Toolkit.Extensions {
                     GetValue = getMethodInfo != null ? new Func<object, object[], object>(each.GetValue) : null,
                     SerializeAsType = (persistableAttribute != null ? persistableAttribute.SerializeAsType : null) ?? each.PropertyType,
                     DeserializeAsType = (persistableAttribute != null ? persistableAttribute.DeserializeAsType : null) ?? each.PropertyType,
+                    ActualType = each.PropertyType,
                     Name = (persistableAttribute != null ? persistableAttribute.Name : null) ?? each.Name
                 })).ToArray()
             );
@@ -201,6 +206,84 @@ namespace CoApp.Toolkit.Extensions {
 
         }
 
+        private static Func<object,object> GetOpImplicit(Type sourceType, Type destinationType) {
+            lock( OpImplicitMethods ) {
+                if( !OpImplicitMethods.ContainsKey(sourceType) ) {
+                    var opImplicit = 
+                        (from method in sourceType.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+                            where method.Name == "op_Implicit" && method.ReturnType == destinationType && method.GetParameters()[0].ParameterType == sourceType
+                            select method).Union(
+                        (from method in destinationType.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+                            where method.Name == "op_Implicit" && method.ReturnType == destinationType && method.GetParameters()[0].ParameterType == sourceType
+                            select method
+                        )).FirstOrDefault();
+
+                    if (opImplicit != null) {
+                        OpImplicitMethods.Add(sourceType, obj => opImplicit.Invoke(null, new[] { obj }));
+                    } else {
+                        // let's 'try harder'
+                        var result = destinationType.GetCustomAttributes(typeof(ImplementedByAttribute), false).Select(i => i as ImplementedByAttribute).SelectMany(attribute => attribute.Types).Select(target => GetOpImplicit(sourceType, target)).FirstOrDefault();
+                        if (result == null) {
+                            // still not found one? is it an IEnumerable conversion?
+                            if (sourceType.IsIEnumerable() && destinationType.IsIEnumerable()) {
+                                var sourceElementType = sourceType.GetPersistableInfo().ElementType;
+                                var destElementType = destinationType.GetPersistableInfo().ElementType;
+                                var elemConversion = GetOpImplicit(sourceElementType, destElementType);
+                                if (elemConversion != null) {
+                                    // it looks like we can translate the elements of the collection.
+                                    if (destinationType.IsArray) {
+                                        // get an array of converted values.
+                                        result = obj => ((IEnumerable<object>)(obj)).Select(each => each.ImplicitlyConvert(destElementType)).ToArrayOfType(destElementType);
+
+                                    } else if (destinationType.Name.StartsWith("IEnumerable")) {
+                                        // just get an IEnumerable of the converted elements
+                                        result = obj => ((IEnumerable<object>)(obj)).Select(each => each.ImplicitlyConvert(destElementType)).CastToIEnumerableOfType(destElementType);
+                                    } else {
+                                        // create the target collection type, and stuff the values into that.
+                                        result = obj => {
+                                            var v = (IList)destinationType.CreateInstance();
+                                            foreach (object each in ((IEnumerable<object>)(obj))) {
+                                                v.Add(each.ImplicitlyConvert(destElementType));
+                                            }
+                                            return v;
+                                        };
+                                    }
+                                }
+                            }
+                        }
+                        OpImplicitMethods.Add(sourceType, result);
+                    } 
+                }
+                return OpImplicitMethods[sourceType];
+            }
+        }
+
+        public static object ImplicitlyConvert(this object obj, Type destinationType) {
+            if( obj == null ) {
+                return null;
+            }
+            if( destinationType == typeof(string)) {
+                return obj.ToString();
+            }
+            
+            var opImplicit = GetOpImplicit(obj.GetType(), destinationType);
+            if( opImplicit != null ) {
+                // return opImplicit.Invoke(null, new[] {obj});
+                return opImplicit(obj);
+            }
+            return obj;
+        }
+
+        public static bool ImplicitlyConvertsTo(this Type type, Type destinationType) {
+            if (type == destinationType ) {
+                return false;
+            }
+            if (typeof(string) == destinationType) {
+                return true;
+            }
+            return GetOpImplicit(type, destinationType) != null;
+        }
+
         public static object ToArrayOfType(this IEnumerable<object> enumerable, Type collectionType) {
             return ToArrayMethods.GetOrAdd(collectionType, () => ToArrayMethod.MakeGenericMethod(collectionType))
                 .Invoke(null, new[] { enumerable.CastToIEnumerableOfType( collectionType ) });
@@ -209,14 +292,9 @@ namespace CoApp.Toolkit.Extensions {
         public static object CastToIEnumerableOfType(this IEnumerable<object> enumerable, Type collectionType  ) {
             return CastMethods.GetOrAdd(collectionType, () => CastMethod.MakeGenericMethod(collectionType)).Invoke(null, new object[] { enumerable });
         }
-#if REMOVED
-        public static bool IsCreateable(this Type type) {
-            return AutoCache.Get(type, () => type.GetConstructor(BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null)) != null;
-        }
-#endif 
+
         public static object CreateInstance(this Type type) {
             return Activator.CreateInstance(TypeSubtitution[type] ?? type, true);
-            // return AutoCache.Get(type, () => type.GetConstructor(BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null)).Invoke(null);
         }
 
         private static MethodInfo GetTryParse(Type parsableType) {

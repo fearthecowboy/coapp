@@ -302,20 +302,19 @@ namespace CoApp.Toolkit.Pipes {
 
             foreach( var p in otherType.GetPersistableElements()) {
                 if( p.SetValue != null ) {
-                    p.SetValue(o, GetValue(FormatKey(key, p.Name), p.DeserializeAsType), null);
-                }
-            }
-            /*
-            var persistable = otherType.GetPersistableElements();
-            foreach (var f in persistable.Fields) {
-                f.SetValue(o, GetValue(FormatKey(key ,f.Name), f.FieldType));
-            }
+                    var v = GetValue(FormatKey(key, p.Name), p.DeserializeAsType);
+                    if( v == null ) {
+                        p.SetValue(o, GetValue(FormatKey(key, p.Name), p.DeserializeAsType), null);
+                        continue;
+                    }
 
-            foreach (var p in persistable.Properties) {
-                if (p.SetValue != null) {
-                    p.SetValue(o, GetValue(FormatKey(key , p.Name), p.DeserializeAsType), null);
+                    if ( (!p.ActualType.IsInstanceOfType(v)) && p.DeserializeAsType.ImplicitlyConvertsTo(p.ActualType)) {
+                        v = v.ImplicitlyConvert(p.ActualType);
+                    }
+
+                    p.SetValue(o, v, null);
                 }
-            }*/
+            }
 
             return o;
         }
@@ -387,12 +386,12 @@ namespace CoApp.Toolkit.Pipes {
             }
         }
 
-        public void AddCollection(string key, IEnumerable values) {
+        public void AddCollection(string key, IEnumerable values, Type serializeElementAsType) {
             if (values != null) {
                 var index = 0;
                 for (var enmerator = values.GetEnumerator(); enmerator.MoveNext();) {
                     if (enmerator.Current != null ) {
-                        Add(FormatKeyIndex(key, index++), enmerator.Current, enmerator.Current.GetType());    
+                        Add(FormatKeyIndex(key, index++), enmerator.Current, serializeElementAsType);    
                     }
                 }
             }
@@ -417,7 +416,11 @@ namespace CoApp.Toolkit.Pipes {
             if( arg == null ) {
                 return;
             }
-           
+
+            if (arg.GetType().ImplicitlyConvertsTo(argType)) {
+                arg = arg.ImplicitlyConvert(argType);
+            }
+
             if (_storeTypeInformation) {
                 Add(argName+"$T$", argType.FullName);
             }
@@ -438,7 +441,7 @@ namespace CoApp.Toolkit.Pipes {
             }
 
             if (argType.IsArray || argType.IsIEnumerable()) {
-                AddCollection(argName, (IEnumerable)arg);
+                AddCollection(argName, (IEnumerable)arg, argType.GetPersistableInfo().ElementType);
                 return;
             }
 
@@ -448,19 +451,6 @@ namespace CoApp.Toolkit.Pipes {
                     Add(FormatKey(argName, p.Name), p.GetValue(arg, null), p.SerializeAsType);
                 }
             }
-
-            /*
-            var persistable = argType.GetPersistableElements();
-            foreach( var f in persistable.Fields ) {
-                Add(FormatKey(argName,f.Name), f.GetValue(arg), f.FieldType);
-            }
-
-            foreach (var p in persistable.Properties) {
-                if (p.GetValue != null) {
-                    Add(FormatKey(argName,p.Name), p.GetValue(arg, null), p.SerializeAsType);
-                }
-            }
-            */
         }
 
         public void Add(string key, object value) {

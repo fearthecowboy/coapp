@@ -19,37 +19,32 @@ namespace CoApp.Packaging.Client {
         /// <summary>
         ///   The newest version of this package that is installed and newer than the given package and is binary compatible.
         /// </summary>
-        public Package InstalledNewerCompatable;
+        public Package InstalledNewestUpdate;
 
         /// <summary>
         ///   The newest version of this package that is installed, and newer than the given package
         /// </summary>
-        public Package InstalledNewer;
+        public Package InstalledNewest;
 
         /// <summary>
         ///   The newest package that is currently installed, that the given package is a compatible update for.
         /// </summary>
-        public Package InstalledOlderCompatable;
+        public Package LatestInstalledThatUpdatesToThis;
 
         /// <summary>
         ///   The newest package that is currently installed, that the give package is an upgrade for.
         /// </summary>
-        public Package InstalledOlder;
+        public Package LatestInstalledThatUpgradesToThis;
 
         /// <summary>
         ///   The latest version of the package that is available that is newer than the current package.
         /// </summary>
-        public Package AvailableNewer;
+        public Package AvailableNewest;
 
         /// <summary>
         ///   The latest version of the package that is available and is binary compatable with the given package
         /// </summary>
-        public Package AvailableNewerCompatible;
-
-        /// <summary>
-        ///   The latest version that is installed.
-        /// </summary>
-        public Package InstalledNewest;
+        public Package AvailableNewestUpdate;
 
         /// <summary>
         ///   All Installed versions of this package

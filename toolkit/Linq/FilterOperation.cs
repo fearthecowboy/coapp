@@ -11,22 +11,17 @@
 //-----------------------------------------------------------------------
 
 namespace CoApp.Toolkit.Linq {
-    public enum FilterOp {
-        EQ,
-        LT,
-        GT,
-        LTE,
-        GTE,
-        Contains
-    }
-
-    public enum BooleanFilterOperator {
-        And,
-        Or,
-        Xor
-    }
-
-    public enum UnaryFilterOperator {
-        Not
+    public enum FilterOperation {
+        Eq,
+        Equals = Eq,
+        Lt,
+        LessThan = Lt,
+        Gt,
+        GreaterThan = Gt,
+        Lte,
+        LessThanOrEqual = Lte,
+        Gte,
+        GreaterThanOrEqual = Gte,
+        Contains,
     }
 }

@@ -23,8 +23,8 @@ Filter Options:
     --installed=false       select packages that are not installed
     --active                packages that are active
     --active=false          packages that are not active
-    --required              packages that are required
-    --required=false        packages that are not required
+    --wanted				packages that are installed by the user
+    --wanted=false			packages that are installed as dependencies 
     --blocked               packages that are blocked
     --blocked=false         packages that are not blocked
     --latest                packages that are the latest version
@@ -43,6 +43,7 @@ Install Options:
     --any                   selects the any/anycpu version of the package
     --all                   selects all platforms to install
 
+
 Commands:
 ---------    
 
@@ -60,16 +61,6 @@ Commands:
     delete-feed         delete      -D    removes a feed from the system
 
     get-packageinfo     info        -g    shows extended package information
-    
-    activate-package    activate    -a    makes specific package the 'current'
-    block-package       block       -b    marks a package as 'blocked'
-    unblock-package     unblock     -B    unblocks a package
-    require-package     require     -w    marks a package as 'required'
-    unrequire-package   unrequire   -W    unmarks a package as 'required'
-    do-not-update       hold              marks a package as 'do-not-update'
-    do-not-upgrade      freeze            marks a package as 'do-not-upgrade'
-    do-update           release           marks a package as 'do-not-update'
-    do-upgrade          thaw              marks a package as 'do-not-upgrade'
 
     enable-telemetry                      enables anonymous feedback
     disable-telemetry                     disables anonymous feedback
@@ -77,3 +68,26 @@ Commands:
     list-policies       policies    -p    lists the security policies
     add-to-policy                         adds a user/group to a policy
     remove-from-policy                    removes a user/group from a policy
+
+						want		-w	  sets the wanted flag to true
+						notwanted	-W    clears the wanted flag
+
+	block-package		block		-b	 *sets a block on a package 
+	lock-package        lock		-B	 *sets a package to do not remove
+	updatable						-d	 *sets a package to allow updates
+	upgradable						-G	 *sets a package to allow upgrades
+
+	active							-a	 *sets a package to be marked active
+	inactive						-n	 *clears a package to be marked active
+
+	show-settings		show			  the package state & active filters.
+    
+	------------------------------------------------------------------------
+	* these commands can accept a package name or a partial package name and 
+	will apply to all packages that match the given partial name.
+	as well, these package masks can be combined with a priority value:
+		
+		--priority=<p> where <p> can be a number or one of:
+		  highest, high, default, low, lowest
+
+

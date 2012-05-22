@@ -27,6 +27,14 @@ namespace CoApp.Packaging.Client {
     using Toolkit.Tasks;
     using Toolkit.Win32;
     using PkgFilter = System.Linq.Expressions.Expression<System.Func<Common.IPackage, bool>>;
+    using CollectionFilter = System.Linq.Expressions.Expression<System.Func<System.Collections.Generic.IEnumerable<Common.IPackage>,System.Collections.Generic.IEnumerable<Common.IPackage>>>;
+
+    public class GeneralPackageInformation {
+        public int Priority { get; set; }
+        public CanonicalName CanonicalName { get; set; }
+        public string Key { get; set; }
+        public string Value { get; set; }
+    }
 
     public class PackageManager {
         private static readonly IPackageManager Remote = Session.RemoteService;
@@ -39,9 +47,10 @@ namespace CoApp.Packaging.Client {
         static PackageManager() {
             // Serializer for System.Linq.Expressions.Expression
             CustomSerializer.Add(new CustomSerializer<Expression<Func<IPackage, bool>>>((message, key, serialize) => message.Add(key, CustomSerializer.ExpressionXmlSerializer.Serialize(serialize).ToString(SaveOptions.OmitDuplicateNamespaces | SaveOptions.DisableFormatting)), (message, key) => (Expression<Func<IPackage, bool>>)CustomSerializer.ExpressionXmlSerializer.Deserialize(message[key])));
+            CustomSerializer.Add(new CustomSerializer<Expression<Func<IEnumerable<IPackage>, IEnumerable<IPackage>>>>((message, key, serialize) => message.Add(key, CustomSerializer.ExpressionXmlSerializer.Serialize(serialize).ToString(SaveOptions.OmitDuplicateNamespaces | SaveOptions.DisableFormatting)), (message, key) => (Expression<Func<IEnumerable<IPackage>, IEnumerable<IPackage>>>)CustomSerializer.ExpressionXmlSerializer.Deserialize(message[key])));
         }
 
-        public Task<IEnumerable<Package>> QueryPackages(string query, PkgFilter pkgFilter = null, string location = null) {
+        public Task<IEnumerable<Package>> QueryPackages(string query, PkgFilter pkgFilter, CollectionFilter collectionFilter ,string location) {
             string localPath = null;
 
             // there are three possibilities:
@@ -49,7 +58,7 @@ namespace CoApp.Packaging.Client {
             try {
                 // some kind of local file?
                 if( File.Exists(query) ) {
-                    return PackagesFromLocalFile(query.EnsureFileIsLocal(), Path.GetDirectoryName(query.GetFullPath()),pkgFilter);
+                    return PackagesFromLocalFile(query.EnsureFileIsLocal(), Path.GetDirectoryName(query.GetFullPath()),pkgFilter,collectionFilter);
                 }
                 var uri = new Uri(query);
                 Task.Factory.StartNew(() => {
@@ -65,7 +74,7 @@ namespace CoApp.Packaging.Client {
                     remoteFile.Get();
 
                     if (localPath != null) {
-                        return PackagesFromLocalFile(localPath,  null,pkgFilter ).Result;
+                        return PackagesFromLocalFile(localPath,  null,pkgFilter ,collectionFilter).Result;
                     }
                     return Enumerable.Empty<Package>();
                 });
@@ -81,13 +90,13 @@ namespace CoApp.Packaging.Client {
                 return (Remote.AddFeed(query, true) as Task<PackageManagerResponseImpl>).Continue(response => {
                     // a feed!
                     if (response.Feeds.Any()) {
-                        return (Remote.NewFindPackages(null, pkgFilter, location: response.Feeds.First().Location) as Task<PackageManagerResponseImpl>).Continue(response1 =>response1.Packages).Result;
+                        return (Remote.FindPackages(null, pkgFilter,collectionFilter, response.Feeds.First().Location) as Task<PackageManagerResponseImpl>).Continue(response1 =>response1.Packages).Result;
                     }
 
                     query = query.GetFullPath();
                     return (Remote.AddFeed(query, true) as Task<PackageManagerResponseImpl>).Continue(response2 => {
                         if (response.Feeds.Any()) {
-                            return (Remote.NewFindPackages(null, location: response2.Feeds.First().Location) as Task<PackageManagerResponseImpl>).Continue( response1 => response1.Packages).Result;
+                            return (Remote.FindPackages(null, pkgFilter, collectionFilter, response2.Feeds.First().Location) as Task<PackageManagerResponseImpl>).Continue( response1 => response1.Packages).Result;
                         }
                         return Enumerable.Empty<Package>();
                     }).Result;
@@ -95,17 +104,17 @@ namespace CoApp.Packaging.Client {
             }
 
             // 3. A partial/canonical name of a package.
-            return (Remote.NewFindPackages(query, pkgFilter, location: location) as Task<PackageManagerResponseImpl>).Continue(response => response.Packages);
+            return (Remote.FindPackages(query, pkgFilter,null, location) as Task<PackageManagerResponseImpl>).Continue(response => response.Packages);
         }
 
-        public Task<IEnumerable<Package>> QueryPackages(IEnumerable<string> queries, PkgFilter pkgFilter = null, string location = null) {
+        public Task<IEnumerable<Package>> QueryPackages(IEnumerable<string> queries, PkgFilter pkgFilter, CollectionFilter collectionFilter, string location) {
             if( queries != null && queries.Any()) {
-                return queries.Select(each => QueryPackages(each, pkgFilter, location)).Continue(results => results.SelectMany(result => result).Distinct());    
+                return queries.Select(each => QueryPackages(each, pkgFilter, collectionFilter, location)).Continue(results => results.SelectMany(result => result).Distinct());    
             }
-            return QueryPackages("*", pkgFilter, location);
+            return QueryPackages("*", pkgFilter,collectionFilter, location);
         }
 
-        private Task<IEnumerable<Package>> PackagesFromLocalFile(string localPath, string originalDirectory, PkgFilter pkgFilter) {
+        private Task<IEnumerable<Package>> PackagesFromLocalFile(string localPath, string originalDirectory, PkgFilter pkgFilter,CollectionFilter collectionFilter) {
             if( localPath.FileIsLocalAndExists()) {
                 return (Remote.RecognizeFile("", localPath, "") as Task<PackageManagerResponseImpl>).Continue(response => {
                     // was that one or more package(s)?
@@ -118,9 +127,8 @@ namespace CoApp.Packaging.Client {
 
                     // was that a feed?
                     if (response.Feeds.Any()) {
-                        return (Remote.NewFindPackages(null, pkgFilter, location: response.Feeds.First().Location) as Task<PackageManagerResponseImpl>).Continue(response2 => response2.Packages).Result;
+                        return (Remote.FindPackages(null, pkgFilter,collectionFilter, response.Feeds.First().Location) as Task<PackageManagerResponseImpl>).Continue(response2 => response2.Packages).Result;
                     }
-
 
                     // nothing we could recognize.
                     return Enumerable.Empty<Package>();
@@ -227,9 +235,8 @@ namespace CoApp.Packaging.Client {
         public Task<IEnumerable<Package>> IdentifyPackageAndDependenciesToInstall(IEnumerable<Package> packages, bool? autoUpgrade = null, bool? download = null) {
             var pTasks = packages.Select(package => Install(package.CanonicalName, autoUpgrade, pretend: true, download: download)).ToArray();
 
-            return pTasks.ContinueAlways(antecedentTasks => {
-                antecedentTasks.RethrowWhenFaulted();
-                return antecedentTasks.SelectMany(each => each.Result).Distinct();
+            return pTasks.Continue(pkgsToinstall => {
+                return pkgsToinstall.SelectMany(each => each).Distinct();
             });
         }
 
@@ -242,102 +249,15 @@ namespace CoApp.Packaging.Client {
             return (Remote.VerifyFileSignature(filename) as Task<PackageManagerResponseImpl>).Continue(response => response.IsSignatureValid);
         }
 
-        public Task<Package> GetLatestInstalledVersion(CanonicalName canonicalName) {
-            return GetInstalledPackages(canonicalName).Continue(packages => packages.OrderByDescending(each => each.Version).FirstOrDefault());
+        public Task SetGeneralPackageInformation(int priority, CanonicalName canonicalName, string key, string value) {
+            return Remote.SetGeneralPackageInformation(priority, canonicalName, key, value);
         }
+        public Task<IEnumerable<GeneralPackageInformation>>  GeneralPackageInformation { get {
+            return (Remote.GetGeneralPackageInformation() as Task<PackageManagerResponseImpl>).Continue(response => response.GeneralPackageInformation);
+        }}
 
-        public Task<PackageSet> GetPackageSet(CanonicalName canonicalName) {
-            var result = new PackageSet();
-
-            return GetPackage(canonicalName).Continue(package => {
-                var tasks = new List<Task>();
-                // the given package.
-                result.Package = package;
-
-                // get all the related packages
-                var allPackages = GetAllVersionsOfPackage(canonicalName).Result.OrderByDescending(each => each.Version);
-
-                result.InstalledPackages = allPackages.Where(each => each.IsInstalled).ToArray();
-                result.InstalledNewerCompatable = NewestCompatablePackageIn(result.Package, result.InstalledPackages);
-                result.InstalledNewer = result.InstalledPackages.FirstOrDefault(each => each.Version > result.Package.Version);
-
-                result.InstalledNewest = result.InstalledPackages.FirstOrDefault();
-
-                var notInstalledPackges = allPackages.Where(each => !each.IsInstalled).ToArray();
-                result.AvailableNewerCompatible = NewestCompatablePackageIn(result.Package, notInstalledPackges);
-                result.AvailableNewer = notInstalledPackges.FirstOrDefault(each => each.Version > result.Package.Version);
-
-                result.InstalledOlderCompatable =
-                    result.InstalledPackages.FirstOrDefault(
-                        each => each.Version < result.Package.Version && result.Package.BindingPolicy.Minimum <= each.Version && result.Package.BindingPolicy.Maximum >= each.Version);
-
-                result.InstalledOlder =
-                    result.InstalledPackages.FirstOrDefault(
-                        each => each.Version < result.Package.Version && (result.Package.BindingPolicy.Minimum > each.Version || result.Package.BindingPolicy.Maximum < each.Version));
-
-                if (result.AvailableNewerCompatible == result.Package) {
-                    result.AvailableNewerCompatible = null;
-                }
-                if (result.AvailableNewer == result.Package) {
-                    result.AvailableNewer = null;
-                }
-                if (result.InstalledNewerCompatable == result.Package) {
-                    result.InstalledNewerCompatable = null;
-                }
-                if (result.InstalledOlderCompatable == result.Package) {
-                    result.InstalledOlderCompatable = null;
-                }
-                if (result.InstalledOlder == result.Package) {
-                    result.InstalledOlder = null;
-                }
-                if (result.InstalledNewer == result.Package) {
-                    result.InstalledNewer = null;
-                }
-#if NOT_READY
-                tasks.Add(GetTrimablePackages(canonicalName).ContinueWith(a2 => {
-                    result.Trimable = !a2.IsFaulted ? a2.Result : Enumerable.Empty<Package>();
-                }));
-#endif 
-                if (result.InstalledNewer != null) {
-                    tasks.Add(GetPackageDetails(result.InstalledNewer));
-                }
-
-                if (result.InstalledNewest != null) {
-                    tasks.Add(GetPackageDetails(result.InstalledNewest));
-                }
-
-                if (result.InstalledNewerCompatable != null) {
-                    tasks.Add(GetPackageDetails(result.InstalledNewerCompatable));
-                }
-
-                if (result.InstalledNewest != null) {
-                    tasks.Add(GetPackageDetails(result.InstalledNewest));
-                }
-
-                if (result.InstalledOlder != null) {
-                    tasks.Add(GetPackageDetails(result.InstalledOlder));
-                }
-
-                if (result.InstalledOlderCompatable != null) {
-                    tasks.Add(GetPackageDetails(result.InstalledOlderCompatable));
-                }
-
-                if (result.AvailableNewer != null) {
-                    tasks.Add(GetPackageDetails(result.AvailableNewer));
-                }
-
-                if (result.AvailableNewerCompatible != null) {
-                    tasks.Add(GetPackageDetails(result.AvailableNewerCompatible));
-                }
-
-                if (result.Package != null) {
-                    tasks.Add(GetPackageDetails(result.Package));
-                }
-
-                Task.WaitAll(tasks.ToArray());
-
-                return result;
-            });
+        public Task SetPackageWanted(CanonicalName canonicalName, bool wanted) {
+            return Remote.SetPackageWanted(canonicalName, wanted);
         }
 
         private Package NewestCompatablePackageIn(Package aPackage, IEnumerable<Package> packages) {
@@ -351,33 +271,7 @@ namespace CoApp.Packaging.Client {
             return result;
         }
 
-        public Task<Package> GetLatestInstalledCompatableVersion(CanonicalName canonicalName) {
-            return GetPackage(canonicalName).Continue(package => {
-                var result = NewestCompatablePackageIn(package, GetInstalledPackages(canonicalName).Result);
-                return result.IsInstalled ? result : null;
-            });
-        }
-
-        public Task<bool> IsPackageBlocked(CanonicalName packageName) {
-            return GetPackage(packageName).Continue(pkg => pkg.IsBlocked);
-        }
-
-        public Task<bool> IsPackageMarkedRequested(CanonicalName canonicalName) {
-            return GetPackage(canonicalName).Continue(package => package.IsClientRequired);
-        }
-
-        public Task<bool> IsPackageMarkedDoNotUpgrade(CanonicalName canonicalName) {
-            return GetPackage(canonicalName).Continue(package => package.DoNotUpgrade);
-        }
-
-        public Task<bool> IsPackageMarkedDoNotUpdate(CanonicalName canonicalName) {
-            return GetPackage(canonicalName).Continue(package => package.DoNotUpdate);
-        }
-
-        public Task<bool> IsPackageActive(CanonicalName canonicalName) {
-            return GetPackage(canonicalName).Continue(package => package.IsActive);
-        }
-
+#if DEPRECATED
         public Task BlockPackage(CanonicalName packageName) {
             return SetPackageFlags(packageName, blocked: true);
         }
@@ -418,7 +312,7 @@ namespace CoApp.Packaging.Client {
             // you can actually use a partial package name for this call.
             return Remote.SetPackage(canonicalName, active, requested, blocked, doNotUpdate, doNotUpgrade);
         }
-
+#endif
 
         public Task<IEnumerable<Package>> GetActiveVersion(CanonicalName packageName) {
             return FindPackages(packageName, Package.Properties.Active.Is(true));
@@ -427,47 +321,25 @@ namespace CoApp.Packaging.Client {
             return packageNames.Select(GetActiveVersion).Continue(results => results.SelectMany(result => result).Distinct());
         }
 
-#if NOT_READY
-        public Task<IEnumerable<Package>> GetUpdatablePackages(CanonicalName packageName) {
-            return (Remote.FindPackages(packageName, updates: true) as Task<PackageManagerResponseImpl>).Continue(response => response.Packages);
-        }
-        public Task<IEnumerable<Package>> GetUpdatablePackages(IEnumerable<CanonicalName> packageNames) {
-            return packageNames.Select(GetUpdatablePackages).Continue(results => results.SelectMany(result => result).Distinct());
-        }
-
-        public Task<IEnumerable<Package>> GetUpgradablePackages(CanonicalName packageName) {
-            return (Remote.FindPackages(packageName, upgrades: true) as Task<PackageManagerResponseImpl>).Continue(response => response.Packages);
-        }
-        public Task<IEnumerable<Package>> GetUpgradablePackages(IEnumerable<CanonicalName> packageNames) {
-            return packageNames.Select(GetUpgradablePackages).Continue(results => results.SelectMany(result => result).Distinct());
-        }
-
-        public Task<IEnumerable<Package>> GetTrimablePackages(CanonicalName packageName) {
-            return (Remote.FindPackages(packageName, trimable: true) as Task<PackageManagerResponseImpl>).Continue(response => response.Packages);
-        }
-        public Task<IEnumerable<Package>> GetTrimablePackages(IEnumerable<CanonicalName> packageNames) {
-            return packageNames.Select(GetTrimablePackages).Continue(results => results.SelectMany(result => result).Distinct());
-        }
-#endif
         public Task<IEnumerable<Package>> GetAllVersionsOfPackage(CanonicalName packageName) {
             return FindPackages(packageName.OtherVersionFilter);
         }
         
         public Task<IEnumerable<Package>> GetInstalledPackages(CanonicalName packageName, string locationFeed = null) {
-            return FindPackages(packageName.OtherVersionFilter, Package.Properties.Installed.Is(true), locationFeed);
+            return FindPackages(packageName.OtherVersionFilter, Package.Properties.Installed.Is(true),locationFeed:locationFeed);
         }
         public Task<IEnumerable<Package>> GetInstalledPackages(IEnumerable<CanonicalName> packageNames, string locationFeed = null) {
             return packageNames.Select(each => GetInstalledPackages(each, locationFeed)).Continue(results => results.SelectMany(result => result).Distinct());
         }
 
-        public Task<IEnumerable<Package>> FindPackages( CanonicalName packageName, PkgFilter pkgFilter = null, string locationFeed = null) {
-            return (Remote.NewFindPackages(packageName, pkgFilter, location: locationFeed) as Task<PackageManagerResponseImpl>).Continue(response => response.Packages);
+        public Task<IEnumerable<Package>> FindPackages(CanonicalName packageName, PkgFilter pkgFilter = null, CollectionFilter collectionFilter = null, string locationFeed = null) {
+            return (Remote.FindPackages(packageName, pkgFilter, collectionFilter , locationFeed) as Task<PackageManagerResponseImpl>).Continue(response => response.Packages);
         }
 
         public Task<Package> GetPackageFromFile(string filename) {
             filename = filename.GetFullPath();
             if( File.Exists(filename)) {
-                return QueryPackages(filename).Continue(packages => {
+                return QueryPackages(filename,null,null,null).Continue(packages => {
                     var pkg = packages.FirstOrDefault();
                     if (pkg == null) {
                         throw new UnknownPackageException("filename: {0}".format(filename));
@@ -484,7 +356,7 @@ namespace CoApp.Packaging.Client {
             return failedResult.Task;
         }
 
-        private Task<IEnumerable<Package>> Install(CanonicalName canonicalName, bool? autoUpgrade = null, bool? isUpdate = null, bool? isUpgrade = null, bool? pretend = null, bool? download = null) {
+        private Task<IEnumerable<Package>> Install(CanonicalName canonicalName, bool? autoUpgrade = null, bool? force = null, bool? download = null, bool? pretend = null, CanonicalName replacingPackage = null) {
             if (!canonicalName.IsCanonical) {
                 return InvalidCanonicalNameResult<IEnumerable<Package>>(canonicalName);
             }
@@ -497,7 +369,7 @@ namespace CoApp.Packaging.Client {
                 }
             });
 
-            return (Remote.InstallPackage(canonicalName, autoUpgrade, false, download, pretend, isUpdate, isUpgrade) as Task<PackageManagerResponseImpl>).Continue(response => {
+            return (Remote.InstallPackage(canonicalName, autoUpgrade, force, download, pretend, replacingPackage) as Task<PackageManagerResponseImpl>).Continue(response => {
                 if (response.PotentialUpgrades != null) {
                     throw new PackageHasPotentialUpgradesException(response.UpgradablePackage, response.PotentialUpgrades);
                 }
@@ -517,12 +389,8 @@ namespace CoApp.Packaging.Client {
             return Install(canonicalName, autoUpgrade, true, false, false);
         }
 
-        public Task<IEnumerable<Package>> EnsurePackagesAndDependenciesAreLocal(CanonicalName canonicalName, bool? autoUpgrade = null) {
-            return Install(canonicalName, autoUpgrade, false, false, true, true);
-        }
-
         public Task<IEnumerable<Package>> WhatWouldBeInstalled(CanonicalName canonicalName, bool? autoUpgrade = null) {
-            return Install(canonicalName, autoUpgrade, false, false, false, false);
+            return Install(canonicalName, autoUpgrade, false, false, false, null);
         }
 
         public Task<int> RemovePackages(IEnumerable<CanonicalName> canonicalNames, bool forceRemoval) {
@@ -669,7 +537,7 @@ namespace CoApp.Packaging.Client {
             return (Remote.GetPackageDetails(canonicalName) as Task<PackageManagerResponseImpl>).Continue(response => Package.GetPackage(canonicalName));
         }
 
-        public Task<Package> GetPackage(CanonicalName canonicalName) {
+        public Task<Package> GetPackage(CanonicalName canonicalName, bool forceRefresh = false) {
             if( null == canonicalName) {
                 return CoTask.AsResultTask<Package>(null);
             }
@@ -679,18 +547,18 @@ namespace CoApp.Packaging.Client {
 
             var pkg = Package.GetPackage(canonicalName);
 
-            if (pkg.IsPackageInfoStale) {
-                return (Remote.NewFindPackages(canonicalName) as Task<PackageManagerResponseImpl>).Continue(response => Package.GetPackage(canonicalName));
+            if (forceRefresh || pkg.IsPackageInfoStale) {
+                return (Remote.FindPackages(canonicalName,null,null,null) as Task<PackageManagerResponseImpl>).Continue(response => Package.GetPackage(canonicalName));
             }
 
             return pkg.AsResultTask();
         }
 
-        public Task<IEnumerable<Package>> GetPackages(IEnumerable<CanonicalName> canonicalNames) {
+        public Task<IEnumerable<Package>> GetPackages(IEnumerable<CanonicalName> canonicalNames, bool forceRefresh = false) {
             if(canonicalNames.IsNullOrEmpty()) {
                 return Enumerable.Empty<Package>().AsResultTask();
             }
-            return canonicalNames.Select(GetPackage).Continue(all => all);
+            return canonicalNames.Select(c => GetPackage(c, true)).Continue(all => all);
         }
 
         public Task<Package> GetPackageDetails(CanonicalName canonicalName) {
@@ -702,11 +570,11 @@ namespace CoApp.Packaging.Client {
         }
 
         public Task<Package> GetPackageDetails(Package package) {
-            if (package.IsPackageDetailsStale) {
+            if (package.IsPackageInfoStale) {
                 return GetPackage(package.CanonicalName).Continue(pkg => RefreshPackageDetails(pkg.CanonicalName).Result);
             }
 
-            return package.Roles.IsNullOrEmpty() ? RefreshPackageDetails(package.CanonicalName) : package.AsResultTask();
+            return package.IsPackageDetailsStale ? RefreshPackageDetails(package.CanonicalName) : package.AsResultTask();
         }
 
         public Task<bool> GetTelemetry() {

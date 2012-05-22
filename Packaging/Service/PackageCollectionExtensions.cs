@@ -66,8 +66,6 @@ namespace CoApp.Packaging.Service {
             return from feed in feedCollection select feed.Location;
         }
 
-      
-
         internal static Package[] HighestPackages(this IEnumerable<Package> packageSet) {
             var all = packageSet.OrderByDescending(p => p.CanonicalName.Version).ToArray();
             if (all.Length > 1) {

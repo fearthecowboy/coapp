@@ -145,6 +145,40 @@ namespace CoApp.Packaging.Common {
                                 PublicKeyToken.NewIsWildcardMatch(packageCriteria.PublicKeyToken);
         }
 
+        public int MatchQuality(CanonicalName packageCriteria) {
+            if (null == packageCriteria) {
+                return 0;
+            }
+
+            if( !Matches(packageCriteria) ) {
+                return 0;
+            }
+
+            int result =1;
+
+            if (Name.Equals(packageCriteria.Name, StringComparison.CurrentCultureIgnoreCase)) {
+                result++;
+            }
+
+            if( Flavor == packageCriteria.Flavor) {
+                result++;
+            }
+            
+            if( Version == packageCriteria.Version) {
+                result++;
+            }
+
+            if (packageCriteria.Architecture == Architecture) {
+                result++;
+            }
+
+            if( PublicKeyToken == packageCriteria.PublicKeyToken) {
+                result++;
+            }
+
+            return result;
+        }
+
         public bool DiffersOnlyByVersion(CanonicalName otherPackage) {
             if( IsPartial) {
                 return PackageType == otherPackage.PackageType &&

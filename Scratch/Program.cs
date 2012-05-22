@@ -88,17 +88,28 @@ namespace Scratch {
 
             
             // var x =((SimpleClass s) => s.Name)
-            var x = Extn<Test>.Create2(s => s.Name);
+            // var x = Extn<Test>.Create2(s => s.Name);
 
-            var simple = t;
+            // var simple = t;
 
-            var answer = x.Compile()(simple);
+            // var answer = x.Compile()(simple);
+
+            Func<IEnumerable<Shoe>, IEnumerable<Shoe>> x = null;
+            Func<IEnumerable<Shoe>, IOrderedEnumerable<Shoe>> y = shoes => {
+                return shoes.OrderBy(each => each.Age);
+            };
+            
+            x = y;
 
 
+            var ex2 = Extn<IEnumerable<Shoe>>.Create2(shoes => shoes.SortBy(each => each.Name));
+            
+            var anser = ex2.Compile()(t.shoes);
 
-            Console.WriteLine("Answer: {0}", answer);
 
-            var ser = x.Serialize<Expression>("\r\n");
+            Console.WriteLine("Answers: {0},{1}", anser.First(), anser.Skip(1).First());
+
+            var ser = ex2.Serialize<Expression>("\r\n");
 
             // var ser = xs.Serialize(x).ToString();
             Console.WriteLine(ser.ToString().UrlDecode() );
@@ -120,11 +131,14 @@ namespace Scratch {
 #endif 
 
             // var x2 = xs.Deserialize<Func<Test,CanonicalName>>(XElement.Parse(ser));
-            var x2 = (ser.DeserializeTo<Expression>() as Expression<Func<Test, CanonicalName>>);
+            var x2 = (ser.DeserializeTo<Expression>() as Expression<Func<IEnumerable<Shoe>, IEnumerable<Shoe>>>);
+            // var x2 = ser.DeserializeTo<Expression>() is Expression<Func<IEnumerable<Shoe>, IEnumerable<Shoe>>>;
 
-            var answer2 = x2.Compile()(simple);
 
-            Console.WriteLine("Answer2: {0}", answer2);
+            var answer2 = x2.Compile()(t.shoes);
+            Console.WriteLine("Answers: {0},{1}", answer2.First(), answer2.Skip(1).First());
+
+            
 
             /*
             var msg = t.Serialize("\r\n");
@@ -147,170 +161,3 @@ namespace Scratch {
 
     }
 }
-#if FALSE
-
-using System;
-using System.ComponentModel;
-using System.Text;
-using System.Collections.Generic;
-using System.Linq;
-using CoApp.Toolkit.Query;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-
-namespace TestProject1
-{
-    using CoApp.Toolkit.Query;
-
-    [TestClass]
-    public class QueryTesting
-    {
-        SimpleClass[] _list = new[]
-                           {
-                               new SimpleClass {Name = "foo"}, new SimpleClass {Name = "not foo", Value1 = 10},
-                               new SimpleClass {Name = "foo is the beginning"}, new SimpleClass {Name = "lame", Value1= 5},  new SimpleClass {Name = "bar", Value1= 3}, new SimpleClass {Name = "baz", Value1= 8}
-                           };
-        
-        [TestMethod]
-        public void BasicEqualForStrings()
-        {            
-
-           
-            var nameRef = PropRef<SimpleClass>.Create(s => s.Name);
-            var filter = Filter.Create(nameRef, FilterOp.EQ, "foo");
-
-            var query = Query.Create(filter, nameRef);
-            var result = query.Invoke(_list).ToArray();
-            Assert.AreEqual(1, result.Count());
-            Assert.AreEqual("foo", result[0].Name);
-
-        }
-
-        [TestMethod]
-        public void WildcardEqualForStrings()
-        {
-
-           
-            var nameRef = PropRef<SimpleClass>.Create(s => s.Name);
-            var filter = Filter.Create(nameRef, FilterOp.EQ, "foo*");
-
-            var query = Query.Create(filter, PropRef<SimpleClass>.Create(s => s.Name));
-            var result = query.Invoke(_list).ToArray();
-            Assert.AreEqual(2, result.Count());
-            Assert.AreEqual("foo", result[0].Name);
-            Assert.AreEqual("foo is the beginning", result[1].Name);
-        }
-
-        [TestMethod]
-        public void StringContainsFoo()
-        {
-            
-            var nameRef = PropRef<SimpleClass>.Create(s => s.Name);
-            var filter = Filter.Create(nameRef, FilterOp.Contains, "foo");
-            var query = Query.Create(filter, nameRef);
-            var result = query.Invoke(_list).ToArray();
-            Assert.AreEqual(3, result.Count());
-            Assert.AreEqual("foo", result[0].Name);
-            Assert.AreEqual("foo is the beginning", result[1].Name);
-            Assert.AreEqual("not foo", result[2].Name);
-        }
-
-        [TestMethod]
-        public void StringDoesntContainsFoo()
-        {
-            
-            var nameRef = PropRef<SimpleClass>.Create(s => s.Name);
-            var filter = Filter.Create(nameRef, FilterOp.Contains, "foo");
-            var notFilter = !filter;
-            var query = Query.Create(notFilter, nameRef);
-            var result = query.Invoke(_list).ToArray();
-            Assert.AreEqual(3, result.Count());
-            Assert.AreEqual("bar", result[0].Name);
-            Assert.AreEqual("baz", result[1].Name);
-            Assert.AreEqual("lame", result[2].Name);
-        }
-
-        [TestMethod]
-        public void ValueComparisonOps()
-        {
-         
-            
-            var notContainingFoo = !Filter.Create(PropRef<SimpleClass>.Create(s => s.Name), FilterOp.Contains, "foo");
-
-            var gt4 = Filter.Create(PropRef<SimpleClass>.Create(s => s.Value1), FilterOp.GT, 4);
-
-            var andFilter = notContainingFoo & gt4;
-
-            var query = Query.Create(andFilter, PropRef<SimpleClass>.Create(s => s.Name), ListSortDirection.Descending);
-
-            var result = query.Invoke(_list).ToArray();
-
-            Assert.AreEqual(2, result.Count());
-
-            Assert.AreEqual("lame", result[0].Name);
-            Assert.AreEqual("baz", result[1].Name);
-
-            
-
-        }
-
-        [TestMethod]
-        public void ValueComparisonOr()
-        {
-            var name = PropRef<SimpleClass>.Create(s => s.Name);
-            var value1 = PropRef<SimpleClass>.Create(s => s.Value1);
-
-            var notContainingFoo = Filter.Create(Filter.Create(name, FilterOp.Contains, "foo"), UnaryFilterOperator.Not);
-
-            var gt4 = Filter.Create(value1, FilterOp.GT, 4);
-
-            var andFilter = notContainingFoo | gt4;
-
-            var query = Query.Create(andFilter, name, ListSortDirection.Descending);
-
-            var result = query.Invoke(_list).ToArray();
-
-            Assert.AreEqual(4, result.Count());
-             Assert.AreEqual("not foo", result[0].Name);
-            Assert.AreEqual("lame", result[1].Name);
-            Assert.AreEqual("baz", result[2].Name);
-            Assert.AreEqual("bar", result[3].Name);
-
-        }
-
-
-        [TestMethod]
-        public void EmbeddingTest()
-        {
-            var name = PropRef<SimpleClass>.Create(s => s.Name);
-            var value1 = PropRef<SimpleClass>.Create(s => s.Value1);
-            var notContainingFoo = Filter.Create(Filter.Create(name, FilterOp.Contains, "foo"), UnaryFilterOperator.Not);
-            var eq3 = Filter.Create(value1, FilterOp.EQ, 3);
-            var gte8 = Filter.Create(value1, FilterOp.GTE, 8);
-
-            var query = Query.Create((notContainingFoo & eq3) | gte8);
-            var result = query.Invoke(_list).ToArray();
-
-            Assert.AreEqual(3, result.Count());
-            
-            Assert.AreEqual("not foo", result[0].Name);
-            Assert.AreEqual("bar", result[1].Name);
-            Assert.AreEqual("baz", result[2].Name);
-
-        }
-
-    }
-
-
-    public class SimpleClass
-    {
-        public string Name { get; set; }
-        public int Value1 { get; set; }
-    }
-
-    public class BadClass
-    {
-        
-    }
-}
-
-#endif 

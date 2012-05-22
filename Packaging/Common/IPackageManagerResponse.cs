@@ -66,5 +66,6 @@ namespace CoApp.Packaging.Common {
         void LoggingSettings(bool messages, bool warnings, bool errors);
 
         void TaskComplete();
+        void GeneralPackageSetting(int priority, CanonicalName canonicalName, string key, string value);
     }
 }

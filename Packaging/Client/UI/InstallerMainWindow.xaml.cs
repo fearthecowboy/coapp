@@ -27,7 +27,7 @@ namespace CoApp.Packaging.Client.UI {
     /// </summary>
     public partial class InstallerMainWindow : Window {
         private bool _actionTaken;
-        public Installer Installer;
+        public Installer Installer { get; set; }
 
         public InstallerMainWindow(Installer installer) {
             Opacity = 0;
@@ -67,36 +67,23 @@ namespace CoApp.Packaging.Client.UI {
                 VisibilityAnimation.SetAnimationType(CancelButton, VisibilityAnimation.AnimationType.Fade);
             } catch {
             }
-
-            Loaded += (src, evnt) => {
+            
+            Loaded += (x, y) => {
+                Installer.Ping = true;
+                ShowInTaskbar = true;
                 Topmost = false;
-                if (Opacity <= 0 && Installer.HasPackage) {
-                    Installer.Ping = true;
-                    ShowInTaskbar = true;
-                    ((Storyboard)FindResource("showWindow")).Begin();
-                    if (WhichVersionToInstall.SelectedIndex == -1) {
-                        WhichVersionToInstall.SelectedIndex = 0;
-                    }
+                ((Storyboard)FindResource("showWindow")).Begin();
+                if (WhichVersionToInstall.SelectedIndex == -1) {
+                    WhichVersionToInstall.SelectedIndex = 0;
                 }
             };
-
-            Installer.Ready += (src, evnt) => Invoke(() => {
-                if (!(Opacity > 0)) {
-                    Installer.Ping = true;
-                    ShowInTaskbar = true;
-                    ((Storyboard)FindResource("showWindow")).Begin();
-                    if (WhichVersionToInstall.SelectedIndex == -1) {
-                        WhichVersionToInstall.SelectedIndex = 0;
-                    }
-                }
-            });
-
+  
             Installer.Finished += (src, evnt) => Invoke(() => {
                 ((Storyboard)FindResource("hideWindow")).Completed += (ss, ee) => Invoke(Close);
                 ((Storyboard)FindResource("hideWindow")).Begin();
             });
         }
-
+     
         internal void FixFont() {
             if (DescriptionText.ActualHeight > 150 && DescriptionText.FontSize > 9) {
                 DescriptionText.FontSize -= .5;
@@ -146,7 +133,7 @@ namespace CoApp.Packaging.Client.UI {
             }
         }
 
-        protected void Invoke(Action action) {
+        internal void Invoke(Action action) {
             Dispatcher.Invoke(action);
         }
 

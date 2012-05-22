@@ -27,11 +27,13 @@ namespace CoApp.Packaging.Client {
     using Toolkit.Tasks;
     using Toolkit.Win32;
 
+
     public class PackageManagerResponseImpl : IPackageManagerResponse {
         private static readonly IPackageManager Remote = Session.RemoteService;
 
         private readonly Lazy<List<Package>> _packages = new Lazy<List<Package>>(() => new List<Package>());
         private readonly Lazy<List<Feed>> _feeds = new Lazy<List<Feed>>(() => new List<Feed>());
+        private readonly Lazy<List<GeneralPackageInformation>> _gpi = new Lazy<List<GeneralPackageInformation>>(() => new List<GeneralPackageInformation>());
         private readonly Lazy<List<Policy>> _policies = new Lazy<List<Policy>>(() => new List<Policy>());
         private readonly Lazy<List<ScheduledTask>> _scheduledTasks = new Lazy<List<ScheduledTask>>(() => new List<ScheduledTask>());
 
@@ -52,6 +54,12 @@ namespace CoApp.Packaging.Client {
         internal IEnumerable<Feed> Feeds {
             get {
                 return _feeds.IsValueCreated ? _feeds.Value.Distinct() : Enumerable.Empty<Feed>();
+            }
+        }
+
+        internal IEnumerable<GeneralPackageInformation> GeneralPackageInformation {
+            get {
+                return _gpi.IsValueCreated ? _gpi.Value : Enumerable.Empty<GeneralPackageInformation>();
             }
         }
 
@@ -345,7 +353,7 @@ namespace CoApp.Packaging.Client {
         public void Restarting() {
             EngineRestarting = true;
             // throw an exception here to quickly short circuit the rest of this call
-            throw new Exception("restarting");
+            throw new RestartingException();
         }
 
         public void SendShuttingDown() {
@@ -366,6 +374,15 @@ namespace CoApp.Packaging.Client {
 
         public void TaskComplete() {
             // nothing to do here but smile!
+        }
+
+        public void GeneralPackageSetting(int priority, CanonicalName canonicalName, string key, string value) {
+            _gpi.Value.Add(new GeneralPackageInformation() {
+                Priority = priority,
+                CanonicalName = canonicalName,
+                Key = key,
+                Value = value
+            });
         }
 
         public void LoggingSettings(bool messages, bool warnings, bool errors) {

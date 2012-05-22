@@ -17,15 +17,26 @@ namespace CoApp.Packaging.Common.Model {
     /// <remarks>
     /// </remarks>
     public enum CompositionAction {
-        /// <summary>
-        ///   Create a symlink to a file
-        /// </summary>
-        SymlinkFile,
 
         /// <summary>
         ///   Create a symlink to a folder
         /// </summary>
         SymlinkFolder,
+
+        /// <summary>
+        ///   Copies a file from one place to another
+        /// </summary>
+        FileCopy,
+
+        /// <summary>
+        ///   Copies a file from one place to another, processes ${macros} in file
+        /// </summary>
+        FileRewrite,
+        
+        /// <summary>
+        ///   Create a symlink to a file
+        /// </summary>
+        SymlinkFile,
 
         /// <summary>
         ///   Create a .lnk shortcut to a file
@@ -43,13 +54,18 @@ namespace CoApp.Packaging.Common.Model {
         Registry,
 
         /// <summary>
-        ///   Copies a file from one place to another
+        /// TrustedAction: Downloads a file
         /// </summary>
-        FileCopy,
+        DownloadFile,
 
         /// <summary>
-        ///   Copies a file from one place to another, processes ${macros} in file
+        /// TrustedAction: Allows arbitrary code to execute at install
         /// </summary>
-        FileRewrite,
+        InstallScript,
+
+        /// <summary>
+        /// TrustedAction: Allows arbitrary code to execute at remove
+        /// </summary>
+        RemoveScript,
     }
 }
