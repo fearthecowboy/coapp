@@ -288,27 +288,19 @@ namespace CoApp.CLI {
                         return Help();
                      
                     case "test":
-                        /* task = preCommandTasks.Continue(() => _packageManager.GetInstalledPackages(CanonicalName.CoAppItself, _location))
+                       // pkgFilter &= Package.Properties.Installed.Is(true) & Package.Properties.Active.Is(true) & Package.Properties.UpdatePackages.Any();
+                        // collectionFilter = collectionFilter.Then(p => p.HighestPackages().OrderByDescending(each => each.Version));
+                        // collectionFilter = collectionFilter.Then(pkgs => pkgs.HighestPackages());
+                        collectionFilter = collectionFilter.Then(pkgs => pkgs.SortBy( pkg => pkg.Version));
+                        collectionFilter = collectionFilter.Then(pkgs => pkgs.SortBy(pkg => pkg.Version));
+
+                        task = preCommandTasks.Continue(() => _packageManager.FindPackages(CanonicalName.AllPackages, pkgFilter, collectionFilter, _location))
                             .Continue(packages => {
                                 if (packages.IsNullOrEmpty()) {
                                     PrintNoPackagesFound(parameters);
                                     return;
                                 }
-                                PrintPackages(packages);
-                            });
-                         */
-                        pkgFilter &= Package.Properties.Installed.Is(true) & Package.Properties.Active.Is(true) & Package.Properties.UpdatePackages.Any();
-                        
-                        task = preCommandTasks.Continue(() => _packageManager.QueryPackages(parameters, pkgFilter, collectionFilter, _location))
-                            .Continue(packages => {
-                                if (packages.IsNullOrEmpty()) {
-                                    PrintNoPackagesFound(parameters);
-                                    return;
-                                }
-                                var updates = packages.Select(each => new {
-                                    Old = each, 
-                                    New = each.UpdatePackages.HighestPackages().FirstOrDefault()
-                                });
+                               PrintPackages(packages);
 
                             });
 

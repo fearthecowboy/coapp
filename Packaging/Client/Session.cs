@@ -113,7 +113,8 @@ namespace CoApp.Packaging.Client {
             }
         }
 
-        private Session() : base(WriteAsync) {
+        private Session()
+            : base(typeof(IPackageManager), WriteAsync) {
             _remoteService = this.ActLike();
         }
 

@@ -58,14 +58,16 @@
   <ItemGroup>
     <Compile Include="Packaging\Client\PackageManagerResponseImpl.cs" />
     <Compile Include="Packaging\Client\Delegates.cs" />
-    <Compile Include="Packaging\Client\UI\InstallChoice.cs" />
     <Compile Include="Packaging\Client\UI\InstallerFailureState.cs" />
     <Compile Include="Packaging\Client\UI\InstSelection.cs" />
+    <Compile Include="Packaging\Client\UI\PopupQuestion.xaml.cs">
+      <DependentUpon>PopupQuestion.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Packaging\Client\UI\RemoveCommand.cs" />
     <Compile Include="Packaging\Common\CanonicalName.cs" />
     <Compile Include="Packaging\Client\PackageManager.cs" />
     <Compile Include="Packaging\Client\Feed.cs" />
-    <Compile Include="Packaging\Client\FeedState.cs" />
+    <Compile Include="Packaging\Common\FeedState.cs" />
     <Compile Include="Packaging\Client\UI\Installer.cs" />
     <Compile Include="Packaging\Client\LoggingSettings.cs" />
     <Compile Include="Packaging\Client\Package.cs" />
@@ -140,6 +142,10 @@
     <Page Include="Packaging\Client\UI\InstallerMainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Packaging\Client\UI\PopupQuestion.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Packaging\Client\UI\Styles.xaml">
       <Generator>MSBuild:Compile</Generator>

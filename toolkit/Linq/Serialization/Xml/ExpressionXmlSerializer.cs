@@ -857,7 +857,7 @@ namespace CoApp.Toolkit.Linq.Serialization.Xml {
             }
 
             return expectedType.ParseString(objectStringValue);
-            //return Convert.ChangeType(objectStringValue, expectedType, default(IFormatProvider));
+            // return Convert.ChangeType(objectStringValue, expectedType, default(IFormatProvider));
         }
 
         public XElement     GenerateXmlFromExpressionCore(Expression e) {

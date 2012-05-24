@@ -35,7 +35,7 @@ namespace CoApp.Packaging.Client {
         private bool _isDependency;
         private bool _isTrimable;
         private bool _isInstalled;
-        private string _packageItemText;
+        
         private PackageState _packageState;
 
         private IPackage _availableNewest;
@@ -63,19 +63,6 @@ namespace CoApp.Packaging.Client {
             IsPackageDetailsStale = true;
             RemoteLocations = Enumerable.Empty<Uri>();
             Feeds = Enumerable.Empty<Uri>();
-        }
-
-
-        [Persistable]
-        public string PackageItemText {
-            get {
-                DemandLoad();
-                return _packageItemText;
-            }
-            internal set {
-                IsPackageInfoStale = false;
-                _packageItemText = value;
-            }
         }
 
         [NotPersistable]
@@ -106,8 +93,9 @@ namespace CoApp.Packaging.Client {
         [Persistable]
         public PackageDetails PackageDetails {
             get {
+                DemandLoad();
                 if (IsPackageDetailsStale) {
-                    PackageManager.Instance.GetPackageDetails(this);
+                    PackageManager.Instance.GetPackageDetails(this).Wait();
                 }
                 return _packageDetails;
             }

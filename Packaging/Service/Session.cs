@@ -279,7 +279,7 @@ namespace CoApp.Packaging.Service {
             _isAsychronous = serverPipe == responsePipe;
             Connected = true;
 
-            _outgoingDispatcher = new OutgoingCallDispatcher(WriteAsync);
+            _outgoingDispatcher = new OutgoingCallDispatcher(typeof(IPackageManagerResponse), WriteAsync);
             _dispatcher = _outgoingDispatcher.ActLike<IPackageManagerResponse>();
 
             // this session task

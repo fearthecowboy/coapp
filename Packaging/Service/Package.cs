@@ -244,7 +244,9 @@ namespace CoApp.Packaging.Service {
         internal PackageRequestData PackageRequestData {
             get {
                 var cache = Event<GetRequestPackageDataCache>.RaiseFirst();
-                return cache[CanonicalName] ?? (cache[CanonicalName] = new PackageRequestData(this));
+                lock (cache) {
+                    return cache[CanonicalName] ?? (cache[CanonicalName] = new PackageRequestData(this));
+                }
             }
         }
 
@@ -316,7 +318,6 @@ namespace CoApp.Packaging.Service {
                 PackageHandler.Remove(this);
                 IsInstalled = false;
 
-                Logger.Message("Deleting Package data Subkey from registry");
                 PackageManagerSettings.PerPackageSettings.DeleteSubkey(CanonicalName);
             } catch (Exception e) {
                 Logger.Error(e);
@@ -775,17 +776,18 @@ namespace CoApp.Packaging.Service {
 
             foreach (var rule in ResolvedRules) {
                 // there are three possibilities
-                // 1. my rule was superceding another: run that rule.
+
+                // 1. my rule was already superceded by another rule: do nothing.
+                if (rulesThatSuperceedMine.Any(each => each.Destination.Equals(rule.Destination, StringComparison.CurrentCultureIgnoreCase))) {
+                    continue;
+                }
+
+                // 2. my rule was superceding another: run that rule.
                 var runRule = rulesThatISuperceed.FirstOrDefault(each => each.rule.Destination.Equals(rule.Destination, StringComparison.CurrentCultureIgnoreCase));
                 if (runRule != null) {
                     runRule.package.ApplyRule(runRule.rule);
                     continue;
                 } 
-
-                // 2. my rule was already superceded by another rule: do nothing.
-                if( rulesThatSuperceedMine.Any( each => each.Destination.Equals(rule.Destination, StringComparison.CurrentCultureIgnoreCase) ) ) {
-                    continue;
-                }
 
                 // 3. my rule should be the current rule, let's undo it.
                 switch (rule.Action) {

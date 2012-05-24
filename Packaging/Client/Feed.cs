@@ -12,6 +12,7 @@
 
 namespace CoApp.Packaging.Client {
     using System;
+    using Common;
 
     public class Feed {
         public string Location { get; internal set; }

@@ -62,6 +62,7 @@ namespace CoApp.Toolkit.Linq {
             if (null == second) {
                 return first;
             }
+            
             return p => second.Compile()(first.Compile()(p));
         }
     }

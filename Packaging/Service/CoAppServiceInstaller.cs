@@ -38,7 +38,7 @@ namespace CoApp.Packaging.Service {
             _serviceInstaller.ServiceName = EngineServiceManager.CoAppServiceName;
             _serviceInstaller.DisplayName = EngineServiceManager.CoAppDisplayName;
 
-            _serviceInstaller.StartType = ServiceStartMode.Automatic;
+            _serviceInstaller.StartType = ServiceStartMode.Manual;
 
             Installers.AddRange(new Installer[] {_serviceProcessInstaller, _serviceInstaller});
 

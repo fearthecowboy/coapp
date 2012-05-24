@@ -127,11 +127,15 @@ namespace CoApp.Packaging.Service.Feeds {
         /// </remarks>
         internal static Task<PackageFeed> GetPackageFeedFromLocation(string location) {
             if (InstalledPackageFeed.CanonicalLocation.Equals(location, StringComparison.CurrentCultureIgnoreCase)) {
-                return Task<PackageFeed>.Factory.StartNew(() => InstalledPackageFeed.Instance).AutoManage();
+                return ((PackageFeed)InstalledPackageFeed.Instance).AsResultTask();
             }
 
             if (SessionPackageFeed.CanonicalLocation.Equals(location, StringComparison.CurrentCultureIgnoreCase)) {
-                return Task<PackageFeed>.Factory.StartNew(() => SessionPackageFeed.Instance).AutoManage();
+                return ((PackageFeed)SessionPackageFeed.Instance).AsResultTask();
+            }
+
+            if( PackageManagerSettings.PerFeedSettings[location,"state"].GetEnumValue<FeedState>() == FeedState.Ignored) {
+                return ((PackageFeed)null).AsResultTask();
             }
 
             return Recognizer.Recognize(location).ContinueWith(antecedent => {
@@ -201,6 +205,10 @@ namespace CoApp.Packaging.Service.Feeds {
                 return result;
             }, TaskContinuationOptions.AttachedToParent);
         }
+
+        internal FeedState FeedState { get {
+            return PackageManagerSettings.PerPackageSettings[Location, "state"].GetEnumValue<FeedState>(); 
+        }} 
 
         internal bool IsLocationMatch(IEnumerable<string> locations) {
             return locations.Any(IsLocationMatch);

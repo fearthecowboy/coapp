@@ -29,7 +29,7 @@ namespace CoApp.Packaging.Common {
         Task ListFeeds();
         Task RemoveFeed(string location, bool? session);
         Task AddFeed(string location, bool? session);
-        Task SetFeedFlags(string location, string activePassiveIgnored);
+        Task SetFeedFlags(string location, FeedState feedState);
         Task SuppressFeed(string location);
         Task SetFeedStale(string feedLocation);
 
@@ -41,6 +41,7 @@ namespace CoApp.Packaging.Common {
         Task SetPackageWanted(CanonicalName canonicalName, bool wanted);
 
         Task RecognizeFile(string requestReference, string localLocation, string remoteLocation);
+        Task RecognizeFiles(IEnumerable<string> localLocations);
         Task UnableToAcquire(string requestReference);
         Task DownloadProgress(string requestReference, int? downloadProgress);
 
@@ -63,5 +64,7 @@ namespace CoApp.Packaging.Common {
 
         Task GetTelemetry();
         Task SetTelemetry(bool optin);
+
+        Task GetAtomFeed(IEnumerable<CanonicalName> canonicalNames);
     }
 }

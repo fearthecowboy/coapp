@@ -23,17 +23,7 @@ namespace CoApp.Toolkit.Pipes {
 
     internal class DispatchableMethod {
         internal MethodInfo MethodInfo;
-        internal IEnumerable<CachedParameter> Parameters;
-    }
-
-    internal class CachedParameter {
-        internal CachedParameter(ParameterInfo parameterInfo) {
-            Name = parameterInfo.Name;
-            PersistableInfo = parameterInfo.ParameterType.GetPersistableInfo();
-        }
-
-        internal string Name { get; set; }
-        internal PersistableInfo PersistableInfo { get; set; }
+        internal IDictionary<string,PersistableInfo> Parameters;
     }
 
     public class IncomingCallDispatcher<T> {
@@ -44,7 +34,7 @@ namespace CoApp.Toolkit.Pipes {
             _targetObject = target;
             _methodTargets = target.GetType().GetMethods().ToXDictionary(method => method.Name, method => new DispatchableMethod {
                 MethodInfo = method,
-                Parameters = method.GetParameters().Select(each => new CachedParameter(each))
+                Parameters = method.GetParameters().ToXDictionary(each => each.Name, each => each.ParameterType.GetPersistableInfo())
             });
         }
 
@@ -56,8 +46,7 @@ namespace CoApp.Toolkit.Pipes {
         public Task Dispatch(UrlEncodedMessage message) {
             return _methodTargets[message.Command].With(method => Task.Factory.StartNew(() => {
                 try {
-                    // method.MethodInfo.Invoke(_targetObject, method.Parameters.Select(each => each.FromString(message, each.Name)).ToArray());
-                    method.MethodInfo.Invoke(_targetObject, method.Parameters.Select(each => message.GetValue(each.Name, each.PersistableInfo.Type)).ToArray());
+                    method.MethodInfo.Invoke(_targetObject, method.Parameters.Keys.Select(each => message.GetValue(each, method.Parameters[each].Type)).ToArray());
                 } catch( Exception e ) {
                     Logger.Error(e);
                 }
@@ -74,7 +63,7 @@ namespace CoApp.Toolkit.Pipes {
         public bool DispatchSynchronous(UrlEncodedMessage message) {
             return _methodTargets[message.Command].With(method => {
                 try {
-                    method.MethodInfo.Invoke(_targetObject, method.Parameters.Select(each => message.GetValue(each.Name, each.PersistableInfo.Type)).ToArray());
+                    method.MethodInfo.Invoke(_targetObject, method.Parameters.Keys.Select(each => message.GetValue(each, method.Parameters[each].Type)).ToArray());
                 }
                 catch (TargetInvocationException exception) {
                     if (exception.InnerException is RestartingException) {
@@ -93,16 +82,26 @@ namespace CoApp.Toolkit.Pipes {
     public delegate void WriteAsyncMethod(UrlEncodedMessage message);
 
     public class OutgoingCallDispatcher : DynamicObject {
+        private readonly XDictionary<string, DispatchableMethod> _methodTargets;
+
         private readonly WriteAsyncMethod _writeAsync;
 
-        public OutgoingCallDispatcher(WriteAsyncMethod writeAsync) {
+        public OutgoingCallDispatcher(Type targetInterface, WriteAsyncMethod writeAsync) {
             _writeAsync = writeAsync;
+
+            _methodTargets = targetInterface.GetMethods().ToXDictionary(method => method.Name, method => new DispatchableMethod {
+                MethodInfo = method,
+                Parameters = method.GetParameters().ToXDictionary(each => each.Name, each => each.ParameterType.GetPersistableInfo())
+            });
         }
 
         public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result) {
             var msg = new UrlEncodedMessage(binder.Name);
+            var method = _methodTargets[binder.Name];
             for (int i = 0; i < binder.CallInfo.ArgumentCount; i++) {
                 if (args[i] != null) {
+                    // var targetType = method.Parameters[binder.CallInfo.ArgumentNames[i]].Type;
+                    // var sourceType = args[i].GetType();
                     msg.Add(binder.CallInfo.ArgumentNames[i], args[i], args[i].GetType());
                 }
             }
