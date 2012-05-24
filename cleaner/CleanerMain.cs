@@ -22,6 +22,7 @@ namespace CoApp.Cleaner {
     using System.Windows.Forms;
     using Microsoft.Win32;
     using Toolkit.Extensions;
+    using Toolkit.Win32;
 
     class CleanerMain {
 
@@ -238,6 +239,9 @@ CoApp.Cleaner [options]
                 OverallProgress = 5;
                 OnPropertyChanged();
 
+
+                var tsk = Task.Factory.StartNew(FilesystemExtensions.RemoveTemporaryFiles);
+
                 // try to gracefully kill coapp.service
                 try {
                     var psi = new ProcessStartInfo {
@@ -358,11 +362,18 @@ CoApp.Cleaner [options]
                     OverallProgress = 75;
                     OnPropertyChanged();
 
-                    // try to get rid of c:\apps 
-                    FilesystemExtensions.TryHardToDelete(String.Format("{0}\\apps", Environment.GetEnvironmentVariable("SystemDrive")));
 
-                    // no more packages installed-- remove the c:\apps directory
+                    // try to get rid of c:\apps 
+                var apps = String.Format("{0}\\apps", Environment.GetEnvironmentVariable("SystemDrive"));
+                    if (Symlink.IsSymlink(apps) ) {
+                        Symlink.DeleteSymlink(apps);
+                    }
+                    else if (Directory.Exists(apps)) {
+                        FilesystemExtensions.TryHardToDelete(String.Format("{0}\\apps", Environment.GetEnvironmentVariable("SystemDrive")));
+                    }
+                // no more packages installed-- remove the c:\apps directory
                     var rootFolder = CoAppRootFolder.Value;
+
                     FilesystemExtensions.TryHardToDelete(Path.Combine(rootFolder, ".cache"));
                     FilesystemExtensions.TryHardToDelete(Path.Combine(rootFolder, "ReferenceAssemblies"));
                     FilesystemExtensions.TryHardToDelete(Path.Combine(rootFolder, "x86"));
@@ -373,10 +384,19 @@ CoApp.Cleaner [options]
                     FilesystemExtensions.TryHardToDelete(Path.Combine(rootFolder, "include"));
                     FilesystemExtensions.TryHardToDelete(Path.Combine(rootFolder, "etc"));
 
-                    FilesystemExtensions.RemoveTemporaryFiles();
+                    StatusText = "Status: Removing Dead Links.";
+                    OverallProgress = 80;
+                    OnPropertyChanged();
 
                     FilesystemExtensions.RemoveDeadLnks(rootFolder);
+
+                    StatusText = "Status: Removing Empty Folders.";
+                    OverallProgress = 81;
+                    OnPropertyChanged();
+
+
                     FilesystemExtensions.RemoveEssentiallyEmptyFolders(rootFolder);
+
                 // }
 
                 // clean out the CoApp registry keys

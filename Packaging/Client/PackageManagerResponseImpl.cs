@@ -15,10 +15,13 @@ namespace CoApp.Packaging.Client {
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
+    using System.ServiceModel.Syndication;
     using System.Threading.Tasks;
+    using System.Xml;
     using Common;
     using Common.Exceptions;
     using Common.Model;
+    using Common.Model.Atom;
     using Toolkit.Collections;
     using Toolkit.Exceptions;
     using Toolkit.Extensions;
@@ -36,6 +39,7 @@ namespace CoApp.Packaging.Client {
         private readonly Lazy<List<GeneralPackageInformation>> _gpi = new Lazy<List<GeneralPackageInformation>>(() => new List<GeneralPackageInformation>());
         private readonly Lazy<List<Policy>> _policies = new Lazy<List<Policy>>(() => new List<Policy>());
         private readonly Lazy<List<ScheduledTask>> _scheduledTasks = new Lazy<List<ScheduledTask>>(() => new List<ScheduledTask>());
+        private AtomFeed _feed;
 
         private readonly IncomingCallDispatcher<IPackageManagerResponse> _dispatcher;
 
@@ -72,6 +76,12 @@ namespace CoApp.Packaging.Client {
         internal IEnumerable<ScheduledTask> ScheduledTasks {
             get {
                 return _scheduledTasks.IsValueCreated ? _scheduledTasks.Value.Distinct() : Enumerable.Empty<ScheduledTask>();
+            }
+        }
+
+        internal AtomFeed Feed {
+            get {
+                return _feed ?? new AtomFeed();
             }
         }
 
@@ -132,13 +142,13 @@ namespace CoApp.Packaging.Client {
             result.IsPackageDetailsStale = false;
         }
 
-        public void FeedDetails(string location, DateTime lastScanned, bool session, bool suppressed, bool validated, string state) {
+        public void FeedDetails(string location, DateTime lastScanned, bool session, bool suppressed, bool validated, FeedState state) {
             _feeds.Value.Add(new Feed {
                 Location = location,
                 LastScanned = lastScanned,
                 IsSession = session,
                 IsSuppressed = suppressed,
-                FeedState = state.ParseEnum(FeedState.Active)
+                FeedState = state
             });
         }
 
@@ -387,6 +397,10 @@ namespace CoApp.Packaging.Client {
 
         public void LoggingSettings(bool messages, bool warnings, bool errors) {
             LoggingSettingsResult = new LoggingSettings {Messages = messages, Warnings = warnings, Errors = errors};
+        }
+
+        public void AtomFeedText(string atomText) {
+            _feed = AtomFeed.Load(atomText);
         }
     }
 }

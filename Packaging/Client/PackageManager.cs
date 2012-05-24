@@ -20,6 +20,7 @@ namespace CoApp.Packaging.Client {
     using System.Xml.Linq;
     using Common;
     using Common.Exceptions;
+    using Common.Model.Atom;
     using Toolkit.Extensions;
     using Toolkit.Linq;
     using Toolkit.Logging;
@@ -508,7 +509,7 @@ namespace CoApp.Packaging.Client {
         }
 
         public Task SetFeed(string feedLocation, FeedState state) {
-            return Remote.SetFeedFlags(feedLocation, state.ToString());
+            return Remote.SetFeedFlags(feedLocation, state);
         }
 
         public Task<IEnumerable<Feed>> Feeds {
@@ -659,8 +660,24 @@ namespace CoApp.Packaging.Client {
 
         // GS01: TrustedPublishers Coming Soon.
 
-        public Task RecognizeFile(string filename) {
-            return Remote.RecognizeFile("", filename, "");
+        public Task<IEnumerable<Package>> RecognizeFile(string filename) {
+            return (Remote.RecognizeFile(null, filename, null) as Task<PackageManagerResponseImpl>).Continue( response => response.Packages);
+        }
+
+        public Task<IEnumerable<Package>> RecognizeFiles(IEnumerable<string> filenames) {
+            return (Remote.RecognizeFiles(filenames) as Task<PackageManagerResponseImpl>).Continue( response => response.Packages );
+        }
+
+        public Task<AtomItem> GetAtomItem(CanonicalName canonicalName) {
+            return GetAtomFeed(canonicalName.SingleItemAsEnumerable()).Continue( feed => feed.Items.FirstOrDefault() as AtomItem);
+        }
+
+        public Task<AtomFeed> GetAtomFeed(CanonicalName canonicalName) {
+            return GetAtomFeed(canonicalName.SingleItemAsEnumerable());
+        }
+
+        public Task<AtomFeed> GetAtomFeed(IEnumerable<CanonicalName> canonicalNames) {
+            return (Remote.GetAtomFeed(canonicalNames) as Task<PackageManagerResponseImpl>).Continue(response => response.Feed);   
         }
     }
 }

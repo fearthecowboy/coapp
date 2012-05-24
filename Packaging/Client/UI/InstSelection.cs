@@ -11,15 +11,16 @@
 //-----------------------------------------------------------------------
 
 namespace CoApp.Packaging.Client.UI {
+    using Common;
     using Toolkit.Extensions;
 
     public class InstSelection {
-        public InstSelection(InstallChoice key, string value, params object[] args) {
-            Key = key;
-            Value = value.format(args);
+        public InstSelection(IPackage package, string value) {
+            Package = (Package)package;
+            Value = value.format(package.Version);
         }
 
-        public InstallChoice Key { get; set; }
+        public Package Package{ get; set; }
         public string Value { get; set; }
     }
 }

@@ -25,7 +25,7 @@ namespace CoApp.Packaging.Common {
 
         void PackageDetails(CanonicalName canonicalName, PackageDetails details);
 
-        void FeedDetails(string location, DateTime lastScanned, bool session, bool suppressed, bool validated, string state);
+        void FeedDetails(string location, DateTime lastScanned, bool session, bool suppressed, bool validated, FeedState state);
         void FeedAdded(string location);
         void FeedRemoved(string location);
         void FeedSuppressed(string location);
@@ -67,5 +67,7 @@ namespace CoApp.Packaging.Common {
 
         void TaskComplete();
         void GeneralPackageSetting(int priority, CanonicalName canonicalName, string key, string value);
+
+        void AtomFeedText(string atomText);
     }
 }

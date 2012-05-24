@@ -90,6 +90,7 @@ CoApp.Service [options]
 
         private int main(IEnumerable<string> args) {
             try {
+                Environment.CurrentDirectory = Environment.GetEnvironmentVariable("tmp");
                 var options = args.Switches();
                 var parameters = args.Parameters();
 

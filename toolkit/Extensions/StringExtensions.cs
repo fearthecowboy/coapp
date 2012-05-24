@@ -260,10 +260,11 @@ namespace CoApp.Toolkit.Extensions {
 
             if (!isMatchingLocation) {
                 key = (currentLocation ?? "") + wildcardMask;
-                if (!NewWildcards.ContainsKey(key)) {
-                    NewWildcards.Add(key, WildcardToRegex(key));
+                lock (NewWildcards) {
+                    if (!NewWildcards.ContainsKey(key)) {
+                        NewWildcards.Add(key, WildcardToRegex(key));
+                    }
                 }
-
                 return NewWildcards[key].IsMatch(text);
             }
 

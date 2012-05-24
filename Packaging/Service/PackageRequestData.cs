@@ -54,8 +54,8 @@ namespace CoApp.Packaging.Service {
             NewerPackages = new Lazy<IEnumerable<IPackage>>(() => OtherVersions.Value.TakeWhile(each => each.IsNewerThan(_package)).ToArray());
             AvailableVersions = new Lazy<IEnumerable<IPackage>>(() => OtherVersions.Value.Where(each => each.IsInstalled == false).ToArray());
 
-            UpdatePackages = new Lazy<IEnumerable<IPackage>>(() => State.Value >= PackageState.Updatable ? NewerPackages.Value.Where(each => each.IsAnUpdateFor(_package)).ToArray() : Enumerable.Empty<IPackage>());
-            UpgradePackages = new Lazy<IEnumerable<IPackage>>(() => State.Value >= PackageState.Upgradable ? NewerPackages.Value.Where(each => each.IsAnUpgradeFor(_package)).ToArray() : Enumerable.Empty<IPackage>());
+            UpdatePackages = new Lazy<IEnumerable<IPackage>>(() => State.Value >= PackageState.Updatable ? NewerPackages.Value.Where(each => !each.IsInstalled && each.IsAnUpdateFor(_package)).ToArray() : Enumerable.Empty<IPackage>());
+            UpgradePackages = new Lazy<IEnumerable<IPackage>>(() => State.Value >= PackageState.Upgradable ? NewerPackages.Value.Where(each => !each.IsInstalled && each.IsAnUpgradeFor(_package)).ToArray() : Enumerable.Empty<IPackage>());
 
             InstalledNewest = new Lazy<IPackage>(() => InstalledPackages.Value.FirstOrDefault());
             InstalledNewestUpdate = new Lazy<IPackage>(() => InstalledPackages.Value.FirstOrDefault(each => each.IsAnUpdateFor(_package)));

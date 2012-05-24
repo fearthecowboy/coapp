@@ -20,6 +20,7 @@ namespace CoApp.Packaging.Service {
     using System.Threading.Tasks;
     using System.Xml.Linq;
     using Common;
+    using Common.Model.Atom;
     using Feeds;
     using PackageFormatHandlers;
     using Toolkit.Crypto;
@@ -67,20 +68,14 @@ namespace CoApp.Packaging.Service {
         private IEnumerable<string> SystemFeedLocations {
             get {
                 lock (typeof(PackageManagerImpl)) {
-                    if (!PackageManagerSettings.CoAppSettings["#feedLocations"].HasValue) {
-
-                        PackageManagerSettings.CoAppSettings["#feedLocations"].StringsValue = new[] {
-                            "http://coapp.org/current",
-                            "http://coapp.org/archive",
-                            "http://coapp.org/unstable"
-                        };
-
-                        PackageManagerSettings.PerPackageSettings["http://coapp.org/archive", "state"].StringValue = "passive";
-                        PackageManagerSettings.PerPackageSettings["http://coapp.org/unstable", "state"].StringValue = "ignored";
+                    if (!PackageManagerSettings.PerFeedSettings.Subkeys.Any()) {
+                        PackageManagerSettings.PerFeedSettings["http://coapp.org/current", "state"].SetEnumValue(FeedState.Active);
+                        PackageManagerSettings.PerFeedSettings["http://coapp.org/archive", "state"].SetEnumValue(FeedState.Passive);
+                        PackageManagerSettings.PerFeedSettings["http://coapp.org/unstable", "state"].SetEnumValue(FeedState.Ignored);
                     }
                 }
 
-                return PackageManagerSettings.CoAppSettings["#feedLocations"].StringsValue;
+                return PackageManagerSettings.PerFeedSettings.Subkeys;
             }
         }
 
@@ -106,8 +101,7 @@ namespace CoApp.Packaging.Service {
                 if( !feedLocation.IsWebUri()) {
                     feedLocation = feedLocation.CanonicalizePathWithWildcards();
                 }
-                var systemFeeds = SystemFeedLocations.Union(feedLocation.SingleItemAsEnumerable()).Distinct();
-                PackageManagerSettings.CoAppSettings["#feedLocations"].StringsValue = systemFeeds.ToArray();
+                PackageManagerSettings.PerFeedSettings[feedLocation, "state"].SetEnumValue(FeedState.Active);
             }
         }
 
@@ -130,9 +124,7 @@ namespace CoApp.Packaging.Service {
                 if (!feedLocation.IsWebUri()) {
                     feedLocation = feedLocation.CanonicalizePathWithWildcards();
                 }
-
-                var systemFeeds = from feed in SystemFeedLocations where !feed.Equals(feedLocation, StringComparison.CurrentCultureIgnoreCase) select feed;
-                PackageManagerSettings.CoAppSettings["#feedLocations"].StringsValue = systemFeeds.ToArray();
+                PackageManagerSettings.PerFeedSettings.DeleteSubkey(feedLocation);
 
                 // remove it from the cached feeds
                 Cache<PackageFeed>.Value.Clear(feedLocation);
@@ -544,6 +536,7 @@ namespace CoApp.Packaging.Service {
                 response.OperationCanceled("list-feeds");
                 return FinishedSynchronously;
             }
+            EnsureSystemFeedsAreLoaded();
 
             var canFilterSession = Event<QueryPermission>.RaiseFirst(PermissionPolicy.EditSessionFeeds);
             var canFilterSystem = Event<QueryPermission>.RaiseFirst(PermissionPolicy.EditSystemFeeds);
@@ -560,6 +553,7 @@ namespace CoApp.Packaging.Service {
                     session = false,
                     suppressed = canFilterSystem && BlockedScanLocations.Contains(feedLocation),
                     validated,
+                    feedstate = PackageManagerSettings.PerPackageSettings[feedLocation, "state"].GetEnumValue<FeedState>()
                 };
 
             var y = from feedLocation in SessionFeedLocations
@@ -571,17 +565,14 @@ namespace CoApp.Packaging.Service {
                     session = true,
                     suppressed = canFilterSession && BlockedScanLocations.Contains(feedLocation),
                     validated,
+                    feedstate = FeedState.Active
                 };
 
             var results = x.Union(y).ToArray();
            
             if (results.Length > 0 ) {
                 foreach (var f in results) {
-                    var state = PackageManagerSettings.PerPackageSettings[f.feed, "state"].StringValue;
-                    if (string.IsNullOrEmpty(state)) {
-                        state = "Active";
-                    }
-                    response.FeedDetails(f.feed, f.LastScanned, f.session, f.suppressed, f.validated, state);
+                    response.FeedDetails(f.feed, f.LastScanned, f.session, f.suppressed, f.validated, f.feedstate);
                 }
             } else {
                 response.NoFeedsFound();
@@ -820,6 +811,11 @@ namespace CoApp.Packaging.Service {
             return FinishedSynchronously;
         }
 
+        public Task RecognizeFiles(IEnumerable<string> localLocations) {
+            Parallel.ForEach(localLocations, each => RecognizeFile(null, each, null));
+            return FinishedSynchronously;
+        }
+
         public Task RecognizeFile(string requestReference, string localLocation, string remoteLocation) {
             var response = Event<GetResponseInterface>.RaiseFirst();
             
@@ -900,7 +896,7 @@ namespace CoApp.Packaging.Service {
             return FinishedSynchronously;
         }
 
-        public Task SetFeedFlags(string location, string activePassiveIgnored) {
+        public Task SetFeedFlags(string location, FeedState feedState) {
             var response = Event<GetResponseInterface>.RaiseFirst();
             
             if (CancellationRequested) {
@@ -909,19 +905,7 @@ namespace CoApp.Packaging.Service {
             }
 
             if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.EditSystemFeeds)) {
-                activePassiveIgnored = activePassiveIgnored ?? string.Empty;
-
-                switch (activePassiveIgnored.ToLower()) {
-                    case "active":
-                        PackageManagerSettings.PerPackageSettings[location, "state"].StringValue = "active";
-                        break;
-                    case "passive":
-                        PackageManagerSettings.PerPackageSettings[location, "state"].StringValue = "passive";
-                        break;
-                    case "ignored":
-                        PackageManagerSettings.PerPackageSettings[location, "state"].StringValue = "ignored";
-                        break;
-                }
+                PackageManagerSettings.PerPackageSettings[location, "state"].SetEnumValue(feedState);
             }
             return FinishedSynchronously;
         }
@@ -965,14 +949,15 @@ namespace CoApp.Packaging.Service {
 
                     var canFilterSession = Event<QueryPermission>.RaiseFirst(PermissionPolicy.EditSessionFeeds);
                     var canFilterSystem = Event<QueryPermission>.RaiseFirst(PermissionPolicy.EditSystemFeeds);
+
                     var filters = BlockedScanLocations.ToArray();
                     if( filters.IsNullOrEmpty()) {
                         return new PackageFeed[] { SessionPackageFeed.Instance, InstalledPackageFeed.Instance}.Union(Cache<PackageFeed>.Value.Values).Union(SessionCache<PackageFeed>.Value.SessionValues).ToArray();
                     }
-                    return new PackageFeed[] {
-                        SessionPackageFeed.Instance, InstalledPackageFeed.Instance
-                    }.Union(from feed in Cache<PackageFeed>.Value.Values where !canFilterSystem || !feed.IsLocationMatch(filters) select feed)
-                     .Union(from feed in SessionCache<PackageFeed>.Value.SessionValues where !canFilterSession || !feed.IsLocationMatch(filters) select feed).ToArray();
+                    return new PackageFeed[] {SessionPackageFeed.Instance, InstalledPackageFeed.Instance}
+                        .Union(from feed in Cache<PackageFeed>.Value.Values where !canFilterSystem || !feed.IsLocationMatch(filters) select feed)
+                        .Union(from feed in SessionCache<PackageFeed>.Value.SessionValues where !canFilterSession || !feed.IsLocationMatch(filters) select feed)
+                        .ToArray();
                 } catch (Exception e) {
                     Logger.Error(e);
                     throw;
@@ -988,32 +973,45 @@ namespace CoApp.Packaging.Service {
         /// <param name="canonicalName"> </param>
         /// <param name="location"> </param>
         /// <returns> </returns>
-        internal IEnumerable<Package> SearchForPackages(CanonicalName canonicalName, string location = null) {
+        internal IEnumerable<Package> SearchForPackages(CanonicalName canonicalName, string location = null, bool lookDeep = false) {
             try {
-                var allfeeds = Feeds;
+                lock (this) {
+                    if (!string.IsNullOrEmpty(location) ) {
+                        // asking a specific feed. just use that one.
+                        var feed = Feeds.FirstOrDefault(each => each.IsLocationMatch(location));
+                        if( feed == null ) {
+                            return Enumerable.Empty<Package>();
+                        }
+                        return feed.FindPackages(canonicalName).Distinct().ToArray();
+                    }
 
-                // get the filtered list of feeds.
-                var feeds = string.IsNullOrEmpty(location) ? allfeeds : allfeeds.Where(each => each.IsLocationMatch(location)).ToArray();
+                    var feeds = Feeds.Where(each => (lookDeep & each.FeedState == FeedState.Passive) || each.FeedState == FeedState.Active).ToArray();
 
-                if (!string.IsNullOrEmpty(location ) || canonicalName.IsCanonical) {
-                    // asking a specific feed, or they are not asking for more than one version of a given package.
-                    // or asking for a specific version.
-                    return feeds.SelectMany(each => each.FindPackages(canonicalName)).Distinct().ToArray();
+                    if( canonicalName.IsCanonical || lookDeep == false) {
+                        // they are not asking for more than one version of a given package.
+                        // or we're just not interested in going deep.
+                        var result = feeds.SelectMany(each => each.FindPackages(canonicalName)).Distinct().ToArray();
+                        if (result.Length != 0 || lookDeep == false) { 
+                            return result;
+                        }
+                    }
+
+                    // we're either searching for more than a single package, or we didn't find what we were looking for,
+                    
+                    var feedLocations = feeds.Select(each => each.Location).ToArray();
+                    var packages = feeds.SelectMany(each => each.FindPackages(canonicalName)).Distinct().ToArray();
+
+                    var otherFeeds = packages.SelectMany(each => each.FeedLocations).Distinct().Where(each => !feedLocations.Contains(each.AbsoluteUri));
+                    // given a list of other feeds that we're not using, we can search each of those feeds for newer versions of the packages that we already have.
+                    var tf = TransientFeeds(otherFeeds, lookDeep);
+                    return packages.Union(packages.SelectMany(p => tf.SelectMany(each => each.FindPackages(p.CanonicalName.OtherVersionFilter)))).Distinct().ToArray();
                 }
-
-                var feedLocations = allfeeds.Select(each => each.Location);
-                var packages = feeds.SelectMany(each => each.FindPackages(canonicalName)).Distinct().ToArray();
-
-                var otherFeeds = packages.SelectMany(each => each.FeedLocations).Distinct().Where(each => !feedLocations.Contains(each.AbsoluteUri));
-                // given a list of other feeds that we're not using, we can search each of those feeds for newer versions of the packages that we already have.
-                var tf = TransientFeeds(otherFeeds);
-                return packages.Union(packages.SelectMany(p => tf.SelectMany(each => each.FindPackages(p.CanonicalName.OtherVersionFilter)))).Distinct().ToArray();
             } catch (InvalidOperationException) {
                 // this can happen if the collection changes during the operation (and can actually happen in the middle of .ToArray() 
                 // since, locking the hell out of the collections isn't worth the effort, we'll just try again on this type of exception
                 // and pray the collection won't keep changing :)
                 Logger.Message("PERF HIT [REPORT THIS IF THIS IS CONSISTENT!]: Rerunning SearchForPackages!");
-                return SearchForPackages(canonicalName, location);
+                return SearchForPackages(canonicalName, location, lookDeep);
             }
         }
 
@@ -1022,7 +1020,7 @@ namespace CoApp.Packaging.Service {
         /// </summary>
         /// <param name="locations"> List of feed locations </param>
         /// <returns> </returns>
-        internal IEnumerable<PackageFeed> TransientFeeds(IEnumerable<Uri> locations) {
+        internal IEnumerable<PackageFeed> TransientFeeds(IEnumerable<Uri> locations, bool lookDeep) {
             var locs = locations.ToArray();
             var tf = SessionCache<List<PackageFeed>>.Value["TransientFeeds"] ?? (SessionCache<List<PackageFeed>>.Value["TransientFeeds"] = new List<PackageFeed>());
             var existingLocations = tf.Select(each => each.Location);
@@ -1030,7 +1028,7 @@ namespace CoApp.Packaging.Service {
             var tasks = newLocations.Select(each => PackageFeed.GetPackageFeedFromLocation(each.AbsoluteUri )).ToArray();
             var newFeeds = tasks.Where(each => each.Result != null).Select(each => each.Result);
             tf.AddRange(newFeeds);
-            return tf.Where(each => locs.Contains(each.Location.ToUri()));
+            return tf.Where(each => locs.Contains(each.Location.ToUri()) && (each.FeedState == FeedState.Active || (each.FeedState == FeedState.Passive && lookDeep)));
         }
 
         internal IEnumerable<Package> InstalledPackages {
@@ -1377,6 +1375,15 @@ namespace CoApp.Packaging.Service {
         }
 
         public Task SetTelemetry(bool optin) {
+            return FinishedSynchronously;
+        }
+
+        public Task GetAtomFeed(IEnumerable<CanonicalName> canonicalNames) {
+            var response = Event<GetResponseInterface>.RaiseFirst();
+            var feed = new AtomFeed();
+            var pkgs = canonicalNames.Select(each => SearchForPackages(each).FirstOrDefault()).Where(each => null != each);
+            feed.Add(pkgs);
+            response.AtomFeedText(feed.ToString());
             return FinishedSynchronously;
         }
     }

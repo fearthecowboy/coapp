@@ -69,6 +69,7 @@
     <Compile Include="Packaging\Common\Exceptions\UnableToStartServiceException.cs" />
     <Compile Include="Packaging\Common\Exceptions\UnableToStopServiceException.cs" />
     <Compile Include="Packaging\Common\Exceptions\UnknownPackageException.cs" />
+    <Compile Include="Packaging\Common\FeedState.cs" />
     <Compile Include="Packaging\Common\FlavorString.cs" />
     <Compile Include="Packaging\Common\IPackage.cs" />
     <Compile Include="Packaging\Common\IPackageManager.cs" />

@@ -14,12 +14,10 @@ namespace CoApp.Toolkit.Extensions {
     using System;
     using System.Collections;
     using System.Collections.Generic;
-    using System.ComponentModel;
     using System.Linq;
-    
     using System.Reflection;
     using Collections;
-    
+    using Exceptions;
 
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
     public class NotPersistableAttribute : Attribute {
@@ -49,6 +47,8 @@ namespace CoApp.Toolkit.Extensions {
     }
 
     public class PersistableInfo {
+        private static Type IteratorType = Type.GetType("System.Linq.Enumerable.Iterator<>");
+
         internal PersistableInfo(Type type) {
             Type = type;
 
@@ -84,7 +84,33 @@ namespace CoApp.Toolkit.Extensions {
 
             if (typeof(IEnumerable).IsAssignableFrom(type)) {
                 PersistableCategory = PersistableCategory.Enumerable;
-                ElementType = type.IsGenericType ? type.GetGenericArguments()[0] : typeof(object);
+                if( type.IsGenericType ) {
+                    ElementType = type.GetGenericArguments().Last();
+                    /* 
+                     * scratch code to identify if we're looking at an iterator or somethig.  Don't think we need to get weird tho'
+                     * 
+                     * var et = type.GetGenericArguments().Last();
+                    var It = type.IsAssignableFrom((Type)Activator.CreateInstance(IteratorType.MakeGenericType(type.GetGenericArguments().Last()), true));
+
+                    var t = type;
+                    Type[] genericArguments;
+
+                    do {
+                        if (t == typeof(object) || t == null) {
+                            throw new CoAppException("Critical Failure in PersistableInfo/Enumerator [1].");
+                        }
+                        genericArguments = t.GetGenericArguments();
+                        if (genericArguments.Length == 0) {
+                            throw new CoAppException("Critical Failure in PersistableInfo/Enumerator [2].");
+                        }
+                        t = t.BaseType;
+                    } while (genericArguments.Length > 1);
+                    ElementType = genericArguments[0];
+                     */
+                }
+                else {
+                    ElementType = typeof (object);
+                }
                 return;
             }
 
@@ -120,10 +146,12 @@ namespace CoApp.Toolkit.Extensions {
             internal static readonly IDictionary<TKey, TValue> Cache = new XDictionary<TKey, TValue>();
         }
         public static TValue Get<TKey, TValue>(TKey key, Func<TValue> valueFunc) {
-            if (!C<TKey, TValue>.Cache.ContainsKey(key)) {
-                C<TKey, TValue>.Cache[key] = valueFunc();
+            lock (C<TKey, TValue>.Cache) {
+                if (!C<TKey, TValue>.Cache.ContainsKey(key)) {
+                    C<TKey, TValue>.Cache[key] = valueFunc();
+                }
+                return C<TKey, TValue>.Cache[key];
             }
-            return C<TKey, TValue>.Cache[key];
         }
     }
 
@@ -290,7 +318,9 @@ namespace CoApp.Toolkit.Extensions {
         }
 
         public static object CastToIEnumerableOfType(this IEnumerable<object> enumerable, Type collectionType  ) {
-            return CastMethods.GetOrAdd(collectionType, () => CastMethod.MakeGenericMethod(collectionType)).Invoke(null, new object[] { enumerable });
+            lock (collectionType) {
+                return CastMethods.GetOrAdd(collectionType, () => CastMethod.MakeGenericMethod(collectionType)).Invoke(null, new object[] {enumerable});
+            }
         }
 
         public static object CreateInstance(this Type type) {
