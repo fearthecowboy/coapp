@@ -129,7 +129,7 @@ namespace CoApp.Toolkit.Win32 {
         /// </summary>
         /// <param name="piconInfo"> Pointer to an ICONINFO structure the function uses to create the icon or cursor. </param>
         /// <returns> If the function succeeds, the return value is a handle to the icon or cursor that is created. If the function fails, the return value is NULL. </returns>
-        [DllImport("user32,dll", SetLastError = true)]
+        [DllImport("user32.dll", SetLastError = true)]
         public static extern IntPtr CreateIconIndirect(ref Iconinfo piconInfo);
 #endif
     }
