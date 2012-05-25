@@ -16,6 +16,7 @@ namespace CoApp.Toolkit.Linq {
     using System.Collections.Generic;
     using System.Linq;
     using System.Linq.Expressions;
+    using System.Reflection;
     using Extensions;
 
     public class FilterExpression<T, TProperty> : Filter<T> {
@@ -81,6 +82,7 @@ namespace CoApp.Toolkit.Linq {
             Property = property;
             Operation = operation;
         }
+        private static MethodInfo any = typeof(Enumerable).GetMethods().FirstOrDefault(each => each.Name == "Any" && each.GetParameters().Count() == 1);
 
         private PropertyExpression<T, TProperty> Property { get; set; }
         private QualifierOperation Operation { get; set; }
@@ -91,11 +93,10 @@ namespace CoApp.Toolkit.Linq {
                 var leftInvoke = System.Linq.Expressions.Expression.Invoke(Property, p);
                 Expression e = null;
 
-
                 switch (Operation) {
                     case QualifierOperation.Any:
                         if (typeof(TProperty).IsIEnumerable()) {
-                            e = System.Linq.Expressions.Expression.Call(typeof(IEnumerable).GetMethod("Any").MakeGenericMethod(typeof(TProperty).GetGenericArguments()[0]),leftInvoke);
+                            e = System.Linq.Expressions.Expression.Call(any.MakeGenericMethod(typeof(TProperty).GetGenericArguments()[0]),leftInvoke);
                         }
                         break;
                     case QualifierOperation.IsNullOrEmpty:

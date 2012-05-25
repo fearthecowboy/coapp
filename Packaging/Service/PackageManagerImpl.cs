@@ -69,13 +69,13 @@ namespace CoApp.Packaging.Service {
             get {
                 lock (typeof(PackageManagerImpl)) {
                     if (!PackageManagerSettings.PerFeedSettings.Subkeys.Any()) {
-                        PackageManagerSettings.PerFeedSettings["http://coapp.org/current", "state"].SetEnumValue(FeedState.Active);
-                        PackageManagerSettings.PerFeedSettings["http://coapp.org/archive", "state"].SetEnumValue(FeedState.Passive);
-                        PackageManagerSettings.PerFeedSettings["http://coapp.org/unstable", "state"].SetEnumValue(FeedState.Ignored);
+                        PackageManagerSettings.PerFeedSettings["http://coapp.org/current".UrlEncodeJustBackslashes(), "state"].SetEnumValue(FeedState.Active);
+                        PackageManagerSettings.PerFeedSettings["http://coapp.org/archive".UrlEncodeJustBackslashes(), "state"].SetEnumValue(FeedState.Passive);
+                        PackageManagerSettings.PerFeedSettings["http://coapp.org/unstable".UrlEncodeJustBackslashes(), "state"].SetEnumValue(FeedState.Ignored);
                     }
                 }
 
-                return PackageManagerSettings.PerFeedSettings.Subkeys;
+                return PackageManagerSettings.PerFeedSettings.Subkeys.Select(each => each.UrlDecode());
             }
         }
 
@@ -101,7 +101,8 @@ namespace CoApp.Packaging.Service {
                 if( !feedLocation.IsWebUri()) {
                     feedLocation = feedLocation.CanonicalizePathWithWildcards();
                 }
-                PackageManagerSettings.PerFeedSettings[feedLocation, "state"].SetEnumValue(FeedState.Active);
+
+                PackageManagerSettings.PerFeedSettings[feedLocation.UrlEncodeJustBackslashes(), "state"].SetEnumValue(FeedState.Active);
             }
         }
 
@@ -124,7 +125,7 @@ namespace CoApp.Packaging.Service {
                 if (!feedLocation.IsWebUri()) {
                     feedLocation = feedLocation.CanonicalizePathWithWildcards();
                 }
-                PackageManagerSettings.PerFeedSettings.DeleteSubkey(feedLocation);
+                PackageManagerSettings.PerFeedSettings.DeleteSubkey(feedLocation.UrlEncodeJustBackslashes());
 
                 // remove it from the cached feeds
                 Cache<PackageFeed>.Value.Clear(feedLocation);
@@ -269,26 +270,34 @@ namespace CoApp.Packaging.Service {
                     }
 
                     var installedPackages = package.InstalledPackages.ToArray();
-                    var installedCompatibleVersions = package.InstalledPackages;
+                    
 
                     // is the user authorized to install this?
-                    var highestInstalledPackage = installedPackages.HighestPackages().FirstOrDefault();
-
-                    if (highestInstalledPackage != null && highestInstalledPackage.CanonicalName.Version < package.CanonicalName.Version) {
-                        if (!Event<CheckForPermission>.RaiseFirst(PermissionPolicy.UpdatePackage)) {
-                            return FinishedSynchronously;
+                    if (null != replacingPackage) {
+                        if (replacingPackage.DiffersOnlyByVersion(canonicalName)) {
+                            if (!Event<CheckForPermission>.RaiseFirst(PermissionPolicy.UpdatePackage)) {
+                                return FinishedSynchronously;
+                            }
                         }
                     } else {
-                        if (!Event<CheckForPermission>.RaiseFirst(PermissionPolicy.InstallPackage)) {
-                            return FinishedSynchronously;
+                        if( package.LatestInstalledThatUpdatesToThis != null ) {
+                            if (!Event<CheckForPermission>.RaiseFirst(PermissionPolicy.UpdatePackage)) {
+                                return FinishedSynchronously;
+                            }
+                        } else {
+                            if (!Event<CheckForPermission>.RaiseFirst(PermissionPolicy.InstallPackage)) {
+                                return FinishedSynchronously;
+                            }
                         }
                     }
+                   
 
                     // if this is an explicit update or upgrade, 
                     //      - check to see if there is a compatible package already installed that is marked do-not-update
                     //        fail if so.
                     if (null != replacingPackage && unwantedPackages.Any( each => each.IsBlocked )) {
                         response.PackageBlocked(canonicalName);
+                        return FinishedSynchronously;
                     }
 
 
@@ -862,7 +871,7 @@ namespace CoApp.Packaging.Service {
                     return FinishedSynchronously;
                 }
             }
-
+            Logger.Message("Calling Recognizer with {0}", location);
             // otherwise, we'll call the recognizer 
             Recognizer.Recognize(location).ContinueWith(antecedent => {
                 if (antecedent.IsFaulted) {

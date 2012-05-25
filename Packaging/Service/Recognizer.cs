@@ -18,6 +18,7 @@ namespace CoApp.Packaging.Service {
     using Common.Model.Atom;
     using PackageFormatHandlers;
     using Toolkit.Extensions;
+    using Toolkit.Logging;
     using Toolkit.Tasks;
 
     internal class Recognizer {
@@ -40,7 +41,7 @@ namespace CoApp.Packaging.Service {
                     return cachedResult.AsResultTask();
                 }
             }
-
+            
             try {
                 var location = new Uri(item);
                 if (!location.IsFile) {
@@ -162,7 +163,7 @@ namespace CoApp.Packaging.Service {
                     // which means that it's a package feed.
                     return CacheAndReturnTask(item, new RecognitionInfo {
                         FullPath = localPath,
-                        Filter = "*",
+                        Filter = "*.msi", // TODO: evenutally, we have to expand this to detect other types.
                         IsFolder = true,
                         IsPackageFeed = true,
                     });

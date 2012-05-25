@@ -234,11 +234,18 @@ namespace CoApp.Packaging.Client {
         /// <param name="download"> </param>
         /// <returns> </returns>
         public Task<IEnumerable<Package>> IdentifyPackageAndDependenciesToInstall(IEnumerable<Package> packages, bool? autoUpgrade = null, bool? download = null) {
-            var pTasks = packages.Select(package => Install(package.CanonicalName, autoUpgrade, pretend: true, download: download)).ToArray();
-
-            return pTasks.Continue(pkgsToinstall => {
-                return pkgsToinstall.SelectMany(each => each).Distinct();
+            
+            var pTasks = packages.Select(package => Install(package.CanonicalName, autoUpgrade, pretend: true, download: download));
+            /*
+            return pTasks.ContinueAlways(antecedents => {
+                if (antecedents.Any(each => each.IsFaulted)) {
+                    throw new AggregateException(antecedents.Where(each => each.IsFaulted).Select(each => each.Exception));
+                }
+                return  antecedents.SelectMany(each => each.Result);
+                // pkgsToinstall => pkgsToinstall.SelectMany(each => antecedents.Result).Distinct();
             });
+             * */
+            return pTasks.Continue(pkgsToinstall => pkgsToinstall.SelectMany(each => each).Distinct());
         }
 
         public Task Elevate() {
@@ -357,7 +364,7 @@ namespace CoApp.Packaging.Client {
             return failedResult.Task;
         }
 
-        private Task<IEnumerable<Package>> Install(CanonicalName canonicalName, bool? autoUpgrade = null, bool? force = null, bool? download = null, bool? pretend = null, CanonicalName replacingPackage = null) {
+        public Task<IEnumerable<Package>> Install(CanonicalName canonicalName, bool? autoUpgrade = null, bool? force = null, bool? download = null, bool? pretend = null, CanonicalName replacingPackage = null) {
             if (!canonicalName.IsCanonical) {
                 return InvalidCanonicalNameResult<IEnumerable<Package>>(canonicalName);
             }
@@ -376,18 +383,6 @@ namespace CoApp.Packaging.Client {
                 }
                 return response.Packages;
             });
-        }
-
-        public Task InstallPackage(CanonicalName canonicalName, bool? autoUpgrade = null) {
-            return Install(canonicalName, autoUpgrade, false, false, false);
-        }
-
-        public Task UpgradeExistingPackage(CanonicalName canonicalName, bool? autoUpgrade = null) {
-            return Install(canonicalName, autoUpgrade, false, true, false);
-        }
-
-        public Task UpdateExistingPackage(CanonicalName canonicalName, bool? autoUpgrade = null) {
-            return Install(canonicalName, autoUpgrade, true, false, false);
         }
 
         public Task<IEnumerable<Package>> WhatWouldBeInstalled(CanonicalName canonicalName, bool? autoUpgrade = null) {

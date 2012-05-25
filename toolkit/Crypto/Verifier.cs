@@ -17,6 +17,7 @@ namespace CoApp.Toolkit.Crypto {
     using System.Security.Cryptography.Pkcs;
     using System.Security.Cryptography.X509Certificates;
     using Collections;
+    using Logging;
     using Win32;
     using FILETIME = System.Runtime.InteropServices.ComTypes.FILETIME;
 
@@ -130,12 +131,18 @@ namespace CoApp.Toolkit.Crypto {
         // GUID of the action to perform
         private const string WINTRUST_ACTION_GENERIC_VERIFY_V2 = "{00AAC56B-CD44-11d0-8CC2-00C04FC295EE}";
 
+        private static IDictionary<string, bool> _isValidCache = new Dictionary<string, bool>();
+
         public static bool HasValidSignature(string fileName) {
             try {
+                if( _isValidCache.ContainsKey(fileName)) {
+                    return _isValidCache[fileName];
+                }
                 var wtd = new WinTrustData(fileName);
                 var guidAction = new Guid(WINTRUST_ACTION_GENERIC_VERIFY_V2);
                 WinVerifyTrustResult result = WinTrust.WinVerifyTrust(INVALID_HANDLE_VALUE, guidAction, wtd);
                 bool ret = (result == WinVerifyTrustResult.Success);
+                _isValidCache[fileName] = ret;
                 return ret;
             } catch (Exception) {
                 return false;

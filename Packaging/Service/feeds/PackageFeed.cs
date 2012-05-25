@@ -134,7 +134,7 @@ namespace CoApp.Packaging.Service.Feeds {
                 return ((PackageFeed)SessionPackageFeed.Instance).AsResultTask();
             }
 
-            if( PackageManagerSettings.PerFeedSettings[location,"state"].GetEnumValue<FeedState>() == FeedState.Ignored) {
+            if (PackageManagerSettings.PerFeedSettings[location.UrlEncodeJustBackslashes(), "state"].GetEnumValue<FeedState>() == FeedState.Ignored) {
                 return ((PackageFeed)null).AsResultTask();
             }
 

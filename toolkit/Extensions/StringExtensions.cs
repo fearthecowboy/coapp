@@ -701,6 +701,11 @@ namespace CoApp.Toolkit.Extensions {
             return HttpUtility.UrlEncode(s);
         }
 
+        public static string UrlEncodeJustBackslashes(this string s) {
+            return s.Replace("\\", "%5c");
+        }
+
+
         /// <summary>
         ///   decodes the URL encoded string
         /// </summary>

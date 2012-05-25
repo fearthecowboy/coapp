@@ -338,6 +338,7 @@ namespace CoApp.Packaging.Client {
         public void PackageHasPotentialUpgrades(CanonicalName packageCanonicalName, IEnumerable<CanonicalName> supercedents) {
             UpgradablePackage = Package.GetPackage(packageCanonicalName);
             PotentialUpgrades = supercedents.Select(Package.GetPackage);
+            throw new PackageHasPotentialUpgradesException(Package.GetPackage(packageCanonicalName), PotentialUpgrades);
         }
 
         public void ScheduledTaskInfo(string taskName, string executable, string commandline, int hour, int minutes, DayOfWeek? dayOfWeek, int intervalInMinutes) {

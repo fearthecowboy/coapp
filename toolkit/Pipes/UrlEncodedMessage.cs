@@ -170,8 +170,8 @@ namespace CoApp.Toolkit.Pipes {
 
         private IEnumerable<object> GetCollectionOfParsable(string collectionName, Type elementType) {
             var rx = new Regex(CollectionEx.format(Regex.Escape(collectionName)));
-            // return (from k in _data.Keys let match = rx.Match(k) where match.Success select new { index = match.Groups[1].Captures[0].Value.UrlDecode().ToInt32(), value = _data[k] }).OrderBy(each => each.index).Select(each => elementType.ParseString(each.value));
-            var li = new List<Tuple<int,string>>();
+             return (from k in _data.Keys let match = rx.Match(k) where match.Success select new { index = match.Groups[1].Captures[0].Value.UrlDecode().ToInt32(), value = _data[k] }).OrderBy(each => each.index).Select(each => elementType.ParseString(each.value));
+           /* var li = new List<Tuple<int,string>>();
             foreach( var k in _data.Keys) {
                 var match = rx.Match(k);
                 if( match.Success) {
@@ -181,7 +181,7 @@ namespace CoApp.Toolkit.Pipes {
             }
             var ob = li.OrderBy(each => each.Item1).ToArray();
             var results = ob.Select(each => elementType.ParseString(each.Item2)).ToArray();
-            return results;
+            return results; */
         }
 
         private object GetValueAsArrayOfParsable(string collectionName, Type elementType) {

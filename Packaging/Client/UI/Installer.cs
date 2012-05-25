@@ -535,7 +535,7 @@ namespace CoApp.Packaging.Client.UI {
                     Progress = overallProgress;
                 });
 
-                var instTask = _packageManager.InstallPackage(SelectedPackage.CanonicalName, autoUpgrade: false);
+                var instTask = _packageManager.Install(SelectedPackage.CanonicalName, autoUpgrade: false);
 
                 instTask.Continue(() => {
                     _finalText = "The package ({0}) has been installed.".format(SelectedPackage.Version);

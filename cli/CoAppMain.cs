@@ -291,10 +291,8 @@ namespace CoApp.CLI {
                        // pkgFilter &= Package.Properties.Installed.Is(true) & Package.Properties.Active.Is(true) & Package.Properties.UpdatePackages.Any();
                         // collectionFilter = collectionFilter.Then(p => p.HighestPackages().OrderByDescending(each => each.Version));
                         // collectionFilter = collectionFilter.Then(pkgs => pkgs.HighestPackages());
-                        collectionFilter = collectionFilter.Then(pkgs => pkgs.SortBy( pkg => pkg.Version));
-                        collectionFilter = collectionFilter.Then(pkgs => pkgs.SortBy(pkg => pkg.Version));
-
-                        task = preCommandTasks.Continue(() => _packageManager.FindPackages(CanonicalName.AllPackages, pkgFilter, collectionFilter, _location))
+                        
+                        task = preCommandTasks.Continue(() => _packageManager.FindPackages(CanonicalName.AllPackages, Package.Filters.PackagesWithUpgradeAvailable, collectionFilter, _location))
                             .Continue(packages => {
                                 if (packages.IsNullOrEmpty()) {
                                     PrintNoPackagesFound(parameters);
@@ -625,10 +623,29 @@ namespace CoApp.CLI {
 
                 task.ContinueOnFail((exception) => {
                     exception = exception.Unwrap();
-                    if( !(exception is OperationCanceledException)) {
-                        Fail("Error (???): {0}\r\n\r\n{1}", exception.Message, exception.StackTrace);
+                    if (!(exception is OperationCanceledException)) {
+                        var phpue = exception as PackageHasPotentialUpgradesException;
+                        if (phpue != null) {
+                            // we've been told something we've asked for has a newer package available, and we didn't tell it that we either wanted it or an auto-upgrade
+                            PrintPotentialUpgradeInformation(phpue.UnsatisfiedPackage, phpue.SatifactionOptions);
+                            phpue.Cancel(); // marks this exception as handled.
+                            return;
+                        }
+
+                        // handle coapp exceptions as cleanly as possible.
+                        var ce = exception as CoAppException;
+                        if (ce != null) {
+                            Fail("Alternative");
+                            Fail(ce.Message);
+
+                            ce.Cancel();
+                            return;
+                        }
                     }
-                    // it's all been handled then.
+
+                    // hmm. The plan did not work out so well. 
+                    Fail("Error (???): {0}-{1}\r\n\r\n{2}", exception.GetType(), exception.Message, exception.StackTrace);
+                    
                 });
 
                 task.Continue(() => {
@@ -757,87 +774,7 @@ namespace CoApp.CLI {
                 }
             });
         }
-#if DEPRECATED
-        private Task Require(IEnumerable<string> parameters, IEnumerable<Package> packages) {
-            if (!packages.Any()) {
-                PrintNoPackagesFound(parameters);
-                return "".AsResultTask();
-            }
 
-            var remoteTasks = packages.Select(package => _packageManager.MarkPackageRequested(package.CanonicalName)).ToArray();
-            remoteTasks.ContinueOnFail(ex => FailOnExceptions(ex));
-            return remoteTasks.Continue(() => {
-                Console.WriteLine("Marked packages as 'required' :");
-                foreach (var pkg in packages) {
-                    Console.WriteLine("   {0}", pkg.CanonicalName);
-                }
-            });
-        }
-
-        private Task UnRequire(IEnumerable<string> parameters, IEnumerable<Package> packages) {
-            if (!packages.Any()) {
-                PrintNoPackagesFound(parameters);
-                return "".AsResultTask();
-            }
-
-            var remoteTasks = packages.Select(package => _packageManager.MarkPackageNotRequested(package.CanonicalName)).ToArray();
-            remoteTasks.ContinueOnFail(ex => FailOnExceptions(ex));
-            return remoteTasks.Continue(() => {
-                Console.WriteLine("Marked packages as 'not-required' :");
-                foreach (var pkg in packages) {
-                    Console.WriteLine("   {0}", pkg.CanonicalName);
-                }
-            });
-        }
-
-        private Task UnBlock(IEnumerable<string> parameters, IEnumerable<Package> packages) {
-            if (!packages.Any()) {
-                PrintNoPackagesFound(parameters);
-                return "".AsResultTask();
-            }
-
-            var remoteTasks = packages.Select(package => _packageManager.UnBlockPackage(package.CanonicalName)).ToArray();
-            remoteTasks.ContinueOnFail(ex => FailOnExceptions(ex));
-            return remoteTasks.Continue(() => {
-                Console.WriteLine("Marked packages as 'unblocked' :");
-                foreach (var pkg in packages) {
-                    Console.WriteLine("   {0}", pkg.CanonicalName);
-                }
-            });
-        }
-
-        private Task Block(IEnumerable<string> parameters, IEnumerable<Package> packages) {
-            if (!packages.Any()) {
-                PrintNoPackagesFound(parameters);
-                return "".AsResultTask();
-            }
-
-            var remoteTasks = packages.Select(package => _packageManager.BlockPackage(package.CanonicalName)).ToArray();
-            remoteTasks.ContinueOnFail(ex => FailOnExceptions(ex));
-            return remoteTasks.Continue(() => {
-                Console.WriteLine("Marked packages as 'blocked' :");
-                foreach (var pkg in packages) {
-                    Console.WriteLine("   {0}", pkg.CanonicalName);
-                }
-            });
-        }
-
-        private Task Activate(IEnumerable<string> parameters, IEnumerable<Package> packages) {
-            if (!packages.Any()) {
-                PrintNoPackagesFound(parameters);
-                return "".AsResultTask();
-            }
-
-            var remoteTasks = packages.Select(package => _packageManager.MarkPackageActive(package.CanonicalName)).ToArray();
-            remoteTasks.ContinueOnFail(ex => FailOnExceptions(ex));
-            return remoteTasks.Continue(() => {
-                Console.WriteLine("Activated packages:");
-                foreach (var pkg in packages) {
-                    Console.WriteLine("   {0}", pkg.CanonicalName);
-                }
-            });
-        }
-#endif
         private void FailOnExceptions(Exception exception) {
             if (exception is OperationCanceledException) {
                 // it's been dealt with.
@@ -977,7 +914,7 @@ namespace CoApp.CLI {
             CurrentTask.Events += new PackageInstallProgress((canonicalName, progress, overall) => "Installing: {0}".format(canonicalName).PrintProgressBar(progress));
 
             // given what the user requested, what packages are they really asking for?
-            return _packageManager.QueryPackages(parameters, pkgFilter,null , _location ).Continue(packages => {
+            return _packageManager.QueryPackages(parameters, pkgFilter, collectionFilter, _location).Continue(packages => {
                 // we got back a package collection for what the user passed in.
 
                 // but, we *can* get back an empty collection...
@@ -1007,29 +944,7 @@ namespace CoApp.CLI {
                     // lets get the package install plan.
                     var getPackagePlanTask = _packageManager.IdentifyPackageAndDependenciesToInstall(filteredPackages, _autoUpgrade);
 
-                    // hmm. The plan did not work out so well. 
-                    getPackagePlanTask.ContinueOnFail((exception) => {
-                        exception = exception.Unwrap();
-                        var phpue = exception as PackageHasPotentialUpgradesException;
-                        if (phpue != null) {
-                            // we've been told something we've asked for has a newer package available, and we didn't tell it that we either wanted it or an auto-upgrade
-                            PrintPotentialUpgradeInformation(phpue.UnsatisfiedPackage, phpue.SatifactionOptions);
-                            phpue.Cancel(); // marks this exception as handled.
-                            return;
-                        }
-
-                        // handle coapp exceptions as cleanly as possible.
-                        var ce = exception as CoAppException;
-                        if( ce != null ) {
-                            Fail(ce.Message);
-                            ce.Cancel();
-                            return;
-                        }
-
-                        // else soemthing else went wrong...
-                        Console.WriteLine("Something else failed!");
-                        Console.WriteLine("({0}){1} == {2}", exception.GetType(),exception.Message, exception.StackTrace);
-                    });
+                   
 
                     // if we get a good plan back
                     getPackagePlanTask.Continue(allPackages => {
@@ -1043,7 +958,7 @@ namespace CoApp.CLI {
 
                         foreach (var p in filteredPackages) {
                             try {
-                                _packageManager.InstallPackage(p.CanonicalName, _autoUpgrade).Continue(() => Console.WriteLine()).Wait();
+                                _packageManager.Install(p.CanonicalName, _autoUpgrade).Continue(() => Console.WriteLine()).Wait();
                             }
                             catch (Exception failed) {
                                 failed = failed.Unwrap();
