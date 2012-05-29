@@ -19,6 +19,21 @@ namespace CoApp.Packaging.Common.Model {
     public enum CompositionAction {
 
         /// <summary>
+        /// TrustedAction: Downloads a file
+        /// </summary>
+        DownloadFile,
+
+        /// <summary>
+        /// TrustedAction: Allows arbitrary code to execute at install
+        /// </summary>
+        InstallCommand,
+
+        /// <summary>
+        /// TrustedAction: Allows arbitrary code to execute at remove
+        /// </summary>
+        RemoveCommand,
+
+        /// <summary>
         ///   Create a symlink to a folder
         /// </summary>
         SymlinkFolder,
@@ -53,19 +68,6 @@ namespace CoApp.Packaging.Common.Model {
         /// </summary>
         Registry,
 
-        /// <summary>
-        /// TrustedAction: Downloads a file
-        /// </summary>
-        DownloadFile,
-
-        /// <summary>
-        /// TrustedAction: Allows arbitrary code to execute at install
-        /// </summary>
-        InstallScript,
-
-        /// <summary>
-        /// TrustedAction: Allows arbitrary code to execute at remove
-        /// </summary>
-        RemoveScript,
+        
     }
 }

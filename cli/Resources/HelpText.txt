@@ -65,6 +65,10 @@ Commands:
     enable-telemetry                      enables anonymous feedback
     disable-telemetry                     disables anonymous feedback
 
+    add-publisher                         adds a trusted publisher key 
+    remove-publisher                      removes a trusted publisher key 
+    list-publisher                        displays the current trusted keys
+
     list-policies       policies    -p    lists the security policies
     add-to-policy                         adds a user/group to a policy
     remove-from-policy                    removes a user/group from a policy

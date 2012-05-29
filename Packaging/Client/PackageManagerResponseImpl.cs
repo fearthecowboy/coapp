@@ -15,9 +15,7 @@ namespace CoApp.Packaging.Client {
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
-    using System.ServiceModel.Syndication;
     using System.Threading.Tasks;
-    using System.Xml;
     using Common;
     using Common.Exceptions;
     using Common.Model;
@@ -48,6 +46,13 @@ namespace CoApp.Packaging.Client {
         internal bool NoPackages;
         internal bool IsSignatureValid;
         internal bool OptedIn;
+        internal IEnumerable<string> _publishers = Enumerable.Empty<string>();
+
+        internal IEnumerable<string> Publishers {
+            get {
+                return _publishers;
+            }
+        }
 
         internal IEnumerable<Package> Packages {
             get {
@@ -153,23 +158,43 @@ namespace CoApp.Packaging.Client {
         }
 
         public void InstallingPackageProgress(CanonicalName canonicalName, int percentComplete, int overallProgress) {
-            Event<PackageInstallProgress>.Raise(canonicalName, percentComplete, overallProgress);
+            try {
+                Event<PackageInstallProgress>.Raise(canonicalName, percentComplete, overallProgress);
+            }
+            catch (Exception e) {
+                Logger.Error("CRITICAL: PackageInstallProgress event delegate thru an exception of type '{0}' -- {1}".format(e.GetType(), e.StackTrace));
+            }
         }
 
         public void RemovingPackageProgress(CanonicalName canonicalName, int percentComplete) {
-            Event<PackageRemoveProgress>.Raise(canonicalName, percentComplete);
+            try {
+                Event<PackageRemoveProgress>.Raise(canonicalName, percentComplete);
+            }
+            catch (Exception e) {
+                Logger.Error("CRITICAL: PackageRemoveProgress event delegate thru an exception of type '{0}' -- {1}".format(e.GetType(), e.StackTrace));
+            }
         }
 
         public void InstalledPackage(CanonicalName canonicalName) {
             _packages.Value.Add(Package.GetPackage(canonicalName));
             Package.GetPackage(canonicalName).IsInstalled = true;
-            Event<PackageInstalled>.Raise(canonicalName);
+            try {
+                Event<PackageInstalled>.Raise(canonicalName);
+            }
+            catch (Exception e) {
+                Logger.Error("CRITICAL: PackageInstalled event delegate thru an exception of type '{0}' -- {1}".format(e.GetType(), e.StackTrace));
+            }
         }
 
         public void RemovedPackage(CanonicalName canonicalName) {
             _packages.Value.Add(Package.GetPackage(canonicalName));
             Package.GetPackage(canonicalName).IsInstalled = false;
-            Event<PackageRemoved>.Raise(canonicalName);
+            try {
+                Event<PackageRemoved>.Raise(canonicalName);
+            }
+            catch (Exception e) {
+                Logger.Error("CRITICAL: PackageRemoved event delegate thru an exception of type '{0}' -- {1}".format(e.GetType(), e.StackTrace));
+            }
         }
 
         public void FailedPackageInstall(CanonicalName canonicalName, string filename, string reason) {
@@ -189,8 +214,12 @@ namespace CoApp.Packaging.Client {
                     // wait for this guy to respond (which should give us what we need)
                     CurrentDownloads[requestReference].Continue(() => {
                         if (File.Exists(targetFilename)) {
-                            Event<DownloadCompleted>.Raise(requestReference, targetFilename);
-
+                            try {
+                                Event<DownloadCompleted>.Raise(requestReference, targetFilename);
+                            }
+                            catch (Exception e) {
+                                Logger.Error("CRITICAL: DownloadCompleted event delegate thru an exception of type '{0}' -- {1}".format(e.GetType(), e.StackTrace));
+                            }
                             Remote.RecognizeFile(requestReference, targetFilename, (remoteLocations.FirstOrDefault() ?? new Uri("http://nowhere")).AbsoluteUri);
                         }
                     });
@@ -219,7 +248,12 @@ namespace CoApp.Packaging.Client {
                             var rf = new RemoteFile(uri, targetFilename,
                                 itemUri => {
                                     Remote.RecognizeFile(requestReference, targetFilename, uri.AbsoluteUri);
-                                    Event<DownloadCompleted>.Raise(requestReference, targetFilename);
+                                    try {
+                                        Event<DownloadCompleted>.Raise(requestReference, targetFilename);
+                                    }
+                                    catch (Exception e) {
+                                        Logger.Error("CRITICAL: DownloadCompleted event delegate thru an exception of type '{0}' -- {1}".format(e.GetType(), e.StackTrace));
+                                    }
                                     // remove it from the list of current downloads
                                     CurrentDownloads.Remove(requestReference);
                                     success = true;
@@ -235,8 +269,12 @@ namespace CoApp.Packaging.Client {
                                             progressTask = null;
                                         });
                                     }
-
-                                    Event<DownloadProgress>.Raise(requestReference, targetFilename, percent);
+                                    try {
+                                        Event<DownloadProgress>.Raise(requestReference, targetFilename, percent);
+                                    }
+                                    catch (Exception e) {
+                                        Logger.Error("CRITICAL: DownloadCompleted event delegate thru an exception of type '{0}' -- {1}".format(e.GetType(), e.StackTrace));
+                                    }
                                 });
 
                             rf.Get();
@@ -255,7 +293,12 @@ namespace CoApp.Packaging.Client {
 
                     // was there a file there from before?
                     if (File.Exists(targetFilename)) {
-                        Event<DownloadCompleted>.Raise(requestReference, targetFilename);
+                        try {
+                            Event<DownloadCompleted>.Raise(requestReference, targetFilename);
+                        }
+                        catch (Exception e) {
+                            Logger.Error("CRITICAL: DownloadCompleted event delegate thru an exception of type '{0}' -- {1}".format(e.GetType(), e.StackTrace));
+                        }
                         Remote.RecognizeFile(requestReference, targetFilename, (remoteLocations.FirstOrDefault() ?? new Uri("http://nowhere")).AbsoluteUri);
                     }
 
@@ -372,7 +415,12 @@ namespace CoApp.Packaging.Client {
         }
 
         public void UnableToDownloadPackage(CanonicalName packageCanonicalName) {
-            Event<UnableToDownloadPackage>.Raise(packageCanonicalName);
+            try {
+                Event<UnableToDownloadPackage>.Raise(packageCanonicalName);
+            }
+            catch (Exception e) {
+                Logger.Error("CRITICAL: UnableToDownloadPackage event delegate thru an exception of type '{0}' -- {1}".format(e.GetType(), e.StackTrace));
+            }
         }
 
         public void UnableToInstallPackage(CanonicalName packageCanonicalName) {
@@ -402,6 +450,10 @@ namespace CoApp.Packaging.Client {
 
         public void AtomFeedText(string atomText) {
             _feed = AtomFeed.Load(atomText);
+        }
+
+        public void TrustedPublishers( IEnumerable<string> trustedPublishers) {
+            _publishers = trustedPublishers;
         }
     }
 }

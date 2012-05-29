@@ -374,6 +374,16 @@ namespace CoApp.Packaging.Service {
                                 p.PackageSessionData.HasRequestedDownload = true;
                             }
                         } else {
+                            // check to see if this package requires trust.
+                            bool ok = true;
+                            foreach (var pkg in installGraph.Where(pkg => pkg.RequiresTrustedPublisher && !TrustedPublishers.ContainsIgnoreCase(pkg.PublicKeyToken))) {
+                                response.FailedPackageInstall(pkg.CanonicalName, pkg.LocalLocations.FirstOrDefault(), "Package requires a trusted publisher key of '{0}'.".format(pkg.PublicKeyToken));
+                                ok = false;
+                            }
+                            if( ok == false) {
+                                return FinishedSynchronously;
+                            }
+
                             if (pretend == true) {
                                 // we can just return a bunch of found-package messages, since we're not going to be 
                                 // actually installing anything, and everything we needed is downloaded.
@@ -1367,23 +1377,48 @@ namespace CoApp.Packaging.Service {
             return FinishedSynchronously;
         }
 
-        public Task AddTrustedPublisher() {
+        public Task AddTrustedPublisher(string publisherKeyToken) {
+            if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.ModifyPolicy) && publisherKeyToken != null && publisherKeyToken.Length == 16) {
+                TrustedPublishers = TrustedPublishers.UnionSingleItem(publisherKeyToken).Distinct().ToArray();    
+            }
             return FinishedSynchronously;
         }
 
-        public Task RemoveTrustedPublisher() {
+        public Task RemoveTrustedPublisher(string publisherKeyToken) {
+            if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.ModifyPolicy) && publisherKeyToken !=null && publisherKeyToken.Length == 16) {
+                TrustedPublishers = TrustedPublishers.Where(each => !each.Equals(publisherKeyToken, StringComparison.CurrentCultureIgnoreCase)).Distinct().ToArray();
+            }
             return FinishedSynchronously;
         }
 
         public Task GetTrustedPublishers() {
+            Event<GetResponseInterface>.RaiseFirst().TrustedPublishers(TrustedPublishers);
             return FinishedSynchronously;
         }
 
+        internal string[] TrustedPublishers {
+            get {
+                lock (this) {
+                    var tp = PackageManagerSettings.CoAppSettings["#TrustedPublishers"].EncryptedStringsValue;
+                    return tp.Length == 0 ? new []{CanonicalName.CoAppItself.PublicKeyToken} : tp;
+                }
+            }
+            set {
+                lock (this) {
+                    PackageManagerSettings.CoAppSettings["#TrustedPublishers"].EncryptedStringsValue = value;
+                }
+            }
+        }
+
         public Task GetTelemetry() {
+            Event<GetResponseInterface>.RaiseFirst().CurrentTelemetryOption(PackageManagerSettings.CoAppSettings["#TelemetryOptIn"].BoolValue);
             return FinishedSynchronously;
         }
 
         public Task SetTelemetry(bool optin) {
+            if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.ModifyPolicy)) {
+                PackageManagerSettings.CoAppSettings["#TelemetryOptIn"].BoolValue = optin;
+            }
             return FinishedSynchronously;
         }
 

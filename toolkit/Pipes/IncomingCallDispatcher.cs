@@ -66,10 +66,21 @@ namespace CoApp.Toolkit.Pipes {
                     method.MethodInfo.Invoke(_targetObject, method.Parameters.Keys.Select(each => message.GetValue(each, method.Parameters[each].Type)).ToArray());
                 }
                 catch (TargetInvocationException exception) {
-                    if (exception.InnerException is RestartingException) {
-                        return false;
+                    if (exception.InnerException != null) {
+                        if (exception.InnerException is RestartingException) {
+                            return false;
+                        }
+                        throw exception.InnerException;
                     }
-                    throw exception.InnerException;
+                }
+                catch (AggregateException exception) {
+                    var c = exception.Unwrap();
+                    Logger.Error(c);
+                    throw c;
+                }
+                catch (Exception exception) {
+                    Logger.Error(exception);
+                    throw exception;
                 }
 
                 return !(message.Command.Equals("TaskComplete") || message.Command.Equals("OperationCanceled") || message.Command.Equals("Restarting"));

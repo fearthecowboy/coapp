@@ -58,8 +58,8 @@ namespace CoApp.Packaging.Common {
         Task RemoveScheduledTask(string taskName);
         Task GetScheduledTasks(string taskName);
 
-        Task AddTrustedPublisher();
-        Task RemoveTrustedPublisher();
+        Task AddTrustedPublisher(string publisherKeyToken);
+        Task RemoveTrustedPublisher(string publisherKeyToken);
         Task GetTrustedPublishers();
 
         Task GetTelemetry();

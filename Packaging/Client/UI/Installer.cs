@@ -80,27 +80,6 @@ namespace CoApp.Packaging.Client.UI {
                             .UnionSingleItem(_packageManager.GetPackageDetails(pkg).Continue(() => { PrimaryPackage = pkg; }))
                             .ToArray()));
                     });
-
-                    /*
-                    _packageManager.AddSessionFeed(Path.GetDirectoryName(Path.GetFullPath(MsiFilename))).Continue(() => {
-                        _packageManager.GetPackageFromFile(Path.GetFullPath(MsiFilename)).Continue(pkg => {
-
-                            // gets the package data for the likely suspects.
-
-                            var tsks = new[] { pkg.InstalledNewest, pkg.AvailableNewestUpdate, pkg.AvailableNewestUpgrade }
-                                .Select(each => 
-                                    each == null ? 
-                                    null :
-                                    _packageManager.GetPackage(each.CanonicalName, true).Continue(pg => {
-                                        if (pg != null) {
-                                            _packageManager.GetPackageDetails(pg.CanonicalName);
-                                        }
-                                    })).Where( each => each != null).ToArray();
-                            
-                            _packageManager.GetPackageDetails(pkg).Continue(() => {PrimaryPackage = pkg;}).Wait();
-                            Task.WaitAll(tsks);
-                        });
-                    });*/
                 });
 
                 tsk.ContinueOnFail(error => {
@@ -384,8 +363,6 @@ namespace CoApp.Packaging.Client.UI {
             }
         }
 
-        
-
         public bool CancelRequested {
             get {
                 return _cancel;
@@ -431,7 +408,6 @@ namespace CoApp.Packaging.Client.UI {
                 return "Upgrade";
             }
         }
-
 
         internal bool Ping {
             get {

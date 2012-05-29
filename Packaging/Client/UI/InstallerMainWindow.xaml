@@ -118,9 +118,8 @@
             <TextBlock Name="StatusText"   HorizontalAlignment="Center"  Margin="0,6,0,0" Grid.Row="1" Foreground="#FF015329" FontSize="16" FontStyle="Italic" Text=""/>
             <ProgressBar Height="30" Name="InstallationProgress" Width="450" Visibility="Collapsed" Grid.Row="1" Foreground="#FF01D329" />
             
-            <ComboBox Margin="0,0,0,0" Name="WhichVersionToInstall" HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Row="2" Foreground="Black" Background="#80000000" Width="450" FontSize="16" BorderThickness="1" />
+            <ComboBox Margin="0,0,0,0" Name="WhichVersionToInstall" HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Row="2"  Width="450" FontSize="16" BorderThickness="1" />
             <CheckBox Name="CloseOption" HorizontalAlignment="Center"  Margin="0,8,0,0" Visibility="Collapsed" Grid.Row="2" Foreground="#FF000000" Checked="CloseOption_Checked" Unchecked="CloseOption_Unchecked" >Close installation window automatically when complete</CheckBox>
-                  
 
           <Grid Margin="10,10,10,10" Grid.Row="3" Height="40">
             <Grid.ColumnDefinitions>

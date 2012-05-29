@@ -322,6 +322,44 @@ namespace CoApp.CLI {
                             }));
                         break;
 
+                    case "add-publisher":
+                    case "add-publishers":
+                        if( !parameters.Any()) {
+                            return Fail("add-publisher requires one or more public key tokens to add");
+                        }
+
+                        task = parameters.Select(each => _packageManager.AddTrustedPublisher(each)).Continue(() => _packageManager.TrustedPublishers).Continue(publishers => {
+                            Console.WriteLine("Trusted publisher key tokens: ");
+                            foreach( var t in publishers ) {
+                                Console.WriteLine("      {0}", t);
+                            }
+                        });
+                        break;
+
+                    case "remove-publisher":
+                    case "remove-publishers":
+                        if( !parameters.Any()) {
+                            return Fail("remove-publisher requires one or more public key tokens to add");
+                        }
+
+                        task = parameters.Select(each => _packageManager.RemoveTrustedPublisher(each)).Continue(() => _packageManager.TrustedPublishers).Continue(publishers => {
+                            Console.WriteLine("Trusted publisher key tokens: ");
+                            foreach (var t in publishers) {
+                                Console.WriteLine("      {0}", t);
+                            }
+                        });
+                        break;
+
+                    case "list-publishers":
+                    case "list-publisher":
+                        task = _packageManager.TrustedPublishers.Continue(publishers => {
+                            Console.WriteLine("Trusted publisher key tokens: ");
+                            foreach (var t in publishers) {
+                                Console.WriteLine("      {0}", t);
+                            }
+                        });
+                        break;
+
                     case "-w":
                     case "wanted":
                     case "want":

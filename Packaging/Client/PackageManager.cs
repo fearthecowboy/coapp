@@ -61,24 +61,27 @@ namespace CoApp.Packaging.Client {
                 if( File.Exists(query) ) {
                     return PackagesFromLocalFile(query.EnsureFileIsLocal(), Path.GetDirectoryName(query.GetFullPath()),pkgFilter,collectionFilter);
                 }
+                
                 var uri = new Uri(query);
-                Task.Factory.StartNew(() => {
-                    var lp = uri.AbsolutePath.MakeSafeFileName().GenerateTemporaryFilename();
-                    var remoteFile = new RemoteFile(uri, localPath, itemUri => {
-                        Event<DownloadCompleted>.Raise(uri.AbsolutePath, lp); // got the file!
-                        localPath = lp;
-                    },
-                        itemUri => {
-                            localPath = null; // failed
+                if (uri.IsWebUri()) {
+                    Task.Factory.StartNew(() => {
+                        var lp = uri.AbsolutePath.MakeSafeFileName().GenerateTemporaryFilename();
+                        var remoteFile = new RemoteFile(uri, lp, itemUri => {
+                            Event<DownloadCompleted>.Raise(uri.AbsolutePath, lp); // got the file!
+                            localPath = lp;
                         },
-                        (itemUri, percent) => Event<DownloadProgress>.Raise(uri.AbsolutePath, localPath, percent));
-                    remoteFile.Get();
+                            itemUri => {
+                                localPath = null; // failed
+                            },
+                            (itemUri, percent) => Event<DownloadProgress>.Raise(uri.AbsolutePath, localPath, percent));
+                        remoteFile.Get();
 
-                    if (localPath != null) {
-                        return PackagesFromLocalFile(localPath,  null,pkgFilter ,collectionFilter).Result;
-                    }
-                    return Enumerable.Empty<Package>();
-                });
+                        if (localPath != null) {
+                            return PackagesFromLocalFile(localPath, null, pkgFilter, collectionFilter).Result;
+                        }
+                        return Enumerable.Empty<Package>();
+                    });
+                }
             }
             catch {
                 // ignore what can't be fixed
@@ -639,18 +642,18 @@ namespace CoApp.Packaging.Client {
             }
         }
 
-        public Task<IEnumerable<Publisher>> TrustedPublishers {
+        public Task<IEnumerable<string>> TrustedPublishers {
             get {
-                return null;
+                return (Remote.GetTrustedPublishers() as Task<PackageManagerResponseImpl>).Continue(response => response.Publishers);
             }
         }
 
-        public Task<Publisher> AddTrustedPublisher(string publisherName, string publicKeyToken) {
-            return null;
+        public Task AddTrustedPublisher(string publicKeyToken) {
+            return Remote.AddTrustedPublisher(publicKeyToken);
         }
 
-        public Task RemoveTrustedPublisher(string publisherName, string publicKeyToken) {
-            return null;
+        public Task RemoveTrustedPublisher(string publicKeyToken) {
+            return Remote.RemoveTrustedPublisher(publicKeyToken);
         }
 
         // GS01: TrustedPublishers Coming Soon.

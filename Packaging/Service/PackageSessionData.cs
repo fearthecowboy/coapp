@@ -11,8 +11,12 @@
 //-----------------------------------------------------------------------
 
 namespace CoApp.Packaging.Service {
+    using System;
+    using System.IO;
     using System.Linq;
+    using System.Threading.Tasks;
     using Common;
+    using Toolkit.Collections;
     using Toolkit.Configuration;
     using Toolkit.Crypto;
     using Toolkit.Extensions;
@@ -62,16 +66,6 @@ namespace CoApp.Packaging.Service {
                 }
             }
         }
-
-        /*
-        public bool Supercedes(Package p)
-        {
-            return Architecture == p.Architecture &&
-                   PublicKeyToken == p.PublicKeyToken &&
-                   Name.Equals(p.Name, StringComparison.CurrentCultureIgnoreCase) &&
-                   p.Version <= PolicyMaximumVersion && p.Version >= PolicyMinimumVersion;
-        }
-        */
 
         public bool CouldNotDownload {
             get {
@@ -151,6 +145,57 @@ namespace CoApp.Packaging.Service {
                 _lastProgress = p;
                 return result;
             }
+        }
+
+        public bool WaitForFileDownloads() {
+            if( _downloadQueue.IsNullOrEmpty()) {
+                return true;
+            }
+            var result = _downloadQueue.All(each => each.Result != null);
+            _downloadQueue = null;
+            return result;
+        }
+
+        private XList<Task<string>> _downloadQueue;
+
+        public void DownloadFile(string url, string destination) {
+            var response = Event<GetResponseInterface>.RaiseFirst();
+            if (response == null) {
+                return;
+            }
+
+            lock (SessionCache<Task<string>>.Value) {
+                Task<string> completion = SessionCache<Task<string>>.Value[url];
+
+                if (completion != null) {
+                    return; // completion.ContinueAlways(antecedent => antecedent.Result);
+                }
+
+                // otherwise, let's create a delegate to run when the file gets resolved.
+                completion = new Task<string>(rrfState => {
+                    var state = rrfState as RequestRemoteFileState;
+
+                    if (state == null || string.IsNullOrEmpty(state.LocalLocation) || !File.Exists(state.LocalLocation)) {
+                        // didn't fill in the local location? -- this happens when the client can't download.
+                        return null;
+                    }
+
+                    if (!state.LocalLocation.Equals(destination, StringComparison.CurrentCultureIgnoreCase)) {
+                        File.Copy(state.LocalLocation, destination);
+                    }
+
+                    return destination;
+                }, new RequestRemoteFileState {
+                    OriginalUrl = url
+                }, TaskCreationOptions.AttachedToParent);
+
+                // store the task until the client tells us that it has the file.
+                SessionCache<Task<string>>.Value[url] = completion;
+                _downloadQueue = _downloadQueue ?? new XList<Task<string>>();
+                _downloadQueue.Add(completion);
+            }
+
+            response.RequireRemoteFile(null, new Uri(url).SingleItemAsEnumerable(), PackageManagerSettings.CoAppCacheDirectory, false);
         }
     }
 }

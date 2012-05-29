@@ -11,7 +11,9 @@
 //-----------------------------------------------------------------------
 
 namespace CoApp.Packaging.Common.Model {
+    using System;
     using System.Xml.Serialization;
+    using Toolkit.Collections;
 
     [XmlRoot(ElementName = "WebApplication", Namespace = "http://coapp.org/atom-package-feed-1.0")]
     public class WebApplication {
@@ -23,4 +25,26 @@ namespace CoApp.Packaging.Common.Model {
         public List<string> VirutalDirs { get; set; }
         */
     }
+
+    [XmlRoot(ElementName = "WebApplication", Namespace = "http://coapp.org/atom-package-feed-1.0")]
+    public class FauxApplication {
+        [XmlElement(IsNullable = false)]
+        public string Name { get; set; }
+
+        [XmlElement(IsNullable = false)]
+        public string InstallCommand { get; set; }
+
+        [XmlElement(IsNullable = false)]
+        public string InstallParameters { get; set; }
+
+        [XmlElement(IsNullable = false)]
+        public string RemoveCommand { get; set; }
+
+        [XmlElement(IsNullable = false)]
+        public string RemoveParameters { get; set; }
+
+        [XmlElement(IsNullable = false)]
+        public XDictionary<string,Uri> Downloads { get; set; }
+    }
+
 }

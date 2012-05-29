@@ -137,7 +137,32 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Toolkit\Extensions\XmlExtensions.cs" />
+    <Compile Include="Toolkit\Linq\BooleanExpression.cs" />
+    <Compile Include="Toolkit\Linq\BooleanOperation.cs" />
+    <Compile Include="Toolkit\Linq\ExpressionBase.cs" />
+    <Compile Include="Toolkit\Linq\Filter.cs" />
+    <Compile Include="Toolkit\Linq\FilterExpression.cs" />
+    <Compile Include="Toolkit\Linq\FilterOperation.cs" />
+    <Compile Include="Toolkit\Linq\PropertyExpression.cs" />
+    <Compile Include="Toolkit\Linq\QualifierOperation.cs" />
+    <Compile Include="Toolkit\Linq\Query.cs" />
+    <Compile Include="Toolkit\Linq\Serialization\Evaluator.cs" />
+    <Compile Include="Toolkit\Linq\Serialization\Extn.cs" />
+    <Compile Include="Toolkit\Linq\Serialization\LinqHelper.cs" />
+    <Compile Include="Toolkit\Linq\Serialization\Message\ExpressionMessageSerializer.cs" />
+    <Compile Include="Toolkit\Linq\Serialization\Query.cs" />
+    <Compile Include="Toolkit\Linq\Serialization\Xml\CustomExpressionXmlConverter.cs" />
+    <Compile Include="Toolkit\Linq\Serialization\Xml\ExpressionXmlSerializer.cs" />
+    <Compile Include="Toolkit\Linq\Serialization\Xml\KnownTypeExpressionXmlConverter.cs" />
+    <Compile Include="Toolkit\Linq\Serialization\Xml\TypeResolver.cs" />
+    <Compile Include="Toolkit\Linq\UnaryExpression.cs" />
+    <Compile Include="Toolkit\Linq\UnaryOperation.cs" />
     <Compile Include="Toolkit\Logging\Logger.cs" />
+    <Compile Include="Toolkit\Pipes\AsyncPipeExtensions.cs" />
+    <Compile Include="Toolkit\Pipes\CustomSerializer.cs" />
+    <Compile Include="Toolkit\Pipes\IncomingCallDispatcher.cs" />
+    <Compile Include="Toolkit\Pipes\SerializationExtensions.cs" />
+    <Compile Include="Toolkit\Pipes\UrlEncodedMessage.cs" />
     <Compile Include="Toolkit\Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -351,9 +376,7 @@
       <SubType>Designer</SubType>
     </EmbeddedResource>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Toolkit\Pipes\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
