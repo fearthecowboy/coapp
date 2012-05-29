@@ -12,6 +12,7 @@
 
 namespace CoApp.Packaging.Service {
     using System;
+    using System.Collections.Generic;
     using System.IO;
     using System.Linq;
     using System.Threading.Tasks;
@@ -164,38 +165,22 @@ namespace CoApp.Packaging.Service {
                 return;
             }
 
-            lock (SessionCache<Task<string>>.Value) {
-                Task<string> completion = SessionCache<Task<string>>.Value[url];
-
-                if (completion != null) {
-                    return; // completion.ContinueAlways(antecedent => antecedent.Result);
+            _downloadQueue = _downloadQueue ?? new XList<Task<string>>();
+            _downloadQueue.Add(SessionData.Current.RequireRemoteFile(url, new Uri(url).SingleItemAsEnumerable(), PackageManagerSettings.CoAppCacheDirectory, false, rrfState => {
+                if (rrfState == null || string.IsNullOrEmpty(rrfState.LocalLocation) || !File.Exists(rrfState.LocalLocation)) {
+                    // didn't fill in the local location? -- this happens when the client can't download.
+                    return null;
                 }
 
-                // otherwise, let's create a delegate to run when the file gets resolved.
-                completion = new Task<string>(rrfState => {
-                    var state = rrfState as RequestRemoteFileState;
-
-                    if (state == null || string.IsNullOrEmpty(state.LocalLocation) || !File.Exists(state.LocalLocation)) {
-                        // didn't fill in the local location? -- this happens when the client can't download.
-                        return null;
-                    }
-
-                    if (!state.LocalLocation.Equals(destination, StringComparison.CurrentCultureIgnoreCase)) {
-                        File.Copy(state.LocalLocation, destination);
-                    }
-
-                    return destination;
-                }, new RequestRemoteFileState {
-                    OriginalUrl = url
-                }, TaskCreationOptions.AttachedToParent);
-
-                // store the task until the client tells us that it has the file.
-                SessionCache<Task<string>>.Value[url] = completion;
-                _downloadQueue = _downloadQueue ?? new XList<Task<string>>();
-                _downloadQueue.Add(completion);
-            }
-
-            response.RequireRemoteFile(null, new Uri(url).SingleItemAsEnumerable(), PackageManagerSettings.CoAppCacheDirectory, false);
+                if (!rrfState.LocalLocation.Equals(destination, StringComparison.CurrentCultureIgnoreCase)) {
+                    File.Copy(rrfState.LocalLocation, destination);
+                }
+                return destination;
+            }) as Task<string>);
         }
+
+
+
+        
     }
 }

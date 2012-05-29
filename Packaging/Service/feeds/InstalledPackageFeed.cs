@@ -81,15 +81,13 @@ namespace CoApp.Packaging.Service.Feeds {
                     _packageList.Clear();
                     ScanInstalledMSIs(); // kick off the system package task. It's ok if this doesn't get done in a hurry.
 
-
-                    Logger.Message("Getting List of cached package files");
                     // add the cached package directory, 'cause on backlevel platform, they taint the MSI in the installed files folder.
                     var coAppInstalledFiles = PackageManagerSettings.CoAppPackageCache.FindFilesSmarter("*.msi").ToArray();
 
                     Logger.Message("There are '{0}' cached package files", coAppInstalledFiles.Length );
                     coAppInstalledFiles.AsParallel().ForAll(each => {
                     // foreach (var each in coAppInstalledFiles) {
-                        Logger.Message("Checking cached package file '{0}'", each);
+                        // Logger.Message("Checking cached package file '{0}'", each);
                         var lookup = File.GetCreationTime(each).Ticks + each.GetHashCode();
                         if (!Cache.Contains(lookup)) {
                             var pkg = Package.GetPackageFromFilename(each);

@@ -145,9 +145,7 @@ namespace CoApp.Toolkit.Extensions {
 #if COAPP_ENGINE_CORE 
 
     // in the engine, we'd like disposable filenames to be session-local
-        private static List<string> DisposableFilenames {
-            get { return SessionCache<List<string>>.Value["DisposableFilenames"] ?? (SessionCache<List<string>>.Value["DisposableFilenames"] = new List<string>()); }
-        }
+        private static List<string> DisposableFilenames { get { return SessionData.Current.DisposableFilenames; } }
 #else
         private static readonly List<string> DisposableFilenames = new List<string>();
 #endif

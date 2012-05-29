@@ -23,20 +23,19 @@ namespace CoApp.Packaging.Service {
 
     internal class Recognizer {
         private static Task<RecognitionInfo> CacheAndReturnTask(string itemPath, RecognitionInfo recognitionInfo) {
-            SessionCache<RecognitionInfo>.Value[itemPath] = recognitionInfo;
-            return recognitionInfo.AsResultTask();
+            return (SessionData.Current.RecognitionInfo[itemPath] = recognitionInfo).AsResultTask();
         }
 
         private static RecognitionInfo Cache(string itemPath, RecognitionInfo recognitionInfo) {
-            SessionCache<RecognitionInfo>.Value[itemPath] = recognitionInfo;
-            return recognitionInfo;
+            return SessionData.Current.RecognitionInfo[itemPath] = recognitionInfo;
         }
 
         internal static Task<RecognitionInfo> Recognize(string item, bool forceRescan = false) {
-            var cachedResult = SessionCache<RecognitionInfo>.Value[item];
+            var cachedResult = SessionData.Current.RecognitionInfo[item];
+
             if (cachedResult != null) {
                 if (forceRescan) {
-                    SessionCache<RecognitionInfo>.Value[item] = null;
+                    SessionData.Current.RecognitionInfo[item] = null;
                 } else {
                     return cachedResult.AsResultTask();
                 }
@@ -52,7 +51,7 @@ namespace CoApp.Packaging.Service {
                     // before we go down this, check to see if we asked for it in this session 
                     // in the last five minutes or so. We don't need to pound away at a URL for
                     // no reason.
-                    var peek = SessionCache<RecognitionInfo>.Value[location.AbsoluteUri];
+                    var peek = SessionData.Current.RecognitionInfo[location.AbsoluteUri];
                     if( peek != null ) {
                         if( DateTime.Now.Subtract(peek.LastAccessed) < new TimeSpan(0,5,0) ) {
                             return peek.AsResultTask();
@@ -64,76 +63,39 @@ namespace CoApp.Packaging.Service {
                     // data in the URL
                     var safeCanonicalName = location.GetLeftPart(UriPartial.Path).MakeSafeFileName();
 
-                    // BEFORE
-                    // Check to see if there is a request for this file already in progress. 
-                    // attach a continuation to that if it is, instead of adding a new task
-                    Task<RecognitionInfo> completion;
-                    lock (SessionCache<Task<RecognitionInfo>>.Value) {
-                        completion = SessionCache<Task<RecognitionInfo>>.Value[safeCanonicalName];
-                        if (completion != null) {
-                            return completion.ContinueAlways(antecedent => antecedent.Result);
+                    return SessionData.Current.RequireRemoteFile(safeCanonicalName, location.SingleItemAsEnumerable(), PackageManagerSettings.CoAppPackageCache, forceRescan, state => {
+                        if (state == null || string.IsNullOrEmpty(state.LocalLocation)) {
+                            // didn't fill in the local location? -- this happens when the client can't download.
+                            return Cache(location.AbsoluteUri, new RecognitionInfo {
+                                FullPath = location.AbsoluteUri,
+                                FullUrl = location,
+                                IsURL = true,
+                                IsInvalid = true,
+                            });
                         }
 
-                        // otherwise, let's create a delegate to run when the file gets resolved.
-                        completion = new Task<RecognitionInfo>(rrfState => {
-                            var state = rrfState as RequestRemoteFileState;
-                            if (state == null || string.IsNullOrEmpty(state.LocalLocation)) {
-                                // didn't fill in the local location? -- this happens when the client can't download.
-                                // PackageManagerMessages.Invoke.FileNotRecognized() ?
-                                var rslt = new RecognitionInfo {
-                                    FullPath = location.AbsoluteUri,
-                                    FullUrl = location,
-                                    IsURL = true,
-                                    IsInvalid = true,
-                                };
-                                // session cache it 
-                                SessionCache<RecognitionInfo>.Value[location.AbsoluteUri] = rslt;
-                                return rslt;
-                            }
-                            var newLocation = new Uri(state.LocalLocation);
-                            if (newLocation.IsFile) {
-                                var continuedResult = Recognize(state.LocalLocation).Result;
+                        var newLocation = new Uri(state.LocalLocation);
+                        if (newLocation.IsFile) {
+                            var continuedResult = Recognize(state.LocalLocation).Result;
 
-                                // create the result object 
-                                var result = new RecognitionInfo {
-                                    FullUrl = location,
-                                };
-
-                                // if( continuedResult.IsPackageFeed && forceRescan ) {
-                                // this ensures that feed files aren't kept around needlessly.
-                                //state.LocalLocation.MarkFileTemporary(); 
-                                //}
-
-                                result.CopyDetailsFrom(continuedResult);
-                                result.IsURL = true;
-                                
-                                return Cache(item, result);
-                            }
-                            // so, the callback comes, but it's not a file. 
-                            // 
-                            var r = new RecognitionInfo {
-                                FullPath = location.AbsoluteUri,
-                                IsInvalid = true,
+                            // create the result object 
+                            var result = new RecognitionInfo {
+                                FullUrl = location,
                             };
 
-                            // session cache it 
-                            SessionCache<RecognitionInfo>.Value[location.AbsoluteUri] = r;
-                            return r;
-                        }, new RequestRemoteFileState {
-                            OriginalUrl = location.AbsoluteUri
-                        }, TaskCreationOptions.AttachedToParent);
+                            result.CopyDetailsFrom(continuedResult);
+                            result.IsURL = true;
 
-                        // store the task until the client tells us that it has the file.
-                        SessionCache<Task<RecognitionInfo>>.Value[safeCanonicalName] = completion;
-                    }
+                            return Cache(item, result);
+                        }
 
-                    // GS01: Should we make a deeper path in the cache directory?
-                    // perhaps that would let us use a cached version of the file we're looking for.
-                    Event<GetResponseInterface>.RaiseFirst().RequireRemoteFile(safeCanonicalName, location.SingleItemAsEnumerable(),PackageManagerSettings.CoAppPackageCache, forceRescan);
-
-                    // return the completion task, as whatever is waiting for this 
-                    // needs to continue on that.
-                    return completion;
+                        // so, the callback comes, but it's not a file. 
+                        // session cache it 
+                        return Cache(location.AbsoluteUri,new RecognitionInfo {
+                            FullPath = location.AbsoluteUri,
+                            IsInvalid = true,
+                        });
+                    }) as Task<RecognitionInfo>;
                 }
 
                 //----------------------------------------------------------------

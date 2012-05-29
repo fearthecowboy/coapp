@@ -11,8 +11,13 @@
 //-----------------------------------------------------------------------
 
 namespace CoApp.Packaging.Service {
+    using System;
+    using System.Collections.Generic;
+
     internal class RequestRemoteFileState {
         internal string LocalLocation;
-        internal string OriginalUrl;
+        // internal string OriginalUrl;
+        internal IEnumerable<Uri> OriginalUrls;
+        internal string RequestReference;
     }
 }

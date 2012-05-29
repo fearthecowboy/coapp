@@ -24,7 +24,7 @@ namespace CoApp.Packaging.Service {
             get {
                 SessionCache<T> result = null;
                 try {
-                    result = (Event<GetSessionCache>.Raise(typeof (T), () => new SessionCache<T>())) as SessionCache<T>;
+                    result = (Event<GetSessionCache>.RaiseFirst(typeof (T), () => new SessionCache<T>())) as SessionCache<T>;
                 } catch {
                 }
                 if (result == null) {

@@ -81,7 +81,7 @@ namespace CoApp.Packaging.Service {
 
         private IEnumerable<string> SessionFeedLocations {
             get {
-                return SessionCache<IEnumerable<string>>.Value["session-feeds"] ?? Enumerable.Empty<string>();
+                return SessionData.Current.SessionPackageFeeds.Keys;
             }
         }
 
@@ -90,9 +90,7 @@ namespace CoApp.Packaging.Service {
                 if (!feedLocation.IsWebUri()) {
                     feedLocation = feedLocation.CanonicalizePathWithWildcards();
                 }
-
-                var sessionFeeds = SessionFeedLocations.Union(feedLocation.SingleItemAsEnumerable()).Distinct();
-                SessionCache<IEnumerable<string>>.Value["session-feeds"] = sessionFeeds.ToArray();
+                SessionData.Current.SessionPackageFeeds.GetOrAdd(feedLocation, ()=> null);
             }
         }
 
@@ -112,11 +110,8 @@ namespace CoApp.Packaging.Service {
                     feedLocation = feedLocation.CanonicalizePathWithWildcards();
                 }
 
-                var sessionFeeds = from emove in SessionFeedLocations where !emove.Equals(feedLocation, StringComparison.CurrentCultureIgnoreCase) select emove;
-                SessionCache<IEnumerable<string>>.Value["session-feeds"] = sessionFeeds.ToArray();
-
                 // remove it from the cached feeds
-                SessionCache<PackageFeed>.Value.Clear(feedLocation);
+                SessionData.Current.SessionPackageFeeds.Remove(feedLocation);
             }
         }
 
@@ -134,12 +129,13 @@ namespace CoApp.Packaging.Service {
 
         internal void EnsureSystemFeedsAreLoaded() {
             // do a cheap check first (so that this session never gets blocked unnecessarily).
-            if (SessionCache<string>.Value["system-cache-loaded"].IsTrue()) {
+
+            if (SessionData.Current.IsSystemCacheLoaded) {
                 return;
             }
 
             lock (this) {
-                if (SessionCache<string>.Value["system-cache-loaded"].IsTrue()) {
+                if (SessionData.Current.IsSystemCacheLoaded) {
                     return;
                 }
 
@@ -153,7 +149,7 @@ namespace CoApp.Packaging.Service {
                 })).ToArray());
 
                 // mark this session as 'yeah, done that already'
-                SessionCache<string>.Value["system-cache-loaded"] = "true";
+                SessionData.Current.IsSystemCacheLoaded  = true;
             }
         }
 
@@ -368,8 +364,11 @@ namespace CoApp.Packaging.Service {
                         if (missingFiles.Any()) {
                             // we've got some packages to install that don't have files.
                             foreach (var p in missingFiles.Where(p => !p.PackageSessionData.HasRequestedDownload)) {
-                                response.RequireRemoteFile(p.CanonicalName,
-                                    p.RemotePackageLocations, PackageManagerSettings.CoAppPackageCache, false);
+                                SessionData.Current.RequireRemoteFile(p.CanonicalName,
+                                    p.RemotePackageLocations, PackageManagerSettings.CoAppPackageCache, false,(rrfState) => {
+                                        Updated(); //shake loose anything that might be waiting for this.
+                                        return rrfState.LocalLocation;
+                                    });
 
                                 p.PackageSessionData.HasRequestedDownload = true;
                             }
@@ -515,36 +514,18 @@ namespace CoApp.Packaging.Service {
 
         public Task DownloadProgress(string requestReference, int? downloadProgress) {
             try {
-                // it takes a non-trivial amount of time to lookup a package by its name.
-                // so, we're going to cache the package in the session.
-                // of course if there isn't one, (because we're downloading soemthing we don't know what it's actualy canonical name is)
-                // we don't want to try looking up each time again, since that's the worst-case-scenario, we have to
-                // cache the fact that we have cached nothing.
-                // /facepalm.
+                
+                var cn = new CanonicalName(requestReference);
 
-                Package package;
-
-                var cachedPackageName = SessionCache<string>.Value["cached-the-lookup" + requestReference];
-
-                if (cachedPackageName == null) {
-                    SessionCache<string>.Value["cached-the-lookup" + requestReference] = "yes";
-
-                    package = SearchForPackages(requestReference).FirstOrDefault();
-
+                if (null != cn && cn.IsCanonical) {
+                    var package = SearchForPackages(cn).FirstOrDefault();
                     if (package != null) {
-                        SessionCache<Package>.Value[requestReference] = package;
+                        package.PackageSessionData.DownloadProgress = Math.Max(package.PackageSessionData.DownloadProgress, downloadProgress.GetValueOrDefault());
                     }
-                } else {
-                    package = SessionCache<Package>.Value[requestReference];
-                }
-
-                if (package != null) {
-                    package.PackageSessionData.DownloadProgress = Math.Max(package.PackageSessionData.DownloadProgress, downloadProgress.GetValueOrDefault());
                 }
             } catch {
                 // suppress any exceptions... we just don't care!
             }
-            SessionCache<string>.Value["busy" + requestReference] = null;
             return FinishedSynchronously;
         }
 
@@ -560,7 +541,7 @@ namespace CoApp.Packaging.Service {
             var canFilterSession = Event<QueryPermission>.RaiseFirst(PermissionPolicy.EditSessionFeeds);
             var canFilterSystem = Event<QueryPermission>.RaiseFirst(PermissionPolicy.EditSystemFeeds);
 
-            var activeSessionFeeds = SessionCache<PackageFeed>.Value.SessionValues;
+            var activeSessionFeeds = SessionData.Current.SessionPackageFeeds;
             var activeSystemFeeds = Cache<PackageFeed>.Value.Values;
 
             var x = from feedLocation in SystemFeedLocations
@@ -576,7 +557,7 @@ namespace CoApp.Packaging.Service {
                 };
 
             var y = from feedLocation in SessionFeedLocations
-                let theFeed = activeSessionFeeds.FirstOrDefault(each => each.IsLocationMatch(feedLocation))
+                let theFeed = activeSessionFeeds[feedLocation]
                 let validated = theFeed != null
                 select new {
                     feed = feedLocation,
@@ -656,7 +637,7 @@ namespace CoApp.Packaging.Service {
                             response.FeedAdded(location);
 
                             if (foundFeed != SessionPackageFeed.Instance || foundFeed != InstalledPackageFeed.Instance) {
-                                SessionCache<PackageFeed>.Value[location] = foundFeed;
+                                SessionData.Current.SessionPackageFeeds[location] = foundFeed;
                             }
                         } else {
                             response.Error("add-feed", "location",
@@ -801,8 +782,8 @@ namespace CoApp.Packaging.Service {
             // we should continue with that task, and get the heck out of here.
             // 
 
-            var continuationTask = SessionCache<Task<Recognizer.RecognitionInfo>>.Value[requestReference];
-            SessionCache<Task<Recognizer.RecognitionInfo>>.Value.Clear(requestReference);
+            var continuationTask = SessionData.Current.RequestedFileTasks.GetAndRemove(requestReference);
+
             Updated(); // do an updated regardless.
 
             if (continuationTask != null) {
@@ -866,8 +847,8 @@ namespace CoApp.Packaging.Service {
             // we should continue with that task, and get the heck out of here.
             // 
             if (null != requestReference) {
-                var continuationTask = SessionCache<Task<Recognizer.RecognitionInfo>>.Value[requestReference];
-                SessionCache<Task<Recognizer.RecognitionInfo>>.Value.Clear(requestReference);
+                var continuationTask = SessionData.Current.RequestedFileTasks.GetAndRemove(requestReference);
+
                 if (continuationTask != null) {
                     var state = continuationTask.AsyncState as RequestRemoteFileState;
                     if (state != null) {
@@ -937,14 +918,12 @@ namespace CoApp.Packaging.Service {
                 return FinishedSynchronously;
             }
 
-            var suppressedFeeds = SessionCache<List<string>>.Value["suppressed-feeds"] ?? new List<string>();
+            
 
-            lock (suppressedFeeds) {
-                if (!suppressedFeeds.Contains(location)) {
-                    suppressedFeeds.Add(location);
-                    SessionCache<List<string>>.Value["suppressed-feeds"] = suppressedFeeds;
-                }
+            lock (SessionData.Current) {
+                SessionData.Current.SuppressedFeeds = SessionData.Current.SuppressedFeeds.UnionSingleItem(location).Distinct();
             }
+
             response.FeedSuppressed(location);
             return FinishedSynchronously;
         }
@@ -955,9 +934,9 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        internal List<string> BlockedScanLocations {
+        internal IEnumerable<string> BlockedScanLocations {
             get {
-                return SessionCache<List<string>>.Value["suppressed-feeds"] ?? new List<string>();
+                return SessionData.Current.SuppressedFeeds;
             }
         }
 
@@ -971,11 +950,11 @@ namespace CoApp.Packaging.Service {
 
                     var filters = BlockedScanLocations.ToArray();
                     if( filters.IsNullOrEmpty()) {
-                        return new PackageFeed[] { SessionPackageFeed.Instance, InstalledPackageFeed.Instance}.Union(Cache<PackageFeed>.Value.Values).Union(SessionCache<PackageFeed>.Value.SessionValues).ToArray();
+                        return new PackageFeed[] { SessionPackageFeed.Instance, InstalledPackageFeed.Instance}.Union(Cache<PackageFeed>.Value.Values).Union(SessionData.Current.SessionPackageFeeds.Values).ToArray();
                     }
                     return new PackageFeed[] {SessionPackageFeed.Instance, InstalledPackageFeed.Instance}
                         .Union(from feed in Cache<PackageFeed>.Value.Values where !canFilterSystem || !feed.IsLocationMatch(filters) select feed)
-                        .Union(from feed in SessionCache<PackageFeed>.Value.SessionValues where !canFilterSession || !feed.IsLocationMatch(filters) select feed)
+                        .Union(from feed in SessionData.Current.SessionPackageFeeds.Values  where !canFilterSession || !feed.IsLocationMatch(filters) select feed)
                         .ToArray();
                 } catch (Exception e) {
                     Logger.Error(e);
@@ -1041,7 +1020,8 @@ namespace CoApp.Packaging.Service {
         /// <returns> </returns>
         internal IEnumerable<PackageFeed> TransientFeeds(IEnumerable<Uri> locations, bool lookDeep) {
             var locs = locations.ToArray();
-            var tf = SessionCache<List<PackageFeed>>.Value["TransientFeeds"] ?? (SessionCache<List<PackageFeed>>.Value["TransientFeeds"] = new List<PackageFeed>());
+            var tf = SessionData.Current.TransientFeeds;
+
             var existingLocations = tf.Select(each => each.Location);
             var newLocations = locs.Where(each => !existingLocations.Contains(each.AbsoluteUri));
             var tasks = newLocations.Select(each => PackageFeed.GetPackageFeedFromLocation(each.AbsoluteUri )).ToArray();
@@ -1336,15 +1316,15 @@ namespace CoApp.Packaging.Service {
             var response = Event<GetResponseInterface>.RaiseFirst();
 
             if (messages.HasValue) {
-                SessionCache<string>.Value["LogMessages"] = messages.ToString();
+                SessionData.Current.LoggingMessages = messages.Value;
             }
 
             if (errors.HasValue) {
-                SessionCache<string>.Value["LogErrors"] = errors.ToString();
+                SessionData.Current.LoggingErrors= errors.Value;
             }
 
             if (warnings.HasValue) {
-                SessionCache<string>.Value["LogWarnings"] = warnings.ToString();
+                SessionData.Current.LoggingWarnings= warnings.Value;
             }
             response.LoggingSettings(Logger.Messages, Logger.Warnings, Logger.Errors);
             return FinishedSynchronously;

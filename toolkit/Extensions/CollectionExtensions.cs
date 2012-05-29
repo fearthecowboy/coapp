@@ -189,6 +189,16 @@ namespace CoApp.Toolkit.Extensions {
             return dictionary.ContainsKey(key) ? dictionary[key] : dictionary.AddOrSet(key, valueFunction());
         }
 
+        public static TValue GetAndRemove<TKey, TValue>( this IDictionary<TKey, TValue> dictionary, TKey key ) {
+            lock( dictionary) {
+                var result = dictionary[key];
+                if (dictionary.ContainsKey(key)) {
+                    dictionary.Remove(key);
+                }
+                return result;
+            }
+        }
+
         public static void AddObjectPairPair<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, object key, object value) where TKey : class where TValue : class {
             dictionary.Add(key as TKey, value as TValue);
         }

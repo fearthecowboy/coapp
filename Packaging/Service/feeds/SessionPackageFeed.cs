@@ -15,15 +15,13 @@ namespace CoApp.Packaging.Service.Feeds {
     using System.Collections.Generic;
     using System.Linq;
     using Common;
-    using Toolkit.Tasks;
 
     internal class SessionPackageFeed : PackageFeed {
         internal static string CanonicalLocation = "CoApp://SessionPackages";
 
         internal static SessionPackageFeed Instance {
             get {
-                return SessionCache<SessionPackageFeed>.Value[CanonicalLocation] ??
-                    (SessionCache<SessionPackageFeed>.Value[CanonicalLocation] = new SessionPackageFeed());
+                return SessionData.Current.SessionPackageFeed ?? (SessionData.Current.SessionPackageFeed = new SessionPackageFeed());    
             }
         }
 

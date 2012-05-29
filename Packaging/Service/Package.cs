@@ -239,7 +239,7 @@ namespace CoApp.Packaging.Service {
 
         internal PackageSessionData PackageSessionData {
             get {
-                return SessionCache<PackageSessionData>.Value[CanonicalName] ?? (SessionCache<PackageSessionData>.Value[CanonicalName] = new PackageSessionData(this));
+                return SessionData.Current.PackageSessionData.GetOrAdd(CanonicalName, () => new PackageSessionData(this));
             }
         }
 
@@ -303,9 +303,8 @@ namespace CoApp.Packaging.Service {
 
             } catch (Exception e) {
                 Logger.Error("Package Install Failure [{0}] => [{1}].\r\n{2}", CanonicalName, e.Message, e.StackTrace);
+                Remove();
 
-                //we could get here and the MSI had installed but nothing else
-                PackageHandler.Remove(this);
                 IsInstalled = false;
                 throw new PackageInstallFailedException(this);
             }
@@ -315,15 +314,23 @@ namespace CoApp.Packaging.Service {
             try {
                 Logger.Message("Attempting to undo package composition");
                 UndoPackageComposition();
+            } catch {
+                // if something goes wrong in removing package composition, keep uninstalling.
+            }
 
+            try {
                 Logger.Message("Attempting to remove MSI");
                 PackageHandler.Remove(this);
+
+                // clean up the package directory if it hangs around.
+                PackageDirectory.TryHardToDelete();
+
                 IsInstalled = false;
 
                 PackageManagerSettings.PerPackageSettings.DeleteSubkey(CanonicalName);
             } catch (Exception e) {
                 Logger.Error(e);
-                Event<GetResponseInterface>.RaiseFirst().FailedPackageRemoval(CanonicalName, "GS01: I'm not sure of the reason... ");
+                Event<GetResponseInterface>.RaiseFirst().FailedPackageRemoval(CanonicalName, "GS01: During package removal, things went horribly wrong.... ");
                 throw new OperationCompletedBeforeResultException();
             } 
         }
@@ -486,25 +493,30 @@ namespace CoApp.Packaging.Service {
                         case PackageRole.WebApplication:
                             break;
                         case PackageRole.Faux:
-                            foreach (var fauxApplication in FauxApplications.Where(each => each.Name == role.Name)) {
-                                foreach (var dest in fauxApplication.Downloads.Keys) {
-                                    yield return new CompositionRule {
-                                        Action = CompositionAction.DownloadFile,
-                                        Destination = "${packagedir}\\" + dest,
-                                        Source = fauxApplication.Downloads[dest].AbsoluteUri,
-                                    };
+                            foreach (var fauxApplication in FauxApplications) {
+                                if (fauxApplication.Name == role.Name || (string.IsNullOrEmpty(fauxApplication.Name) && string.IsNullOrEmpty(role.Name))) {
+                                    foreach (var dest in fauxApplication.Downloads.Keys) {
+                                        yield return new CompositionRule {
+                                            Action = CompositionAction.DownloadFile,
+                                            Destination = "${packagedir}\\" + dest,
+                                            Source = fauxApplication.Downloads[dest].AbsoluteUri,
+                                        };
+                                    }
+                                    if( !string.IsNullOrEmpty(fauxApplication.InstallCommand) ) {
+                                        yield return new CompositionRule {
+                                            Action = CompositionAction.InstallCommand,
+                                            Source = fauxApplication.InstallCommand,
+                                            Destination = fauxApplication.InstallParameters
+                                        };    
+                                    }
+                                    if (!string.IsNullOrEmpty(fauxApplication.RemoveCommand)) {
+                                        yield return new CompositionRule {
+                                            Action = CompositionAction.RemoveCommand,
+                                            Source = fauxApplication.RemoveCommand,
+                                            Destination = fauxApplication.RemoveParameters
+                                        };
+                                    }
                                 }
-                                yield return new CompositionRule {
-                                    Action = CompositionAction.InstallCommand,
-                                    Source = fauxApplication.InstallCommand,
-                                    Destination = fauxApplication.InstallParameters
-                                };
-                                yield return new CompositionRule {
-                                    Action = CompositionAction.RemoveCommand,
-                                    Source = fauxApplication.RemoveCommand,
-                                    Destination = fauxApplication.RemoveParameters
-                                };
-
                             }
                             break;
                     }
@@ -605,8 +617,12 @@ namespace CoApp.Packaging.Service {
         }
 
         private bool ExecuteCommand(string command, string parameters) {
+            if( string.IsNullOrEmpty(command)) {
+                return true;
+            }
+
             var psi = new ProcessStartInfo {
-                FileName = command,
+                FileName = command.Contains("\\") ? command : EnvironmentUtility.FindInPath( command, PackageDirectory+";"+EnvironmentUtility.EnvironmentPath),
                 Arguments = parameters,
                 CreateNoWindow = false,
                 RedirectStandardError = true,
@@ -614,20 +630,28 @@ namespace CoApp.Packaging.Service {
                 UseShellExecute = false,
                 WorkingDirectory = PackageDirectory
             };
-
-            var proc = Process.Start(psi);
-            var stdOut = Task.Factory.StartNew(() => proc.StandardOutput.ReadToEnd());
-            var stdErr = Task.Factory.StartNew(() => proc.StandardError.ReadToEnd());
-            
-            proc.WaitForExit();
-            
-            if( proc.ExitCode != 0) {
-                Logger.Error("Failed Execute Command StdOut: \r\n{0}", stdOut.Result);
-                Logger.Error("Failed Execute Command StdError: \r\n{0}", stdErr.Result);
-                return false;
+            if(! psi.FileName.Contains("\\") ) {
+                Logger.Error("Target execute command does not have a full path. '{0}'", psi.FileName);
             }
 
-            return true;
+            try {
+                var proc = Process.Start(psi);
+                var stdOut = Task.Factory.StartNew(() => proc.StandardOutput.ReadToEnd());
+                var stdErr = Task.Factory.StartNew(() => proc.StandardError.ReadToEnd());
+
+                proc.WaitForExit();
+
+                if (proc.ExitCode != 0) {
+                    Logger.Error("Failed Execute Command StdOut: \r\n{0}", stdOut.Result);
+                    Logger.Error("Failed Execute Command StdError: \r\n{0}", stdErr.Result);
+                    return false;
+                }
+                return true;
+            } catch(Exception e) {
+                Logger.Error(e);
+                
+            }
+            return false;
         }
 
 
@@ -717,7 +741,7 @@ namespace CoApp.Packaging.Service {
                             Directory.CreateDirectory(parentDir);
                         }
                         try {
-                            Logger.Message("Creating file Symlink [{0}] => [{1}]", rule.Destination, rule.Source);
+                            // Logger.Message("Creating file Symlink [{0}] => [{1}]", rule.Destination, rule.Source);
                             Symlink.MakeFileLink(rule.Destination, rule.Source);
                         }
                         catch (Exception) {
@@ -743,7 +767,7 @@ namespace CoApp.Packaging.Service {
                     }
 
                     try {
-                        Logger.Message("Creatign Directory Symlink [{0}] => [{1}]", rule.Destination, rule.Source);
+                        // Logger.Message("Creatign Directory Symlink [{0}] => [{1}]", rule.Destination, rule.Source);
                         Symlink.MakeDirectoryLink(rule.Destination, rule.Source);
                     }
                     catch (Exception) {
@@ -768,7 +792,7 @@ namespace CoApp.Packaging.Service {
                         if (!Directory.Exists(pDir)) {
                             Directory.CreateDirectory(pDir);
                         }
-                        Logger.Message("Creating Shortcut [{0}] => [{1}]", rule.Destination, rule.Source);
+                        // Logger.Message("Creating Shortcut [{0}] => [{1}]", rule.Destination, rule.Source);
                         ShellLink.CreateShortcut(rule.Destination, rule.Source);
                     }
 
@@ -811,7 +835,7 @@ namespace CoApp.Packaging.Service {
                         case "systemroot":
                         case "userdomain":
                         case "userprofile":
-                            Logger.Message("Package may not set environment variable '{0}'", rule.Key);
+                            Logger.Warning("Package may not set environment variable '{0}'", rule.Key);
                             return true;
 
                         default:
@@ -918,7 +942,7 @@ namespace CoApp.Packaging.Service {
                         break;
 
                     case CompositionAction.RemoveCommand:
-                        // not implemented yet.
+                        ExecuteCommand(rule.Source, rule.Destination);
                         break;
                 }
             }
