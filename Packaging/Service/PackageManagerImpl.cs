@@ -859,7 +859,7 @@ namespace CoApp.Packaging.Service {
                         continuationTask.Start();
                     }
 
-                    return FinishedSynchronously;
+                    // return FinishedSynchronously;
                 }
             }
             Logger.Message("Calling Recognizer with {0}", location);

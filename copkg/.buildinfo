@@ -7,6 +7,14 @@
     packager: "garrett serack <garretts@microsoft.com>";
 }
 
+publish-current { 
+    build-command : @"
+    for /F %%G in ('dir /s /b /o-n  coapp*.msi') do ( 
+        curl -T %%G http://coapp.org/upload/current/
+        goto :eof
+    )";
+}
+
 private { 
     uses: install;
     build-command: @"
