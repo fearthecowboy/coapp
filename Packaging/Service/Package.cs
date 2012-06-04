@@ -793,7 +793,7 @@ namespace CoApp.Packaging.Service {
                             Directory.CreateDirectory(pDir);
                         }
                         // Logger.Message("Creating Shortcut [{0}] => [{1}]", rule.Destination, rule.Source);
-                        ShellLink.CreateShortcut(rule.Destination, rule.Source);
+                        ShellLink.CreateShortcut(rule.Destination, rule.Source, workingDirectory:"");
                     }
 
                     return true;

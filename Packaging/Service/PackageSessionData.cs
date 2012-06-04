@@ -96,8 +96,6 @@ namespace CoApp.Packaging.Service {
 
         public string LocalValidatedLocation {
             get {
-                var remoteInterface = Event<GetResponseInterface>.RaiseFirst();
-
                 if (!string.IsNullOrEmpty(_localValidatedLocation) && _localValidatedLocation.FileIsLocalAndExists()) {
                     return _localValidatedLocation;
                 }
@@ -107,10 +105,6 @@ namespace CoApp.Packaging.Service {
 
                     if (!string.IsNullOrEmpty(location)) {
                         var result = Verifier.HasValidSignature(location);
-                        if (remoteInterface != null) {
-                            // only call this when we're connected to a client
-                            Event<GetResponseInterface>.RaiseFirst().SignatureValidation(location, result, result ? Verifier.GetPublisherName(location) : null);
-                        }
 
                         if (result) {
                             // looks valid, return it. 
@@ -178,9 +172,5 @@ namespace CoApp.Packaging.Service {
                 return destination;
             }) as Task<string>);
         }
-
-
-
-        
     }
 }

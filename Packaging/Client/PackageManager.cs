@@ -257,7 +257,7 @@ namespace CoApp.Packaging.Client {
 
         public Task<bool> VerifyFileSignature(string filename) {
             // make the remote call via the interface.
-            return (Remote.VerifyFileSignature(filename) as Task<PackageManagerResponseImpl>).Continue(response => response.IsSignatureValid);
+            return (Remote.VerifyFileSignature(filename) as Task<PackageManagerResponseImpl>).Continue(response => response.ValidationState[filename]);
         }
 
         public Task SetGeneralPackageInformation(int priority, CanonicalName canonicalName, string key, string value) {
@@ -281,49 +281,6 @@ namespace CoApp.Packaging.Client {
             }
             return result;
         }
-
-#if DEPRECATED
-        public Task BlockPackage(CanonicalName packageName) {
-            return SetPackageFlags(packageName, blocked: true);
-        }
-
-        public Task MarkPackageDoNotUpdate(CanonicalName canonicalName) {
-            return SetPackageFlags(canonicalName, doNotUpdate: true);
-        }
-
-        public Task MarkPackageDoNotUpgrade(CanonicalName canonicalName) {
-            return SetPackageFlags(canonicalName, doNotUpgrade: true);
-        }
-
-        public Task MarkPackageActive(CanonicalName canonicalName) {
-            return SetPackageFlags(canonicalName, active: true);
-        }
-
-        public Task MarkPackageRequested(CanonicalName canonicalName) {
-            return SetPackageFlags(canonicalName, requested: true);
-        }
-
-        public Task UnBlockPackage(CanonicalName packageName) {
-            return SetPackageFlags(packageName, blocked: false);
-        }
-
-        public Task MarkPackageOkToUpdate(CanonicalName canonicalName) {
-            return SetPackageFlags(canonicalName, doNotUpdate: false);
-        }
-
-        public Task MarkPackageOkToUpgrade(CanonicalName canonicalName) {
-            return SetPackageFlags(canonicalName, doNotUpgrade: false);
-        }
-
-        public Task MarkPackageNotRequested(CanonicalName canonicalName) {
-            return SetPackageFlags(canonicalName, requested: false);
-        }
-
-        private Task SetPackageFlags(CanonicalName canonicalName, bool? active = null, bool? requested = null, bool? blocked = null, bool? doNotUpdate = null, bool? doNotUpgrade = null) {
-            // you can actually use a partial package name for this call.
-            return Remote.SetPackage(canonicalName, active, requested, blocked, doNotUpdate, doNotUpgrade);
-        }
-#endif
 
         public Task<IEnumerable<Package>> GetActiveVersion(CanonicalName packageName) {
             return FindPackages(packageName, Package.Properties.Active.Is(true));

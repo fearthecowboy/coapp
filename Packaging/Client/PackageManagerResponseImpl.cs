@@ -37,14 +37,22 @@ namespace CoApp.Packaging.Client {
         private readonly Lazy<List<GeneralPackageInformation>> _gpi = new Lazy<List<GeneralPackageInformation>>(() => new List<GeneralPackageInformation>());
         private readonly Lazy<List<Policy>> _policies = new Lazy<List<Policy>>(() => new List<Policy>());
         private readonly Lazy<List<ScheduledTask>> _scheduledTasks = new Lazy<List<ScheduledTask>>(() => new List<ScheduledTask>());
+        private readonly Lazy<IDictionary<string, bool>>  _validState = new Lazy<IDictionary<string, bool>>( () => new XDictionary<string, bool>());
+
         private AtomFeed _feed;
+
+        internal string OperationCanceledReason;
+        internal Package UpgradablePackage;
+        internal IEnumerable<Package> PotentialUpgrades;
+        internal static IDictionary<string, Task> CurrentDownloads = new XDictionary<string, Task>();
+
 
         private readonly IncomingCallDispatcher<IPackageManagerResponse> _dispatcher;
 
         internal LoggingSettings LoggingSettingsResult;
         internal bool EngineRestarting;
         internal bool NoPackages;
-        internal bool IsSignatureValid;
+        
         internal bool OptedIn;
         internal IEnumerable<string> _publishers = Enumerable.Empty<string>();
 
@@ -57,6 +65,12 @@ namespace CoApp.Packaging.Client {
         internal IEnumerable<Package> Packages {
             get {
                 return _packages.IsValueCreated ? _packages.Value.Distinct() : Enumerable.Empty<Package>();
+            }
+        }
+
+        internal IDictionary<string,bool> ValidationState {
+            get {
+                return _validState.Value;
             }
         }
 
@@ -90,11 +104,7 @@ namespace CoApp.Packaging.Client {
             }
         }
 
-        internal string OperationCanceledReason;
-        internal Package UpgradablePackage;
-        internal IEnumerable<Package> PotentialUpgrades;
-        internal static IDictionary<string, Task> CurrentDownloads = new XDictionary<string, Task>();
-
+      
         public PackageManagerResponseImpl() {
             // this makes sure that all response messages are getting sent back to here.
             _dispatcher = new IncomingCallDispatcher<IPackageManagerResponse>(this);
@@ -104,7 +114,6 @@ namespace CoApp.Packaging.Client {
         internal void Clear() {
             EngineRestarting = false;
             NoPackages = false;
-            IsSignatureValid = false;
             OperationCanceledReason = null;
         }
 
@@ -314,7 +323,7 @@ namespace CoApp.Packaging.Client {
         }
 
         public void SignatureValidation(string filename, bool isValid, string certificateSubjectName) {
-            IsSignatureValid = isValid;
+            _validState.Value[filename] = isValid;
         }
 
         public void PermissionRequired(string policyRequired) {

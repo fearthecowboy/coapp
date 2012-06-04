@@ -17,7 +17,10 @@ namespace CoApp.Toolkit.Crypto {
     using System.Security.Cryptography.Pkcs;
     using System.Security.Cryptography.X509Certificates;
     using Collections;
-    using Logging;
+#if COAPP_ENGINE_CORE
+    using Packaging.Service;
+#endif
+    using Tasks;
     using Win32;
     using FILETIME = System.Runtime.InteropServices.ComTypes.FILETIME;
 
@@ -131,18 +134,28 @@ namespace CoApp.Toolkit.Crypto {
         // GUID of the action to perform
         private const string WINTRUST_ACTION_GENERIC_VERIFY_V2 = "{00AAC56B-CD44-11d0-8CC2-00C04FC295EE}";
 
-        private static IDictionary<string, bool> _isValidCache = new Dictionary<string, bool>();
+        private static HashSet<string> _isValidCache = new HashSet<string>();
 
         public static bool HasValidSignature(string fileName) {
             try {
-                if( _isValidCache.ContainsKey(fileName)) {
-                    return _isValidCache[fileName];
+                if( _isValidCache.Contains(fileName)) {
+                    return true;
                 }
                 var wtd = new WinTrustData(fileName);
                 var guidAction = new Guid(WINTRUST_ACTION_GENERIC_VERIFY_V2);
                 WinVerifyTrustResult result = WinTrust.WinVerifyTrust(INVALID_HANDLE_VALUE, guidAction, wtd);
                 bool ret = (result == WinVerifyTrustResult.Success);
-                _isValidCache[fileName] = ret;
+                
+                if (ret) {
+                    _isValidCache.Add(fileName);
+                } 
+#if COAPP_ENGINE_CORE
+                var response = Event<GetResponseInterface>.RaiseFirst();
+
+                if( response != null ) {
+                    response.SignatureValidation(fileName, ret, ret ? Verifier.GetPublisherInformation(fileName)["PublisherName"] : null);
+                }
+#endif                 
                 return ret;
             } catch (Exception) {
                 return false;

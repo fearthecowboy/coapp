@@ -694,8 +694,7 @@ namespace CoApp.Packaging.Service {
                 return FinishedSynchronously;
             }
 
-            var r = Verifier.HasValidSignature(location);
-            response.SignatureValidation(location, r, r ? Verifier.GetPublisherInformation(location)["PublisherName"] : null);
+            Verifier.HasValidSignature(location);
             return FinishedSynchronously;
         }
 
