@@ -22,6 +22,16 @@ namespace CoApp.Toolkit.Win32 {
         public delegate bool ConsoleHandlerRoutine(ConsoleEvents eventId);
 #endif
 
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        public static extern uint SearchPath(
+            string lpPath,
+            string lpFileName,
+            string lpExtension,
+            int nBufferLength,
+            [MarshalAs(UnmanagedType.LPTStr)]
+                StringBuilder lpBuffer,
+            out IntPtr lpFilePart);
+
         [DllImport("shell32.dll", SetLastError = true)]
         public static extern IntPtr CommandLineToArgvW([MarshalAs(UnmanagedType.LPWStr)] string lpCmdLine, out int pNumArgs);
 

@@ -23,17 +23,17 @@
 #if COAPP_ENGINE_CORE
         private static bool _messages;
         public static bool Messages {
-            get { return _messages || SessionCache<string>.Value["LogMessages"].IsTrue(); }
+            get { return _messages || SessionData.Current.LoggingMessages; }
             set { _messages = value; }
         }
         private static bool _errors;
         public static bool Errors {
-            get { return _errors || SessionCache<string>.Value["LogErrors"].IsTrue(); }
+            get { return _errors || SessionData.Current.LoggingErrors; }
             set { _errors= value; }
         }
         private static bool _warnings;
         public static bool Warnings {
-            get { return _warnings || SessionCache<string>.Value["LogWarnings"].IsTrue(); }
+            get { return _warnings || SessionData.Current.LoggingWarnings; }
             set { _warnings = value; }
         }
 #else

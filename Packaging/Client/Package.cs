@@ -554,7 +554,7 @@ namespace CoApp.Packaging.Client {
             public static Filter<IPackage> InstalledPackages = Properties.Installed.Is(true);
             public static Filter<IPackage> Trimable = InstalledPackages & Properties.Trimable.Is(true);
             public static Filter<IPackage> PackagesWithUpdateAvailable = InstalledPackages & Properties.UpdatePackages.Any();
-            public static Filter<IPackage> PackagesWithUpgradeAvailable = InstalledPackages & Properties.UpdatePackages.Any();
+            public static Filter<IPackage> PackagesWithUpgradeAvailable = InstalledPackages & Properties.UpgradePackages.Any();
         }
 
         #endregion

@@ -14,8 +14,10 @@ namespace CoApp.Packaging.Service {
     using System;
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
+    using System.Diagnostics;
     using System.IO;
     using System.Linq;
+    using System.Threading.Tasks;
     using Common;
     using Common.Exceptions;
     using Common.Model;
@@ -237,7 +239,7 @@ namespace CoApp.Packaging.Service {
 
         internal PackageSessionData PackageSessionData {
             get {
-                return SessionCache<PackageSessionData>.Value[CanonicalName] ?? (SessionCache<PackageSessionData>.Value[CanonicalName] = new PackageSessionData(this));
+                return SessionData.Current.PackageSessionData.GetOrAdd(CanonicalName, () => new PackageSessionData(this));
             }
         }
 
@@ -301,9 +303,8 @@ namespace CoApp.Packaging.Service {
 
             } catch (Exception e) {
                 Logger.Error("Package Install Failure [{0}] => [{1}].\r\n{2}", CanonicalName, e.Message, e.StackTrace);
+                Remove();
 
-                //we could get here and the MSI had installed but nothing else
-                PackageHandler.Remove(this);
                 IsInstalled = false;
                 throw new PackageInstallFailedException(this);
             }
@@ -313,15 +314,23 @@ namespace CoApp.Packaging.Service {
             try {
                 Logger.Message("Attempting to undo package composition");
                 UndoPackageComposition();
+            } catch {
+                // if something goes wrong in removing package composition, keep uninstalling.
+            }
 
+            try {
                 Logger.Message("Attempting to remove MSI");
                 PackageHandler.Remove(this);
+
+                // clean up the package directory if it hangs around.
+                PackageDirectory.TryHardToDelete();
+
                 IsInstalled = false;
 
                 PackageManagerSettings.PerPackageSettings.DeleteSubkey(CanonicalName);
             } catch (Exception e) {
                 Logger.Error(e);
-                Event<GetResponseInterface>.RaiseFirst().FailedPackageRemoval(CanonicalName, "GS01: I'm not sure of the reason... ");
+                Event<GetResponseInterface>.RaiseFirst().FailedPackageRemoval(CanonicalName, "GS01: During package removal, things went horribly wrong.... ");
                 throw new OperationCompletedBeforeResultException();
             } 
         }
@@ -484,6 +493,31 @@ namespace CoApp.Packaging.Service {
                         case PackageRole.WebApplication:
                             break;
                         case PackageRole.Faux:
+                            foreach (var fauxApplication in FauxApplications) {
+                                if (fauxApplication.Name == role.Name || (string.IsNullOrEmpty(fauxApplication.Name) && string.IsNullOrEmpty(role.Name))) {
+                                    foreach (var dest in fauxApplication.Downloads.Keys) {
+                                        yield return new CompositionRule {
+                                            Action = CompositionAction.DownloadFile,
+                                            Destination = "${packagedir}\\" + dest,
+                                            Source = fauxApplication.Downloads[dest].AbsoluteUri,
+                                        };
+                                    }
+                                    if( !string.IsNullOrEmpty(fauxApplication.InstallCommand) ) {
+                                        yield return new CompositionRule {
+                                            Action = CompositionAction.InstallCommand,
+                                            Source = fauxApplication.InstallCommand,
+                                            Destination = fauxApplication.InstallParameters
+                                        };    
+                                    }
+                                    if (!string.IsNullOrEmpty(fauxApplication.RemoveCommand)) {
+                                        yield return new CompositionRule {
+                                            Action = CompositionAction.RemoveCommand,
+                                            Source = fauxApplication.RemoveCommand,
+                                            Destination = fauxApplication.RemoveParameters
+                                        };
+                                    }
+                                }
+                            }
                             break;
                     }
                 }
@@ -511,6 +545,12 @@ namespace CoApp.Packaging.Service {
 
             Logger.Error("ERROR: path '{0}' must resolve to be a child of '{1}' (resolves to '{2}')", variable, parentPath, path);
             return null;
+        }
+
+        public bool RequiresTrustedPublisher {
+            get {
+                return FauxApplications.Any();
+            }
         }
 
         private IEnumerable<CompositionRule> ResolvedRules { 
@@ -554,29 +594,97 @@ namespace CoApp.Packaging.Service {
                             };
                             break;
 
+                        case CompositionAction.DownloadFile:
+                            yield return new CompositionRule {
+                                Action = rule.Action,
+                                Destination = ResolveVariablesAndEnsurePathParentage(packagedir, rule.Destination),
+                                Source = rule.Source
+                            };
+                            break;
+
+                        case CompositionAction.InstallCommand:
+                        case CompositionAction.RemoveCommand:
+                            yield return new CompositionRule {
+                                Action = rule.Action,
+                                Destination = ResolveVariables(rule.Destination),
+                                Source = ResolveVariables(rule.Source)
+                            };
+                            break;
                     }
                 }
                 
             }
         }
 
-        private void ApplyRule( CompositionRule rule ) {
+        private bool ExecuteCommand(string command, string parameters) {
+            if( string.IsNullOrEmpty(command)) {
+                return true;
+            }
+
+            var psi = new ProcessStartInfo {
+                FileName = command.Contains("\\") ? command : EnvironmentUtility.FindInPath( command, PackageDirectory+";"+EnvironmentUtility.EnvironmentPath),
+                Arguments = parameters,
+                CreateNoWindow = false,
+                RedirectStandardError = true,
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                WorkingDirectory = PackageDirectory
+            };
+            if(! psi.FileName.Contains("\\") ) {
+                Logger.Error("Target execute command does not have a full path. '{0}'", psi.FileName);
+            }
+
+            try {
+                var proc = Process.Start(psi);
+                var stdOut = Task.Factory.StartNew(() => proc.StandardOutput.ReadToEnd());
+                var stdErr = Task.Factory.StartNew(() => proc.StandardError.ReadToEnd());
+
+                proc.WaitForExit();
+
+                if (proc.ExitCode != 0) {
+                    Logger.Error("Failed Execute Command StdOut: \r\n{0}", stdOut.Result);
+                    Logger.Error("Failed Execute Command StdError: \r\n{0}", stdErr.Result);
+                    return false;
+                }
+                return true;
+            } catch(Exception e) {
+                Logger.Error(e);
+                
+            }
+            return false;
+        }
+
+
+        private bool ApplyRule( CompositionRule rule ) {
             switch (rule.Action) {
+                case CompositionAction.DownloadFile:
+                    if(!File.Exists(rule.Destination)) {
+                        PackageSessionData.DownloadFile(rule.Source, rule.Destination);
+                    }
+                    return true;
+
+                case CompositionAction.InstallCommand:
+                    return ExecuteCommand(rule.Source, rule.Destination);
+
+                case CompositionAction.RemoveCommand:
+                    // we never 'apply' remove commands. Just remove em'
+                    return true; 
+
                 case CompositionAction.FileCopy:
                     // file copy operations may only manipulate files in the package directory.
                     if (string.IsNullOrEmpty(rule.Source)) {
                         Logger.Error("ERROR: Illegal file copy rule. Source must be in package directory [{0}] => [{1}]", rule.Source, rule.Destination);
-                        return;
+                        return false;
                     }
 
                     if (string.IsNullOrEmpty(rule.Destination)) {
                         Logger.Error("ERROR: Illegal file copy rule. Destination must be in package directory [{0}] => [{1}]", rule.Source, rule.Destination);
-                        return;
+                        return false;
                     }
 
                     if (!File.Exists(rule.Source)) {
                         Logger.Error("ERROR: Illegal file copy rule. Source file does not exist [{0}] => [{1}]", rule.Source, rule.Destination);
-                        return;
+                        return false;
                     }
                     try {
                         var destParent = Path.GetDirectoryName(rule.Destination);
@@ -590,41 +698,41 @@ namespace CoApp.Packaging.Service {
                     catch (Exception e) {
                         Logger.Error(e);
                     }
-                    break;
+                    return true;
 
                 case CompositionAction.FileRewrite:
                     // file copy operations may only manipulate files in the package directory.
                     if (string.IsNullOrEmpty(rule.Source)) {
                         Logger.Error("ERROR: Illegal file rewrite rule. Source must be in package directory [{0}] => [{1}]", rule.Source, rule.Destination);
-                        return;
+                        return false;
                     }
 
                     if (string.IsNullOrEmpty(rule.Destination)) {
                         Logger.Error("ERROR: Illegal file rewrite rule. Destination must be in package directory [{0}] => [{1}]", rule.Source, rule.Destination);
-                        return;
+                        return false;
                     }
 
                     if (!File.Exists(rule.Source)) {
                         Logger.Error("ERROR: Illegal file rewrite rule. Source file does not exist [{0}] => [{1}]", rule.Source, rule.Destination);
-                        return;
+                        return false;
                     }
                     File.WriteAllText(rule.Destination, ResolveVariables(File.ReadAllText(rule.Source)));
-                    break;
+                    return true;
 
                 case CompositionAction.SymlinkFile:
                     if (string.IsNullOrEmpty(rule.Destination)) {
                         Logger.Error("ERROR: Illegal file symlink rule. Destination location '{0}' must be a subpath of apps dir", rule.Destination);
-                        return;
+                        return false;
                     }
 
                     if (string.IsNullOrEmpty(rule.Source)) {
                         Logger.Error("ERROR: Illegal file symlink rule. Source file '{0}' must be a subpath of package directory", rule.Source);
-                        return;
+                        return false;
                     }
 
                     if (!File.Exists(rule.Source)) {
                         Logger.Error("ERROR: Illegal folder symlink rule. Source file '{0}' does not exist.", rule.Source);
-                        return;
+                        return false;
                     }
 
                     var parentDir = Path.GetDirectoryName(rule.Destination);
@@ -633,49 +741,50 @@ namespace CoApp.Packaging.Service {
                             Directory.CreateDirectory(parentDir);
                         }
                         try {
-                            Logger.Message("Creating file Symlink [{0}] => [{1}]", rule.Destination, rule.Source);
+                            // Logger.Message("Creating file Symlink [{0}] => [{1}]", rule.Destination, rule.Source);
                             Symlink.MakeFileLink(rule.Destination, rule.Source);
                         }
                         catch (Exception) {
                             Logger.Error("Warning: File Symlink Link Failed. [{0}] => [{1}]", rule.Destination, rule.Source);
                         }
                     }
-                    break;
+                    return true;
 
                 case CompositionAction.SymlinkFolder:
                     if (string.IsNullOrEmpty(rule.Destination)) {
                         Logger.Error("ERROR: Illegal folder symlink rule. Destination location '{0}' must be a subpath of appsdir", rule.Destination);
-                        return;
+                        return false;
                     }
 
                     if (string.IsNullOrEmpty(rule.Source)) {
                         Logger.Error("ERROR: Illegal folder symlink rule. Source folder '{0}' must be a subpath of package directory{1}", rule.Source);
-                        return;
+                        return false;
                     }
 
                     if (!Directory.Exists(rule.Source)) {
                         Logger.Error("ERROR: Illegal folder symlink rule. Source folder '{0}' does not exist.", rule.Source);
-                        return;
+                        return false;
                     }
 
                     try {
-                        Logger.Message("Creatign Directory Symlink [{0}] => [{1}]", rule.Destination, rule.Source);
+                        // Logger.Message("Creatign Directory Symlink [{0}] => [{1}]", rule.Destination, rule.Source);
                         Symlink.MakeDirectoryLink(rule.Destination, rule.Source);
                     }
                     catch (Exception) {
                         Logger.Error("Warning: Directory Symlink Link Failed. [{0}] => [{1}]", rule.Destination, rule.Source);
+                        return false;
                     }
-                    break;
+                    return true;
 
                 case CompositionAction.Shortcut:
                     if (string.IsNullOrEmpty(rule.Source)) {
                         Logger.Error("ERROR: Illegal shortcut rule. Source file '{0}' must be a subpath of package directory", rule.Source);
-                        return;
+                        return false;
                     }
 
                     if (!File.Exists(rule.Source)) {
                         Logger.Error("ERROR: Illegal shortcut rule. Source file '{0}' does not exist.", rule.Source);
-                        return;
+                        return false;
                     }
 
                     var pDir = Path.GetDirectoryName(rule.Destination);
@@ -683,11 +792,11 @@ namespace CoApp.Packaging.Service {
                         if (!Directory.Exists(pDir)) {
                             Directory.CreateDirectory(pDir);
                         }
-                        Logger.Message("Creating Shortcut [{0}] => [{1}]", rule.Destination, rule.Source);
-                        ShellLink.CreateShortcut(rule.Destination, rule.Source);
+                        // Logger.Message("Creating Shortcut [{0}] => [{1}]", rule.Destination, rule.Source);
+                        ShellLink.CreateShortcut(rule.Destination, rule.Source, workingDirectory:"");
                     }
 
-                    break;
+                    return true;
 
                 case CompositionAction.EnvironmentVariable:
                     switch (rule.Key.ToLower()) {
@@ -726,14 +835,14 @@ namespace CoApp.Packaging.Service {
                         case "systemroot":
                         case "userdomain":
                         case "userprofile":
-                            Logger.Message("Package may not set environment variable '{0}'", rule.Key);
-                            break;
+                            Logger.Warning("Package may not set environment variable '{0}'", rule.Key);
+                            return true;
 
                         default:
                             EnvironmentUtility.SetSystemEnvironmentVariable(rule.Key, rule.Value);
-                            break;
+                            return true;
                     }
-                    break;
+                    
 
                 case CompositionAction.Registry:
                     if( CanonicalName.Architecture == Architecture.x64 && Environment.Is64BitOperatingSystem ) {
@@ -741,24 +850,29 @@ namespace CoApp.Packaging.Service {
                     } else {
                         RegistryView.System["SOFTWARE\\Wow6432Node"][rule.Key].StringValue = rule.Value;
                     }
-                    break;
-
-                case CompositionAction.DownloadFile:
-                    break;
-
-                case CompositionAction.InstallScript:
-                    break; 
+                    return true;
 
             }
+            return true;
         }
 
         internal void DoPackageComposition() {
             // GS01: if package composition fails, and we're in the middle of installing a package
             // we should roll back the package install.
-            var rulesThatSuperceedMine = InstalledPackageFeed.Instance.FindPackages(CanonicalName.AllPackages).Where(package => !WinsVersus(package)).SelectMany(package => package.ResolvedRules).ToArray();
+            var rulesThatSuperceedMine = InstalledPackageFeed.Instance.FindPackages(CanonicalName.AllPackages).Where(package => !WinsVersus(package)).SelectMany(package => package.ResolvedRules.Where(each => each.Action != CompositionAction.DownloadFile && each.Action != CompositionAction.InstallCommand && each.Action != CompositionAction.RemoveCommand)).ToArray();
 
             foreach (var rule in ResolvedRules.Where(rule => !rulesThatSuperceedMine.Any(each => each.Destination.Equals(rule.Destination, StringComparison.CurrentCultureIgnoreCase))).OrderBy(rule => rule.Action)) {
-                ApplyRule(rule);
+                // if we've past the downloads, we need to block on them finishing. No downloads is a quick skip.
+                if( rule.Action > CompositionAction.DownloadFile ) {
+                    if (!PackageSessionData.WaitForFileDownloads() ) {
+                        throw new CoAppException("Failed to download one or more dependent files.");
+                    }
+                }
+
+                if (!ApplyRule(rule)) {
+                    // throw if not successful?
+                    // think on this. GS01
+                }
             }
         }
 
@@ -776,18 +890,26 @@ namespace CoApp.Packaging.Service {
 
             foreach (var rule in ResolvedRules) {
                 // there are three possibilities
-
-                // 1. my rule was already superceded by another rule: do nothing.
-                if (rulesThatSuperceedMine.Any(each => each.Destination.Equals(rule.Destination, StringComparison.CurrentCultureIgnoreCase))) {
+                if( rule.Action == CompositionAction.DownloadFile || rule.Action == CompositionAction.InstallCommand) {
+                    //skip these types of rules.
                     continue;
                 }
 
-                // 2. my rule was superceding another: run that rule.
-                var runRule = rulesThatISuperceed.FirstOrDefault(each => each.rule.Destination.Equals(rule.Destination, StringComparison.CurrentCultureIgnoreCase));
-                if (runRule != null) {
-                    runRule.package.ApplyRule(runRule.rule);
-                    continue;
-                } 
+                // never supercede RemoveCommand.
+                if (rule.Action != CompositionAction.RemoveCommand) {
+                    // 1. my rule was already superceded by another rule: do nothing.
+                    if (rulesThatSuperceedMine.Any(each => each.Destination.Equals(rule.Destination, StringComparison.CurrentCultureIgnoreCase))) {
+                        continue;
+                    }
+
+                    // 2. my rule was superceding another: run that rule.
+                    var runRule = rulesThatISuperceed.FirstOrDefault(each => each.rule.Destination.Equals(rule.Destination, StringComparison.CurrentCultureIgnoreCase));
+                    if (runRule != null) {
+
+                        runRule.package.ApplyRule(runRule.rule);
+                        continue;
+                    }
+                }
 
                 // 3. my rule should be the current rule, let's undo it.
                 switch (rule.Action) {
@@ -817,6 +939,10 @@ namespace CoApp.Packaging.Service {
                         break;
                     case CompositionAction.EnvironmentVariable:
                         // not implemented yet.
+                        break;
+
+                    case CompositionAction.RemoveCommand:
+                        ExecuteCommand(rule.Source, rule.Destination);
                         break;
                 }
             }
@@ -855,6 +981,12 @@ namespace CoApp.Packaging.Service {
         internal IEnumerable<DeveloperLibrary> DeveloperLibraries {
             get {
                 return CompositionData.DeveloperLibraries ?? Enumerable.Empty<DeveloperLibrary>();
+            }
+        }
+
+        internal IEnumerable<FauxApplication> FauxApplications {
+            get {
+                return CompositionData.FauxApplications ?? Enumerable.Empty<FauxApplication>();
             }
         }
 

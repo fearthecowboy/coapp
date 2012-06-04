@@ -15,6 +15,7 @@ namespace CoApp.Toolkit.Configuration {
     using System.Reflection;
     using Extensions;
     using Microsoft.Win32;
+    using Pipes;
 
     /// <summary>
     ///   A simplified view into the registry
@@ -337,6 +338,27 @@ namespace CoApp.Toolkit.Configuration {
             }
             set {
                 Value = _rootKey == Registry.CurrentUser ? value.ProtectForUser() : value.ProtectForMachine();
+            }
+        }
+
+        /// <summary>
+        ///   Gets or sets the current node's value as an encrypted string (user-account encrypted for user values, machine-key encrypted for all others). Uses the DPAPI stuff way down deep.
+        /// </summary>
+        /// <value> The unencrypted string value. </value>
+        /// <remarks>
+        /// </remarks>
+        public string[] EncryptedStringsValue {
+            get {
+                var serialized = _rootKey == Registry.CurrentUser
+                    ? (Value as IEnumerable<byte>).UnprotectForUser()
+                    : (Value as IEnumerable<byte>).UnprotectForMachine();
+                if(! string.IsNullOrEmpty(serialized) ) {
+                    return new UrlEncodedMessage(serialized).DeserializeTo<string[]>();
+                }
+                return new string[0];
+            }
+            set {
+                Value = _rootKey == Registry.CurrentUser ?  value.Serialize().ToString().ProtectForUser() :  value.Serialize().ToString().ProtectForMachine();
             }
         }
 

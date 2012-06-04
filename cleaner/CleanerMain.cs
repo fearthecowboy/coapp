@@ -547,9 +547,9 @@ CoApp.Cleaner [options]
                     continue;
                 }
 
-                var feed = GetMsiProperty(path, "CoAppPackageFeed");
+                var cn = GetMsiProperty(path, "CanonicalName");
 
-                if(!string.IsNullOrEmpty(feed)) {
+                if(!string.IsNullOrEmpty(cn)) {
                     yield return new Product {
                         Path = path,
                         Publisher = publisher,
@@ -558,7 +558,6 @@ CoApp.Cleaner [options]
                         Manufacturer = GetMsiProperty(path, "Manufacturer")
                     };    
                 }
-
             }
         }
 

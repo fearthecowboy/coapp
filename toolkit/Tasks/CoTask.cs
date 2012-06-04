@@ -19,6 +19,7 @@ namespace CoApp.Toolkit.Tasks {
     using System.Threading.Tasks;
     using Collections;
     using Exceptions;
+    using Extensions;
     using Logging;
 
     public static class CurrentTask {
@@ -124,14 +125,22 @@ namespace CoApp.Toolkit.Tasks {
 
         public static T Raise {
             get {
-                return (CoTask.CurrentTask.GetEventHandler(typeof (T)) as T) ?? EmptyDelegate;
+                try {
+                    return (CoTask.CurrentTask.GetEventHandler(typeof (T)) as T) ?? EmptyDelegate;
+                } catch(Exception e) {
+                    throw new CoAppException("A TaskBasedEvent thru an exception of type '{0}' for Delegate Type '{1}'".format(  e.GetType() , typeof(T) ),e);
+                }
             }
         }
 
         public static T RaiseFirst {
             get {
-                var dlg = CoTask.CurrentTask.GetEventHandler(typeof (T));
-                return dlg != null ? dlg.GetInvocationList().FirstOrDefault() as T : EmptyDelegate;
+                try {
+                    var dlg = CoTask.CurrentTask.GetEventHandler(typeof (T));
+                    return dlg != null ? dlg.GetInvocationList().FirstOrDefault() as T : EmptyDelegate;
+                } catch(Exception e) {
+                    throw new CoAppException("A TaskBasedEvent thru an exception of type '{0}' for Delegate Type '{1}'".format(  e.GetType() , typeof(T) ),e);
+                }
             }
         }
     }

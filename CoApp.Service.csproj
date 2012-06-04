@@ -105,7 +105,7 @@
     <Compile Include="Packaging\Service\PackageRequestData.cs" />
     <Compile Include="Packaging\Service\PackageSessionData.cs" />
     <Compile Include="Packaging\Service\RequestRemoteFileState.cs" />
-    <Compile Include="Packaging\Service\SessionCache.cs" />
+    <Compile Include="Packaging\Service\SessionData.cs" />
     <Compile Include="Packaging\Service\Signals.cs" />
     <Compile Include="Toolkit\Collections\XDictionary.cs" />
     <Compile Include="Toolkit\Collections\InternalDictionary.cs" />

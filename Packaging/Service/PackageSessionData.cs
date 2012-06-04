@@ -11,8 +11,13 @@
 //-----------------------------------------------------------------------
 
 namespace CoApp.Packaging.Service {
+    using System;
+    using System.Collections.Generic;
+    using System.IO;
     using System.Linq;
+    using System.Threading.Tasks;
     using Common;
+    using Toolkit.Collections;
     using Toolkit.Configuration;
     using Toolkit.Crypto;
     using Toolkit.Extensions;
@@ -63,16 +68,6 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        /*
-        public bool Supercedes(Package p)
-        {
-            return Architecture == p.Architecture &&
-                   PublicKeyToken == p.PublicKeyToken &&
-                   Name.Equals(p.Name, StringComparison.CurrentCultureIgnoreCase) &&
-                   p.Version <= PolicyMaximumVersion && p.Version >= PolicyMinimumVersion;
-        }
-        */
-
         public bool CouldNotDownload {
             get {
                 return _couldNotDownload;
@@ -101,8 +96,6 @@ namespace CoApp.Packaging.Service {
 
         public string LocalValidatedLocation {
             get {
-                var remoteInterface = Event<GetResponseInterface>.RaiseFirst();
-
                 if (!string.IsNullOrEmpty(_localValidatedLocation) && _localValidatedLocation.FileIsLocalAndExists()) {
                     return _localValidatedLocation;
                 }
@@ -112,10 +105,6 @@ namespace CoApp.Packaging.Service {
 
                     if (!string.IsNullOrEmpty(location)) {
                         var result = Verifier.HasValidSignature(location);
-                        if (remoteInterface != null) {
-                            // only call this when we're connected to a client
-                            Event<GetResponseInterface>.RaiseFirst().SignatureValidation(location, result, result ? Verifier.GetPublisherName(location) : null);
-                        }
 
                         if (result) {
                             // looks valid, return it. 
@@ -151,6 +140,37 @@ namespace CoApp.Packaging.Service {
                 _lastProgress = p;
                 return result;
             }
+        }
+
+        public bool WaitForFileDownloads() {
+            if( _downloadQueue.IsNullOrEmpty()) {
+                return true;
+            }
+            var result = _downloadQueue.All(each => each.Result != null);
+            _downloadQueue = null;
+            return result;
+        }
+
+        private XList<Task<string>> _downloadQueue;
+
+        public void DownloadFile(string url, string destination) {
+            var response = Event<GetResponseInterface>.RaiseFirst();
+            if (response == null) {
+                return;
+            }
+
+            _downloadQueue = _downloadQueue ?? new XList<Task<string>>();
+            _downloadQueue.Add(SessionData.Current.RequireRemoteFile(url, new Uri(url).SingleItemAsEnumerable(), PackageManagerSettings.CoAppCacheDirectory, false, rrfState => {
+                if (rrfState == null || string.IsNullOrEmpty(rrfState.LocalLocation) || !File.Exists(rrfState.LocalLocation)) {
+                    // didn't fill in the local location? -- this happens when the client can't download.
+                    return null;
+                }
+
+                if (!rrfState.LocalLocation.Equals(destination, StringComparison.CurrentCultureIgnoreCase)) {
+                    File.Copy(rrfState.LocalLocation, destination);
+                }
+                return destination;
+            }) as Task<string>);
         }
     }
 }

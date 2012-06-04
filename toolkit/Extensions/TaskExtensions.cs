@@ -50,7 +50,7 @@ namespace CoApp.Toolkit.Extensions {
                 throw new AggregateException(exceptions);
             }
 
-            if (antecedents.Any(each => each.IsCompleted))
+            if (antecedents.Any(each => each.IsCanceled))
                 throw new OperationCompletedBeforeResultException();
         }
 
@@ -72,7 +72,7 @@ namespace CoApp.Toolkit.Extensions {
                 throw new AggregateException(exceptions);
             }
 
-            if (antecedents.Any(each => each.IsCompleted))
+            if (antecedents.Any(each => each.IsCanceled))
                 throw new OperationCompletedBeforeResultException();
         }
 
@@ -287,10 +287,16 @@ namespace CoApp.Toolkit.Extensions {
             var tcs = new TaskCompletionSource<TResult>();
             Task.Factory.ContinueWhenAll(
                 antes, aa => {
-                    if (aa.Any(each => each.IsCanceled || each.IsFaulted)) {
+                    if (aa.Any(each => each.IsFaulted)) {
+                        tcs.SetException( new AggregateException(aa.Where(each => each.IsFaulted).Select(each => each.Exception)));
+                        return;
+                    }
+
+                    if (aa.Any(each => each.IsCanceled)) {
                         // there was a failure somewhere.
                         // don't do anything else.
                         tcs.SetCanceled();
+                        return;
                     }
 
                     try {
@@ -388,10 +394,16 @@ namespace CoApp.Toolkit.Extensions {
             var tcs = new TaskCompletionSource<Task<TResult>>();
             Task.Factory.ContinueWhenAll(
                 antes, aa => {
-                    if (aa.Any(each => each.IsCanceled || each.IsFaulted)) {
+                    if (aa.Any(each => each.IsFaulted)) {
+                        tcs.SetException(new AggregateException(aa.Where(each => each.IsFaulted).Select(each => each.Exception)));
+                        return;
+                    }
+
+                    if (aa.Any(each => each.IsCanceled)) {
                         // there was a failure somewhere.
                         // don't do anything else.
                         tcs.SetCanceled();
+                        return;
                     }
 
                     try {
@@ -488,10 +500,16 @@ namespace CoApp.Toolkit.Extensions {
             var tcs = new TaskCompletionSource<TResult>();
             Task.Factory.ContinueWhenAll(
                 antes, aa => {
-                    if (aa.Any(each => each.IsCanceled || each.IsFaulted)) {
+                    if (aa.Any(each => each.IsFaulted)) {
+                        tcs.SetException(new AggregateException(aa.Where(each => each.IsFaulted).Select(each => each.Exception)));
+                        return;
+                    }
+
+                    if (aa.Any(each => each.IsCanceled)) {
                         // there was a failure somewhere.
                         // don't do anything else.
                         tcs.SetCanceled();
+                        return;
                     }
 
                     try {
@@ -588,10 +606,16 @@ namespace CoApp.Toolkit.Extensions {
             var tcs = new TaskCompletionSource<Task<TResult>>();
             Task.Factory.ContinueWhenAll(
                 antes, aa => {
-                    if (aa.Any(each => each.IsCanceled || each.IsFaulted)) {
+                    if (aa.Any(each => each.IsFaulted)) {
+                        tcs.SetException(new AggregateException(aa.Where(each => each.IsFaulted).Select(each => each.Exception)));
+                        return;
+                    }
+
+                    if (aa.Any(each => each.IsCanceled)) {
                         // there was a failure somewhere.
                         // don't do anything else.
                         tcs.SetCanceled();
+                        return;
                     }
 
                     try {
@@ -687,10 +711,16 @@ namespace CoApp.Toolkit.Extensions {
             var tcs = new TaskCompletionSource<object>();
             Task.Factory.ContinueWhenAll(
                 antes, aa => {
-                    if (aa.Any(each => each.IsCanceled || each.IsFaulted)) {
+                    if (aa.Any(each => each.IsFaulted)) {
+                        tcs.SetException(new AggregateException(aa.Where(each => each.IsFaulted).Select(each => each.Exception)));
+                        return;
+                    }
+
+                    if (aa.Any(each => each.IsCanceled)) {
                         // there was a failure somewhere.
                         // don't do anything else.
                         tcs.SetCanceled();
+                        return;
                     }
 
                     try {
@@ -789,10 +819,16 @@ namespace CoApp.Toolkit.Extensions {
             var tcs = new TaskCompletionSource<Task>();
             Task.Factory.ContinueWhenAll(
                 antes, aa => {
-                    if (aa.Any(each => each.IsCanceled || each.IsFaulted)) {
+                    if (aa.Any(each => each.IsFaulted)) {
+                        tcs.SetException(new AggregateException(aa.Where(each => each.IsFaulted).Select(each => each.Exception)));
+                        return;
+                    }
+
+                    if (aa.Any(each => each.IsCanceled)) {
                         // there was a failure somewhere.
                         // don't do anything else.
                         tcs.SetCanceled();
+                        return;
                     }
 
                     try {
@@ -888,10 +924,16 @@ namespace CoApp.Toolkit.Extensions {
             var tcs = new TaskCompletionSource<object>();
             Task.Factory.ContinueWhenAll(
                 antes, aa => {
-                    if (aa.Any(each => each.IsCanceled || each.IsFaulted)) {
+                    if (aa.Any(each => each.IsFaulted)) {
+                        tcs.SetException(new AggregateException(aa.Where(each => each.IsFaulted).Select(each => each.Exception)));
+                        return;
+                    }
+
+                    if (aa.Any(each => each.IsCanceled)) {
                         // there was a failure somewhere.
                         // don't do anything else.
                         tcs.SetCanceled();
+                        return;
                     }
 
                     try {
@@ -989,12 +1031,17 @@ namespace CoApp.Toolkit.Extensions {
             var tcs = new TaskCompletionSource<Task>();
             Task.Factory.ContinueWhenAll(
                 antes, aa => {
-                    if (aa.Any(each => each.IsCanceled || each.IsFaulted)) {
+                    if (aa.Any(each => each.IsFaulted)) {
+                        tcs.SetException(new AggregateException(aa.Where(each => each.IsFaulted).Select(each => each.Exception)));
+                        return;
+                    }
+
+                    if (aa.Any(each => each.IsCanceled)) {
                         // there was a failure somewhere.
                         // don't do anything else.
                         tcs.SetCanceled();
+                        return;
                     }
-
                     try {
                         tcs.SetResult(childActionTask());
                     } catch (Exception e) {

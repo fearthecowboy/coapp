@@ -90,6 +90,15 @@ namespace CoApp.Packaging.Service {
         private readonly OutgoingCallDispatcher _outgoingDispatcher;
         private readonly IPackageManagerResponse _dispatcher;
 
+
+        private readonly Queue<string> _outputQueue = new Queue<string>();
+        private Task _queueProcessingTask;
+        
+        private readonly ManualResetEvent _bufferReady = new ManualResetEvent(true);
+
+        // private IDictionary<Type, object> _sessionCache = new XDictionary<Type, object>();
+        private SessionData _sessionData;
+       
         private bool Connected {
             get {
                 return _resetEvent.WaitOne(0);
@@ -218,8 +227,7 @@ namespace CoApp.Packaging.Service {
                 _cancellationTokenSource.Cancel();
 
                 // drop all our local session data.
-                _sessionCache.Clear();
-                _sessionCache = null;
+                _sessionData = null;
 
                 // close and clean up the pipes. 
                 Disconnect();
@@ -278,7 +286,8 @@ namespace CoApp.Packaging.Service {
             _isElevated = isElevated;
             _isAsychronous = serverPipe == responsePipe;
             Connected = true;
-
+            _sessionData = new SessionData {Session = this};
+            
             _outgoingDispatcher = new OutgoingCallDispatcher(typeof(IPackageManagerResponse), WriteAsync);
             _dispatcher = _outgoingDispatcher.ActLike<IPackageManagerResponse>();
 
@@ -299,8 +308,6 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        private readonly Queue<string> _outputQueue = new Queue<string>();
-        private Task _queueProcessingTask;
 
         private Task SendQueuedMessages() {
             lock (this) {
@@ -380,8 +387,6 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        private IDictionary<Type, object> _sessionCache = new XDictionary<Type, object>();
-        private readonly ManualResetEvent _bufferReady = new ManualResetEvent(true);
 
         /// <summary>
         ///   Processes the mesages.
@@ -391,6 +396,8 @@ namespace CoApp.Packaging.Service {
         private void ProcessMesages() {
             // instantiate the Asynchronous Package Session object (ie, like thread-local-storage, but really, 
             // it's session-local-storage. So for this task and all its children, this will serve up data.
+
+            CurrentTask.Events += new GetCurrentSession(() => _sessionData);
 
             CurrentTask.Events += new CheckForPermission(policy => {
                 try {
@@ -439,15 +446,6 @@ namespace CoApp.Packaging.Service {
                     }
                 });
                 return result;
-            });
-
-            CurrentTask.Events += new GetSessionCache((type, constructor) => {
-                lock (_sessionCache) {
-                    if (!_sessionCache.ContainsKey(type)) {
-                        _sessionCache.Add(type, constructor());
-                    }
-                    return _sessionCache[type];
-                }
             });
 
             Task<int> readTask = null;

@@ -28,6 +28,9 @@ namespace CoApp.Packaging.Common.Model {
         public List<WebApplication> WebApplications { get; set; }
 
         [XmlArray(IsNullable = false)]
+        public List<FauxApplication> FauxApplications { get; set; }
+
+        [XmlArray(IsNullable = false)]
         public List<Service> Services { get; set; }
 
         [XmlArray(IsNullable = false)]

@@ -45,7 +45,7 @@ namespace CoApp.Packaging.Service.Feeds {
         /// </remarks>
         internal DirectoryPackageFeed(string location, string patternMatch) : base(location) {
             _path = location;
-            _filter = patternMatch ?? "*";
+            _filter = patternMatch ?? "*.msi";  // TODO: evenutally, we have to expand this to detect other types.
         }
 
         private int _lastCount;

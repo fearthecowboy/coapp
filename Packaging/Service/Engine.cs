@@ -339,9 +339,15 @@ namespace CoApp.Packaging.Service {
                 Symlink.MakeDirectoryLink("{0}:\\apps".format(root[0]), root);
             }
 
+            var pathext=EnvironmentUtility.GetSystemEnvironmentVariable("PATHEXT");
+            if( pathext.IndexOf(".lnk",StringComparison.CurrentCultureIgnoreCase) == -1 ) {
+                EnvironmentUtility.SetSystemEnvironmentVariable("PATHEXT", pathext + ";.lnk");
+            }
+
             foreach (var path in CanonicalFolders.Select(folder => Path.Combine(root, folder)).Where(path => !Directory.Exists(path))) {
                 Directory.CreateDirectory(path);
             }
+
             // make sure system paths are updated.
             var binPath = Path.Combine(root, "bin");
             var psPath = Path.Combine(root, "powershell");

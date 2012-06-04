@@ -16,6 +16,7 @@ namespace CoApp.Packaging.Service {
     using System;
 
     internal delegate object GetSessionCache(Type type, Func<object> constructor);
+    internal delegate SessionData GetCurrentSession();
     internal delegate IPackageManagerResponse GetResponseInterface();
     internal delegate XDictionary<string, PackageRequestData> GetRequestPackageDataCache();
     internal delegate bool CheckForPermission(PermissionPolicy policy);

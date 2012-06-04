@@ -12,6 +12,8 @@
 
 namespace CoApp.Packaging.Service.PackageFormatHandlers {
     using System;
+    using System.Collections;
+    using System.Collections.Generic;
     using System.IO;
     using System.Linq;
     using Common;
@@ -30,7 +32,7 @@ namespace CoApp.Packaging.Service.PackageFormatHandlers {
     /// </remarks>
     internal class CoAppMSI : MSIBase, IPackageFormatHandler {
         internal static CoAppMSI Instance = new CoAppMSI();
-
+        private static IDictionary<string, bool> _isValidCache = new Dictionary<string, bool>();
         private CoAppMSI() {
         }
 
@@ -47,7 +49,7 @@ namespace CoApp.Packaging.Service.PackageFormatHandlers {
         /// </remarks>
         internal static bool IsValidPackageFile(string path) {
             try {
-                return HasCoAppProperties(path) && Verifier.HasValidSignature(path);
+                return _isValidCache.ContainsKey(path) ? _isValidCache[path] : (_isValidCache[path] = HasCoAppProperties(path) && Verifier.HasValidSignature(path));
             } catch {
             }
             return false;

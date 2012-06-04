@@ -11,7 +11,9 @@
 namespace CoApp.Toolkit.Win32 {
     using System;
     using System.Collections.Generic;
+    using System.IO;
     using System.Linq;
+    using System.Text;
     using System.Threading.Tasks;
     using Extensions;
 
@@ -113,6 +115,30 @@ namespace CoApp.Toolkit.Win32 {
 
         public static IEnumerable<string> Remove(this IEnumerable<string> searchPath, string pathToRemove) {
             return searchPath.Where(s => !s.Equals(pathToRemove, StringComparison.CurrentCultureIgnoreCase));
+        }
+
+        
+
+        internal static string FindInPath(string filename, string searchPath = null) {
+            if (string.IsNullOrEmpty(filename))
+                return string.Empty;
+            var p = new IntPtr();
+            var s = new StringBuilder(260); // MAX_PATH
+
+            if (Path.GetExtension(filename) != string.Empty) {
+                Kernel32.SearchPath(searchPath, filename, null, s.Capacity, s, out p);
+            }
+
+            // Step 2b: ... otherwise, iterate through some defaults.
+            else {
+                foreach (var ext in new[] { "", ".exe", ".com" }) {
+                    if (Kernel32.SearchPath(searchPath, filename + ext, null, s.Capacity, s, out p) != 0)
+                        break;
+                }
+            }
+
+            // Step 3: Return the result.
+            return (s.Length == 0 ? filename : s.ToString());
         }
     }
 }

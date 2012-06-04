@@ -141,7 +141,7 @@ namespace CoApp.Packaging.Service.PackageFormatHandlers {
             localPackagePath = localPackagePath.ToLower();
 
             try {
-                var result = SessionCache<MsiProperties>.Value[localPackagePath];
+                var result = SessionData.Current.MsiProperties[localPackagePath];
                 if (result != null) {
                     return result;
                 }
@@ -162,11 +162,7 @@ namespace CoApp.Packaging.Service.PackageFormatHandlers {
                             }
 
                             try {
-                                //  GS01: this seems hinkey too... the local package is sometimes getting added twice. prollly a race condition somewhere.
-                                // if (SessionCache<MsiProperties>.Value[localPackagePath] != null) {
-                                //  return SessionCache<MsiProperties>.Value[localPackagePath];
-                                // }
-                                SessionCache<MsiProperties>.Value[localPackagePath] = result;
+                                SessionData.Current.MsiProperties[localPackagePath] = result;
                             } catch {
                             }
                             return result;

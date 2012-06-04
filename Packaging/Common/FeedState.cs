@@ -10,14 +10,10 @@
 // </license>
 //-----------------------------------------------------------------------
 
-namespace CoApp.Packaging.Service {
-    using System;
-    using System.Collections.Generic;
-
-    internal class RequestRemoteFileState {
-        internal string LocalLocation;
-        // internal string OriginalUrl;
-        internal IEnumerable<Uri> OriginalUrls;
-        internal string RequestReference;
+namespace CoApp.Packaging.Common {
+    public enum FeedState {
+        Active,
+        Passive,
+        Ignored
     }
 }

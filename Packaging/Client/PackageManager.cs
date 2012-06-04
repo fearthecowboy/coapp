@@ -61,24 +61,27 @@ namespace CoApp.Packaging.Client {
                 if( File.Exists(query) ) {
                     return PackagesFromLocalFile(query.EnsureFileIsLocal(), Path.GetDirectoryName(query.GetFullPath()),pkgFilter,collectionFilter);
                 }
+                
                 var uri = new Uri(query);
-                Task.Factory.StartNew(() => {
-                    var lp = uri.AbsolutePath.MakeSafeFileName().GenerateTemporaryFilename();
-                    var remoteFile = new RemoteFile(uri, localPath, itemUri => {
-                        Event<DownloadCompleted>.Raise(uri.AbsolutePath, lp); // got the file!
-                        localPath = lp;
-                    },
-                        itemUri => {
-                            localPath = null; // failed
+                if (uri.IsWebUri()) {
+                    Task.Factory.StartNew(() => {
+                        var lp = uri.AbsolutePath.MakeSafeFileName().GenerateTemporaryFilename();
+                        var remoteFile = new RemoteFile(uri, lp, itemUri => {
+                            Event<DownloadCompleted>.Raise(uri.AbsolutePath, lp); // got the file!
+                            localPath = lp;
                         },
-                        (itemUri, percent) => Event<DownloadProgress>.Raise(uri.AbsolutePath, localPath, percent));
-                    remoteFile.Get();
+                            itemUri => {
+                                localPath = null; // failed
+                            },
+                            (itemUri, percent) => Event<DownloadProgress>.Raise(uri.AbsolutePath, localPath, percent));
+                        remoteFile.Get();
 
-                    if (localPath != null) {
-                        return PackagesFromLocalFile(localPath,  null,pkgFilter ,collectionFilter).Result;
-                    }
-                    return Enumerable.Empty<Package>();
-                });
+                        if (localPath != null) {
+                            return PackagesFromLocalFile(localPath, null, pkgFilter, collectionFilter).Result;
+                        }
+                        return Enumerable.Empty<Package>();
+                    });
+                }
             }
             catch {
                 // ignore what can't be fixed
@@ -234,11 +237,18 @@ namespace CoApp.Packaging.Client {
         /// <param name="download"> </param>
         /// <returns> </returns>
         public Task<IEnumerable<Package>> IdentifyPackageAndDependenciesToInstall(IEnumerable<Package> packages, bool? autoUpgrade = null, bool? download = null) {
-            var pTasks = packages.Select(package => Install(package.CanonicalName, autoUpgrade, pretend: true, download: download)).ToArray();
-
-            return pTasks.Continue(pkgsToinstall => {
-                return pkgsToinstall.SelectMany(each => each).Distinct();
+            
+            var pTasks = packages.Select(package => Install(package.CanonicalName, autoUpgrade, pretend: true, download: download));
+            /*
+            return pTasks.ContinueAlways(antecedents => {
+                if (antecedents.Any(each => each.IsFaulted)) {
+                    throw new AggregateException(antecedents.Where(each => each.IsFaulted).Select(each => each.Exception));
+                }
+                return  antecedents.SelectMany(each => each.Result);
+                // pkgsToinstall => pkgsToinstall.SelectMany(each => antecedents.Result).Distinct();
             });
+             * */
+            return pTasks.Continue(pkgsToinstall => pkgsToinstall.SelectMany(each => each).Distinct());
         }
 
         public Task Elevate() {
@@ -247,7 +257,7 @@ namespace CoApp.Packaging.Client {
 
         public Task<bool> VerifyFileSignature(string filename) {
             // make the remote call via the interface.
-            return (Remote.VerifyFileSignature(filename) as Task<PackageManagerResponseImpl>).Continue(response => response.IsSignatureValid);
+            return (Remote.VerifyFileSignature(filename) as Task<PackageManagerResponseImpl>).Continue(response => response.ValidationState[filename]);
         }
 
         public Task SetGeneralPackageInformation(int priority, CanonicalName canonicalName, string key, string value) {
@@ -271,49 +281,6 @@ namespace CoApp.Packaging.Client {
             }
             return result;
         }
-
-#if DEPRECATED
-        public Task BlockPackage(CanonicalName packageName) {
-            return SetPackageFlags(packageName, blocked: true);
-        }
-
-        public Task MarkPackageDoNotUpdate(CanonicalName canonicalName) {
-            return SetPackageFlags(canonicalName, doNotUpdate: true);
-        }
-
-        public Task MarkPackageDoNotUpgrade(CanonicalName canonicalName) {
-            return SetPackageFlags(canonicalName, doNotUpgrade: true);
-        }
-
-        public Task MarkPackageActive(CanonicalName canonicalName) {
-            return SetPackageFlags(canonicalName, active: true);
-        }
-
-        public Task MarkPackageRequested(CanonicalName canonicalName) {
-            return SetPackageFlags(canonicalName, requested: true);
-        }
-
-        public Task UnBlockPackage(CanonicalName packageName) {
-            return SetPackageFlags(packageName, blocked: false);
-        }
-
-        public Task MarkPackageOkToUpdate(CanonicalName canonicalName) {
-            return SetPackageFlags(canonicalName, doNotUpdate: false);
-        }
-
-        public Task MarkPackageOkToUpgrade(CanonicalName canonicalName) {
-            return SetPackageFlags(canonicalName, doNotUpgrade: false);
-        }
-
-        public Task MarkPackageNotRequested(CanonicalName canonicalName) {
-            return SetPackageFlags(canonicalName, requested: false);
-        }
-
-        private Task SetPackageFlags(CanonicalName canonicalName, bool? active = null, bool? requested = null, bool? blocked = null, bool? doNotUpdate = null, bool? doNotUpgrade = null) {
-            // you can actually use a partial package name for this call.
-            return Remote.SetPackage(canonicalName, active, requested, blocked, doNotUpdate, doNotUpgrade);
-        }
-#endif
 
         public Task<IEnumerable<Package>> GetActiveVersion(CanonicalName packageName) {
             return FindPackages(packageName, Package.Properties.Active.Is(true));
@@ -357,7 +324,7 @@ namespace CoApp.Packaging.Client {
             return failedResult.Task;
         }
 
-        private Task<IEnumerable<Package>> Install(CanonicalName canonicalName, bool? autoUpgrade = null, bool? force = null, bool? download = null, bool? pretend = null, CanonicalName replacingPackage = null) {
+        public Task<IEnumerable<Package>> Install(CanonicalName canonicalName, bool? autoUpgrade = null, bool? force = null, bool? download = null, bool? pretend = null, CanonicalName replacingPackage = null) {
             if (!canonicalName.IsCanonical) {
                 return InvalidCanonicalNameResult<IEnumerable<Package>>(canonicalName);
             }
@@ -376,18 +343,6 @@ namespace CoApp.Packaging.Client {
                 }
                 return response.Packages;
             });
-        }
-
-        public Task InstallPackage(CanonicalName canonicalName, bool? autoUpgrade = null) {
-            return Install(canonicalName, autoUpgrade, false, false, false);
-        }
-
-        public Task UpgradeExistingPackage(CanonicalName canonicalName, bool? autoUpgrade = null) {
-            return Install(canonicalName, autoUpgrade, false, true, false);
-        }
-
-        public Task UpdateExistingPackage(CanonicalName canonicalName, bool? autoUpgrade = null) {
-            return Install(canonicalName, autoUpgrade, true, false, false);
         }
 
         public Task<IEnumerable<Package>> WhatWouldBeInstalled(CanonicalName canonicalName, bool? autoUpgrade = null) {
@@ -644,18 +599,18 @@ namespace CoApp.Packaging.Client {
             }
         }
 
-        public Task<IEnumerable<Publisher>> TrustedPublishers {
+        public Task<IEnumerable<string>> TrustedPublishers {
             get {
-                return null;
+                return (Remote.GetTrustedPublishers() as Task<PackageManagerResponseImpl>).Continue(response => response.Publishers);
             }
         }
 
-        public Task<Publisher> AddTrustedPublisher(string publisherName, string publicKeyToken) {
-            return null;
+        public Task AddTrustedPublisher(string publicKeyToken) {
+            return Remote.AddTrustedPublisher(publicKeyToken);
         }
 
-        public Task RemoveTrustedPublisher(string publisherName, string publicKeyToken) {
-            return null;
+        public Task RemoveTrustedPublisher(string publicKeyToken) {
+            return Remote.RemoveTrustedPublisher(publicKeyToken);
         }
 
         // GS01: TrustedPublishers Coming Soon.
