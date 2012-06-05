@@ -29,8 +29,10 @@ namespace CoApp.Packaging.Service {
     using Toolkit.Logging;
     using Toolkit.Pipes;
     using Toolkit.Shell;
+    using Toolkit.TaskService;
     using Toolkit.Tasks;
     using Toolkit.Win32;
+    using Task = System.Threading.Tasks.Task;
 
     public class PackageManagerImpl : IPackageManager {
         private static Task FinishedSynchronously {
@@ -47,6 +49,7 @@ namespace CoApp.Packaging.Service {
 
 
         public static PackageManagerImpl Instance = new PackageManagerImpl();
+        
 
         private readonly List<ManualResetEvent> _manualResetEvents = new List<ManualResetEvent>();
         internal static IncomingCallDispatcher<PackageManagerImpl> Dispatcher = new IncomingCallDispatcher<PackageManagerImpl>(Instance);
@@ -139,13 +142,20 @@ namespace CoApp.Packaging.Service {
                     return;
                 }
                 try {
-                    Task.WaitAll(SystemFeedLocations.Select(each => PackageFeed.GetPackageFeedFromLocation(each).ContinueAlways(antecedent => {
+
+                    var tasks = SystemFeedLocations.Select(each => PackageFeed.GetPackageFeedFromLocation(each).ContinueAlways(antecedent => {
                         if (antecedent.Result != null) {
                             Cache<PackageFeed>.Value[each] = antecedent.Result;
                         } else {
                             Logger.Error("Feed {0} was unable to load.", each);
                         }
-                    })).ToArray());
+                    })).ToArray();
+                    
+                    while(!Task.WaitAll(tasks, 100) ) {
+                        if( !SessionData.Current.Session.Connected ) {
+                            return;
+                        }
+                    }
                 } catch {
                     
                 }
@@ -887,6 +897,7 @@ namespace CoApp.Packaging.Service {
                 if (antecedent.Result.IsPackageFeed) {
                     response.FeedAdded(location);
                     response.Recognized(location);
+                    return;
                 }
 
                 // if this isn't a package file, then there is something odd going on here.
@@ -1185,8 +1196,9 @@ namespace CoApp.Packaging.Service {
             yield return package;
         }
 
+        private string UDFLock = "UpdateDependencyFlagsLock";
         private void UpdateDependencyFlags() {
-            lock (this) {
+            lock (UDFLock) {
                 var installedPackages = InstalledPackages.ToArray();
 
                 foreach (var p in installedPackages) {
@@ -1346,14 +1358,141 @@ namespace CoApp.Packaging.Service {
         }
 
         public Task ScheduleTask(string taskName, string executable, string commandline, int hour, int minutes, DayOfWeek? dayOfWeek, int intervalInMinutes) {
+            if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.EditSchedule)) {
+                var response = Event<GetResponseInterface>.RaiseFirst();
+                RemoveScheduledTask(taskName);
+
+                var dow = DaysOfTheWeek.AllDays;
+
+                if (dayOfWeek.HasValue) {
+                    // once-a-week
+                    switch (dayOfWeek.Value) {
+                        case DayOfWeek.Saturday:
+                            dow = DaysOfTheWeek.Saturday;
+                            break;
+                        case DayOfWeek.Sunday:
+                            dow = DaysOfTheWeek.Sunday;
+                            break;
+                        case DayOfWeek.Monday:
+                            dow = DaysOfTheWeek.Monday;
+                            break;
+                        case DayOfWeek.Tuesday:
+                            dow = DaysOfTheWeek.Tuesday;
+                            break;
+                        case DayOfWeek.Wednesday:
+                            dow = DaysOfTheWeek.Wednesday;
+                            break;
+                        case DayOfWeek.Thursday:
+                            dow = DaysOfTheWeek.Thursday;
+                            break;
+                        case DayOfWeek.Friday:
+                            dow = DaysOfTheWeek.Friday;
+                            break;
+                    }
+                }
+                using (var taskService = new TaskService()) {
+                    var tName = "coapp\\" + taskName;
+                    if (taskService.HighestSupportedVersion < new Version(1, 2)) {
+                        // old style
+                        tName = "coapp-" + taskName;
+                    }
+
+                    var trigger = Trigger.CreateTrigger(TaskTriggerType.Weekly) as WeeklyTrigger;
+                    trigger.DaysOfWeek = dow;
+                    if (intervalInMinutes != 0 && intervalInMinutes < 1440) {
+                        trigger.Repetition.Interval = new TimeSpan(0, intervalInMinutes, 0);
+                    }
+
+                    trigger.StartBoundary = DateTime.Today + new TimeSpan(hour, minutes, 0);
+
+                    var t = taskService.AddTask(tName, trigger, new ExecAction(executable, commandline));
+                    t.Definition.Settings.MultipleInstances = TaskInstancesPolicy.IgnoreNew;
+                    t.Definition.Settings.RunOnlyIfNetworkAvailable = true;
+                    t.RegisterChanges();
+
+                    return GetScheduledTasks(taskName);
+                }
+            }
             return FinishedSynchronously;
         }
 
         public Task RemoveScheduledTask(string taskName) {
+            if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.EditSchedule)) {
+                var response = Event<GetResponseInterface>.RaiseFirst();
+                taskName = taskName ?? "*";
+
+                using (var taskService = new TaskService()) {
+                    var tFolder = taskService.RootFolder;
+
+                    if (taskService.HighestSupportedVersion >= new Version(1, 2)) {
+                        tFolder = tFolder.SubFolders.FirstOrDefault(each => each.Name == "coapp") ?? tFolder.CreateFolder("coapp");
+                    } else {
+                        taskName = "coapp-" + taskName;
+                    }
+                    var tasks = tFolder.GetTasks();
+                    foreach (var t in tasks) {
+                        if (t.Name.NewIsWildcardMatch(taskName)) {
+                            tFolder.DeleteTask(t.Name);
+                        }
+                    }
+                }
+            }
             return FinishedSynchronously;
         }
 
         public Task GetScheduledTasks(string taskName) {
+            var response = Event<GetResponseInterface>.RaiseFirst();
+            taskName = taskName ?? "*";
+
+            using (var taskService = new TaskService()) {
+                var tFolder = taskService.RootFolder;
+
+                if (taskService.HighestSupportedVersion >= new Version(1, 2)) {
+                    tFolder = tFolder.SubFolders.FirstOrDefault(each => each.Name == "coapp") ?? tFolder.CreateFolder("coapp");
+                } else {
+                    taskName = "coapp-" + taskName;
+                }
+                var tasks = tFolder.GetTasks();
+                foreach (var t in tasks) {
+                    if (t.Name.NewIsWildcardMatch(taskName)) {
+                        var a = t.Definition.Actions[0] as ExecAction;
+                        var foundName = t.Name;
+                        if (foundName.StartsWith("coapp-")) {
+                            foundName = foundName.Substring(6);
+                        }
+
+                        DayOfWeek? dow = null;
+                        var wt = t.Definition.Triggers[0] as WeeklyTrigger;
+
+                        // once-a-week
+                        switch (wt.DaysOfWeek) {
+                            case DaysOfTheWeek.Saturday:
+                                dow = DayOfWeek.Saturday;
+                                break;
+                            case DaysOfTheWeek.Sunday:
+                                dow = DayOfWeek.Sunday;
+                                break;
+                            case DaysOfTheWeek.Monday:
+                                dow = DayOfWeek.Monday;
+                                break;
+                            case DaysOfTheWeek.Tuesday:
+                                dow = DayOfWeek.Tuesday;
+                                break;
+                            case DaysOfTheWeek.Wednesday:
+                                dow = DayOfWeek.Wednesday;
+                                break;
+                            case DaysOfTheWeek.Thursday:
+                                dow = DayOfWeek.Thursday;
+                                break;
+                            case DaysOfTheWeek.Friday:
+                                dow = DayOfWeek.Friday;
+                                break;
+                        }
+                        response.ScheduledTaskInfo(foundName, a.Path, a.Arguments, wt.StartBoundary.Hour, wt.StartBoundary.Minute, dow, (int)wt.Repetition.Interval.TotalMinutes);
+                    }
+                }
+            }
+
             return FinishedSynchronously;
         }
 

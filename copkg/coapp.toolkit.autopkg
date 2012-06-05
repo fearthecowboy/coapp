@@ -110,7 +110,7 @@ package-composition {
     };
     
     file-copy : {
-       etc =>  @"${etc}\${each.Name}" = @"${packagedir}\${each.Name}";
+       etc =>  @"${etc}\${each.Name}" = @"${packagedir}\etc\${each.Name}";
     };
 }
 

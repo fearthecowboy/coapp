@@ -128,6 +128,8 @@ namespace CoApp.Packaging.Service {
         internal static PermissionPolicy StopService = new PermissionPolicy("StopService", "Allows users to stop the CoApp Service", new[] {WellKnownSidType.BuiltinAdministratorsSid});
         internal static PermissionPolicy ModifyPolicy = new PermissionPolicy("ModifyPolicy", "Allows users to change policy values for CoApp", new[] {WellKnownSidType.BuiltinAdministratorsSid});
 
+        internal static PermissionPolicy EditSchedule = new PermissionPolicy("EditSchedule", "Allows users to edit any CoApp scheduled tasks", new[] { WellKnownSidType.BuiltinAdministratorsSid });
+
         internal static PermissionPolicy Symlink = new PermissionPolicy("Symlink", "Allows users to create and edit symlinks", new[] {WellKnownSidType.BuiltinAdministratorsSid});
 
         /// <summary>

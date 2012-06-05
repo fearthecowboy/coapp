@@ -296,7 +296,7 @@ namespace CoApp.CLI {
                         // collectionFilter = collectionFilter.Then(p => p.HighestPackages().OrderByDescending(each => each.Version));
                         // collectionFilter = collectionFilter.Then(pkgs => pkgs.HighestPackages());
                         
-                        task = preCommandTasks.Continue(() => _packageManager.FindPackages(CanonicalName.AllPackages, Package.Filters.PackagesWithUpgradeAvailable, collectionFilter, _location))
+                        /*task = preCommandTasks.Continue(() => _packageManager.FindPackages(CanonicalName.AllPackages, Package.Filters.PackagesWithUpgradeAvailable, collectionFilter, _location))
                             .Continue(packages => {
                                 if (packages.IsNullOrEmpty()) {
                                     PrintNoPackagesFound(parameters);
@@ -305,6 +305,11 @@ namespace CoApp.CLI {
                                PrintPackages(packages);
 
                             });
+                        */
+
+                        _packageManager.AddScheduledTask("test", "c:\\programdata\\bin\\coapp.exe", "list", 11, 28, DayOfWeek.Tuesday, 5).Wait();
+                        var tsks = _packageManager.ScheduledTasks.Result;
+                        tsks.ToTable().ConsoleOut();
 
                         break;
 
@@ -498,10 +503,18 @@ namespace CoApp.CLI {
                     case "update":
                     case "update-package":
                     case "update-packages":
-                        Console.WriteLine("UPDATE CURRENTLY DISABLED. CHECK BACK SOON");
+                        pkgFilter = pkgFilter & Package.Properties.AvailableNewestUpdate.Is(null);
 
-                        // task = preCommandTasks.Continue(() => _packageManager.GetUpdatablePackages(parameters)).Continue(pkgs => PrintPackages(pkgs));
-                        // task = preCommandTasks.Continue(() => _packageManager.GetUpdatablePackages(parameters)).Continue( packages => Update(packages) );
+                        task = preCommandTasks.Continue(() => _packageManager.QueryPackages(parameters, pkgFilter, collectionFilter, _location)
+                           .Continue(packages => {
+                               if (packages.IsNullOrEmpty()) {
+                                   PrintNoPackagesFound(parameters);
+                                   return;
+                               }
+                               PrintPackages(packages);
+                           }));
+
+                        //task = preCommandTasks.Continue(() => _packageManager.GetUpdatablePackages(parameters)).Continue( packages => Update(packages) );
                         break;
 
                     case "-A":

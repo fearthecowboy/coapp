@@ -41,7 +41,7 @@ namespace CoApp.Packaging.Service.Feeds {
         /// <summary>
         ///   the collection of packages found in this feed.
         /// </summary>
-        private readonly List<Package> _packageList = new List<Package>();
+        private Package[] _packageList = new Package[0];
 
         /// <summary>
         ///   Initializes a new instance of the <see cref="PackageFeed" /> class.
@@ -108,27 +108,20 @@ namespace CoApp.Packaging.Service.Feeds {
         /// </remarks>
         protected void Scan() {
             lock (this) {
-                if (!Scanned || Stale) {
+                if (_packageList.Length == 0 || !Scanned || Stale) {
                     // bring the file local first
-                    EnsureFileIsLocal().ContinueWith(
-                        antecedent => {
-                            if (antecedent.IsFaulted || antecedent.IsCanceled || !antecedent.Result) {
-                                Scanned = false;
-                                LastScanned = DateTime.MinValue;
-                                return false;
-                            }
-                            Stale = false;
+                    Scanned = false;
+                    LastScanned = DateTime.MinValue;
 
-                            // we're good to load the file from the _localLocation
-                            var feed = AtomFeed.LoadFile(_localLocation);
+                    EnsureFileIsLocal().Wait();
 
-                            // since AtomFeeds are so nicely integrated with Package now, we can just get the packages from there :)
-                            _packageList.AddRange(feed.Packages);
+                    // we're good to load the file from the _localLocation
+                    // since AtomFeeds are so nicely integrated with Package now, we can just get the packages from there :)
+                    _packageList = AtomFeed.LoadFile(_localLocation).Packages.ToArray();
 
-                            Scanned = true;
-                            LastScanned = DateTime.Now;
-                            return true;
-                        }, TaskContinuationOptions.AttachedToParent).Wait(); // block on this actually finishing for now.
+                    Stale = false;
+                    Scanned = true;
+                    LastScanned = DateTime.Now;
                 }
             }
         }

@@ -23,11 +23,15 @@ namespace CoApp.Packaging.Service {
 
     internal class Recognizer {
         private static Task<RecognitionInfo> CacheAndReturnTask(string itemPath, RecognitionInfo recognitionInfo) {
-            return (SessionData.Current.RecognitionInfo[itemPath] = recognitionInfo).AsResultTask();
+            lock (typeof(Recognizer)) {
+                return (SessionData.Current.RecognitionInfo[itemPath] = recognitionInfo).AsResultTask();
+            }
         }
 
         private static RecognitionInfo Cache(string itemPath, RecognitionInfo recognitionInfo) {
-            return SessionData.Current.RecognitionInfo[itemPath] = recognitionInfo;
+            lock (typeof(Recognizer)) {
+                return SessionData.Current.RecognitionInfo[itemPath] = recognitionInfo;
+            }
         }
 
         internal static Task<RecognitionInfo> Recognize(string item, bool forceRescan = false) {

@@ -99,7 +99,7 @@ namespace CoApp.Packaging.Service {
         // private IDictionary<Type, object> _sessionCache = new XDictionary<Type, object>();
         private SessionData _sessionData;
        
-        private bool Connected {
+        internal bool Connected {
             get {
                 return _resetEvent.WaitOne(0);
             }
@@ -401,36 +401,43 @@ namespace CoApp.Packaging.Service {
             CurrentTask.Events += new GetCurrentSession(() => _sessionData);
 
             CurrentTask.Events += new CheckForPermission(policy => {
-                try {
-                    var result = false;
-                    _serverPipe.RunAsClient(() => {
-                        result = policy.HasPermission;
-                    });
-                    if (!result) {
-                        Event<GetResponseInterface>.RaiseFirst().PermissionRequired(policy.Name);
-                    }
-                    return result;
-                } catch {
-                    // may have been disconnected?
-                    if (!_serverPipe.IsConnected) {
-                        Disconnect();
+                if (_serverPipe != null && _serverPipe.IsConnected) {
+                    try {
+                        var result = false;
+                        _serverPipe.RunAsClient(() => {
+                            result = policy.HasPermission;
+                        });
+                        if (!result) {
+                            var response = Event<GetResponseInterface>.RaiseFirst();
+                            if (response != null) {
+                                response.PermissionRequired(policy.Name);
+                            }
+                        }
+                        return result;
+                    } catch {
+                        // may have been disconnected?
+                        if (!_serverPipe.IsConnected) {
+                            Disconnect();
+                        }
                     }
                 }
+
                 return false;
             });
 
             CurrentTask.Events += new QueryPermission(policy => {
-                try {
-                    var result = false;
-                    _serverPipe.RunAsClient(() => {
-                        result = policy.HasPermission;
-                    });
-                    return result;
-                }
-                catch {
-                    // may have been disconnected?
-                    if (!_serverPipe.IsConnected) {
-                        Disconnect();
+                if (_serverPipe != null && _serverPipe.IsConnected) {
+                    try {
+                        var result = false;
+                        _serverPipe.RunAsClient(() => {
+                            result = policy.HasPermission;
+                        });
+                        return result;
+                    } catch {
+                        // may have been disconnected?
+                        if (!_serverPipe.IsConnected) {
+                            Disconnect();
+                        }
                     }
                 }
                 return false;
