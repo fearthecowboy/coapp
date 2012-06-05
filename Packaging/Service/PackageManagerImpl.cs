@@ -138,16 +138,17 @@ namespace CoApp.Packaging.Service {
                 if (SessionData.Current.IsSystemCacheLoaded) {
                     return;
                 }
-
-                Task.WaitAll(SystemFeedLocations.Select(each => PackageFeed.GetPackageFeedFromLocation(each).ContinueAlways(antecedent => {
-                    if (antecedent.Result != null) {
-                        Cache<PackageFeed>.Value[each] = antecedent.Result;
-                    }
-                    else {
-                        Logger.Error("Feed {0} was unable to load.", each);
-                    }
-                })).ToArray());
-
+                try {
+                    Task.WaitAll(SystemFeedLocations.Select(each => PackageFeed.GetPackageFeedFromLocation(each).ContinueAlways(antecedent => {
+                        if (antecedent.Result != null) {
+                            Cache<PackageFeed>.Value[each] = antecedent.Result;
+                        } else {
+                            Logger.Error("Feed {0} was unable to load.", each);
+                        }
+                    })).ToArray());
+                } catch {
+                    
+                }
                 // mark this session as 'yeah, done that already'
                 SessionData.Current.IsSystemCacheLoaded  = true;
             }

@@ -263,7 +263,7 @@ namespace CoApp.Packaging.Service {
                                 var isSync = requestMessage["async"].IsFalse();
 
                                 if (isSync) {
-                                    StartResponsePipeAndProcessMesages(requestMessage["client"], requestMessage["id"], serverPipe);
+                                    StartResponsePipeAndProcessMessages(requestMessage["client"], requestMessage["id"], serverPipe);
                                 } else {
                                     Session.Start(requestMessage["client"], requestMessage["id"], serverPipe, serverPipe);
                                 }
@@ -370,7 +370,7 @@ namespace CoApp.Packaging.Service {
         /// <param name="serverPipe"> The server pipe. </param>
         /// <remarks>
         /// </remarks>
-        private void StartResponsePipeAndProcessMesages(string clientId, string sessionId, NamedPipeServerStream serverPipe) {
+        private void StartResponsePipeAndProcessMessages(string clientId, string sessionId, NamedPipeServerStream serverPipe) {
             try {
                 var channelname = OutputPipeName + sessionId;
                 var responsePipe = new NamedPipeServerStream(channelname, PipeDirection.Out, Instances, PipeTransmissionMode.Message, PipeOptions.Asynchronous,

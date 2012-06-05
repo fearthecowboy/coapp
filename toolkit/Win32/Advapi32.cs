@@ -112,7 +112,22 @@ namespace CoApp.Toolkit.Win32 {
 
         [DllImport("advapi32.dll", SetLastError = true)]
         public static extern bool SetServiceObjectSecurity(SafeHandle serviceHandle, SecurityInfos secInfos, byte[] lpSecDesrBuf);
+
+        [DllImport("advapi32.dll", EntryPoint = "AllocateAndInitializeSid")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool AllocateAndInitializeSid([In] ref SidIdentifierAuthority pIdentifierAuthority, byte nSubAuthorityCount, uint nSubAuthority0, uint nSubAuthority1, uint nSubAuthority2, uint nSubAuthority3, uint nSubAuthority4,
+            uint nSubAuthority5, int nSubAuthority6, uint nSubAuthority7, out IntPtr pSid);
+
+        [DllImport("advapi32.dll", SetLastError = true)]
+        public static extern bool CheckTokenMembership(IntPtr TokenHandle, IntPtr SidToCheck, out bool IsMember);
     }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct SidIdentifierAuthority {
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 6, ArraySubType = UnmanagedType.I1)]
+        public byte[] Value;
+    }
+
 
     [StructLayout(LayoutKind.Sequential)]
     public struct SECURITY_DESCRIPTOR {

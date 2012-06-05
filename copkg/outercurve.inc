@@ -1,17 +1,9 @@
-// autopackage file for coapp.toolkit
-
+// Outercurve.inc
+// A common autopackage include file for for all coapp/outercurve packages
 package {
     location: "http://coapp.org/repository/${OutputFilename}";
     feed: "http://coapp.org/current";
     publisher: "CoApp Project";
-}
-
-
-metadata {
-    licenses : {
-        Apache20
-    };
-    
 }
 
 identity[CoApp Project] {

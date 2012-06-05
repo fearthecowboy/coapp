@@ -110,6 +110,10 @@ namespace CoApp.Toolkit.Extensions {
             '*', '?'
         };
 
+        private static readonly char[] PathChars = new[] {
+            '\\', '/',':'
+        };
+
         public static string SystemTempFolder {
             get {
                 return Environment.GetEnvironmentVariable("temp", EnvironmentVariableTarget.Machine);
@@ -140,6 +144,51 @@ namespace CoApp.Toolkit.Extensions {
             Environment.SetEnvironmentVariable("TEMP", TempPath);
 
             TryToHandlePendingRenames(true);
+        }
+
+        public static string GetCustomFilePath(this string filename, string currentDirectory = null) {
+            try {
+                // check user etc
+                var chkPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "etc", filename);
+                if( File.Exists(chkPath)) {
+                    return chkPath;
+                }
+                // check user etc
+                chkPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "etc", filename);
+                if (File.Exists(chkPath)) {
+                    return chkPath;
+                }
+
+                // check system etc
+                chkPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "etc", filename);
+                if (File.Exists(chkPath)) {
+                    return chkPath;
+                }
+            } catch {
+            }
+            return null;
+        }
+
+        public static string WalkUpPath(this string filename, string currentDirectory = null) {
+            try {
+                currentDirectory = currentDirectory ?? Environment.CurrentDirectory;
+                if (!string.IsNullOrEmpty(currentDirectory)) {
+                    currentDirectory = currentDirectory.GetFullPath();
+                    while (!string.IsNullOrEmpty(currentDirectory)) {
+                        var chkPath = Path.Combine(currentDirectory, filename);
+                        if (File.Exists(chkPath)) {
+                            return chkPath;
+                        }
+                        currentDirectory = Path.GetDirectoryName(currentDirectory);
+                    }
+                }
+            } catch {
+            }
+            return null;
+        }
+
+        public static string GetCustomFilePathOrWalkUp(this string filename, string currentDirectory = null) {
+            return GetCustomFilePath(filename) ?? WalkUpPath(filename, currentDirectory);
         }
 
 #if COAPP_ENGINE_CORE 

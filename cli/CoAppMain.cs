@@ -88,6 +88,8 @@ namespace CoApp.CLI {
         /// <remarks></remarks>
         protected override int Main(IEnumerable<string> args) {
 
+            _packageManager.Elevate().Wait();
+
             CurrentTask.Events += new DownloadProgress((remoteLocation, location, progress) => {
                 if (!activeDownloads.Contains(remoteLocation)) {
                     activeDownloads.Add(remoteLocation);
@@ -282,6 +284,8 @@ namespace CoApp.CLI {
                 if (!command.StartsWith("-")) {
                     command = command.ToLower();
                 }
+
+                
 
                 switch (command) {
                     case "-?":

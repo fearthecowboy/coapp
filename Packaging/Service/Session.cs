@@ -292,7 +292,7 @@ namespace CoApp.Packaging.Service {
             _dispatcher = _outgoingDispatcher.ActLike<IPackageManagerResponse>();
 
             // this session task
-            _task = Task.Factory.StartNew(ProcessMesages, _cancellationTokenSource.Token);
+            _task = Task.Factory.StartNew(ProcessMessages, _cancellationTokenSource.Token);
 
             // this task is not attached to a parent anywhere.
             _task.AutoManage();
@@ -350,7 +350,8 @@ namespace CoApp.Packaging.Service {
                     lock (_outputQueue) {
                         _outputQueue.Dequeue();
                     }
-                } catch /* (Exception e) */ {
+                } catch (Exception e) {
+                    Logger.Error(e);
                     // hmm. if the wait() threw, we're disconnected.
                     Disconnect();
                 }
@@ -393,7 +394,7 @@ namespace CoApp.Packaging.Service {
         /// </summary>
         /// <remarks>
         /// </remarks>
-        private void ProcessMesages() {
+        private void ProcessMessages() {
             // instantiate the Asynchronous Package Session object (ie, like thread-local-storage, but really, 
             // it's session-local-storage. So for this task and all its children, this will serve up data.
 
@@ -490,59 +491,33 @@ namespace CoApp.Packaging.Service {
 
                             readTask.ContinueWith(antecedent => {
                                 if (antecedent.IsFaulted || antecedent.IsCanceled || _serverPipe == null || !_serverPipe.IsConnected) {
+                                    if( antecedent.IsFaulted ) {
+                                        Logger.Error(antecedent.Exception.Unwrap());
+                                    }
                                     Disconnect();
                                     return;
                                 }
 
-                                if (antecedent.Result >= Engine.BufferSize) {
+                                var numBytes = antecedent.Result;
+
+                                if (numBytes >= Engine.BufferSize) {
                                     _bufferReady.Set();
                                     Event<GetResponseInterface>.RaiseFirst().UnexpectedFailure("CoAppException", "Message size exceeds maximum size allowed.", "");
                                     return;
                                 }
 
-                                try {
-                                    var rawMessage = Encoding.UTF8.GetString(serverInput, 0, antecedent.Result);
-                                    var requestMessage = new UrlEncodedMessage(rawMessage);
-
-                                    if (string.IsNullOrEmpty(requestMessage)) {
-                                        return;
-                                    }
-
-                                    if (IsCanceled) {
-                                        Event<GetResponseInterface>.RaiseFirst().OperationCanceled("Service is shutting down");
-                                    } else {
-                                        Logger.Message("Request:[{0}]{1}".format(requestMessage["rqid"], requestMessage.ToString()));
-
-                                       
-                                        var packageRequestData = new XDictionary<string, PackageRequestData>();
-                                        var rqid = requestMessage["rqid"];
-
-                                        CurrentTask.Events += new GetCurrentRequestId(() => rqid );
-                                        CurrentTask.Events += new GetResponseInterface(() => _dispatcher);
-                                        CurrentTask.Events += new GetRequestPackageDataCache(() => packageRequestData);
-
-                                        var dispatchTask = PackageManagerImpl.Dispatcher.Dispatch(requestMessage);
-                                        dispatchTask.ContinueOnFail(failure => {
-                                            if (!IsCanceled) {
-                                                Logger.Error(failure);
-                                                Event<GetResponseInterface>.RaiseFirst().UnexpectedFailure(failure.GetType().Name, failure.Message, failure.StackTrace);
-                                            }
-                                        });
-
-                                        dispatchTask.ContinueAlways(dt => Event<GetResponseInterface>.RaiseFirst().TaskComplete());
-                                    }
-                                } finally {
-                                    // whatever, after this point let the messages flow!
-                                    _bufferReady.Set();
-                                }
+                                ProcessMessage(serverInput, numBytes);
                             }).AutoManage();
+
                             readTask.ContinueOnFail(failure => {
                                 if (!IsCanceled) {
                                     Logger.Error(failure);
                                     Event<GetResponseInterface>.RaiseFirst().UnexpectedFailure(failure.GetType().Name, failure.Message, failure.StackTrace);
                                 }
                             });
-                        } catch /* (Exception e) */ {
+
+                        } catch  (Exception e) {
+                            Logger.Error(e);
                             // if the pipe is broken, let's move to the disconnected state
                             Disconnect();
                         }
@@ -586,6 +561,46 @@ namespace CoApp.Packaging.Service {
                     // something broke. Could be a closed pipe.
                     Logger.Error(e);
                 }
+            }
+        }
+
+        private void ProcessMessage(byte[] serverInput, int numBytes) {
+            try {
+                var rawMessage = Encoding.UTF8.GetString(serverInput, 0, numBytes);
+                var requestMessage = new UrlEncodedMessage(rawMessage);
+
+                if (string.IsNullOrEmpty(requestMessage)) {
+                    return;
+                }
+
+                if (IsCanceled) {
+                    Event<GetResponseInterface>.RaiseFirst().OperationCanceled("Service is shutting down");
+                }
+                else {
+                    Logger.Message("Request:[{0}]{1}".format(requestMessage["rqid"], requestMessage.ToString()));
+
+
+                    var packageRequestData = new XDictionary<string, PackageRequestData>();
+                    var rqid = requestMessage["rqid"];
+
+                    CurrentTask.Events += new GetCurrentRequestId(() => rqid);
+                    CurrentTask.Events += new GetResponseInterface(() => _dispatcher);
+                    CurrentTask.Events += new GetRequestPackageDataCache(() => packageRequestData);
+
+                    var dispatchTask = PackageManagerImpl.Dispatcher.Dispatch(requestMessage);
+                    dispatchTask.ContinueOnFail(failure => {
+                        if (!IsCanceled) {
+                            Logger.Error(failure);
+                            Event<GetResponseInterface>.RaiseFirst().UnexpectedFailure(failure.GetType().Name, failure.Message, failure.StackTrace);
+                        }
+                    });
+
+                    dispatchTask.ContinueAlways(dt => Event<GetResponseInterface>.RaiseFirst().TaskComplete());
+                }
+            }
+            finally {
+                // whatever, after this point let the messages flow!
+                _bufferReady.Set();
             }
         }
     }

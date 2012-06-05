@@ -17,6 +17,7 @@ namespace CoApp.Packaging.Client {
     using System.Dynamic;
     using System.IO.Pipes;
     using System.Linq;
+    using System.Runtime.InteropServices;
     using System.Security.Principal;
     using System.Text;
     using System.Threading;
@@ -29,6 +30,7 @@ namespace CoApp.Packaging.Client {
     using Toolkit.Logging;
     using Toolkit.Pipes;
     using Toolkit.Tasks;
+    using Toolkit.Win32;
 
     public class Session : OutgoingCallDispatcher {
         internal class ManualEventQueue : Queue<UrlEncodedMessage>, IDisposable {
@@ -77,8 +79,30 @@ namespace CoApp.Packaging.Client {
             }
         }
 
+       
         internal const int BufferSize = 1024 * 1024 * 2;
-        private bool _isElevated;
+        private bool? _isElevated;
+        private bool IsElevated {
+            get {
+                if (!_isElevated.HasValue) {
+                    _isElevated = false;
+
+                    try {
+                        var ntAuth = new SidIdentifierAuthority();
+                        ntAuth.Value = new byte[] {0, 0, 0, 0, 0, 5};
+
+                        var psid = IntPtr.Zero;
+                        bool isAdmin;
+                        if (Advapi32.AllocateAndInitializeSid(ref ntAuth, 2, 0x00000020, 0x00000220, 0, 0, 0, 0, 0, 0, out psid) && Advapi32.CheckTokenMembership(IntPtr.Zero, psid, out isAdmin) && isAdmin) {
+                            _isElevated = true;
+                        }
+                    } catch {
+                    }
+                }
+
+                return _isElevated.Value;
+            }
+        }
         private IPackageManager _remoteService;
         private static Session _instance = new Session();
         private readonly ManualResetEvent _isBufferReady = new ManualResetEvent(false);
@@ -162,23 +186,31 @@ namespace CoApp.Packaging.Client {
 
         internal static Task Elevate() {
             lock (_instance) {
-                if (_instance._isElevated) {
+                if (_instance.IsElevated) {
                     return "Elevated".AsResultTask();
                 }
+                var svcTask = Task.Factory.StartNew(EngineServiceManager.EnsureServiceIsResponding);
+
                 // Disconnect from old pipe asap.
                 _instance.Disconnect();
 
                 // change pipe name 
                 _instance.PipeName = "CoAppInstaller" + Process.GetCurrentProcess().Id.ToString().MD5Hash();
 
-                // start elevation proxy
-                // Process.Start( ... )
+                return svcTask.Continue(() => {
+                    // start elevation proxy
+                    var proc = Process.Start(new ProcessStartInfo {
+                        FileName = "CoApp.ElevationProxy.Exe",
+                        Arguments = _instance.PipeName,
+                        UseShellExecute = false, // if you use 
+                        // Verb = "runas"
+                    });
 
-                // if( process started ok  ) _isElevated = true;
-
-
-                // continue with re-connect.
-                return _instance.Connect();
+                    if (proc == null || proc.HasExited) {
+                        throw new CoAppException("Failed to elevate for service communication");
+                    } 
+                    _instance._isElevated = true;
+                }).ContinueWith((a2) => _instance.Connect());
             }
         }
         
@@ -202,7 +234,7 @@ namespace CoApp.Packaging.Client {
                         for (int count = 0; count < 5; count++) {
                             _pipe = new NamedPipeClientStream(".", PipeName, PipeDirection.InOut, PipeOptions.Asynchronous, TokenImpersonationLevel.Impersonation);
                             try {
-                                _pipe.Connect(500);
+                                _pipe.Connect(1500);
                                 _pipe.ReadMode = PipeTransmissionMode.Message;
                                 break;
                             } catch {
@@ -241,6 +273,11 @@ namespace CoApp.Packaging.Client {
                     readTask.ContinueWith(
                         antecedent => {
                             if (antecedent.IsCanceled || antecedent.IsFaulted || !IsConnected) {
+                                if (antecedent.IsCanceled) {
+                                    Logger.Message("Client/Session ReadTask is Cancelled");
+                                } if (antecedent.IsFaulted) {
+                                    Logger.Message("Client/Session ReadTask is Faulted : {0}", antecedent.Exception.GetType());
+                                }
                                 Disconnect();
                                 return;
                             }

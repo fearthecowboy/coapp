@@ -1,6 +1,6 @@
 @import "outercurve.inc";
 
-// autopackage file for coapp.toolkit
+// autopackage file for coapp
 
 package {
     name: "CoApp";
@@ -26,7 +26,10 @@ The goal of the CoApp project is to create a community of developers dedicated t
     /* tags : {
         green, red
     }; */
-
+    
+    licenses : {
+        Apache20
+    };
 }
 
 compatability-policy {
@@ -45,11 +48,21 @@ files[exes] {
     include: {
         "coapp.exe",
         "coapp.service.exe",
+        "coapp.elevationproxy.exe",
         "coapp.cleaner.exe",
     };
     
     trim-path: minimal;
 };
+
+files[etc] {
+    include: {
+        "outercurve.inc",
+    };
+    
+    trim-path: all;
+    destination: "etc";
+}
 
 files[dlls] {
     root: "..\output\any\release\bin";
@@ -81,7 +94,7 @@ developer-library[refasms] {
 
 application {
     include : {
-    exes
+    exes, etc
     };
 }
 
@@ -96,7 +109,9 @@ package-composition {
         exes => @"${bin}\${each.Name}" = @"${packagedir}\${each.Name}";
     };
     
-    // shortcuts : {
-        
-    // };
+    file-copy : {
+       etc =>  @"${etc}\${each.Name}" = @"${packagedir}\${each.Name}";
+    };
 }
+
+

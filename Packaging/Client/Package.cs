@@ -35,7 +35,7 @@ namespace CoApp.Packaging.Client {
         private bool _isDependency;
         private bool _isTrimable;
         private bool _isInstalled;
-        
+
         private PackageState _packageState;
 
         private IPackage _availableNewest;
@@ -82,7 +82,9 @@ namespace CoApp.Packaging.Client {
         public BindingPolicy BindingPolicy {
             get {
                 DemandLoad();
-                return _bindingPolicy;
+                lock (this) {
+                    return _bindingPolicy;
+                }
             }
             internal set {
                 IsPackageInfoStale = false;
@@ -97,7 +99,9 @@ namespace CoApp.Packaging.Client {
                 if (IsPackageDetailsStale) {
                     PackageManager.Instance.GetPackageDetails(this).Wait();
                 }
-                return _packageDetails;
+                lock (this) {
+                    return _packageDetails;
+                }
             }
             internal set {
                 IsPackageDetailsStale = false;
@@ -109,6 +113,7 @@ namespace CoApp.Packaging.Client {
         public bool IsInstalled {
             get {
                 DemandLoad();
+                lock (this)
                 return _isInstalled;
             }
             internal set {
@@ -121,6 +126,7 @@ namespace CoApp.Packaging.Client {
         public bool IsBlocked {
             get {
                 DemandLoad();
+                lock (this)
                 return _isBlocked;
             }
             internal set {
@@ -133,6 +139,7 @@ namespace CoApp.Packaging.Client {
         public bool IsWanted {
             get {
                 DemandLoad();
+                lock (this)
                 return _isWanted;
             }
             internal set {
@@ -145,6 +152,7 @@ namespace CoApp.Packaging.Client {
         public bool IsActive {
             get {
                 DemandLoad();
+                lock (this)
                 return _isActive;
             }
             internal set {
@@ -157,6 +165,7 @@ namespace CoApp.Packaging.Client {
         public bool IsDependency {
             get {
                 DemandLoad();
+                lock (this)
                 return _isDependency;
             }
             internal set {
@@ -165,10 +174,11 @@ namespace CoApp.Packaging.Client {
             }
         }
 
-         [Persistable]
+        [Persistable]
         public bool IsTrimable {
             get {
                 DemandLoad();
+                lock (this)
                 return _isTrimable;
             }
             internal set {
@@ -181,6 +191,7 @@ namespace CoApp.Packaging.Client {
         public string DisplayName {
             get {
                 DemandLoad();
+                lock (this)
                 return _displayName;
             }
             internal set {
@@ -189,11 +200,11 @@ namespace CoApp.Packaging.Client {
             }
         }
 
-        
         [Persistable]
         public IEnumerable<Uri> RemoteLocations {
             get {
                 DemandLoad();
+                lock (this)
                 return _remoteLocations ?? Enumerable.Empty<Uri>();
             }
             internal set {
@@ -206,6 +217,7 @@ namespace CoApp.Packaging.Client {
         public IEnumerable<Uri> Feeds {
             get {
                 DemandLoad();
+                lock (this)
                 return _feeds ?? Enumerable.Empty<Uri>();
             }
             internal set {
@@ -218,6 +230,7 @@ namespace CoApp.Packaging.Client {
         public IEnumerable<Role> Roles {
             get {
                 DemandLoad();
+                lock (this)
                 return _roles ?? Enumerable.Empty<Role>();
             }
             internal set {
@@ -230,6 +243,7 @@ namespace CoApp.Packaging.Client {
         public IPackage InstalledNewestUpdate {
             get {
                 DemandLoad();
+                lock (this)
                 return _installedNewestUpdate;
             }
             internal set {
@@ -242,6 +256,7 @@ namespace CoApp.Packaging.Client {
         public IPackage InstalledNewestUpgrade {
             get {
                 DemandLoad();
+                lock (this)
                 return _installedNewestUpgrade;
             }
             internal set {
@@ -254,6 +269,7 @@ namespace CoApp.Packaging.Client {
         public IPackage InstalledNewest {
             get {
                 DemandLoad();
+                lock (this)
                 return _installedNewest;
             }
             internal set {
@@ -266,6 +282,7 @@ namespace CoApp.Packaging.Client {
         public IPackage LatestInstalledThatUpdatesToThis {
             get {
                 DemandLoad();
+                lock (this)
                 return _latestInstalledThatUpdatesToThis;
             }
             internal set {
@@ -278,6 +295,7 @@ namespace CoApp.Packaging.Client {
         public IPackage LatestInstalledThatUpgradesToThis {
             get {
                 DemandLoad();
+                lock (this)
                 return _latestInstalledThatUpgradesToThis;
             }
             internal set {
@@ -290,6 +308,7 @@ namespace CoApp.Packaging.Client {
         public IPackage AvailableNewest {
             get {
                 DemandLoad();
+                lock (this)
                 return _availableNewest;
             }
             internal set {
@@ -302,6 +321,7 @@ namespace CoApp.Packaging.Client {
         public IPackage AvailableNewestUpdate {
             get {
                 DemandLoad();
+                lock (this)
                 return _availableNewestUpdate;
             }
             internal set {
@@ -314,6 +334,7 @@ namespace CoApp.Packaging.Client {
         public IPackage AvailableNewestUpgrade {
             get {
                 DemandLoad();
+                lock (this)
                 return _availableNewestUpgrade;
             }
             internal set {
@@ -368,6 +389,7 @@ namespace CoApp.Packaging.Client {
         public IPackage SatisfiedBy {
             get {
                 DemandLoad();
+                lock (this)
                 return _satisfiedBy;
             }
             internal set {
@@ -380,6 +402,7 @@ namespace CoApp.Packaging.Client {
         public IEnumerable<IPackage> UpdatePackages {
             get {
                 DemandLoad();
+                lock (this)
                 return _updatePackages ?? Enumerable.Empty<IPackage>();
             }
             internal set {
@@ -392,6 +415,7 @@ namespace CoApp.Packaging.Client {
         public IEnumerable<IPackage> UpgradePackages {
             get {
                 DemandLoad();
+                lock (this)
                 return _upgradePackages ?? Enumerable.Empty<IPackage>();
             }
             internal set {
@@ -404,6 +428,7 @@ namespace CoApp.Packaging.Client {
         public IEnumerable<IPackage> NewerPackages {
             get {
                 DemandLoad();
+                lock (this)
                 return _newerPackages ?? Enumerable.Empty<IPackage>();
             }
             internal set {
@@ -416,6 +441,7 @@ namespace CoApp.Packaging.Client {
         public IEnumerable<IPackage> InstalledPackages {
             get {
                 DemandLoad();
+                lock (this)
                 return _installedPackages ?? Enumerable.Empty<IPackage>();
             }
             internal set {
@@ -428,6 +454,7 @@ namespace CoApp.Packaging.Client {
         public IEnumerable<IPackage> Dependencies {
             get {
                 DemandLoad();
+                lock (this)
                 return _dependencies ?? Enumerable.Empty<IPackage>();
             }
             internal set {
@@ -440,6 +467,7 @@ namespace CoApp.Packaging.Client {
         public IEnumerable<IPackage> TrimablePackages {
             get {
                 DemandLoad();
+                lock (this)
                 return _trimablePackages ?? Enumerable.Empty<IPackage>();
             }
             internal set {
@@ -452,6 +480,7 @@ namespace CoApp.Packaging.Client {
         public PackageState PackageState {
             get {
                 DemandLoad();
+                lock (this)
                 return _packageState;
             }
             internal set {

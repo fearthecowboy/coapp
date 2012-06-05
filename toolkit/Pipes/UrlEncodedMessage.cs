@@ -310,23 +310,24 @@ namespace CoApp.Toolkit.Pipes {
 
                 otherType = o.GetType();
             }
+            lock (o) { // $5 to the guy who knows *why* I did this! (GS!)
 
-            foreach( var p in otherType.GetPersistableElements()) {
-                if( p.SetValue != null ) {
-                    var v = GetValue(FormatKey(key, p.Name), p.DeserializeAsType);
-                    if( v == null ) {
-                        p.SetValue(o, GetValue(FormatKey(key, p.Name), p.DeserializeAsType), null);
-                        continue;
+                foreach (var p in otherType.GetPersistableElements()) {
+                    if (p.SetValue != null) {
+                        var v = GetValue(FormatKey(key, p.Name), p.DeserializeAsType);
+                        if (v == null) {
+                            p.SetValue(o, GetValue(FormatKey(key, p.Name), p.DeserializeAsType), null);
+                            continue;
+                        }
+
+                        if ((!p.ActualType.IsInstanceOfType(v)) && p.DeserializeAsType.ImplicitlyConvertsTo(p.ActualType)) {
+                            v = v.ImplicitlyConvert(p.ActualType);
+                        }
+
+                        p.SetValue(o, v, null);
                     }
-
-                    if ( (!p.ActualType.IsInstanceOfType(v)) && p.DeserializeAsType.ImplicitlyConvertsTo(p.ActualType)) {
-                        v = v.ImplicitlyConvert(p.ActualType);
-                    }
-
-                    p.SetValue(o, v, null);
                 }
             }
-
             return o;
         }
 

@@ -485,14 +485,6 @@ namespace CoApp.Packaging.Client {
             });
         }
 
-        public Task<Package> RefreshPackageDetails(CanonicalName canonicalName) {
-            if (!canonicalName.IsCanonical) {
-                return InvalidCanonicalNameResult<Package>(canonicalName);
-            }
-
-            return (Remote.GetPackageDetails(canonicalName) as Task<PackageManagerResponseImpl>).Continue(response => Package.GetPackage(canonicalName));
-        }
-
         public Task<Package> GetPackage(CanonicalName canonicalName, bool forceRefresh = false) {
             if( null == canonicalName) {
                 return CoTask.AsResultTask<Package>(null);
@@ -517,20 +509,17 @@ namespace CoApp.Packaging.Client {
             return canonicalNames.Select(c => GetPackage(c, true)).Continue(all => all);
         }
 
-        public Task<Package> GetPackageDetails(CanonicalName canonicalName) {
+        public Task<Package> GetPackageDetails(CanonicalName canonicalName, bool forceRefresh = false) {
             if (!canonicalName.IsCanonical) {
                 return InvalidCanonicalNameResult<Package>(canonicalName);
             }
 
-            return GetPackage(canonicalName).Continue(package => GetPackageDetails(package).Result);
-        }
-
-        public Task<Package> GetPackageDetails(Package package) {
-            if (package.IsPackageInfoStale) {
-                return GetPackage(package.CanonicalName).Continue(pkg => RefreshPackageDetails(pkg.CanonicalName).Result);
-            }
-
-            return package.IsPackageDetailsStale ? RefreshPackageDetails(package.CanonicalName) : package.AsResultTask();
+            return GetPackage(canonicalName, forceRefresh).Continue(pkg => {
+                if (forceRefresh || pkg.IsPackageDetailsStale) {
+                    Remote.GetPackageDetails(canonicalName).Wait();
+                }
+                return pkg;
+            });
         }
 
         public Task<bool> GetTelemetry() {
