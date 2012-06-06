@@ -1153,6 +1153,7 @@ namespace CoApp.Packaging.Service {
                 }
 
                 // otherwise
+                Logger.Error("Package '{0}' appears not to be potentially installable.", package.CanonicalName);
                 throw new OperationCompletedBeforeResultException();
             }
 

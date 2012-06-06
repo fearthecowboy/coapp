@@ -503,7 +503,7 @@ namespace CoApp.CLI {
                     case "update":
                     case "update-package":
                     case "update-packages":
-                        pkgFilter = pkgFilter & Package.Properties.AvailableNewestUpdate.Is(null);
+                        pkgFilter = pkgFilter & !Package.Properties.AvailableNewestUpdate.Is(null);
 
                         task = preCommandTasks.Continue(() => _packageManager.QueryPackages(parameters, pkgFilter, collectionFilter, _location)
                            .Continue(packages => {
