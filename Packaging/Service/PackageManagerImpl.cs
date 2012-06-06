@@ -1358,60 +1358,66 @@ namespace CoApp.Packaging.Service {
         }
 
         public Task ScheduleTask(string taskName, string executable, string commandline, int hour, int minutes, DayOfWeek? dayOfWeek, int intervalInMinutes) {
-            if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.EditSchedule)) {
-                var response = Event<GetResponseInterface>.RaiseFirst();
-                RemoveScheduledTask(taskName);
+            try {
+                if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.EditSchedule)) {
+                    var response = Event<GetResponseInterface>.RaiseFirst();
+                    RemoveScheduledTask(taskName);
 
-                var dow = DaysOfTheWeek.AllDays;
+                    var dow = DaysOfTheWeek.AllDays;
 
-                if (dayOfWeek.HasValue) {
-                    // once-a-week
-                    switch (dayOfWeek.Value) {
-                        case DayOfWeek.Saturday:
-                            dow = DaysOfTheWeek.Saturday;
-                            break;
-                        case DayOfWeek.Sunday:
-                            dow = DaysOfTheWeek.Sunday;
-                            break;
-                        case DayOfWeek.Monday:
-                            dow = DaysOfTheWeek.Monday;
-                            break;
-                        case DayOfWeek.Tuesday:
-                            dow = DaysOfTheWeek.Tuesday;
-                            break;
-                        case DayOfWeek.Wednesday:
-                            dow = DaysOfTheWeek.Wednesday;
-                            break;
-                        case DayOfWeek.Thursday:
-                            dow = DaysOfTheWeek.Thursday;
-                            break;
-                        case DayOfWeek.Friday:
-                            dow = DaysOfTheWeek.Friday;
-                            break;
+                    if (dayOfWeek.HasValue) {
+                        // once-a-week
+                        switch (dayOfWeek.Value) {
+                            case DayOfWeek.Saturday:
+                                dow = DaysOfTheWeek.Saturday;
+                                break;
+                            case DayOfWeek.Sunday:
+                                dow = DaysOfTheWeek.Sunday;
+                                break;
+                            case DayOfWeek.Monday:
+                                dow = DaysOfTheWeek.Monday;
+                                break;
+                            case DayOfWeek.Tuesday:
+                                dow = DaysOfTheWeek.Tuesday;
+                                break;
+                            case DayOfWeek.Wednesday:
+                                dow = DaysOfTheWeek.Wednesday;
+                                break;
+                            case DayOfWeek.Thursday:
+                                dow = DaysOfTheWeek.Thursday;
+                                break;
+                            case DayOfWeek.Friday:
+                                dow = DaysOfTheWeek.Friday;
+                                break;
+                        }
+                    }
+                    using (var taskService = new TaskService()) {
+                        var tName = "coapp\\" + taskName;
+                        if (taskService.HighestSupportedVersion < new Version(1, 2)) {
+                            // old style
+                            tName = "coapp-" + taskName;
+                        }
+
+                        var trigger = Trigger.CreateTrigger(TaskTriggerType.Weekly) as WeeklyTrigger;
+                        trigger.DaysOfWeek = dow;
+                        if (intervalInMinutes != 0 && intervalInMinutes < 1440) {
+                            trigger.Repetition.Interval = new TimeSpan(0, intervalInMinutes, 0);
+                        }
+
+                        trigger.StartBoundary = DateTime.Today + new TimeSpan(hour, minutes, 0);
+                        
+                        var t = taskService.AddTask(tName, trigger, new ExecAction(executable, commandline), "Users", null, TaskLogonType.InteractiveToken);
+                        t.Definition.Settings.MultipleInstances = TaskInstancesPolicy.IgnoreNew;
+                        t.Definition.Settings.RunOnlyIfNetworkAvailable = true;
+                        t.RegisterChanges();
+                        
+                        
+                        
+                        return GetScheduledTasks(taskName);
                     }
                 }
-                using (var taskService = new TaskService()) {
-                    var tName = "coapp\\" + taskName;
-                    if (taskService.HighestSupportedVersion < new Version(1, 2)) {
-                        // old style
-                        tName = "coapp-" + taskName;
-                    }
-
-                    var trigger = Trigger.CreateTrigger(TaskTriggerType.Weekly) as WeeklyTrigger;
-                    trigger.DaysOfWeek = dow;
-                    if (intervalInMinutes != 0 && intervalInMinutes < 1440) {
-                        trigger.Repetition.Interval = new TimeSpan(0, intervalInMinutes, 0);
-                    }
-
-                    trigger.StartBoundary = DateTime.Today + new TimeSpan(hour, minutes, 0);
-
-                    var t = taskService.AddTask(tName, trigger, new ExecAction(executable, commandline));
-                    t.Definition.Settings.MultipleInstances = TaskInstancesPolicy.IgnoreNew;
-                    t.Definition.Settings.RunOnlyIfNetworkAvailable = true;
-                    t.RegisterChanges();
-
-                    return GetScheduledTasks(taskName);
-                }
+            } catch( Exception e ) {
+                Logger.Error(e);
             }
             return FinishedSynchronously;
         }

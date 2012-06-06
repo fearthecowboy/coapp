@@ -25,10 +25,12 @@ namespace CoApp.Packaging.Client {
     using Toolkit.Linq;
     using Toolkit.Logging;
     using Toolkit.Pipes;
+    using Toolkit.TaskService;
     using Toolkit.Tasks;
     using Toolkit.Win32;
     using PkgFilter = System.Linq.Expressions.Expression<System.Func<Common.IPackage, bool>>;
     using CollectionFilter = System.Linq.Expressions.Expression<System.Func<System.Collections.Generic.IEnumerable<Common.IPackage>,System.Collections.Generic.IEnumerable<Common.IPackage>>>;
+    using Task = System.Threading.Tasks.Task;
 
     public class GeneralPackageInformation {
         public int Priority { get; set; }
@@ -571,7 +573,60 @@ namespace CoApp.Packaging.Client {
         /// <param name="intervalInMinutes"> how often the scheduled task should consider running (on Windows XP/2003, it's not possible to run as soon as possible after a task was missed. </param>
         /// <returns> </returns>
         public Task AddScheduledTask(string taskName, string executable, string commandline, int hour, int minutes, DayOfWeek? dayOfWeek, int intervalInMinutes) {
-            return Remote.ScheduleTask(taskName, executable, commandline, hour, minutes, dayOfWeek, intervalInMinutes);
+            // remote version doesn't work without user credentials. #sigh
+
+            // return Remote.ScheduleTask(taskName, executable, commandline, hour, minutes, dayOfWeek, intervalInMinutes);
+            return RemoveScheduledTask(taskName).Continue(() => {
+                var dow = DaysOfTheWeek.AllDays;
+
+                if (dayOfWeek.HasValue) {
+                    // once-a-week
+                    switch (dayOfWeek.Value) {
+                        case DayOfWeek.Saturday:
+                            dow = DaysOfTheWeek.Saturday;
+                            break;
+                        case DayOfWeek.Sunday:
+                            dow = DaysOfTheWeek.Sunday;
+                            break;
+                        case DayOfWeek.Monday:
+                            dow = DaysOfTheWeek.Monday;
+                            break;
+                        case DayOfWeek.Tuesday:
+                            dow = DaysOfTheWeek.Tuesday;
+                            break;
+                        case DayOfWeek.Wednesday:
+                            dow = DaysOfTheWeek.Wednesday;
+                            break;
+                        case DayOfWeek.Thursday:
+                            dow = DaysOfTheWeek.Thursday;
+                            break;
+                        case DayOfWeek.Friday:
+                            dow = DaysOfTheWeek.Friday;
+                            break;
+                    }
+                }
+                using (var taskService = new TaskService()) {
+                    var tName = "coapp\\" + taskName;
+                    if (taskService.HighestSupportedVersion < new Version(1, 2)) {
+                        // old style
+                        tName = "coapp-" + taskName;
+                    }
+
+                    var trigger = Trigger.CreateTrigger(TaskTriggerType.Weekly) as WeeklyTrigger;
+                    trigger.DaysOfWeek = dow;
+                    if (intervalInMinutes != 0 && intervalInMinutes < 1440) {
+                        trigger.Repetition.Interval = new TimeSpan(0, intervalInMinutes, 0);
+                    }
+
+                    trigger.StartBoundary = DateTime.Today + new TimeSpan(hour, minutes, 0);
+
+                    var t = taskService.AddTask(tName, trigger, new ExecAction(executable, commandline));
+                    t.Definition.Settings.MultipleInstances = TaskInstancesPolicy.IgnoreNew;
+                    t.Definition.Settings.RunOnlyIfNetworkAvailable = true;
+                    t.RegisterChanges();
+                }
+            });
+
         }
 
         public Task RemoveScheduledTask(string taskName) {

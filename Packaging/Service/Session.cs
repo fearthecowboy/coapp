@@ -443,6 +443,23 @@ namespace CoApp.Packaging.Service {
                 return false;
             });
 
+
+            CurrentTask.Events += new RunAsClient(action => {
+                if (_serverPipe != null && _serverPipe.IsConnected) {
+                    try {
+                        _serverPipe.RunAsClient(() => {
+                            action();
+                        });
+                    }
+                    catch {
+                        // may have been disconnected?
+                        if (!_serverPipe.IsConnected) {
+                            Disconnect();
+                        }
+                    }
+                }
+            });
+
             CurrentTask.Events += new IsCancellationRequested(() => _cancellationTokenSource.Token.IsCancellationRequested);
             CurrentTask.Events += new GetCanonicalizedPath(path => {
                 var result = path;
