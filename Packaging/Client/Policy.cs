@@ -17,5 +17,6 @@ namespace CoApp.Packaging.Client {
         public string Name { get; internal set; }
         public string Description { get; internal set; }
         public IEnumerable<string> Members { get; internal set; }
+        public bool IsEnabled;
     }
 }

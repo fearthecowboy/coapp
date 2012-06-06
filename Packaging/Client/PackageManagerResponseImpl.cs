@@ -134,8 +134,8 @@ namespace CoApp.Packaging.Client {
             NoPackages = true;
         }
 
-        public void PolicyInformation(string name, string description, IEnumerable<string> accounts) {
-            _policies.Value.Add(new Policy {Name = name, Description = description, Members = accounts});
+        public void PolicyInformation(string name, string description, IEnumerable<string> accounts, bool enabled) {
+            _policies.Value.Add(new Policy {Name = name, Description = description, Members = accounts, IsEnabled = enabled});
         }
 
         public void SendSessionStarted(string sessionId) {

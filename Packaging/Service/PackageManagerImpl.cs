@@ -1217,7 +1217,7 @@ namespace CoApp.Packaging.Service {
             var policies = PermissionPolicy.AllPolicies.Where(each => each.Name.NewIsWildcardMatch(policyName)).ToArray();
 
             foreach (var policy in policies) {
-                response.PolicyInformation(policy.Name, policy.Description, policy.Accounts);
+                response.PolicyInformation(policy.Name, policy.Description, policy.Accounts, Event<QueryPermission>.RaiseFirst(policy));
             }
             if (policies.IsNullOrEmpty()) {
                 response.Error("get-policy", "name", "policy '{0}' not found".format(policyName));
@@ -1344,7 +1344,9 @@ namespace CoApp.Packaging.Service {
         }
 
         public Task SetGeneralPackageInformation(int priority, CanonicalName canonicalName, string key, string value){
-            GeneralPackageSettings.Instance[priority, canonicalName, key] = value;
+            if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.ChangeState)) {
+                GeneralPackageSettings.Instance[priority, canonicalName, key] = value;
+            }
             return FinishedSynchronously;
         }
 

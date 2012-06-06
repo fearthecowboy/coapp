@@ -18,7 +18,7 @@ namespace CoApp.Packaging.Common {
     [UseNamedArgument]
     public interface IPackageManagerResponse {
         void NoPackagesFound();
-        void PolicyInformation(string name, string description, IEnumerable<string> accounts);
+        void PolicyInformation(string name, string description, IEnumerable<string> accounts, bool enabled );
         void SendSessionStarted(string sessionId);
 
         void PackageInformation(IPackage package);
