@@ -22,7 +22,6 @@ namespace CoApp.Toolkit.Win32 {
         public static readonly Architecture arm = new Architecture {_architecture = ArchType.arm};
         public static readonly Architecture[] Architectures = new[] {Any, x64, x86, Unknown};
 
-
         private enum ArchType {
             Unknown = 0,
             Auto,
@@ -271,6 +270,18 @@ namespace CoApp.Toolkit.Win32 {
             return o is TwoPartVersion && Equals((TwoPartVersion)o);
         }
 
+        public UInt16 Major {
+            get {
+                return (UInt16)((_version >> 16) & 0xFFFF);
+            }
+        }
+
+        public UInt16 Minor {
+            get {
+                return (UInt16)(_version & 0xFFFF);
+            }
+        }
+
         public bool Equals(TwoPartVersion other) {
             return other._version == _version;
         }
@@ -340,6 +351,30 @@ namespace CoApp.Toolkit.Win32 {
 
         public static implicit operator FourPartVersion(string version) {
             return new FourPartVersion {_version = StringToULong(version)};
+        }
+
+        public UInt16 Major {
+            get {
+                return (UInt16)((_version >> 48) & 0xFFFF);
+            }
+        }
+
+        public UInt16 Minor {
+            get {
+                return (UInt16)((_version >> 32) & 0xFFFF);
+            }
+        }
+
+        public UInt16 Build {
+            get {
+                return (UInt16)((_version >> 16) & 0xFFFF);
+            }
+        }
+
+        public UInt16 Revision {
+            get {
+                return (UInt16)(_version & 0xFFFF);
+            }
         }
 
         private static string ULongToString(ulong version) {

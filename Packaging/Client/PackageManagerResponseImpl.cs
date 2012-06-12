@@ -15,6 +15,7 @@ namespace CoApp.Packaging.Client {
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
+    using System.Net;
     using System.Threading.Tasks;
     using Common;
     using Common.Exceptions;
@@ -38,6 +39,9 @@ namespace CoApp.Packaging.Client {
         private readonly Lazy<List<Policy>> _policies = new Lazy<List<Policy>>(() => new List<Policy>());
         private readonly Lazy<List<ScheduledTask>> _scheduledTasks = new Lazy<List<ScheduledTask>>(() => new List<ScheduledTask>());
         private readonly Lazy<IDictionary<string, bool>>  _validState = new Lazy<IDictionary<string, bool>>( () => new XDictionary<string, bool>());
+
+        internal string ResultString { get; set; }
+        internal bool ResultBool { get; set; }
 
         private AtomFeed _feed;
 
@@ -153,7 +157,6 @@ namespace CoApp.Packaging.Client {
         public void PackageDetails(CanonicalName canonicalName, PackageDetails details) {
             var result = Package.GetPackage(canonicalName);
             result.PackageDetails = details;
-            result.IsPackageDetailsStale = false;
         }
 
         public void FeedDetails(string location, DateTime lastScanned, bool session, bool suppressed, bool validated, FeedState state) {
@@ -184,9 +187,29 @@ namespace CoApp.Packaging.Client {
             }
         }
 
+        
+
         public void InstalledPackage(CanonicalName canonicalName) {
             _packages.Value.Add(Package.GetPackage(canonicalName));
             Package.GetPackage(canonicalName).IsInstalled = true;
+
+            Task.Factory.StartNew(() => {
+                if (PackageManager.Instance.GetTelemetry().Result) {
+                    // ping the coapp server to tell it that a package installed
+                    try {
+                        var uniqId = PackageManager.Instance.AnonymousId;
+                        Logger.Message("Pinging `http://coapp.org/telemetry/?anonid={0}&pkg={1}` ".format(uniqId, canonicalName));
+                        var req =
+                            HttpWebRequest.Create("http://coapp.org/telemetry/?anonid={0}&pkg={1}".format(uniqId, canonicalName));
+                        req.BetterGetResponse().Close();
+                    } catch {
+                        // who cares...
+                    }
+                }
+            }, TaskCreationOptions.AttachedToParent);
+            
+            
+
             try {
                 Event<PackageInstalled>.Raise(canonicalName);
             }
@@ -463,6 +486,14 @@ namespace CoApp.Packaging.Client {
 
         public void TrustedPublishers( IEnumerable<string> trustedPublishers) {
             _publishers = trustedPublishers;
+        }
+
+        public void StringResult(string value) {
+            ResultString = value;
+        }
+
+        public void BoolResult(bool value) {
+            ResultBool= value;
         }
     }
 }

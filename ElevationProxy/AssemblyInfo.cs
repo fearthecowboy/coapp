@@ -17,7 +17,7 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("CoApp.ElevationProxy")]
+[assembly: AssemblyTitle("CoApp Package Manager")]
 [assembly: AssemblyDescription("CoApp Elevation Proxy (to enable frictionless elevation)")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyProduct("CoApp.ElevationProxy")]

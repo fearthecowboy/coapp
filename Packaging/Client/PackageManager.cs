@@ -16,6 +16,7 @@ namespace CoApp.Packaging.Client {
     using System.IO;
     using System.Linq;
     using System.Linq.Expressions;
+    using System.Net;
     using System.Threading.Tasks;
     using System.Xml.Linq;
     using Common;
@@ -29,8 +30,9 @@ namespace CoApp.Packaging.Client {
     using Toolkit.Tasks;
     using Toolkit.Win32;
     using PkgFilter = System.Linq.Expressions.Expression<System.Func<Common.IPackage, bool>>;
-    using CollectionFilter = System.Linq.Expressions.Expression<System.Func<System.Collections.Generic.IEnumerable<Common.IPackage>,System.Collections.Generic.IEnumerable<Common.IPackage>>>;
+    using CollectionFilter = Toolkit.Collections.XList<System.Linq.Expressions.Expression<System.Func<System.Collections.Generic.IEnumerable<Common.IPackage>,System.Collections.Generic.IEnumerable<Common.IPackage>>>>;
     using Task = System.Threading.Tasks.Task;
+    using System.Text;
 
     public class GeneralPackageInformation {
         public int Priority { get; set; }
@@ -110,7 +112,7 @@ namespace CoApp.Packaging.Client {
             }
 
             // 3. A partial/canonical name of a package.
-            return (Remote.FindPackages(query, pkgFilter,null, location) as Task<PackageManagerResponseImpl>).Continue(response => response.Packages);
+            return (Remote.FindPackages(query, pkgFilter,collectionFilter, location) as Task<PackageManagerResponseImpl>).Continue(response => response.Packages);
         }
 
         public Task<IEnumerable<Package>> QueryPackages(IEnumerable<string> queries, PkgFilter pkgFilter, CollectionFilter collectionFilter, string location) {
@@ -511,7 +513,10 @@ namespace CoApp.Packaging.Client {
             return canonicalNames.Select(c => GetPackage(c, true)).Continue(all => all);
         }
 
+        
         public Task<Package> GetPackageDetails(CanonicalName canonicalName, bool forceRefresh = false) {
+            return Package.GetPackage(canonicalName).AsResultTask();
+            /*
             if (!canonicalName.IsCanonical) {
                 return InvalidCanonicalNameResult<Package>(canonicalName);
             }
@@ -522,8 +527,9 @@ namespace CoApp.Packaging.Client {
                 }
                 return pkg;
             });
+             * */
         }
-
+        
         public Task<bool> GetTelemetry() {
             return (Remote.GetTelemetry() as Task<PackageManagerResponseImpl>).Continue(response => response.OptedIn);
         }
@@ -678,5 +684,65 @@ namespace CoApp.Packaging.Client {
         public Task<AtomFeed> GetAtomFeed(IEnumerable<CanonicalName> canonicalNames) {
             return (Remote.GetAtomFeed(canonicalNames) as Task<PackageManagerResponseImpl>).Continue(response => response.Feed);   
         }
+
+        public Task SetConfigurationValue(string key, string valuename, string value) {
+            return Remote.SetConfigurationValue(key, valuename, value);
+        }
+
+        public Task<string> GetConfigurationValue(string key, string valuename) {
+            return (Remote.GetConfigurationValue(key, valuename) as Task<PackageManagerResponseImpl>).Continue(response => response.ResultString);   
+        }
+
+        public string GetEventLog(TimeSpan howMuch, TimeSpan startHowFarBack) {
+            return Logger.GetMessages(howMuch, startHowFarBack);
+        }
+        public string GetEventLog(TimeSpan howMuch) {
+            return GetEventLog(howMuch, new TimeSpan(0));
+        }
+        public string GetEventLog() {
+            return GetEventLog(new TimeSpan(0, 5, 0), new TimeSpan(0));
+        }
+
+        public Task<string> UploadDebugInformation(string textContent = null) {
+            textContent = textContent ?? GetEventLog();
+
+            return Task.Factory.StartNew(() => {
+                    // ping the coapp server to tell it that a package installed
+                    try {
+                        var hash = DateTime.Now.Ticks.ToString().MD5Hash();
+                        var req = HttpWebRequest.Create("http://coapp.org/debug/");
+                        req.Method = "POST";
+                        UrlEncodedMessage uem = new UrlEncodedMessage();
+                        uem.Add("uniqId", AnonymousId);
+                        uem.Add("hash",hash);
+                        uem.Add("content", textContent);
+
+                        var buffer = new ASCIIEncoding().GetBytes(uem.ToString());
+                        req.ContentType = "application/x-www-form-urlencoded";
+                        req.ContentLength = buffer.Length;
+
+                        using( var newStream = req.GetRequestStream() ) {
+                            newStream.Write(buffer, 0, buffer.Length);
+                        }
+
+                        req.BetterGetResponse().Close();
+                        return hash;
+                    }
+                    catch {
+                        // who cares...
+                    }
+                return null;
+            }, TaskCreationOptions.AttachedToParent);
+        }
+
+        public string AnonymousId {get {
+            var uniqId = GetConfigurationValue("", "AnonymousId").Result;
+            if (string.IsNullOrEmpty(uniqId) || uniqId.Length != 32) {
+                uniqId = Guid.NewGuid().ToString("N");
+                
+                SetConfigurationValue("", "AnonymousId", uniqId);
+            }
+            return uniqId;
+        }}
     }
 }

@@ -178,9 +178,9 @@ namespace CoApp.Packaging.Service {
         internal readonly ObservableCollection<Package> PackageDependencies = new ObservableCollection<Package>();
         
         private Package(CanonicalName canonicalName) {
+            CanonicalName = canonicalName;
             Packages.Changed += x => Changed();
             PackageDependencies.CollectionChanged += (x, y) => Changed();
-            CanonicalName = canonicalName;
         }
 
         internal static Package GetPackageFromFilename(string filename) {

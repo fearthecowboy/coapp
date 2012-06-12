@@ -26,6 +26,7 @@ namespace CoApp.Packaging.Service {
     using Toolkit.Crypto;
     using Toolkit.Exceptions;
     using Toolkit.Extensions;
+    using Toolkit.Linq;
     using Toolkit.Logging;
     using Toolkit.Pipes;
     using Toolkit.Shell;
@@ -33,6 +34,11 @@ namespace CoApp.Packaging.Service {
     using Toolkit.Tasks;
     using Toolkit.Win32;
     using Task = System.Threading.Tasks.Task;
+
+    using PkgFilter = System.Linq.Expressions.Expression<System.Func<Common.IPackage, bool>>;
+    using CollectionFilter = Toolkit.Collections.XList<System.Linq.Expressions.Expression<System.Func<System.Collections.Generic.IEnumerable<Common.IPackage>, System.Collections.Generic.IEnumerable<Common.IPackage>>>>;
+
+
 
     public class PackageManagerImpl : IPackageManager {
         private static Task FinishedSynchronously {
@@ -164,7 +170,7 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        public Task FindPackages(CanonicalName canonicalName, Expression<Func<IPackage, bool>> filter, Expression<Func<IEnumerable<IPackage>, IEnumerable<IPackage>>> collectionFilter, string location) {
+        public Task FindPackages(CanonicalName canonicalName, PkgFilter filter, CollectionFilter collectionFilter, string location) {
             var response = Event<GetResponseInterface>.RaiseFirst();
 
             if (CancellationRequested) {
@@ -179,7 +185,7 @@ namespace CoApp.Packaging.Service {
 
                 IEnumerable<IPackage> query = filter == null ? SearchForPackages(canonicalName, location) : SearchForPackages(canonicalName, location).Where(each => filter.Compile()(each));
 
-                if( collectionFilter != null ) {
+                if( !collectionFilter.IsNullOrEmpty()) {
                     query = collectionFilter.Compile()(query);
                 }
 
@@ -1539,7 +1545,9 @@ namespace CoApp.Packaging.Service {
         }
 
         public Task GetTelemetry() {
-            Event<GetResponseInterface>.RaiseFirst().CurrentTelemetryOption(PackageManagerSettings.CoAppSettings["#TelemetryOptIn"].BoolValue);
+            var b = PackageManagerSettings.CoAppSettings["#TelemetryOptIn"].StringValue;
+            Event<GetResponseInterface>.RaiseFirst().CurrentTelemetryOption(!b.IsFalse());
+
             return FinishedSynchronously;
         }
 
@@ -1558,5 +1566,16 @@ namespace CoApp.Packaging.Service {
             response.AtomFeedText(feed.ToString());
             return FinishedSynchronously;
         }
+
+        public Task SetConfigurationValue(string key, string valuename, string value) {
+            PackageManagerSettings.CoAppSettings[key, valuename].StringValue = value;
+            return FinishedSynchronously;
+        }
+
+        public Task GetConfigurationValue(string key, string valuename) {
+            Event<GetResponseInterface>.RaiseFirst().StringResult(PackageManagerSettings.CoAppSettings[key, valuename].StringValue);
+            return FinishedSynchronously;
+        }
+
     }
 }

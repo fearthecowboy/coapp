@@ -384,7 +384,7 @@ namespace CoApp.Toolkit.Extensions {
                 return Activator.CreateInstance(parsableType);
             }
 
-            return value == null ? null : GetStringConstructor(parsableType).Invoke(new object[] {value});
+            return string.IsNullOrEmpty(value) ? null : GetStringConstructor(parsableType).Invoke(new object[] {value});
         }
 
         public static bool IsDictionary(this Type dictionaryType) {

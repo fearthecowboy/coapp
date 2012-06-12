@@ -60,16 +60,10 @@ namespace CoApp.Packaging.Client {
 
         internal Package() {
             IsPackageInfoStale = true;
-            IsPackageDetailsStale = true;
-            RemoteLocations = Enumerable.Empty<Uri>();
-            Feeds = Enumerable.Empty<Uri>();
         }
 
         [NotPersistable]
         internal bool IsPackageInfoStale { get; set; }
-
-        [NotPersistable]
-        internal bool IsPackageDetailsStale { get; set; }
 
         public string LocalPackagePath { get; set; }
 
@@ -96,15 +90,11 @@ namespace CoApp.Packaging.Client {
         public PackageDetails PackageDetails {
             get {
                 DemandLoad();
-                if (IsPackageDetailsStale) {
-                    PackageManager.Instance.GetPackageDetails(this).Wait();
-                }
                 lock (this) {
                     return _packageDetails;
                 }
             }
             internal set {
-                IsPackageDetailsStale = false;
                 _packageDetails = value;
             }
         }
@@ -582,8 +572,8 @@ namespace CoApp.Packaging.Client {
         public static class Filters {
             public static Filter<IPackage> InstalledPackages = Properties.Installed.Is(true);
             public static Filter<IPackage> Trimable = InstalledPackages & Properties.Trimable.Is(true);
-            public static Filter<IPackage> PackagesWithUpdateAvailable = InstalledPackages & Properties.UpdatePackages.Any();
-            public static Filter<IPackage> PackagesWithUpgradeAvailable = InstalledPackages & Properties.UpgradePackages.Any();
+            public static Filter<IPackage> PackagesWithUpdateAvailable = InstalledPackages & Properties.AvailableNewestUpdate.IsNot(null);
+            public static Filter<IPackage> PackagesWithUpgradeAvailable = InstalledPackages & Properties.AvailableNewestUpgrade.IsNot(null);
         }
 
         #endregion

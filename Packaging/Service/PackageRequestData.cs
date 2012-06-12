@@ -51,6 +51,7 @@ namespace CoApp.Packaging.Service {
             _package = package;
             InstalledPackages = new Lazy<IEnumerable<IPackage>>(() => InstalledPackageFeed.Instance.FindPackages(_package.CanonicalName.OtherVersionFilter).OrderByDescending(each => each.Version).ToArray());
             OtherVersions = new Lazy<IEnumerable<IPackage>>(() => PackageManagerImpl.Instance.SearchForPackages(_package.CanonicalName.OtherVersionFilter).OrderByDescending(each => each.Version).ToArray());
+
             NewerPackages = new Lazy<IEnumerable<IPackage>>(() => OtherVersions.Value.TakeWhile(each => each.IsNewerThan(_package)).ToArray());
             AvailableVersions = new Lazy<IEnumerable<IPackage>>(() => OtherVersions.Value.Where(each => each.IsInstalled == false).ToArray());
 
@@ -62,12 +63,18 @@ namespace CoApp.Packaging.Service {
             InstalledNewestUpgrade = new Lazy<IPackage>(() => InstalledPackages.Value.FirstOrDefault(each => each.IsAnUpgradeFor(_package)));
             SatisfiedBy = new Lazy<IPackage>(() => InstalledNewestUpdate.Value ?? (_package.IsInstalled ? _package : null));
 
-            LatestInstalledThatUpdatesToThis = new Lazy<IPackage>(() => InstalledPackages.Value.FirstOrDefault(each => each.IsAnUpgradeFor(_package)));
+            LatestInstalledThatUpdatesToThis = new Lazy<IPackage>(() => InstalledPackages.Value.FirstOrDefault(each => each.IsAnUpdateFor(_package)));
             LatestInstalledThatUpgradesToThis = new Lazy<IPackage>(() => InstalledPackages.Value.FirstOrDefault(each => each.IsAnUpgradeFor(_package)));
 
             AvailableNewest = new Lazy<IPackage>(() =>  AvailableVersions.Value.FirstOrDefault());
-            AvailableNewestUpdate = new Lazy<IPackage>(() => UpdatePackages.Value.FirstOrDefault());
-            AvailableNewestUpgrade = new Lazy<IPackage>(() => UpgradePackages.Value.FirstOrDefault());
+            AvailableNewestUpdate = new Lazy<IPackage>(() => {
+                var result = UpdatePackages.Value.FirstOrDefault();
+                return result != null && InstalledNewestUpdate.Value != null && InstalledNewestUpdate.Value.CanonicalName.Version >= result.CanonicalName.Version ? null : result;
+            });
+            AvailableNewestUpgrade = new Lazy<IPackage>(() => {
+                var result = UpgradePackages.Value.FirstOrDefault();
+                return result != null && InstalledNewestUpgrade.Value != null && InstalledNewestUpgrade.Value.CanonicalName.Version >= result.CanonicalName.Version ? null : result;
+            });
 
             TrimablePackages = new Lazy<IEnumerable<IPackage>>(() => InstalledPackages.Value.Where(each => each.IsTrimable));
 

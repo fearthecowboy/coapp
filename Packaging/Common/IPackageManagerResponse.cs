@@ -68,6 +68,9 @@ namespace CoApp.Packaging.Common {
         void TaskComplete();
         void GeneralPackageSetting(int priority, CanonicalName canonicalName, string key, string value);
 
+        void StringResult(string value);
+        void BoolResult(bool value);
+
         void AtomFeedText(string atomText);
         void TrustedPublishers(IEnumerable<string> trustedPublishers);
     }

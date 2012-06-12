@@ -187,9 +187,8 @@ namespace CoApp.Packaging.Common.Model.Atom {
                 var package = Package.GetPackage(Model.CanonicalName);
                 lock (package) {
                     // lets copy what details we have into that package.
-
                     if (!Model.Dependencies.IsNullOrEmpty()) {
-                        package.PackageDependencies.AddRange(Model.Dependencies.Keys.Select(each => {
+                        package.PackageDependencies.AddRangeUnique(Model.Dependencies.Keys.Select(each => {
                             var result = Package.GetPackage(each);
                             result.FeedLocations.AddRangeUnique(Model.Dependencies[each]);
                             return result;
