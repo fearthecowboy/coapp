@@ -131,6 +131,7 @@ namespace CoApp.Packaging.Service {
             foreach (var s in ActiveSessions.ToArray()) {
                 // s.Restarting(); GS01?
                 // cancel everyone.
+                s.SendQueuedMessages().Wait(5000);
                 s._cancellationTokenSource.Cancel();
             }
         }
@@ -309,7 +310,7 @@ namespace CoApp.Packaging.Service {
         }
 
 
-        private Task SendQueuedMessages() {
+        internal Task SendQueuedMessages() {
             lock (this) {
                 // if another thread is processing this queue, let it.
                 if (_queueProcessingTask != null) {
@@ -321,7 +322,7 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        private void DrainQueue() {
+        internal void DrainQueue() {
             while (true) {
                 // if we're done processing messages, make sure nobody thinks we still are before quitting
                 lock (this) {

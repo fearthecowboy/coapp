@@ -42,6 +42,7 @@ namespace CoApp.Packaging.Client {
 
         internal string ResultString { get; set; }
         internal bool ResultBool { get; set; }
+        internal bool Completed { get; set; }
 
         private AtomFeed _feed;
 
@@ -54,7 +55,8 @@ namespace CoApp.Packaging.Client {
         private readonly IncomingCallDispatcher<IPackageManagerResponse> _dispatcher;
 
         internal LoggingSettings LoggingSettingsResult;
-        internal bool EngineRestarting;
+        internal static bool EngineRestarting;
+
         internal bool NoPackages;
         
         internal bool OptedIn;
@@ -116,7 +118,6 @@ namespace CoApp.Packaging.Client {
         }
 
         internal void Clear() {
-            EngineRestarting = false;
             NoPackages = false;
             OperationCanceledReason = null;
         }
@@ -194,13 +195,12 @@ namespace CoApp.Packaging.Client {
             Package.GetPackage(canonicalName).IsInstalled = true;
 
             Task.Factory.StartNew(() => {
-                if (PackageManager.Instance.GetTelemetry().Result) {
+                if (PackageManager.Instance.Telemetry) {
                     // ping the coapp server to tell it that a package installed
                     try {
-                        var uniqId = PackageManager.Instance.AnonymousId;
-                        Logger.Message("Pinging `http://coapp.org/telemetry/?anonid={0}&pkg={1}` ".format(uniqId, canonicalName));
+                        Logger.Message("Pinging `http://coapp.org/telemetry/?anonid={0}&pkg={1}` ".format(PackageManager.Instance.AnonymousId, canonicalName));
                         var req =
-                            HttpWebRequest.Create("http://coapp.org/telemetry/?anonid={0}&pkg={1}".format(uniqId, canonicalName));
+                            HttpWebRequest.Create("http://coapp.org/telemetry/?anonid={0}&pkg={1}".format(PackageManager.Instance.AnonymousId, canonicalName));
                         req.BetterGetResponse().Close();
                     } catch {
                         // who cares...
@@ -464,7 +464,7 @@ namespace CoApp.Packaging.Client {
         }
 
         public void TaskComplete() {
-            // nothing to do here but smile!
+            Completed = true;
         }
 
         public void GeneralPackageSetting(int priority, CanonicalName canonicalName, string key, string value) {

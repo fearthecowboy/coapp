@@ -117,6 +117,7 @@ namespace CoApp.Packaging.Client {
 
         public Task<IEnumerable<Package>> QueryPackages(IEnumerable<string> queries, PkgFilter pkgFilter, CollectionFilter collectionFilter, string location) {
             if( queries != null && queries.Any()) {
+                queries = queries.Distinct().ToArray();
                 return queries.Select(each => QueryPackages(each, pkgFilter, collectionFilter, location)).Continue(results => results.SelectMany(result => result).Distinct());    
             }
             return QueryPackages("*", pkgFilter,collectionFilter, location);
@@ -340,6 +341,7 @@ namespace CoApp.Packaging.Client {
                     completedThisPackage = true;
                 }
             });
+            GetTelemetry(); // ensure this value is cached before the install.
 
             return (Remote.InstallPackage(canonicalName, autoUpgrade, force, download, pretend, replacingPackage) as Task<PackageManagerResponseImpl>).Continue(response => {
                 if (response.PotentialUpgrades != null) {
@@ -500,7 +502,7 @@ namespace CoApp.Packaging.Client {
             var pkg = Package.GetPackage(canonicalName);
 
             if (forceRefresh || pkg.IsPackageInfoStale) {
-                return (Remote.FindPackages(canonicalName,null,null,null) as Task<PackageManagerResponseImpl>).Continue(response => Package.GetPackage(canonicalName));
+                return (Remote.FindPackages(canonicalName,null,null,null) as Task<PackageManagerResponseImpl>).Continue(response => pkg);
             }
 
             return pkg.AsResultTask();
@@ -529,9 +531,17 @@ namespace CoApp.Packaging.Client {
             });
              * */
         }
-        
+
+        private bool? _telemetry;
+        public bool Telemetry { get {
+            if( !_telemetry.HasValue ) {
+                GetTelemetry().Wait();
+            }
+            return true == _telemetry;
+        }}
+
         public Task<bool> GetTelemetry() {
-            return (Remote.GetTelemetry() as Task<PackageManagerResponseImpl>).Continue(response => response.OptedIn);
+            return (Remote.GetTelemetry() as Task<PackageManagerResponseImpl>).Continue(response => true == (_telemetry = response.OptedIn));
         }
 
         public Task SetTelemetry(bool optInToTelemetry) {
@@ -735,14 +745,19 @@ namespace CoApp.Packaging.Client {
             }, TaskCreationOptions.AttachedToParent);
         }
 
-        public string AnonymousId {get {
-            var uniqId = GetConfigurationValue("", "AnonymousId").Result;
-            if (string.IsNullOrEmpty(uniqId) || uniqId.Length != 32) {
-                uniqId = Guid.NewGuid().ToString("N");
-                
-                SetConfigurationValue("", "AnonymousId", uniqId);
+        private string _anonymousId;
+
+        public string AnonymousId {
+            get {
+                if (string.IsNullOrEmpty(_anonymousId)) {
+                    _anonymousId = GetConfigurationValue("", "AnonymousId").Result;
+                    if (string.IsNullOrEmpty(_anonymousId) || _anonymousId.Length != 32) {
+                        _anonymousId = Guid.NewGuid().ToString("N");
+                        SetConfigurationValue("", "AnonymousId", _anonymousId);
+                    }
+                }
+                return _anonymousId;
             }
-            return uniqId;
-        }}
+        }
     }
 }

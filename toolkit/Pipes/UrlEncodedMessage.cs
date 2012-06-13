@@ -311,7 +311,6 @@ namespace CoApp.Toolkit.Pipes {
                 otherType = o.GetType();
             }
             lock (o) { // $5 to the guy who knows *why* I did this! (GS!)
-
                 foreach (var p in otherType.GetPersistableElements()) {
                     if (p.SetValue != null) {
                         var v = GetValue(FormatKey(key, p.Name), p.DeserializeAsType);

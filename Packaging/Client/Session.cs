@@ -150,38 +150,51 @@ namespace CoApp.Packaging.Client {
         /// <param name="result"> </param>
         /// <returns> </returns>
         public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result) {
-            result = Connect().Continue(() => {
-                using (var eventQueue = new ManualEventQueue()) {
-                    // create return message handler
-                    var responseHandler = new PackageManagerResponseImpl();
-                    CurrentTask.Events += new GetCurrentRequestId(() => "" + Task.CurrentId);
+            if( PackageManagerResponseImpl.EngineRestarting ) {
+                // don't send more calls until it's back.
+                EngineServiceManager.WaitForStableMoment();
+            }
 
-                    do {
-                        // unhook the old one if it's there.
-                        responseHandler.Clear();
-
-                        // send OG message here!
-                        object callResult;
-                        base.TryInvokeMember(binder, args, out callResult);
-
-                        // will return when the final message comes thru.
-                        eventQueue.StillWorking = true;
-
-                        while (eventQueue.StillWorking && eventQueue.ResetEvent.WaitOne()) {
-                            eventQueue.ResetEvent.Reset();
-                            while (eventQueue.Count > 0) {
-                                if (!Event<GetResponseDispatcher>.RaiseFirst().DispatchSynchronous(eventQueue.Dequeue())) {
-                                    eventQueue.StillWorking = false;
-                                }
-                            }
-                        }
-                    } while (responseHandler.EngineRestarting);
-
-                    // this returns the final response back via the Task<*> 
-                    return responseHandler;
-                }
-            });
+            result = Connect().Continue(() => PerformCall(binder, args));
             return true;
+        }
+
+        private PackageManagerResponseImpl PerformCall( InvokeMemberBinder binder, object[] args ) {
+            using (var eventQueue = new ManualEventQueue()) {
+                // create return message handler
+                var responseHandler = new PackageManagerResponseImpl();
+                CurrentTask.Events += new GetCurrentRequestId(() => "" + Task.CurrentId);
+                // unhook the old one if it's there.
+                responseHandler.Clear();
+
+                // send OG message here!
+                object callResult;
+                base.TryInvokeMember(binder, args, out callResult);
+
+                // will return when the final message comes thru.
+                eventQueue.StillWorking = true;
+
+                while (eventQueue.StillWorking && eventQueue.ResetEvent.WaitOne()) {
+                    eventQueue.ResetEvent.Reset();
+                    while (eventQueue.Count > 0) {
+                        if (!Event<GetResponseDispatcher>.RaiseFirst().DispatchSynchronous(eventQueue.Dequeue())) {
+                            eventQueue.StillWorking = false;
+                        }
+                    }
+                }
+                
+                if (PackageManagerResponseImpl.EngineRestarting) {
+                    Logger.Message("Going to try and re issue the call.");
+                    // Disconnect();
+                    // the service is going to restart, let's call TryInvokeMember again.
+                    EngineServiceManager.WaitForStableMoment();
+                    Connect().Wait();
+                    return PerformCall(binder, args);
+                }
+                
+                // this returns the final response back via the Task<*> 
+                return responseHandler;
+            }
         }
 
         internal static Task Elevate() {
@@ -202,8 +215,10 @@ namespace CoApp.Packaging.Client {
                     var proc = Process.Start(new ProcessStartInfo {
                         FileName = "CoApp.ElevationProxy.Exe",
                         Arguments = _instance.PipeName,
-                        UseShellExecute = false, // if you use 
+                        // UseShellExecute = false, // if you use 
                         // Verb = "runas"
+                        UseShellExecute = true,
+                        Verb ="runas"
                     });
 
                     if (proc == null || proc.HasExited) {
@@ -213,7 +228,8 @@ namespace CoApp.Packaging.Client {
                 }).ContinueWith((a2) => _instance.Connect());
             }
         }
-        
+
+        internal bool ExpectingRestart = false;
 
         private Task Connect(string clientName = null, string sessionId = null) {
             lock (this) {
@@ -226,15 +242,17 @@ namespace CoApp.Packaging.Client {
                 if (_connectingTask == null) {
                     _isBufferReady.Reset();
 
+                    PackageManagerResponseImpl.EngineRestarting = false;
                     _connectingTask = Task.Factory.StartNew(() => {
                         EngineServiceManager.EnsureServiceIsResponding();
-
+                        
                         sessionId = sessionId ?? Process.GetCurrentProcess().Id.ToString() + "/" + _autoConnectionCount++;
 
-                        for (int count = 0; count < 5; count++) {
+                        for (int count = 0; count < 25; count++) {
+                            Logger.Message("Connecting...{0}",DateTime.Now.Ticks );
                             _pipe = new NamedPipeClientStream(".", PipeName, PipeDirection.InOut, PipeOptions.Asynchronous, TokenImpersonationLevel.Impersonation);
                             try {
-                                _pipe.Connect(1500);
+                                _pipe.Connect(400);
                                 _pipe.ReadMode = PipeTransmissionMode.Message;
                                 break;
                             } catch {
@@ -267,9 +285,14 @@ namespace CoApp.Packaging.Client {
 
                     // now we claim the buffer 
                     _isBufferReady.Reset();
-
-                    var readTask = _pipe.ReadAsync(incomingMessage, 0, BufferSize);
-
+                    Task<int> readTask;
+                   //  try {
+                        readTask = _pipe.ReadAsync(incomingMessage, 0, BufferSize);
+                    // } catch {
+                        // did it get disconnected here?
+                       // Connect();
+//                        return;
+  //                  }
                     readTask.ContinueWith(
                         antecedent => {
                             if (antecedent.IsCanceled || antecedent.IsFaulted || !IsConnected) {

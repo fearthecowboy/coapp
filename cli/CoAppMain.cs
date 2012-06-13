@@ -736,7 +736,7 @@ namespace CoApp.CLI {
                         // handle coapp exceptions as cleanly as possible.
                         var ce = exception as CoAppException;
                         if (ce != null) {
-                            Fail("Alternative");
+                            // Fail("Alternative");
                             Fail(ce.Message);
 
                             ce.Cancel();
@@ -1012,6 +1012,8 @@ namespace CoApp.CLI {
 
 
             return findConflictTask.Continue(filteredPackages => {
+                filteredPackages = filteredPackages.Distinct().ToArray();
+
                 if (!filteredPackages.Any(each => !each.IsInstalled)) {
                     Console.WriteLine("The following packages are already installed:\r\n");
                     PrintPackages(filteredPackages);
@@ -1023,6 +1025,8 @@ namespace CoApp.CLI {
 
                 // if we get a good plan back
                 getPackagePlanTask.Continue(allPackages => {
+                    allPackages = allPackages.Distinct().ToArray();
+
                     PrintPackageInstallPlan(allPackages, filteredPackages);
                     // actually run the installer for each package in our original collection
                     if (_pretend == true) {
@@ -1032,6 +1036,7 @@ namespace CoApp.CLI {
 
                     foreach (var p in filteredPackages) {
                         try {
+                            Logger.Message("Asking for package Install {0}", p.CanonicalName.ToString());
                             _packageManager.Install(p.CanonicalName, _autoUpgrade).Continue(() => Console.WriteLine()).Wait();
                         }
                         catch (Exception failed) {

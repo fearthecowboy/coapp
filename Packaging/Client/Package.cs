@@ -14,6 +14,7 @@ namespace CoApp.Packaging.Client {
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading.Tasks;
     using Common;
     using Common.Model;
     using Toolkit.Collections;
@@ -500,9 +501,15 @@ namespace CoApp.Packaging.Client {
             }
         }
 
+        //private Task _demandLoadTask;
+
         private void DemandLoad() {
-            if (IsPackageInfoStale) {
-                PackageManager.Instance.GetPackage(CanonicalName);
+            // we can't lock on thi package itself, it would stop the deserializer from working.
+            // but, since CanonicalName is immutable, we can lock it.
+            lock (CanonicalName) {
+                if (IsPackageInfoStale) {
+                    PackageManager.Instance.GetPackage(CanonicalName).Wait();
+                }
             }
         }
 

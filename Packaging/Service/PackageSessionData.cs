@@ -96,25 +96,27 @@ namespace CoApp.Packaging.Service {
 
         public string LocalValidatedLocation {
             get {
-                if (!string.IsNullOrEmpty(_localValidatedLocation) && _localValidatedLocation.FileIsLocalAndExists()) {
-                    return _localValidatedLocation;
-                }
+                lock (this) {
+                    if (!string.IsNullOrEmpty(_localValidatedLocation) && _localValidatedLocation.FileIsLocalAndExists()) {
+                        return _localValidatedLocation;
+                    }
 
-                foreach (var loc in _package.LocalLocations) {
-                    var location = loc.CanonicalizePathIfLocalAndExists();
+                    foreach (var loc in _package.LocalLocations) {
+                        var location = loc.CanonicalizePathIfLocalAndExists();
 
-                    if (!string.IsNullOrEmpty(location)) {
-                        var result = Verifier.HasValidSignature(location);
+                        if (!string.IsNullOrEmpty(location)) {
+                            var result = Verifier.HasValidSignature(location);
 
-                        if (result) {
-                            // looks valid, return it. 
-                            return (_localValidatedLocation = location);
+                            if (result) {
+                                // looks valid, return it. 
+                                _localValidatedLocation = location;
+                                break;
+                            }
                         }
                     }
                 }
-
                 // there are no local locations at all for this package?
-                return null;
+                return _localValidatedLocation;
             }
         }
 

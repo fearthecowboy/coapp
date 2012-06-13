@@ -283,27 +283,28 @@ namespace CoApp.Packaging.Service {
                     }
 
                     var installedPackages = package.InstalledPackages.ToArray();
-                    
 
-                    // is the user authorized to install this?
-                    if (null != replacingPackage) {
-                        if (replacingPackage.DiffersOnlyByVersion(canonicalName)) {
-                            if (!Event<CheckForPermission>.RaiseFirst(PermissionPolicy.UpdatePackage)) {
-                                return FinishedSynchronously;
-                            }
-                        }
-                    } else {
-                        if( package.LatestInstalledThatUpdatesToThis != null ) {
-                            if (!Event<CheckForPermission>.RaiseFirst(PermissionPolicy.UpdatePackage)) {
-                                return FinishedSynchronously;
+
+                    if (pretend != true) { // let pretending work without checking permissions.
+                        // is the user authorized to install this?
+                        if (null != replacingPackage) {
+                            if (replacingPackage.DiffersOnlyByVersion(canonicalName)) {
+                                if (!Event<CheckForPermission>.RaiseFirst(PermissionPolicy.UpdatePackage)) {
+                                    return FinishedSynchronously;
+                                }
                             }
                         } else {
-                            if (!Event<CheckForPermission>.RaiseFirst(PermissionPolicy.InstallPackage)) {
-                                return FinishedSynchronously;
+                            if (package.LatestInstalledThatUpdatesToThis != null) {
+                                if (!Event<CheckForPermission>.RaiseFirst(PermissionPolicy.UpdatePackage)) {
+                                    return FinishedSynchronously;
+                                }
+                            } else {
+                                if (!Event<CheckForPermission>.RaiseFirst(PermissionPolicy.InstallPackage)) {
+                                    return FinishedSynchronously;
+                                }
                             }
                         }
                     }
-                   
 
                     // if this is an explicit update or upgrade, 
                     //      - check to see if there is a compatible package already installed that is marked do-not-update
@@ -359,7 +360,7 @@ namespace CoApp.Packaging.Service {
 
                         // we've got an install graph.
                         // let's see if we've got all the files
-                        var missingFiles = (from p in installGraph where !p.HasLocalLocation select p).ToArray();
+                        var missingFiles = (from p in installGraph where p.PackageSessionData.LocalValidatedLocation == null select p).ToArray();
 
                         if (download == true) {
                             // we want to try downloading all the files that we're missing, regardless if we've tried before.
@@ -436,6 +437,7 @@ namespace CoApp.Packaging.Service {
                                                 if (Engine.DoesTheServiceNeedARestart) {
                                                     // something has changed where we need restart the service before we can continue.
                                                     // and the one place we don't wanna be when we issue a shutdown in in Install :) ...
+                                                    
                                                     Engine.RestartService();
                                                     response.OperationCanceled("install-package");
                                                     return FinishedSynchronously;
@@ -470,6 +472,9 @@ namespace CoApp.Packaging.Service {
                                         eachPkg.IsWanted = false;
                                     }
                                 } else {
+
+                                    // move the 'wanted' flag if we are supposed to.
+
                                     var olderpkgs = package.InstalledPackages.Where(each => each.IsWanted && package.IsNewerThan(each)).ToArray();
                                     if( olderpkgs.Length > 0 ) {
                                         //anthing older? 
@@ -485,19 +490,15 @@ namespace CoApp.Packaging.Service {
                                             ((Package)olderpkgs[0]).IsWanted = false;
                                         } 
                                     }
-
                                 }
                                 
-
                                 // W00T ... We did it!
                                 // check for restart required...
                                 if (Engine.DoesTheServiceNeedARestart) {
-                                    // something has changed where we need restart the service before we can continue.
-                                    // and the one place we don't wanna be when we issue a shutdown in in Install :) ...
-                                    response.Restarting();
-                                    Engine.RestartService();
-                                    return FinishedSynchronously;
+                                    // this tries to push the restart until after the client is done doing what it needs to do.
+                                    Engine.RestartService(1500);
                                 }
+
                                 return FinishedSynchronously;
                             }
 
