@@ -68,6 +68,7 @@ namespace CoApp.Toolkit.Pipes {
                 catch (TargetInvocationException exception) {
                     if (exception.InnerException != null) {
                         if (exception.InnerException is RestartingException) {
+                            Logger.Message("Client recieved restarting message");
                             return false;
                         }
                         throw exception.InnerException;
@@ -83,7 +84,7 @@ namespace CoApp.Toolkit.Pipes {
                     throw exception;
                 }
 
-                return !(message.Command.Equals("TaskComplete") || message.Command.Equals("OperationCanceled") || message.Command.Equals("Restarting"));
+                return !(message.Command.Equals("TaskComplete") || message.Command.Equals("OperationCanceled"));
             }, () => {
                 throw new MissingMethodException("Method '{0}' does not exist in this interface", message.Command);
             });

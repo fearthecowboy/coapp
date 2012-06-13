@@ -85,6 +85,19 @@ Commands:
     inactive						-n	 *clears a package to be marked active
 
     show-settings		show			  the package state & active filters.
+
+    
+Debugging Commands:
+-----------------
+    
+    show-debug <length>                   dumps the debug log information to
+                                          the console.
+    
+    post-debug <length>                   posts the debug log to the coapp 
+                                          server and returns a token 
+    
+    Debugging commands can specify a length in minutes of how much data to take
+    defaults to 5 minutes
     
     ------------------------------------------------------------------------
     * these commands can accept a package name or a partial package name and 

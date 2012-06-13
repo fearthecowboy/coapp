@@ -16,6 +16,7 @@ namespace CoApp.Packaging.Client {
     using System.IO;
     using System.Linq;
     using System.Linq.Expressions;
+    using System.Net;
     using System.Threading.Tasks;
     using System.Xml.Linq;
     using Common;
@@ -25,10 +26,13 @@ namespace CoApp.Packaging.Client {
     using Toolkit.Linq;
     using Toolkit.Logging;
     using Toolkit.Pipes;
+    using Toolkit.TaskService;
     using Toolkit.Tasks;
     using Toolkit.Win32;
     using PkgFilter = System.Linq.Expressions.Expression<System.Func<Common.IPackage, bool>>;
-    using CollectionFilter = System.Linq.Expressions.Expression<System.Func<System.Collections.Generic.IEnumerable<Common.IPackage>,System.Collections.Generic.IEnumerable<Common.IPackage>>>;
+    using CollectionFilter = Toolkit.Collections.XList<System.Linq.Expressions.Expression<System.Func<System.Collections.Generic.IEnumerable<Common.IPackage>,System.Collections.Generic.IEnumerable<Common.IPackage>>>>;
+    using Task = System.Threading.Tasks.Task;
+    using System.Text;
 
     public class GeneralPackageInformation {
         public int Priority { get; set; }
@@ -108,11 +112,12 @@ namespace CoApp.Packaging.Client {
             }
 
             // 3. A partial/canonical name of a package.
-            return (Remote.FindPackages(query, pkgFilter,null, location) as Task<PackageManagerResponseImpl>).Continue(response => response.Packages);
+            return (Remote.FindPackages(query, pkgFilter,collectionFilter, location) as Task<PackageManagerResponseImpl>).Continue(response => response.Packages);
         }
 
         public Task<IEnumerable<Package>> QueryPackages(IEnumerable<string> queries, PkgFilter pkgFilter, CollectionFilter collectionFilter, string location) {
             if( queries != null && queries.Any()) {
+                queries = queries.Distinct().ToArray();
                 return queries.Select(each => QueryPackages(each, pkgFilter, collectionFilter, location)).Continue(results => results.SelectMany(result => result).Distinct());    
             }
             return QueryPackages("*", pkgFilter,collectionFilter, location);
@@ -336,6 +341,7 @@ namespace CoApp.Packaging.Client {
                     completedThisPackage = true;
                 }
             });
+            GetTelemetry(); // ensure this value is cached before the install.
 
             return (Remote.InstallPackage(canonicalName, autoUpgrade, force, download, pretend, replacingPackage) as Task<PackageManagerResponseImpl>).Continue(response => {
                 if (response.PotentialUpgrades != null) {
@@ -485,14 +491,6 @@ namespace CoApp.Packaging.Client {
             });
         }
 
-        public Task<Package> RefreshPackageDetails(CanonicalName canonicalName) {
-            if (!canonicalName.IsCanonical) {
-                return InvalidCanonicalNameResult<Package>(canonicalName);
-            }
-
-            return (Remote.GetPackageDetails(canonicalName) as Task<PackageManagerResponseImpl>).Continue(response => Package.GetPackage(canonicalName));
-        }
-
         public Task<Package> GetPackage(CanonicalName canonicalName, bool forceRefresh = false) {
             if( null == canonicalName) {
                 return CoTask.AsResultTask<Package>(null);
@@ -504,7 +502,7 @@ namespace CoApp.Packaging.Client {
             var pkg = Package.GetPackage(canonicalName);
 
             if (forceRefresh || pkg.IsPackageInfoStale) {
-                return (Remote.FindPackages(canonicalName,null,null,null) as Task<PackageManagerResponseImpl>).Continue(response => Package.GetPackage(canonicalName));
+                return (Remote.FindPackages(canonicalName,null,null,null) as Task<PackageManagerResponseImpl>).Continue(response => pkg);
             }
 
             return pkg.AsResultTask();
@@ -517,24 +515,33 @@ namespace CoApp.Packaging.Client {
             return canonicalNames.Select(c => GetPackage(c, true)).Continue(all => all);
         }
 
-        public Task<Package> GetPackageDetails(CanonicalName canonicalName) {
+        
+        public Task<Package> GetPackageDetails(CanonicalName canonicalName, bool forceRefresh = false) {
+            return Package.GetPackage(canonicalName).AsResultTask();
+            /*
             if (!canonicalName.IsCanonical) {
                 return InvalidCanonicalNameResult<Package>(canonicalName);
             }
 
-            return GetPackage(canonicalName).Continue(package => GetPackageDetails(package).Result);
+            return GetPackage(canonicalName, forceRefresh).Continue(pkg => {
+                if (forceRefresh || pkg.IsPackageDetailsStale) {
+                    Remote.GetPackageDetails(canonicalName).Wait();
+                }
+                return pkg;
+            });
+             * */
         }
 
-        public Task<Package> GetPackageDetails(Package package) {
-            if (package.IsPackageInfoStale) {
-                return GetPackage(package.CanonicalName).Continue(pkg => RefreshPackageDetails(pkg.CanonicalName).Result);
+        private bool? _telemetry;
+        public bool Telemetry { get {
+            if( !_telemetry.HasValue ) {
+                GetTelemetry().Wait();
             }
-
-            return package.IsPackageDetailsStale ? RefreshPackageDetails(package.CanonicalName) : package.AsResultTask();
-        }
+            return true == _telemetry;
+        }}
 
         public Task<bool> GetTelemetry() {
-            return (Remote.GetTelemetry() as Task<PackageManagerResponseImpl>).Continue(response => response.OptedIn);
+            return (Remote.GetTelemetry() as Task<PackageManagerResponseImpl>).Continue(response => true == (_telemetry = response.OptedIn));
         }
 
         public Task SetTelemetry(bool optInToTelemetry) {
@@ -582,7 +589,60 @@ namespace CoApp.Packaging.Client {
         /// <param name="intervalInMinutes"> how often the scheduled task should consider running (on Windows XP/2003, it's not possible to run as soon as possible after a task was missed. </param>
         /// <returns> </returns>
         public Task AddScheduledTask(string taskName, string executable, string commandline, int hour, int minutes, DayOfWeek? dayOfWeek, int intervalInMinutes) {
-            return Remote.ScheduleTask(taskName, executable, commandline, hour, minutes, dayOfWeek, intervalInMinutes);
+            // remote version doesn't work without user credentials. #sigh
+
+            // return Remote.ScheduleTask(taskName, executable, commandline, hour, minutes, dayOfWeek, intervalInMinutes);
+            return RemoveScheduledTask(taskName).Continue(() => {
+                var dow = DaysOfTheWeek.AllDays;
+
+                if (dayOfWeek.HasValue) {
+                    // once-a-week
+                    switch (dayOfWeek.Value) {
+                        case DayOfWeek.Saturday:
+                            dow = DaysOfTheWeek.Saturday;
+                            break;
+                        case DayOfWeek.Sunday:
+                            dow = DaysOfTheWeek.Sunday;
+                            break;
+                        case DayOfWeek.Monday:
+                            dow = DaysOfTheWeek.Monday;
+                            break;
+                        case DayOfWeek.Tuesday:
+                            dow = DaysOfTheWeek.Tuesday;
+                            break;
+                        case DayOfWeek.Wednesday:
+                            dow = DaysOfTheWeek.Wednesday;
+                            break;
+                        case DayOfWeek.Thursday:
+                            dow = DaysOfTheWeek.Thursday;
+                            break;
+                        case DayOfWeek.Friday:
+                            dow = DaysOfTheWeek.Friday;
+                            break;
+                    }
+                }
+                using (var taskService = new TaskService()) {
+                    var tName = "coapp\\" + taskName;
+                    if (taskService.HighestSupportedVersion < new Version(1, 2)) {
+                        // old style
+                        tName = "coapp-" + taskName;
+                    }
+
+                    var trigger = Trigger.CreateTrigger(TaskTriggerType.Weekly) as WeeklyTrigger;
+                    trigger.DaysOfWeek = dow;
+                    if (intervalInMinutes != 0 && intervalInMinutes < 1440) {
+                        trigger.Repetition.Interval = new TimeSpan(0, intervalInMinutes, 0);
+                    }
+
+                    trigger.StartBoundary = DateTime.Today + new TimeSpan(hour, minutes, 0);
+
+                    var t = taskService.AddTask(tName, trigger, new ExecAction(executable, commandline));
+                    t.Definition.Settings.MultipleInstances = TaskInstancesPolicy.IgnoreNew;
+                    t.Definition.Settings.RunOnlyIfNetworkAvailable = true;
+                    t.RegisterChanges();
+                }
+            });
+
         }
 
         public Task RemoveScheduledTask(string taskName) {
@@ -633,6 +693,71 @@ namespace CoApp.Packaging.Client {
 
         public Task<AtomFeed> GetAtomFeed(IEnumerable<CanonicalName> canonicalNames) {
             return (Remote.GetAtomFeed(canonicalNames) as Task<PackageManagerResponseImpl>).Continue(response => response.Feed);   
+        }
+
+        public Task SetConfigurationValue(string key, string valuename, string value) {
+            return Remote.SetConfigurationValue(key, valuename, value);
+        }
+
+        public Task<string> GetConfigurationValue(string key, string valuename) {
+            return (Remote.GetConfigurationValue(key, valuename) as Task<PackageManagerResponseImpl>).Continue(response => response.ResultString);   
+        }
+
+        public string GetEventLog(TimeSpan howMuch, TimeSpan startHowFarBack) {
+            return Logger.GetMessages(howMuch, startHowFarBack);
+        }
+        public string GetEventLog(TimeSpan howMuch) {
+            return GetEventLog(howMuch, new TimeSpan(0));
+        }
+        public string GetEventLog() {
+            return GetEventLog(new TimeSpan(0, 5, 0), new TimeSpan(0));
+        }
+
+        public Task<string> UploadDebugInformation(string textContent = null) {
+            textContent = textContent ?? GetEventLog();
+
+            return Task.Factory.StartNew(() => {
+                    // ping the coapp server to tell it that a package installed
+                    try {
+                        var hash = DateTime.Now.Ticks.ToString().MD5Hash();
+                        var req = HttpWebRequest.Create("http://coapp.org/debug/");
+                        req.Method = "POST";
+                        UrlEncodedMessage uem = new UrlEncodedMessage();
+                        uem.Add("uniqId", AnonymousId);
+                        uem.Add("hash",hash);
+                        uem.Add("content", textContent);
+
+                        var buffer = new ASCIIEncoding().GetBytes(uem.ToString());
+                        req.ContentType = "application/x-www-form-urlencoded";
+                        req.ContentLength = buffer.Length;
+
+                        using( var newStream = req.GetRequestStream() ) {
+                            newStream.Write(buffer, 0, buffer.Length);
+                        }
+
+                        req.BetterGetResponse().Close();
+                        return hash;
+                    }
+                    catch {
+                        // who cares...
+                    }
+                return null;
+            }, TaskCreationOptions.AttachedToParent);
+        }
+
+        private string _anonymousId;
+
+        public string AnonymousId {
+            get {
+                if (string.IsNullOrEmpty(_anonymousId)) {
+                    _anonymousId = GetConfigurationValue("", "AnonymousId").Result;
+                    if (string.IsNullOrEmpty(_anonymousId) || _anonymousId.Length != 32) {
+                        _anonymousId = Guid.NewGuid().ToString("N");
+                        SetConfigurationValue("", "AnonymousId", _anonymousId);
+                    }
+                }
+                return _anonymousId;
+            }
         }
     }
 }

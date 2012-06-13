@@ -69,6 +69,9 @@ namespace CoApp.Toolkit.Linq {
                             expression = System.Linq.Expressions.Expression.Equal(leftInvoke, value);
                         }
                         break;
+                    case FilterOperation.Neq:
+                        expression = System.Linq.Expressions.Expression.NotEqual(leftInvoke, value);
+                        break;
                    
                 }
                 

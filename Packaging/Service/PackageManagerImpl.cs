@@ -26,11 +26,19 @@ namespace CoApp.Packaging.Service {
     using Toolkit.Crypto;
     using Toolkit.Exceptions;
     using Toolkit.Extensions;
+    using Toolkit.Linq;
     using Toolkit.Logging;
     using Toolkit.Pipes;
     using Toolkit.Shell;
+    using Toolkit.TaskService;
     using Toolkit.Tasks;
     using Toolkit.Win32;
+    using Task = System.Threading.Tasks.Task;
+
+    using PkgFilter = System.Linq.Expressions.Expression<System.Func<Common.IPackage, bool>>;
+    using CollectionFilter = Toolkit.Collections.XList<System.Linq.Expressions.Expression<System.Func<System.Collections.Generic.IEnumerable<Common.IPackage>, System.Collections.Generic.IEnumerable<Common.IPackage>>>>;
+
+
 
     public class PackageManagerImpl : IPackageManager {
         private static Task FinishedSynchronously {
@@ -47,6 +55,7 @@ namespace CoApp.Packaging.Service {
 
 
         public static PackageManagerImpl Instance = new PackageManagerImpl();
+        
 
         private readonly List<ManualResetEvent> _manualResetEvents = new List<ManualResetEvent>();
         internal static IncomingCallDispatcher<PackageManagerImpl> Dispatcher = new IncomingCallDispatcher<PackageManagerImpl>(Instance);
@@ -138,22 +147,30 @@ namespace CoApp.Packaging.Service {
                 if (SessionData.Current.IsSystemCacheLoaded) {
                     return;
                 }
+                try {
 
-                Task.WaitAll(SystemFeedLocations.Select(each => PackageFeed.GetPackageFeedFromLocation(each).ContinueAlways(antecedent => {
-                    if (antecedent.Result != null) {
-                        Cache<PackageFeed>.Value[each] = antecedent.Result;
+                    var tasks = SystemFeedLocations.Select(each => PackageFeed.GetPackageFeedFromLocation(each).ContinueAlways(antecedent => {
+                        if (antecedent.Result != null) {
+                            Cache<PackageFeed>.Value[each] = antecedent.Result;
+                        } else {
+                            Logger.Error("Feed {0} was unable to load.", each);
+                        }
+                    })).ToArray();
+                    
+                    while(!Task.WaitAll(tasks, 100) ) {
+                        if( !SessionData.Current.Session.Connected ) {
+                            return;
+                        }
                     }
-                    else {
-                        Logger.Error("Feed {0} was unable to load.", each);
-                    }
-                })).ToArray());
-
+                } catch {
+                    
+                }
                 // mark this session as 'yeah, done that already'
                 SessionData.Current.IsSystemCacheLoaded  = true;
             }
         }
 
-        public Task FindPackages(CanonicalName canonicalName, Expression<Func<IPackage, bool>> filter, Expression<Func<IEnumerable<IPackage>, IEnumerable<IPackage>>> collectionFilter, string location) {
+        public Task FindPackages(CanonicalName canonicalName, PkgFilter filter, CollectionFilter collectionFilter, string location) {
             var response = Event<GetResponseInterface>.RaiseFirst();
 
             if (CancellationRequested) {
@@ -168,7 +185,7 @@ namespace CoApp.Packaging.Service {
 
                 IEnumerable<IPackage> query = filter == null ? SearchForPackages(canonicalName, location) : SearchForPackages(canonicalName, location).Where(each => filter.Compile()(each));
 
-                if( collectionFilter != null ) {
+                if( !collectionFilter.IsNullOrEmpty()) {
                     query = collectionFilter.Compile()(query);
                 }
 
@@ -266,27 +283,28 @@ namespace CoApp.Packaging.Service {
                     }
 
                     var installedPackages = package.InstalledPackages.ToArray();
-                    
 
-                    // is the user authorized to install this?
-                    if (null != replacingPackage) {
-                        if (replacingPackage.DiffersOnlyByVersion(canonicalName)) {
-                            if (!Event<CheckForPermission>.RaiseFirst(PermissionPolicy.UpdatePackage)) {
-                                return FinishedSynchronously;
-                            }
-                        }
-                    } else {
-                        if( package.LatestInstalledThatUpdatesToThis != null ) {
-                            if (!Event<CheckForPermission>.RaiseFirst(PermissionPolicy.UpdatePackage)) {
-                                return FinishedSynchronously;
+
+                    if (pretend != true) { // let pretending work without checking permissions.
+                        // is the user authorized to install this?
+                        if (null != replacingPackage) {
+                            if (replacingPackage.DiffersOnlyByVersion(canonicalName)) {
+                                if (!Event<CheckForPermission>.RaiseFirst(PermissionPolicy.UpdatePackage)) {
+                                    return FinishedSynchronously;
+                                }
                             }
                         } else {
-                            if (!Event<CheckForPermission>.RaiseFirst(PermissionPolicy.InstallPackage)) {
-                                return FinishedSynchronously;
+                            if (package.LatestInstalledThatUpdatesToThis != null) {
+                                if (!Event<CheckForPermission>.RaiseFirst(PermissionPolicy.UpdatePackage)) {
+                                    return FinishedSynchronously;
+                                }
+                            } else {
+                                if (!Event<CheckForPermission>.RaiseFirst(PermissionPolicy.InstallPackage)) {
+                                    return FinishedSynchronously;
+                                }
                             }
                         }
                     }
-                   
 
                     // if this is an explicit update or upgrade, 
                     //      - check to see if there is a compatible package already installed that is marked do-not-update
@@ -342,7 +360,7 @@ namespace CoApp.Packaging.Service {
 
                         // we've got an install graph.
                         // let's see if we've got all the files
-                        var missingFiles = (from p in installGraph where !p.HasLocalLocation select p).ToArray();
+                        var missingFiles = (from p in installGraph where p.PackageSessionData.LocalValidatedLocation == null select p).ToArray();
 
                         if (download == true) {
                             // we want to try downloading all the files that we're missing, regardless if we've tried before.
@@ -419,6 +437,7 @@ namespace CoApp.Packaging.Service {
                                                 if (Engine.DoesTheServiceNeedARestart) {
                                                     // something has changed where we need restart the service before we can continue.
                                                     // and the one place we don't wanna be when we issue a shutdown in in Install :) ...
+                                                    
                                                     Engine.RestartService();
                                                     response.OperationCanceled("install-package");
                                                     return FinishedSynchronously;
@@ -453,6 +472,9 @@ namespace CoApp.Packaging.Service {
                                         eachPkg.IsWanted = false;
                                     }
                                 } else {
+
+                                    // move the 'wanted' flag if we are supposed to.
+
                                     var olderpkgs = package.InstalledPackages.Where(each => each.IsWanted && package.IsNewerThan(each)).ToArray();
                                     if( olderpkgs.Length > 0 ) {
                                         //anthing older? 
@@ -468,19 +490,15 @@ namespace CoApp.Packaging.Service {
                                             ((Package)olderpkgs[0]).IsWanted = false;
                                         } 
                                     }
-
                                 }
                                 
-
                                 // W00T ... We did it!
                                 // check for restart required...
                                 if (Engine.DoesTheServiceNeedARestart) {
-                                    // something has changed where we need restart the service before we can continue.
-                                    // and the one place we don't wanna be when we issue a shutdown in in Install :) ...
-                                    response.Restarting();
-                                    Engine.RestartService();
-                                    return FinishedSynchronously;
+                                    // this tries to push the restart until after the client is done doing what it needs to do.
+                                    Engine.RestartService(1500);
                                 }
+
                                 return FinishedSynchronously;
                             }
 
@@ -886,6 +904,7 @@ namespace CoApp.Packaging.Service {
                 if (antecedent.Result.IsPackageFeed) {
                     response.FeedAdded(location);
                     response.Recognized(location);
+                    return;
                 }
 
                 // if this isn't a package file, then there is something odd going on here.
@@ -1141,6 +1160,7 @@ namespace CoApp.Packaging.Service {
                 }
 
                 // otherwise
+                Logger.Error("Package '{0}' appears not to be potentially installable.", package.CanonicalName);
                 throw new OperationCompletedBeforeResultException();
             }
 
@@ -1184,8 +1204,9 @@ namespace CoApp.Packaging.Service {
             yield return package;
         }
 
+        private string UDFLock = "UpdateDependencyFlagsLock";
         private void UpdateDependencyFlags() {
-            lock (this) {
+            lock (UDFLock) {
                 var installedPackages = InstalledPackages.ToArray();
 
                 foreach (var p in installedPackages) {
@@ -1203,7 +1224,7 @@ namespace CoApp.Packaging.Service {
             var policies = PermissionPolicy.AllPolicies.Where(each => each.Name.NewIsWildcardMatch(policyName)).ToArray();
 
             foreach (var policy in policies) {
-                response.PolicyInformation(policy.Name, policy.Description, policy.Accounts);
+                response.PolicyInformation(policy.Name, policy.Description, policy.Accounts, Event<QueryPermission>.RaiseFirst(policy));
             }
             if (policies.IsNullOrEmpty()) {
                 response.Error("get-policy", "name", "policy '{0}' not found".format(policyName));
@@ -1330,7 +1351,9 @@ namespace CoApp.Packaging.Service {
         }
 
         public Task SetGeneralPackageInformation(int priority, CanonicalName canonicalName, string key, string value){
-            GeneralPackageSettings.Instance[priority, canonicalName, key] = value;
+            if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.ChangeState)) {
+                GeneralPackageSettings.Instance[priority, canonicalName, key] = value;
+            }
             return FinishedSynchronously;
         }
 
@@ -1345,14 +1368,147 @@ namespace CoApp.Packaging.Service {
         }
 
         public Task ScheduleTask(string taskName, string executable, string commandline, int hour, int minutes, DayOfWeek? dayOfWeek, int intervalInMinutes) {
+            try {
+                if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.EditSchedule)) {
+                    var response = Event<GetResponseInterface>.RaiseFirst();
+                    RemoveScheduledTask(taskName);
+
+                    var dow = DaysOfTheWeek.AllDays;
+
+                    if (dayOfWeek.HasValue) {
+                        // once-a-week
+                        switch (dayOfWeek.Value) {
+                            case DayOfWeek.Saturday:
+                                dow = DaysOfTheWeek.Saturday;
+                                break;
+                            case DayOfWeek.Sunday:
+                                dow = DaysOfTheWeek.Sunday;
+                                break;
+                            case DayOfWeek.Monday:
+                                dow = DaysOfTheWeek.Monday;
+                                break;
+                            case DayOfWeek.Tuesday:
+                                dow = DaysOfTheWeek.Tuesday;
+                                break;
+                            case DayOfWeek.Wednesday:
+                                dow = DaysOfTheWeek.Wednesday;
+                                break;
+                            case DayOfWeek.Thursday:
+                                dow = DaysOfTheWeek.Thursday;
+                                break;
+                            case DayOfWeek.Friday:
+                                dow = DaysOfTheWeek.Friday;
+                                break;
+                        }
+                    }
+                    using (var taskService = new TaskService()) {
+                        var tName = "coapp\\" + taskName;
+                        if (taskService.HighestSupportedVersion < new Version(1, 2)) {
+                            // old style
+                            tName = "coapp-" + taskName;
+                        }
+
+                        var trigger = Trigger.CreateTrigger(TaskTriggerType.Weekly) as WeeklyTrigger;
+                        trigger.DaysOfWeek = dow;
+                        if (intervalInMinutes != 0 && intervalInMinutes < 1440) {
+                            trigger.Repetition.Interval = new TimeSpan(0, intervalInMinutes, 0);
+                        }
+
+                        trigger.StartBoundary = DateTime.Today + new TimeSpan(hour, minutes, 0);
+                        
+                        var t = taskService.AddTask(tName, trigger, new ExecAction(executable, commandline), "Users", null, TaskLogonType.InteractiveToken);
+                        t.Definition.Settings.MultipleInstances = TaskInstancesPolicy.IgnoreNew;
+                        t.Definition.Settings.RunOnlyIfNetworkAvailable = true;
+                        t.RegisterChanges();
+                        
+                        
+                        
+                        return GetScheduledTasks(taskName);
+                    }
+                }
+            } catch( Exception e ) {
+                Logger.Error(e);
+            }
             return FinishedSynchronously;
         }
 
         public Task RemoveScheduledTask(string taskName) {
+            if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.EditSchedule)) {
+                var response = Event<GetResponseInterface>.RaiseFirst();
+                taskName = taskName ?? "*";
+
+                using (var taskService = new TaskService()) {
+                    var tFolder = taskService.RootFolder;
+
+                    if (taskService.HighestSupportedVersion >= new Version(1, 2)) {
+                        tFolder = tFolder.SubFolders.FirstOrDefault(each => each.Name == "coapp") ?? tFolder.CreateFolder("coapp");
+                    } else {
+                        taskName = "coapp-" + taskName;
+                    }
+                    var tasks = tFolder.GetTasks();
+                    foreach (var t in tasks) {
+                        if (t.Name.NewIsWildcardMatch(taskName)) {
+                            tFolder.DeleteTask(t.Name);
+                        }
+                    }
+                }
+            }
             return FinishedSynchronously;
         }
 
         public Task GetScheduledTasks(string taskName) {
+            var response = Event<GetResponseInterface>.RaiseFirst();
+            taskName = taskName ?? "*";
+
+            using (var taskService = new TaskService()) {
+                var tFolder = taskService.RootFolder;
+
+                if (taskService.HighestSupportedVersion >= new Version(1, 2)) {
+                    tFolder = tFolder.SubFolders.FirstOrDefault(each => each.Name == "coapp") ?? tFolder.CreateFolder("coapp");
+                } else {
+                    taskName = "coapp-" + taskName;
+                }
+                var tasks = tFolder.GetTasks();
+                foreach (var t in tasks) {
+                    if (t.Name.NewIsWildcardMatch(taskName)) {
+                        var a = t.Definition.Actions[0] as ExecAction;
+                        var foundName = t.Name;
+                        if (foundName.StartsWith("coapp-")) {
+                            foundName = foundName.Substring(6);
+                        }
+
+                        DayOfWeek? dow = null;
+                        var wt = t.Definition.Triggers[0] as WeeklyTrigger;
+
+                        // once-a-week
+                        switch (wt.DaysOfWeek) {
+                            case DaysOfTheWeek.Saturday:
+                                dow = DayOfWeek.Saturday;
+                                break;
+                            case DaysOfTheWeek.Sunday:
+                                dow = DayOfWeek.Sunday;
+                                break;
+                            case DaysOfTheWeek.Monday:
+                                dow = DayOfWeek.Monday;
+                                break;
+                            case DaysOfTheWeek.Tuesday:
+                                dow = DayOfWeek.Tuesday;
+                                break;
+                            case DaysOfTheWeek.Wednesday:
+                                dow = DayOfWeek.Wednesday;
+                                break;
+                            case DaysOfTheWeek.Thursday:
+                                dow = DayOfWeek.Thursday;
+                                break;
+                            case DaysOfTheWeek.Friday:
+                                dow = DayOfWeek.Friday;
+                                break;
+                        }
+                        response.ScheduledTaskInfo(foundName, a.Path, a.Arguments, wt.StartBoundary.Hour, wt.StartBoundary.Minute, dow, (int)wt.Repetition.Interval.TotalMinutes);
+                    }
+                }
+            }
+
             return FinishedSynchronously;
         }
 
@@ -1390,7 +1546,9 @@ namespace CoApp.Packaging.Service {
         }
 
         public Task GetTelemetry() {
-            Event<GetResponseInterface>.RaiseFirst().CurrentTelemetryOption(PackageManagerSettings.CoAppSettings["#TelemetryOptIn"].BoolValue);
+            var b = PackageManagerSettings.CoAppSettings["#TelemetryOptIn"].StringValue;
+            Event<GetResponseInterface>.RaiseFirst().CurrentTelemetryOption(!b.IsFalse());
+
             return FinishedSynchronously;
         }
 
@@ -1409,5 +1567,16 @@ namespace CoApp.Packaging.Service {
             response.AtomFeedText(feed.ToString());
             return FinishedSynchronously;
         }
+
+        public Task SetConfigurationValue(string key, string valuename, string value) {
+            PackageManagerSettings.CoAppSettings[key, valuename].StringValue = value;
+            return FinishedSynchronously;
+        }
+
+        public Task GetConfigurationValue(string key, string valuename) {
+            Event<GetResponseInterface>.RaiseFirst().StringResult(PackageManagerSettings.CoAppSettings[key, valuename].StringValue);
+            return FinishedSynchronously;
+        }
+
     }
 }

@@ -118,11 +118,22 @@ namespace CoApp.Packaging.Common {
             KillServiceProcesses();
         }
 
+        public static void WaitForStableMoment() {
+            while( StartingUp || ShutdownRequested || ShuttingDown ) {
+                Thread.Sleep(100);
+            }
+        }
+
         public static void TryToStartService(bool secondAttempt = false) {
             if (!IsServiceInstalled) {
                 InstallAndStartService();
                 return;
             }
+
+            WaitForStableMoment();
+            // if( Available ) {
+                // return; // if it's running after a moment of stability, well, then we're good.
+            //}
 
             Logger.Message("==[Trying to start Win32 Service]==");
 
@@ -300,6 +311,8 @@ namespace CoApp.Packaging.Common {
         }
 
         public static void EnsureServiceIsResponding() {
+            WaitForStableMoment();
+
             if (Available) {
                 // looks good to me!
                 return;
@@ -327,6 +340,13 @@ namespace CoApp.Packaging.Common {
                 throw new CoAppException("CoApp Engine appears stuck in starting up state.");
             }
 
+            WaitForStableMoment();
+
+            if (Available) {
+                // looks good to me!
+                return;
+            }
+
             count = 10;
             while (ShuttingDown && count > 0) {
                 if (IsServiceRunning) {
@@ -341,12 +361,26 @@ namespace CoApp.Packaging.Common {
                 count--;
             }
 
+            WaitForStableMoment();
+
+            if (Available) {
+                // looks good to me!
+                return;
+            }
+
             if (ShuttingDown) {
                 // hmm. looks like it's stuck shutting down an interactive version of the serivce
                 // he's had long enough, let's kill him.
                 KillServiceProcesses();
                 TryToStartService();
                 EnsureServiceIsResponding();
+                return;
+            }
+
+            WaitForStableMoment();
+
+            if (Available) {
+                // looks good to me!
                 return;
             }
 
@@ -359,10 +393,24 @@ namespace CoApp.Packaging.Common {
                 return;
             }
 
+            WaitForStableMoment();
+
+            if (Available) {
+                // looks good to me!
+                return;
+            }
+
             // we're not running at all!
             if (!IsServiceInstalled) {
                 InstallAndStartService();
                 EnsureServiceIsResponding();
+                return;
+            }
+
+            WaitForStableMoment();
+
+            if (Available) {
+                // looks good to me!
                 return;
             }
 

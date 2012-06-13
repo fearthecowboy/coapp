@@ -15,6 +15,7 @@ namespace CoApp.Packaging.Client {
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
+    using System.Net;
     using System.Threading.Tasks;
     using Common;
     using Common.Exceptions;
@@ -39,6 +40,10 @@ namespace CoApp.Packaging.Client {
         private readonly Lazy<List<ScheduledTask>> _scheduledTasks = new Lazy<List<ScheduledTask>>(() => new List<ScheduledTask>());
         private readonly Lazy<IDictionary<string, bool>>  _validState = new Lazy<IDictionary<string, bool>>( () => new XDictionary<string, bool>());
 
+        internal string ResultString { get; set; }
+        internal bool ResultBool { get; set; }
+        internal bool Completed { get; set; }
+
         private AtomFeed _feed;
 
         internal string OperationCanceledReason;
@@ -50,7 +55,8 @@ namespace CoApp.Packaging.Client {
         private readonly IncomingCallDispatcher<IPackageManagerResponse> _dispatcher;
 
         internal LoggingSettings LoggingSettingsResult;
-        internal bool EngineRestarting;
+        internal static bool EngineRestarting;
+
         internal bool NoPackages;
         
         internal bool OptedIn;
@@ -112,7 +118,6 @@ namespace CoApp.Packaging.Client {
         }
 
         internal void Clear() {
-            EngineRestarting = false;
             NoPackages = false;
             OperationCanceledReason = null;
         }
@@ -134,8 +139,8 @@ namespace CoApp.Packaging.Client {
             NoPackages = true;
         }
 
-        public void PolicyInformation(string name, string description, IEnumerable<string> accounts) {
-            _policies.Value.Add(new Policy {Name = name, Description = description, Members = accounts});
+        public void PolicyInformation(string name, string description, IEnumerable<string> accounts, bool enabled) {
+            _policies.Value.Add(new Policy {Name = name, Description = description, Members = accounts, IsEnabled = enabled});
         }
 
         public void SendSessionStarted(string sessionId) {
@@ -153,7 +158,6 @@ namespace CoApp.Packaging.Client {
         public void PackageDetails(CanonicalName canonicalName, PackageDetails details) {
             var result = Package.GetPackage(canonicalName);
             result.PackageDetails = details;
-            result.IsPackageDetailsStale = false;
         }
 
         public void FeedDetails(string location, DateTime lastScanned, bool session, bool suppressed, bool validated, FeedState state) {
@@ -184,9 +188,28 @@ namespace CoApp.Packaging.Client {
             }
         }
 
+        
+
         public void InstalledPackage(CanonicalName canonicalName) {
             _packages.Value.Add(Package.GetPackage(canonicalName));
             Package.GetPackage(canonicalName).IsInstalled = true;
+
+            Task.Factory.StartNew(() => {
+                if (PackageManager.Instance.Telemetry) {
+                    // ping the coapp server to tell it that a package installed
+                    try {
+                        Logger.Message("Pinging `http://coapp.org/telemetry/?anonid={0}&pkg={1}` ".format(PackageManager.Instance.AnonymousId, canonicalName));
+                        var req =
+                            HttpWebRequest.Create("http://coapp.org/telemetry/?anonid={0}&pkg={1}".format(PackageManager.Instance.AnonymousId, canonicalName));
+                        req.BetterGetResponse().Close();
+                    } catch {
+                        // who cares...
+                    }
+                }
+            }, TaskCreationOptions.AttachedToParent);
+            
+            
+
             try {
                 Event<PackageInstalled>.Raise(canonicalName);
             }
@@ -441,7 +464,7 @@ namespace CoApp.Packaging.Client {
         }
 
         public void TaskComplete() {
-            // nothing to do here but smile!
+            Completed = true;
         }
 
         public void GeneralPackageSetting(int priority, CanonicalName canonicalName, string key, string value) {
@@ -463,6 +486,14 @@ namespace CoApp.Packaging.Client {
 
         public void TrustedPublishers( IEnumerable<string> trustedPublishers) {
             _publishers = trustedPublishers;
+        }
+
+        public void StringResult(string value) {
+            ResultString = value;
+        }
+
+        public void BoolResult(bool value) {
+            ResultBool= value;
         }
     }
 }

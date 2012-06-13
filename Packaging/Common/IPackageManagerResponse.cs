@@ -18,7 +18,7 @@ namespace CoApp.Packaging.Common {
     [UseNamedArgument]
     public interface IPackageManagerResponse {
         void NoPackagesFound();
-        void PolicyInformation(string name, string description, IEnumerable<string> accounts);
+        void PolicyInformation(string name, string description, IEnumerable<string> accounts, bool enabled );
         void SendSessionStarted(string sessionId);
 
         void PackageInformation(IPackage package);
@@ -67,6 +67,9 @@ namespace CoApp.Packaging.Common {
 
         void TaskComplete();
         void GeneralPackageSetting(int priority, CanonicalName canonicalName, string key, string value);
+
+        void StringResult(string value);
+        void BoolResult(bool value);
 
         void AtomFeedText(string atomText);
         void TrustedPublishers(IEnumerable<string> trustedPublishers);

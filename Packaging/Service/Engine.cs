@@ -24,6 +24,7 @@ namespace CoApp.Packaging.Service {
     using System.Threading.Tasks;
     using Common;
     using Feeds;
+    using Toolkit.Collections;
     using Toolkit.Extensions;
     using Toolkit.Logging;
     using Toolkit.Pipes;
@@ -93,9 +94,11 @@ namespace CoApp.Packaging.Service {
         /// </remarks>
         public static void RequestStop() {
             // this should stop the coapp engine.
+            Signals.ShutdownRequested = true;
+            Signals.ShuttingDown = true;
             _instance.Value._cancellationTokenSource.Cancel();
             _instance.Value._isRunning = false;
-            Signals.ShutdownRequested = true;
+            
         }
 
         /// <summary>
@@ -202,6 +205,8 @@ namespace CoApp.Packaging.Service {
 
         private int listenerCount;
 
+        private static XList<NamedPipeServerStream> nonConnectedListeners = new XList<NamedPipeServerStream>();
+
         /// <summary>
         ///   Starts the listener.
         /// </summary>
@@ -217,10 +222,15 @@ namespace CoApp.Packaging.Service {
                     Logger.Message("Starting New Listener {0}", listenerCount++);
                     var serverPipe = new NamedPipeServerStream(PipeName, PipeDirection.InOut, Instances, PipeTransmissionMode.Message, PipeOptions.Asynchronous,
                         BufferSize, BufferSize, _pipeSecurity);
+
+                    nonConnectedListeners.Add(serverPipe);
+
                     var listenTask = Task.Factory.FromAsync(serverPipe.BeginWaitForConnection, serverPipe.EndWaitForConnection, serverPipe);
 
                     listenTask.ContinueWith(t => {
-                        if (t.IsCanceled || _cancellationTokenSource.Token.IsCancellationRequested) {
+
+                        nonConnectedListeners.Remove(serverPipe);
+                        if (t.IsCanceled || _cancellationTokenSource.Token.IsCancellationRequested || Signals.ShutdownRequested || Signals.ShuttingDown) {
                             return;
                         }
 
@@ -263,7 +273,7 @@ namespace CoApp.Packaging.Service {
                                 var isSync = requestMessage["async"].IsFalse();
 
                                 if (isSync) {
-                                    StartResponsePipeAndProcessMesages(requestMessage["client"], requestMessage["id"], serverPipe);
+                                    StartResponsePipeAndProcessMessages(requestMessage["client"], requestMessage["id"], serverPipe);
                                 } else {
                                     Session.Start(requestMessage["client"], requestMessage["id"], serverPipe, serverPipe);
                                 }
@@ -296,17 +306,30 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        public static void RestartService() {
+        public static void RestartService(int msec = 0) {
+            var response = Event<GetResponseInterface>.RaiseFirst();
+            if (response != null) {
+                response.Restarting();
+            }
+
             Task.Factory.StartNew(() => {
                 try {
+
+                    Signals.ShutdownRequested = true;
+                    foreach( var p in nonConnectedListeners ) {
+                        p.Dispose();
+                    }
+                    if( msec > 0 ) {
+                        Thread.Sleep(msec);
+                    }
+                    Logger.Message("Telling clients to go away.");
+                    Session.NotifyClientsOfRestart();
+
                     Logger.Message("Service Restart Order Issued.");
                     // make sure nobody else can connect.
                     RequestStop();
 
-                    // tell the clients to go away.
-                    Logger.Message("Telling clients to go away.");
-                    Session.NotifyClientsOfRestart();
-
+                    
                     Logger.Message("Waiting up to 10 seconds for clients to disconnect.");
                     // I'll give you 10 seconds to get lost.
                     for (var i = 0; i < 100 && Session.HasActiveSessions; i++) {
@@ -370,7 +393,7 @@ namespace CoApp.Packaging.Service {
         /// <param name="serverPipe"> The server pipe. </param>
         /// <remarks>
         /// </remarks>
-        private void StartResponsePipeAndProcessMesages(string clientId, string sessionId, NamedPipeServerStream serverPipe) {
+        private void StartResponsePipeAndProcessMessages(string clientId, string sessionId, NamedPipeServerStream serverPipe) {
             try {
                 var channelname = OutputPipeName + sessionId;
                 var responsePipe = new NamedPipeServerStream(channelname, PipeDirection.Out, Instances, PipeTransmissionMode.Message, PipeOptions.Asynchronous,

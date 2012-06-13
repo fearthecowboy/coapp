@@ -23,6 +23,7 @@ namespace CoApp.Packaging.Common {
     using Client;
 #endif
 
+
     [ImplementedBy(Types = new Type[1]{typeof(Package)})]
     public interface IPackage {
         CanonicalName CanonicalName { get; }

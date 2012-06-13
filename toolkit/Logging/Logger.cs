@@ -1,6 +1,8 @@
 ﻿namespace CoApp.Toolkit.Logging {
     using System;
+    using System.Collections.Generic;
     using System.Diagnostics;
+    using System.Linq;
     using System.Reflection;
     using System.Runtime.InteropServices;
     using System.Threading;
@@ -147,6 +149,24 @@
                 }
             } catch {
             }
+        }
+
+        public static void Clear() {
+            EventLog.Clear();
+        }
+
+        public static string GetMessages(TimeSpan howMuch, TimeSpan startHowFarBack) {
+            var latest = DateTime.Now.Subtract(startHowFarBack).Ticks;
+            var earliest = latest - howMuch.Ticks;
+            return string.Join("\r\n", EventLog.Entries.OfType<EventLogEntry>()
+                .Where( each=> each.TimeGenerated.Ticks > earliest && each.TimeGenerated.Ticks < latest )
+                .Select(each => "[{0}:{1}] {2}{3}".format(each.EventID, each.Source, each.Message, (each.Data.IsNullOrEmpty() ? "" : "\r\nDATA =>" + each.Data.ToUtf8String()))));
+        }
+        public static string GetMessages(TimeSpan howMuch) {
+            return GetMessages(howMuch, new TimeSpan(0));
+        }
+        public static string GetMessages() {
+            return GetMessages(new TimeSpan(0, 5, 0), new TimeSpan(0));
         }
 
         public static void Message(string message, params object[] args) {

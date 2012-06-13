@@ -17,10 +17,14 @@ namespace CoApp.Packaging.Common {
     using System.Threading.Tasks;
     using Toolkit.ImpromptuInterface.Dynamic;
 
+    using PkgFilter = System.Linq.Expressions.Expression<System.Func<Common.IPackage, bool>>;
+    using CollectionFilter = Toolkit.Collections.XList<System.Linq.Expressions.Expression<System.Func<System.Collections.Generic.IEnumerable<Common.IPackage>, System.Collections.Generic.IEnumerable<Common.IPackage>>>>;
+
+
     [UseNamedArgument]
     public interface IPackageManager {
 
-        Task FindPackages(CanonicalName canonicalName, Expression<Func<IPackage, bool>> filter, Expression<Func<IEnumerable<IPackage>,IEnumerable<IPackage>>> collectionFilter,string location);
+        Task FindPackages(CanonicalName canonicalName, PkgFilter filter, CollectionFilter collectionFilter, string location);
 
         Task GetPackageDetails(CanonicalName canonicalName);
         Task InstallPackage(CanonicalName canonicalName, bool? autoUpgrade, bool? force, bool? download, bool? pretend, CanonicalName replacingPackage);
@@ -64,6 +68,9 @@ namespace CoApp.Packaging.Common {
 
         Task GetTelemetry();
         Task SetTelemetry(bool optin);
+
+        Task SetConfigurationValue(string key, string valuename, string value);
+        Task GetConfigurationValue(string key, string valuename);
 
         Task GetAtomFeed(IEnumerable<CanonicalName> canonicalNames);
     }

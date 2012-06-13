@@ -382,7 +382,7 @@ CoApp.Cleaner [options]
                     FilesystemExtensions.TryHardToDelete(Path.Combine(rootFolder, "powershell"));
                     FilesystemExtensions.TryHardToDelete(Path.Combine(rootFolder, "lib"));
                     FilesystemExtensions.TryHardToDelete(Path.Combine(rootFolder, "include"));
-                    FilesystemExtensions.TryHardToDelete(Path.Combine(rootFolder, "etc"));
+                    // FilesystemExtensions.TryHardToDelete(Path.Combine(rootFolder, "etc"));
 
                     StatusText = "Status: Removing Dead Links.";
                     OverallProgress = 80;

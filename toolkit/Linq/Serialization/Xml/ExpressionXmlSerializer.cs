@@ -703,7 +703,8 @@ namespace CoApp.Toolkit.Linq.Serialization.Xml {
             //I changed this to handle Linq.EnumerableQuery: 
             //now the return Type may not necessarily match the type parsed from XML,
             dynamic result = ParseConstantFromElement(xml, "Value", type);
-            return Expression.Constant(result, result.GetType());
+            
+            return Expression.Constant(result, result == null ? type : result.GetType());
             //return Expression.Constant(result, type);
         }
 

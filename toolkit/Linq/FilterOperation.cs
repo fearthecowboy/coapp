@@ -23,5 +23,7 @@ namespace CoApp.Toolkit.Linq {
         Gte,
         GreaterThanOrEqual = Gte,
         Contains,
+        Neq,
+        NotEquals,
     }
 }

@@ -21,6 +21,7 @@ namespace CoApp.CLI {
     using Packaging.Common;
     using Packaging.Common.Exceptions;
     using Properties;
+    using Toolkit.Collections;
     using Toolkit.Console;
     using Toolkit.Exceptions;
     using Toolkit.Extensions;
@@ -76,7 +77,7 @@ namespace CoApp.CLI {
 
         private static List<string>  activeDownloads = new List<string>();
         private Filter<IPackage> pkgFilter;
-        private Expression<Func<IEnumerable<IPackage>, IEnumerable<IPackage>>> collectionFilter;
+        private XList<Expression<Func<IEnumerable<IPackage>, IEnumerable<IPackage>>>> collectionFilter;
 
         private readonly PackageManager _packageManager = new PackageManager();
 
@@ -87,6 +88,8 @@ namespace CoApp.CLI {
         /// <returns>Process return code.</returns>
         /// <remarks></remarks>
         protected override int Main(IEnumerable<string> args) {
+
+            _packageManager.Elevate().Wait();
 
             CurrentTask.Events += new DownloadProgress((remoteLocation, location, progress) => {
                 if (!activeDownloads.Contains(remoteLocation)) {
@@ -283,26 +286,61 @@ namespace CoApp.CLI {
                     command = command.ToLower();
                 }
 
+                
+
                 switch (command) {
                     case "-?":
                         return Help();
                      
                     case "test":
                        // pkgFilter &= Package.Properties.Installed.Is(true) & Package.Properties.Active.Is(true) & Package.Properties.UpdatePackages.Any();
-                        // collectionFilter = collectionFilter.Then(p => p.HighestPackages().OrderByDescending(each => each.Version));
+                          // collectionFilter = collectionFilter.Then(p => p.HighestPackages()).Then(p => p.OrderByDescending(each=> each.Version));
+                        // collectionFilter = collectionFilter.Then(p => p.HighestPackages());
                         // collectionFilter = collectionFilter.Then(pkgs => pkgs.HighestPackages());
                         
-                        task = preCommandTasks.Continue(() => _packageManager.FindPackages(CanonicalName.AllPackages, Package.Filters.PackagesWithUpgradeAvailable, collectionFilter, _location))
+                        /* task = preCommandTasks.Continue(() => _packageManager.FindPackages(CanonicalName.AllPackages, pkgFilter, collectionFilter, _location))
                             .Continue(packages => {
                                 if (packages.IsNullOrEmpty()) {
                                     PrintNoPackagesFound(parameters);
                                     return;
                                 }
                                PrintPackages(packages);
-
                             });
+                        
+                        */
+                        //_packageManager.AddScheduledTask("test", "c:\\programdata\\bin\\coapp.exe", "list", 11, 28, DayOfWeek.Tuesday, 5).Wait();
+                        //var tsks = _packageManager.ScheduledTasks.Result;
+                        //tsks.ToTable().ConsoleOut();
+
+                        _packageManager.SetConfigurationValue("test", null, null).Wait();
+                        Console.WriteLine( _packageManager.GetConfigurationValue("test", "something").Result);
+                        return 0;
+                        
 
                         break;
+
+                    case "show-debug":
+                        var l = 5;
+                        if( parameters.Any() ) {
+                            l = parameters.FirstOrDefault().ToInt32();
+                        }
+                        Console.WriteLine(_packageManager.GetEventLog(new TimeSpan(0, l, 0)));
+                        return 0;
+                        
+
+                    case "post-debug":
+                        l = 5;
+                        if( parameters.Any() ) {
+                            l = parameters.FirstOrDefault().ToInt32();
+                        }
+
+                        var token = _packageManager.UploadDebugInformation(_packageManager.GetEventLog(new TimeSpan(0, l, 0))).Result;
+                        if( string.IsNullOrEmpty(token)) {
+                            return Fail("Unable to upload debug log.");
+                        }
+
+                        Console.WriteLine( "Debug Log Uploaded. Token [{0}]", token);
+                        return 0;
 
                     case "-l":
                     case "list":
@@ -486,18 +524,37 @@ namespace CoApp.CLI {
                     case "upgrade":
                     case "upgrade-package":
                     case "upgrade-packages":
-                        Console.WriteLine("UPDATE CURRENTLY DISABLED. CHECK BACK SOON");
-                        // task = preCommandTasks.Continue(() => _packageManager.GetUpgradablePackages(parameters)).Continue(pkgs => PrintPackages(pkgs));
+                        
+                        pkgFilter = pkgFilter & Package.Filters.PackagesWithUpgradeAvailable;
+
+                        task = preCommandTasks.Continue(() => _packageManager.QueryPackages(parameters, pkgFilter, collectionFilter, _location)
+                           .Continue(packages => {
+                               if (packages.IsNullOrEmpty()) {
+                                   PrintNoPackagesFound(parameters);
+                                   return;
+                               }
+
+                               InstallPackages(packages.Select(each => (Package)each.AvailableNewestUpdate)).Wait();
+                           }));
+
                         break;
 
                     case "-u":
                     case "update":
                     case "update-package":
                     case "update-packages":
-                        Console.WriteLine("UPDATE CURRENTLY DISABLED. CHECK BACK SOON");
+                        pkgFilter = pkgFilter & Package.Filters.PackagesWithUpdateAvailable;
 
-                        // task = preCommandTasks.Continue(() => _packageManager.GetUpdatablePackages(parameters)).Continue(pkgs => PrintPackages(pkgs));
-                        // task = preCommandTasks.Continue(() => _packageManager.GetUpdatablePackages(parameters)).Continue( packages => Update(packages) );
+                        task = preCommandTasks.Continue(() => _packageManager.QueryPackages(parameters, pkgFilter, collectionFilter, _location)
+                           .Continue(packages => {
+                               if (packages.IsNullOrEmpty()) {
+                                   PrintNoPackagesFound(parameters);
+                                   return;
+                               }
+
+                               InstallPackages(packages.Select(each => (Package)each.AvailableNewestUpdate)).Wait();
+                           }));
+
                         break;
 
                     case "-A":
@@ -572,6 +629,12 @@ namespace CoApp.CLI {
 
                     case "enable-telemetry":
                         task = preCommandTasks.Continue(() => _packageManager.SetTelemetry(true)).ContinueAlways((a)=> {
+                            Console.WriteLine("Telemetry is currently set to : {0}", _packageManager.GetTelemetry().Result ? "Enabled" : "Disabled");
+                        });
+                        break;
+
+                    case "telemetry":
+                        task = preCommandTasks.Continue(() => {
                             Console.WriteLine("Telemetry is currently set to : {0}", _packageManager.GetTelemetry().Result ? "Enabled" : "Disabled");
                         });
                         break;
@@ -673,7 +736,7 @@ namespace CoApp.CLI {
                         // handle coapp exceptions as cleanly as possible.
                         var ce = exception as CoAppException;
                         if (ce != null) {
-                            Fail("Alternative");
+                            // Fail("Alternative");
                             Fail(ce.Message);
 
                             ce.Cancel();
@@ -930,28 +993,67 @@ namespace CoApp.CLI {
                 }, TaskContinuationOptions.AttachedToParent);
         }
 
-        private void UpdatePackages(IEnumerable<Package> packages) {
-            ProcessPackages( packages, IsUpdate:true);
-        }
+       
+        private Task InstallPackages(IEnumerable<Package> packages) {
 
-        private void InstallPackages(IEnumerable<Package> packages) {
-            ProcessPackages(packages);
-        }
-
-        private void UpgradePackages(IEnumerable<Package> packages) {
-            ProcessPackages(packages, IsUpgrade: true);
-        }
-
-        private void ProcessPackages( IEnumerable<Package> packages , bool IsUpdate = false, bool IsUpgrade = false) {
-            
-        }
-        
-        private Task InstallPackages(IEnumerable<string> parameters) {
-            
             // when this line is placed in the inner scope, the whole thing gets breaky.!?
             CurrentTask.Events += new PackageInstallProgress((canonicalName, progress, overall) => "Installing: {0}".format(canonicalName).PrintProgressBar(progress));
 
+
+            // we have a collection of packages that the user has requested.
+            // first, lets auto-filter out ones that we can obviously see are not what they wanted.
+            var findConflictTask = _packageManager.FilterConflictsForInstall(packages, _x86, _x64, _cpuany);
+
+            // hmm. had a problem filtering out conflicts.
+            findConflictTask.ContinueOnFail(exception => {
+                Console.WriteLine("Conflict!");
+                Console.WriteLine("{0} == {1}", exception.Message, exception.StackTrace);
+            });
+
+
+            return findConflictTask.Continue(filteredPackages => {
+                filteredPackages = filteredPackages.Distinct().ToArray();
+
+                if (!filteredPackages.Any(each => !each.IsInstalled)) {
+                    Console.WriteLine("The following packages are already installed:\r\n");
+                    PrintPackages(filteredPackages);
+                    return;
+                }
+
+                // lets get the package install plan.
+                var getPackagePlanTask = _packageManager.IdentifyPackageAndDependenciesToInstall(filteredPackages, _autoUpgrade);
+
+                // if we get a good plan back
+                getPackagePlanTask.Continue(allPackages => {
+                    allPackages = allPackages.Distinct().ToArray();
+
+                    PrintPackageInstallPlan(allPackages, filteredPackages);
+                    // actually run the installer for each package in our original collection
+                    if (_pretend == true) {
+                        Console.WriteLine(" --pretend specified, skipping install.");
+                        return;
+                    }
+
+                    foreach (var p in filteredPackages) {
+                        try {
+                            Logger.Message("Asking for package Install {0}", p.CanonicalName.ToString());
+                            _packageManager.Install(p.CanonicalName, _autoUpgrade).Continue(() => Console.WriteLine()).Wait();
+                        }
+                        catch (Exception failed) {
+                            failed = failed.Unwrap();
+                            Console.WriteLine("Installation failed!");
+                            Console.WriteLine("{0} == {1}", failed.Message, failed.StackTrace);
+                        }
+                    }
+
+                });
+            });
+        }
+
+        private Task InstallPackages(IEnumerable<string> parameters) {
+            
             // given what the user requested, what packages are they really asking for?
+            collectionFilter = collectionFilter.Then(p => p.HighestPackages());
             return _packageManager.QueryPackages(parameters, pkgFilter, collectionFilter, _location).Continue(packages => {
                 // we got back a package collection for what the user passed in.
 
@@ -961,52 +1063,7 @@ namespace CoApp.CLI {
                     return;
                 }
 
-                // we have a collection of packages that the user has requested.
-                // first, lets auto-filter out ones that we can obviously see are not what they wanted.
-                var findConflictTask = _packageManager.FilterConflictsForInstall(packages, _x86, _x64, _cpuany);
-
-                // hmm. had a problem filtering out conflicts.
-                findConflictTask.ContinueOnFail(exception => {
-                    Console.WriteLine("Conflict!");
-                    Console.WriteLine("{0} == {1}", exception.Message, exception.StackTrace);
-                });
-
-
-                findConflictTask.Continue(filteredPackages => {
-                    if (!filteredPackages.Any(each => !each.IsInstalled)) {
-                        Console.WriteLine("The following packages are already installed:\r\n");
-                        PrintPackages(filteredPackages);
-                        return;
-                    }
-
-                    // lets get the package install plan.
-                    var getPackagePlanTask = _packageManager.IdentifyPackageAndDependenciesToInstall(filteredPackages, _autoUpgrade);
-
-                   
-
-                    // if we get a good plan back
-                    getPackagePlanTask.Continue(allPackages => {
-                        PrintPackageInstallPlan(allPackages, filteredPackages);
-                        // actually run the installer for each package in our original collection
-                        if (_pretend == true) {
-                            Console.WriteLine(" --pretend specified, skipping install.");
-                            return;
-                        }
-
-
-                        foreach (var p in filteredPackages) {
-                            try {
-                                _packageManager.Install(p.CanonicalName, _autoUpgrade).Continue(() => Console.WriteLine()).Wait();
-                            }
-                            catch (Exception failed) {
-                                failed = failed.Unwrap();
-                                Console.WriteLine("Installation failed!");
-                                Console.WriteLine("{0} == {1}", failed.Message, failed.StackTrace);
-                            }
-                        }
-
-                    });
-                });
+                InstallPackages(packages).Wait();
             });
         }
 
