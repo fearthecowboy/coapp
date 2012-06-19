@@ -244,7 +244,7 @@ namespace CoApp.Toolkit.Extensions {
                 .Replace("?", @".")
                 .Replace("**", @"?")
                 .Replace("*", @"[^\\\/\<\>\|]*")
-                .Replace("?", @".*") + '$');
+                .Replace("?", @".*") + '$',RegexOptions.IgnoreCase);
         }
 
         /// <summary>

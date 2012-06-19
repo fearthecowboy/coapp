@@ -215,10 +215,10 @@ namespace CoApp.Packaging.Client {
                     var proc = Process.Start(new ProcessStartInfo {
                         FileName = "CoApp.ElevationProxy.Exe",
                         Arguments = _instance.PipeName,
-                        // UseShellExecute = false, // if you use 
+                        UseShellExecute = false, // if you use 
                         // Verb = "runas"
-                        UseShellExecute = true,
-                        Verb ="runas"
+                        // UseShellExecute = true,
+                        // Verb ="runas"
                     });
 
                     if (proc == null || proc.HasExited) {

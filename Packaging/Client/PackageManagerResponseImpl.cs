@@ -188,8 +188,6 @@ namespace CoApp.Packaging.Client {
             }
         }
 
-        
-
         public void InstalledPackage(CanonicalName canonicalName) {
             _packages.Value.Add(Package.GetPackage(canonicalName));
             Package.GetPackage(canonicalName).IsInstalled = true;
@@ -207,8 +205,6 @@ namespace CoApp.Packaging.Client {
                     }
                 }
             }, TaskCreationOptions.AttachedToParent);
-            
-            
 
             try {
                 Event<PackageInstalled>.Raise(canonicalName);
@@ -241,6 +237,11 @@ namespace CoApp.Packaging.Client {
             var filename = requestReference.MakeSafeFileName();
 
             var targetFilename = Path.Combine(destination, filename);
+
+            if (force) {
+                targetFilename.TryHardToDelete();
+            }
+
             lock (CurrentDownloads) {
                 if (CurrentDownloads.ContainsKey(requestReference)) {
                     // wait for this guy to respond (which should give us what we need)
