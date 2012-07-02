@@ -297,8 +297,10 @@ namespace CoApp.CLI {
                           // collectionFilter = collectionFilter.Then(p => p.HighestPackages()).Then(p => p.OrderByDescending(each=> each.Version));
                         // collectionFilter = collectionFilter.Then(p => p.HighestPackages());
                         // collectionFilter = collectionFilter.Then(pkgs => pkgs.HighestPackages());
-                        
-                        /* task = preCommandTasks.Continue(() => _packageManager.FindPackages(CanonicalName.AllPackages, pkgFilter, collectionFilter, _location))
+
+                        pkgFilter &= Package.Properties.DisplayName.Is("z*");
+
+                         task = preCommandTasks.Continue(() => _packageManager.FindPackages(CanonicalName.AllPackages, pkgFilter, collectionFilter, _location))
                             .Continue(packages => {
                                 if (packages.IsNullOrEmpty()) {
                                     PrintNoPackagesFound(parameters);
@@ -307,7 +309,7 @@ namespace CoApp.CLI {
                                PrintPackages(packages);
                             });
                         
-                        */
+                        
                         //_packageManager.AddScheduledTask("test", "c:\\programdata\\bin\\coapp.exe", "list", 11, 28, DayOfWeek.Tuesday, 5).Wait();
                         //var tsks = _packageManager.ScheduledTasks.Result;
                         //tsks.ToTable().ConsoleOut();
@@ -326,7 +328,11 @@ namespace CoApp.CLI {
                         }
                         Console.WriteLine(_packageManager.GetEventLog(new TimeSpan(0, l, 0)));
                         return 0;
-                        
+
+                    case "clear-debug":
+                        Logger.Clear(); 
+                        Console.WriteLine("Debug log cleared.");
+                        return 0;
 
                     case "post-debug":
                         l = 5;
@@ -346,7 +352,7 @@ namespace CoApp.CLI {
                     case "list":
                     case "list-package":
                     case "list-packages":
-                        if( !parameters.Any() || parameters[0] == "*" ) {
+                        if( !parameters.Any() ) {
                             collectionFilter = collectionFilter.Then(p => p.HighestPackages());
                         }
 
@@ -965,13 +971,27 @@ namespace CoApp.CLI {
                         pkg.Name,
                         Version = pkg.Version,
                         Arch = pkg.Architecture,
-                        Status = (pkg.IsInstalled ? "Installed " + (pkg.IsBlocked ? "Blocked " : "") + (pkg.IsWanted ? "Wanted ": pkg.IsDependency ? "Dependency " : "")+ (pkg.IsActive ? "Active " : "" ) : ""),
-                        Location = pkg.IsInstalled ? "(installed)" : !string.IsNullOrEmpty(pkg.LocalPackagePath) ? pkg.LocalPackagePath : (pkg.RemoteLocations.IsNullOrEmpty() ? "<unknown>" :  pkg.RemoteLocations.FirstOrDefault().AbsoluteUri.UrlDecode()),
+                        Flavor = pkg.Flavor.Plain,
+                        State = pkg.IsInstalled ? pkg.PackageStatus.ToString() : "",
+                        Act = pkg.IsActive ? "yes" : "",
+                        Blk = pkg.IsBlocked ? "yes" : "",
+                        Location = PkgLocation(pkg),
                     }).ToTable().ConsoleOut();
             }
             else {
                 Console.WriteLine("No packages found.");
             }
+        }
+
+        private string PkgLocation(Package pkg) {
+            if( string.IsNullOrEmpty(pkg.LocalPackagePath)) {
+                if( !pkg.RemoteLocations.IsNullOrEmpty() ) {
+                    return pkg.RemoteLocations.FirstOrDefault().AbsoluteUri.UrlDecode();
+                }
+                return "<unknown>";
+            }
+
+            return pkg.LocalPackagePath;
         }
 
         private Task ListFeeds() {

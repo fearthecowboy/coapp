@@ -1,25 +1,30 @@
-// Include js.js
-with(new ActiveXObject("Scripting.FileSystemObject"))for(var x in p=(".;js;scripts;"+WScript.scriptfullname.replace(/(.*\\)(.*)/g,"$1")+";"+new ActiveXObject("WScript.Shell").Environment("PROCESS")("PATH")).split(";"))if(FileExists(j=BuildPath(p[x],"js.js"))){eval(OpenTextFile(j).ReadAll());break}
+var filename = "source\\CoApp.Toolkit.AssemblyStrongName.cs";
 
 /// Every time we do a release-sign, we increment the build number.
-var rx, major, minor, build, revision, filename;
+var rx, major, minor, build, revision;
+var fso = new ActiveXObject("Scripting.FileSystemObject");
+
+String.prototype.Trim = function () {
+    return (this || "").replace(/^\s+|\s+$/g, "");
+};
 
 function SaveTextFile(filename, text) {
-    var f = $$.fso.OpenTextFile(filename, 2, true);
+    var f = fso.OpenTextFile(filename, 2, true);
     f.Write(text.Trim() + "\r\n");
     f.Close();
 }
 
 function LoadTextFile(filename) {
-    if (exists(filename)) {
-        return ReadAll(filename);
+    if (fso.FileExists((filename))) {
+        return fso.OpenTextFile(filename, 1, false).ReadAll();
     }
-    print("Cannot find file [{0}]", filename);
+    
+    WScript.Echo("Cannot find file: "+ filename);
     return null;
 }
 
 /// ---- Developer Tools Pacakge --------------------------------------------------------------------------------------------
-filename = "source\\CoApp.Toolkit.AssemblyStrongName.cs";
+
 if (newTxt = LoadTextFile(filename)) {
     rx = /\[assembly: AssemblyVersion\("(.*)\.(.*)\.(.*)\.(.*)"\)\]/ig.exec(newTxt); // Get Assembly Version
     

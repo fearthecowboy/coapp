@@ -22,6 +22,14 @@ namespace CoApp.Packaging.Client {
     using Toolkit.Linq;
     using Toolkit.Win32;
 
+     public enum PackageStatus {
+            NotInstalled,
+            Wanted,
+            Trimable,
+            Dependency,
+            Installed,
+        }
+
     public class Package : IPackage {
         private static readonly IDictionary<CanonicalName, Package> AllPackages = new XDictionary<CanonicalName, Package>();
 
@@ -29,6 +37,7 @@ namespace CoApp.Packaging.Client {
         private PackageDetails _packageDetails;
 
         private string _displayName;
+        private string _localPackagePath;
 
         private bool _isActive;
         private bool _isBlocked;
@@ -66,8 +75,6 @@ namespace CoApp.Packaging.Client {
         [NotPersistable]
         internal bool IsPackageInfoStale { get; set; }
 
-        public string LocalPackagePath { get; set; }
-
         #region IPackage Members
 
         [Persistable]
@@ -84,6 +91,19 @@ namespace CoApp.Packaging.Client {
             internal set {
                 IsPackageInfoStale = false;
                 _bindingPolicy = value;
+            }
+        }
+
+        [Persistable]
+        public string LocalPackagePath {
+            get {
+                DemandLoad();
+                lock (this) {
+                    return _localPackagePath;
+                }
+            }
+            internal set {
+                _localPackagePath = value;
             }
         }
 
@@ -512,6 +532,27 @@ namespace CoApp.Packaging.Client {
                 }
             }
         }
+
+
+
+        public PackageStatus PackageStatus {
+            get {
+                if (IsInstalled) {
+                    if (IsWanted) {
+                        return PackageStatus.Wanted;
+                    }
+                    if (IsTrimable) {
+                        return PackageStatus.Trimable;
+                    }
+                    if (IsDependency) {
+                        return PackageStatus.Dependency;
+                    }
+                    return PackageStatus.Installed;
+                }
+                return PackageStatus.NotInstalled;
+            }
+        }
+
 
         #region Nested type: Properties
 

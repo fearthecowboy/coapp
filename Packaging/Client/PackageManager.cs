@@ -46,7 +46,7 @@ namespace CoApp.Packaging.Client {
         internal static PackageManager Instance;
         
         public PackageManager() {
-            // store the current instance of the PM.
+            // store the current instance of the PM.\
             Instance = this;
         }
         static PackageManager() {
@@ -515,7 +515,6 @@ namespace CoApp.Packaging.Client {
             return canonicalNames.Select(c => GetPackage(c, true)).Continue(all => all);
         }
 
-        
         public Task<Package> GetPackageDetails(CanonicalName canonicalName, bool forceRefresh = false) {
             return Package.GetPackage(canonicalName).AsResultTask();
             /*
@@ -758,6 +757,10 @@ namespace CoApp.Packaging.Client {
                 }
                 return _anonymousId;
             }
+        }
+
+        public Task AutoTrim(CanonicalName packageMask) {
+            return Remote.AutoTrim(packageMask ?? CanonicalName.CoAppPackages);
         }
     }
 }

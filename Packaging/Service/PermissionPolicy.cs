@@ -31,6 +31,44 @@ namespace CoApp.Packaging.Service {
 
         private readonly RegistryView _policyView;
 
+        internal static PermissionPolicy Connect;
+        internal static PermissionPolicy EnumeratePackages;
+        internal static PermissionPolicy UpdatePackage ;
+        internal static PermissionPolicy InstallPackage;
+        internal static PermissionPolicy RemovePackage ;
+        internal static PermissionPolicy ChangeRequiredState ;
+        internal static PermissionPolicy ChangeState;
+        internal static PermissionPolicy EditSystemFeeds;
+        internal static PermissionPolicy EditSessionFeeds;
+        internal static PermissionPolicy PauseService;
+        internal static PermissionPolicy StopService ;
+        internal static PermissionPolicy ModifyPolicy ;
+        internal static PermissionPolicy EditSchedule ;
+        internal static PermissionPolicy Symlink;
+
+        static PermissionPolicy() {
+            Connect = new PermissionPolicy("Connect", "Allows access to communicate with the CoApp Service", new[] { WellKnownSidType.WorldSid });
+            EnumeratePackages = new PermissionPolicy("EnumeratePackages", "Allows access to query the system for installed packages", new[] { WellKnownSidType.WorldSid });
+            UpdatePackage = new PermissionPolicy("UpdatePackage", "Allows a newer version of an package that is currently installed to be installed", new[] { WellKnownSidType.WorldSid });
+
+            InstallPackage = new PermissionPolicy("InstallPackage", "Allows a new package to be installed", new[] { WellKnownSidType.BuiltinAdministratorsSid });
+            RemovePackage = new PermissionPolicy("RemovePackage", "Allows a package to be removed", new[] { WellKnownSidType.BuiltinAdministratorsSid });
+
+            ChangeRequiredState = new PermissionPolicy("ChangeRequiredState", "Allows a user to change whether a given package is required (user requested)", new[] { WellKnownSidType.BuiltinAdministratorsSid });
+            ChangeState = new PermissionPolicy("ChangeState", "Allows a user to change whether any state on a given package", new[] { WellKnownSidType.BuiltinAdministratorsSid });
+
+            EditSystemFeeds = new PermissionPolicy("EditSystemFeeds", "Allows users to edit remembered feeds for the system", new[] { WellKnownSidType.BuiltinAdministratorsSid });
+            EditSessionFeeds = new PermissionPolicy("EditSessionFeeds", "Allows users to edit remembered feeds for the session", new[] { WellKnownSidType.WorldSid });
+
+            PauseService = new PermissionPolicy("PauseService", "Allows users to place the CoApp Service into a suspended (paused) state", new[] { WellKnownSidType.BuiltinAdministratorsSid });
+            StopService = new PermissionPolicy("StopService", "Allows users to stop the CoApp Service", new[] { WellKnownSidType.BuiltinAdministratorsSid });
+            ModifyPolicy = new PermissionPolicy("ModifyPolicy", "Allows users to change policy values for CoApp", new[] { WellKnownSidType.BuiltinAdministratorsSid });
+
+            EditSchedule = new PermissionPolicy("EditSchedule", "Allows users to edit any CoApp scheduled tasks", new[] { WellKnownSidType.BuiltinAdministratorsSid });
+
+            Symlink = new PermissionPolicy("Symlink", "Allows users to create and edit symlinks", new[] { WellKnownSidType.BuiltinAdministratorsSid });    
+        }
+
         private PermissionPolicy(string name, string description, IEnumerable<WellKnownSidType> defaults) {
             Name = name;
             Description = description;
@@ -112,27 +150,7 @@ namespace CoApp.Packaging.Service {
             }
         }
 
-        internal static PermissionPolicy Connect = new PermissionPolicy("Connect", "Allows access to communicate with the CoApp Service", new[] {WellKnownSidType.WorldSid});
-        internal static PermissionPolicy EnumeratePackages = new PermissionPolicy("EnumeratePackages", "Allows access to query the system for installed packages", new[] {WellKnownSidType.WorldSid});
-        internal static PermissionPolicy UpdatePackage = new PermissionPolicy("UpdatePackage", "Allows a newer version of an package that is currently installed to be installed", new[] {WellKnownSidType.WorldSid});
-
-        internal static PermissionPolicy InstallPackage = new PermissionPolicy("InstallPackage", "Allows a new package to be installed", new[] {WellKnownSidType.BuiltinAdministratorsSid});
-        internal static PermissionPolicy RemovePackage = new PermissionPolicy("RemovePackage", "Allows a package to be removed", new[] {WellKnownSidType.BuiltinAdministratorsSid});
-        
-        internal static PermissionPolicy ChangeRequiredState = new PermissionPolicy("ChangeRequiredState", "Allows a user to change whether a given package is required (user requested)", new[] {WellKnownSidType.BuiltinAdministratorsSid});
-        internal static PermissionPolicy ChangeState = new PermissionPolicy("ChangeState", "Allows a user to change whether any state on a given package", new[] { WellKnownSidType.BuiltinAdministratorsSid });
-
-        internal static PermissionPolicy EditSystemFeeds = new PermissionPolicy("EditSystemFeeds", "Allows users to edit remembered feeds for the system", new[] {WellKnownSidType.BuiltinAdministratorsSid});
-        internal static PermissionPolicy EditSessionFeeds = new PermissionPolicy("EditSessionFeeds", "Allows users to edit remembered feeds for the session", new[] {WellKnownSidType.WorldSid});
-
-        internal static PermissionPolicy PauseService = new PermissionPolicy("PauseService", "Allows users to place the CoApp Service into a suspended (paused) state", new[] {WellKnownSidType.BuiltinAdministratorsSid});
-        internal static PermissionPolicy StopService = new PermissionPolicy("StopService", "Allows users to stop the CoApp Service", new[] {WellKnownSidType.BuiltinAdministratorsSid});
-        internal static PermissionPolicy ModifyPolicy = new PermissionPolicy("ModifyPolicy", "Allows users to change policy values for CoApp", new[] {WellKnownSidType.BuiltinAdministratorsSid});
-
-        internal static PermissionPolicy EditSchedule = new PermissionPolicy("EditSchedule", "Allows users to edit any CoApp scheduled tasks", new[] { WellKnownSidType.BuiltinAdministratorsSid });
-
-        internal static PermissionPolicy Symlink = new PermissionPolicy("Symlink", "Allows users to create and edit symlinks", new[] {WellKnownSidType.BuiltinAdministratorsSid});
-
+    
         /// <summary>
         ///   Determines whether the user has access to the policy. Run this while impersonating the user
         /// </summary>

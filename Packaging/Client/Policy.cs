@@ -14,6 +14,9 @@ namespace CoApp.Packaging.Client {
     using System.Collections.Generic;
 
     public class Policy {
+        public override int GetHashCode() {
+            return Name.GetHashCode();
+        }
         public string Name { get; internal set; }
         public string Description { get; internal set; }
         public IEnumerable<string> Members { get; internal set; }

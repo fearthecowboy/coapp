@@ -18,6 +18,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Scratch", "Scratch.csproj",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoApp.ElevationProxy", "CoApp.ElevationProxy.csproj", "{40535255-BF9E-46BC-BBBB-B83EB4E76760}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scripts", "scripts", "{1D228908-15F1-4693-8511-BD045EE19CEE}"
+	ProjectSection(SolutionItems) = preProject
+		scripts\increment-build-version.js = scripts\increment-build-version.js
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

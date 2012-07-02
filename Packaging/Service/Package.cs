@@ -116,7 +116,7 @@ namespace CoApp.Packaging.Service {
         public IEnumerable<IPackage> UpgradePackages { get { return PackageRequestData.UpgradePackages.Value; } }
 
 
-        [NotPersistable]
+        [Persistable]
         public bool IsDependency { get {
             return PackageSessionData.IsDependency;
         } }
@@ -145,6 +145,13 @@ namespace CoApp.Packaging.Service {
         public bool IsTrimable {
             get {
                 return (!(IsWanted || IsDependency)) && PackageState > PackageState.DoNotChange;
+            }
+        }
+
+        [Persistable]
+        public string LocalPackagePath {
+            get {
+                return PackageSessionData.LocalValidatedLocation ?? "";
             }
         }
 

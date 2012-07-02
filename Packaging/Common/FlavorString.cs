@@ -95,6 +95,12 @@ namespace CoApp.Packaging.Common {
             return Equals(flavor);
         }
 
+        public string Plain {
+            get {
+                return _string.Trim('[', ']');
+            }
+        }
+
         public override string ToString() {
             return _string;
         }

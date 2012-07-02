@@ -123,26 +123,29 @@ namespace CoApp.Toolkit.Extensions {
         public static string OriginalTempFolder;
 
         static FilesystemExtensions() {
-            OriginalTempFolder = Path.GetTempPath();
+            OriginalTempFolder = OriginalTempFolder ?? Path.GetTempPath();
             ResetTempFolder();
         }
 
         public static void ResetTempFolder() {
             // set the temporary folder to be a child of the User temporary folder
             // based on the application name
-            var appTempPath = Path.Combine(OriginalTempFolder, (Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly()).GetName().Name);
-            if (!Directory.Exists(appTempPath)) {
-                Directory.CreateDirectory(appTempPath);
+            var appName = (Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly()).GetName().Name;
+            if( OriginalTempFolder.IndexOf(appName) == -1) {
+                var appTempPath = Path.Combine(OriginalTempFolder, appName);
+                if (!Directory.Exists(appTempPath)) {
+                    Directory.CreateDirectory(appTempPath);
+                }
+
+                TempPath = Path.Combine(appTempPath, (Directory.EnumerateDirectories(appTempPath).Count() + 1).ToString());
+                if (!Directory.Exists(TempPath)) {
+                    Directory.CreateDirectory(TempPath);
+                }
+
+                Environment.SetEnvironmentVariable("TMP", TempPath);
+                Environment.SetEnvironmentVariable("TEMP", TempPath);
             }
-
-            TempPath = Path.Combine(appTempPath, (Directory.EnumerateDirectories(appTempPath).Count() + 1).ToString());
-            if (!Directory.Exists(TempPath)) {
-                Directory.CreateDirectory(TempPath);
-            }
-
-            Environment.SetEnvironmentVariable("TMP", TempPath);
-            Environment.SetEnvironmentVariable("TEMP", TempPath);
-
+            
             TryToHandlePendingRenames(true);
         }
 

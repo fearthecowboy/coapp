@@ -764,22 +764,28 @@ namespace CoApp.Packaging.Service {
                     return FinishedSynchronously;
                 }
 
-                try {
-                    // send back the progress to the client.
-                    CurrentTask.Events += new IndividualProgress(percentage => response.RemovingPackageProgress(package.CanonicalName, percentage));
-
-                    package.Remove();
-
-                    response.RemovingPackageProgress(canonicalName, 100);
-                    response.RemovedPackage(canonicalName);
-
-                    Signals.RemovedPackage(canonicalName);
-                } catch (OperationCompletedBeforeResultException e) {
-                    response.FailedPackageRemoval(canonicalName, e.Message);
-                    return FinishedSynchronously;
-                }
+                RemovePackage(package);
             }
             return FinishedSynchronously;
+        }
+
+        private void RemovePackage(Package package) {
+            var response = Event<GetResponseInterface>.RaiseFirst();
+
+            try {
+                // send back the progress to the client.
+                CurrentTask.Events += new IndividualProgress(percentage => response.RemovingPackageProgress(package.CanonicalName, percentage));
+
+                package.Remove();
+
+                response.RemovingPackageProgress(package.CanonicalName, 100);
+                response.RemovedPackage(package.CanonicalName);
+                Signals.RemovedPackage(package.CanonicalName);
+            }
+            catch (OperationCompletedBeforeResultException e) {
+                response.FailedPackageRemoval(package.CanonicalName, e.Message);
+            }
+
         }
 
         public Task UnableToAcquire(string requestReference) {
@@ -1578,5 +1584,15 @@ namespace CoApp.Packaging.Service {
             return FinishedSynchronously;
         }
 
+        public Task AutoTrim(CanonicalName packageMask) {
+            if (Event<CheckForPermission>.RaiseFirst(PermissionPolicy.UpdatePackage)) {
+
+                var trimablePackages = InstalledPackages.Where(each => each.CanonicalName.Matches(packageMask) && each.IsTrimable && !each.IsBlocked);
+                foreach( var p in trimablePackages) {
+                    RemovePackage(p);
+                }
+            }
+            return FinishedSynchronously;
+        }
     }
 }

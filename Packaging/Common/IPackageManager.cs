@@ -73,5 +73,7 @@ namespace CoApp.Packaging.Common {
         Task GetConfigurationValue(string key, string valuename);
 
         Task GetAtomFeed(IEnumerable<CanonicalName> canonicalNames);
+
+        Task AutoTrim(CanonicalName packageMask);
     }
 }

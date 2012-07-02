@@ -14,6 +14,7 @@ namespace CoApp.Packaging.Client.UI {
     using System;
     using System.Collections.Generic;
     using System.ComponentModel;
+    using System.Diagnostics;
     using System.IO;
     using System.Linq;
     using System.Net;
@@ -27,6 +28,7 @@ namespace CoApp.Packaging.Client.UI {
     using System.Windows.Media.Imaging;
     using Common;
     using Toolkit.Extensions;
+    using Toolkit.Logging;
     using Toolkit.Tasks;
     using Toolkit.Win32;
     using Application = System.Windows.Application;
@@ -50,9 +52,20 @@ namespace CoApp.Packaging.Client.UI {
         public event PropertyChangedEventHandler PropertyChanged;
         public event PropertyChangedEventHandler Finished;
 
+        private bool Quiet;
+        internal bool Passive;
+        private bool Remove;
+
+
         public Installer(string filename) {
             try {
                 MsiFilename = filename;
+                Quiet = ((AppDomain.CurrentDomain.GetData("QUIET") as string) ?? "false").IsTrue();
+                Passive = ((AppDomain.CurrentDomain.GetData("PASSIVE") as string) ?? "false").IsTrue();
+                Remove = ((AppDomain.CurrentDomain.GetData("REMOVE") as string) ?? "false").IsTrue();
+
+                Logger.Message("Quiet {0}/Passive {1}/Remove {2}", Quiet, Passive, Remove);
+
                 // was coapp just installed by the bootstrapper? 
                 var tsk = Task.Factory.StartNew(() => {
                     if (((AppDomain.CurrentDomain.GetData("COAPP_INSTALLED") as string) ?? "false").IsTrue()) {
@@ -86,20 +99,43 @@ namespace CoApp.Packaging.Client.UI {
                     DoError(InstallerFailureState.FailedToGetPackageFromFile, error);
                     ExitQuick();
                 });
-
+              
                 try {
                     Application.ResourceAssembly = Assembly.GetExecutingAssembly();
-                }
-                catch {
+                } catch {
                 }
 
                 ts2.Wait();
+                
+                if (!Quiet) {
+                    _window = new InstallerMainWindow(this);
+                    if( Remove ) {
+                        _window.Loaded += (sender, args) => _window.RemoveButtonClick(sender, args);
+                    } else if( Passive ) {
+                        _window.Loaded += (sender, args) => _window.InstallButtonClick(sender, args);
+                    }
 
-                _window = new InstallerMainWindow(this);
-                _window.ShowDialog();
+                    _window.ShowDialog();
 
-                if (Application.Current != null) {
-                    Application.Current.Shutdown(0);
+                    if (Application.Current != null) {
+                        Application.Current.Shutdown(0);
+                    }
+                } else {
+                    // when quiet
+                    var discard = RemoveChoices.ToArray();
+                    var discard2 = InstallChoices.ToArray();
+
+                    if( Remove ) {
+                        if (CanRemove) {
+                            RemoveAll().Wait();
+                        }
+                    } else {
+                        Logger.Message("Thinkin' about installin' {0}", CanInstall);
+                        Debugger.Break();
+                        if( CanInstall) {
+                            Install().Wait();
+                        }
+                    }
                 }
                 ExitQuick();
             }
@@ -504,7 +540,7 @@ namespace CoApp.Packaging.Client.UI {
             return img;
         }
 
-        public void Install() {
+        public Task Install() {
             if (!IsWorking) {
                 IsWorking = true;
                 CurrentTask.Events += new PackageInstallProgress((name, progress, overallProgress) => {
@@ -519,21 +555,23 @@ namespace CoApp.Packaging.Client.UI {
                 });
                 
                 instTask.ContinueOnFail(exception => DoError(InstallerFailureState.FailedToGetPackageFromFile, exception));
+                return instTask;
             }
+            return null;
         }
 
-        public void RemoveAll() {
-            RemovePackages(PrimaryPackage.InstalledPackages.Select(each => each.CanonicalName).ToArray());
+        public Task RemoveAll() {
+            return RemovePackages(PrimaryPackage.InstalledPackages.Select(each => each.CanonicalName).ToArray());
         }
 
-        private void RemovePackage(CanonicalName canonicalVersion) {
-            RemovePackages(new[] {canonicalVersion});
+        private Task RemovePackage(CanonicalName canonicalVersion) {
+            return RemovePackages(new[] {canonicalVersion});
         }
 
-        private void RemovePackages(CanonicalName[] canonicalVersions) {
+        private Task RemovePackages(CanonicalName[] canonicalVersions) {
             if (!IsWorking) {
                 IsWorking = true;
-                Task.Factory.StartNew(() => {
+                return Task.Factory.StartNew(() => {
                     var taskCount = canonicalVersions.Length;
                     if (canonicalVersions.Length > 0) {
                         int taskNumber = 0;
@@ -549,6 +587,7 @@ namespace CoApp.Packaging.Client.UI {
                     OnFinished();
                 }, TaskContinuationOptions.AttachedToParent);
             }
+            return null;
         }
 
         protected void OnPropertyChanged(string name = null) {

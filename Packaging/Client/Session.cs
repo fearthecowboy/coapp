@@ -37,7 +37,6 @@ namespace CoApp.Packaging.Client {
             internal static readonly IDictionary<int, ManualEventQueue> EventQueues = new XDictionary<int, ManualEventQueue>();
             internal readonly ManualResetEvent ResetEvent = new ManualResetEvent(true);
             internal bool StillWorking;
-
             
             public ManualEventQueue() {
                 var tid = Task.CurrentId.GetValueOrDefault();
@@ -78,7 +77,6 @@ namespace CoApp.Packaging.Client {
                 }
             }
         }
-
        
         internal const int BufferSize = 1024 * 1024 * 2;
         private bool? _isElevated;
@@ -105,7 +103,8 @@ namespace CoApp.Packaging.Client {
         }
         private IPackageManager _remoteService;
         private static Session _instance = new Session();
-        private readonly ManualResetEvent _isBufferReady = new ManualResetEvent(false);
+        private static readonly ManualResetEvent _isBufferReady = new ManualResetEvent(false);
+        private static readonly ManualResetEvent _isProcessingMessages = new ManualResetEvent(false);
         private Task _connectingTask;
         private int _autoConnectionCount;
         private string PipeName = "CoAppInstaller";
@@ -132,6 +131,12 @@ namespace CoApp.Packaging.Client {
         }
 
         public static bool IsConnected {
+            get {
+                return IsPipeConnected && _isProcessingMessages.WaitOne(0);
+            }
+        }
+
+        public static bool IsPipeConnected {
             get {
                 return IsServiceAvailable && _instance._pipe != null && _instance._pipe.IsConnected;
             }
@@ -197,35 +202,49 @@ namespace CoApp.Packaging.Client {
             }
         }
 
+        private static ManualResetEvent _okToConnect = new ManualResetEvent(true);
+
         internal static Task Elevate() {
+            Logger.Message("Asking for Elevation");
             lock (_instance) {
+                _okToConnect.WaitOne();
+            
                 if (_instance.IsElevated) {
+                    Logger.Message("Currently Elevated, DONE.");
                     return "Elevated".AsResultTask();
                 }
+                _okToConnect.Reset();
+
+                Logger.Message("Not Currently Elevated, Proceeding");
+
                 var svcTask = Task.Factory.StartNew(EngineServiceManager.EnsureServiceIsResponding);
 
-                // Disconnect from old pipe asap.
-                _instance.Disconnect();
-
-                // change pipe name 
-                _instance.PipeName = "CoAppInstaller" + Process.GetCurrentProcess().Id.ToString().MD5Hash();
+                var pipeName = "CoAppInstaller" + Process.GetCurrentProcess().Id.ToString().MD5Hash();
 
                 return svcTask.Continue(() => {
-                    // start elevation proxy
-                    var proc = Process.Start(new ProcessStartInfo {
-                        FileName = "CoApp.ElevationProxy.Exe",
-                        Arguments = _instance.PipeName,
-                        // UseShellExecute = false, // if you use 
-                        // Verb = "runas"
-                        UseShellExecute = true,
-                        Verb ="runas"
-                    });
+                        // start elevation proxy
+                        var proc = Process.Start(new ProcessStartInfo {
+                            FileName = "CoApp.ElevationProxy.Exe",
+                            Arguments = pipeName,
+                            UseShellExecute = false, 
+                        });
 
-                    if (proc == null || proc.HasExited) {
-                        throw new CoAppException("Failed to elevate for service communication");
-                    } 
-                    _instance._isElevated = true;
-                }).ContinueWith((a2) => _instance.Connect());
+                        if (proc == null || proc.HasExited) {
+                            _instance._isElevated = false;
+                            _okToConnect.Set();
+                            throw new CoAppException("Failed to elevate for service communication");
+                        }
+
+                        // Disconnect from old pipe asap.
+                        Logger.Message("In Elevate--Disconnecting old connection");
+                        _instance.Disconnect();
+
+                        // change pipe name 
+                        _instance.PipeName = pipeName;
+
+                        _instance._isElevated = true;
+                        _okToConnect.Set();
+                }).ContinueWith(a2 => _instance.Connect());
             }
         }
 
@@ -233,6 +252,8 @@ namespace CoApp.Packaging.Client {
 
         private Task Connect(string clientName = null, string sessionId = null) {
             lock (this) {
+                _okToConnect.WaitOne();
+
                 if (IsConnected) {
                     return "Completed".AsResultTask();
                 }
@@ -240,6 +261,7 @@ namespace CoApp.Packaging.Client {
                 clientName = clientName ?? Process.GetCurrentProcess().Id.ToString();
 
                 if (_connectingTask == null) {
+                    
                     _isBufferReady.Reset();
 
                     PackageManagerResponseImpl.EngineRestarting = false;
@@ -270,7 +292,6 @@ namespace CoApp.Packaging.Client {
                     }, TaskCreationOptions.AttachedToParent);
                 }
             }
-
             return _connectingTask;
         }
 
@@ -279,20 +300,19 @@ namespace CoApp.Packaging.Client {
             _isBufferReady.Set();
 
             try {
+                // tell others that we are indeed processing messages.
+                _isProcessingMessages.Set();
+
                 do {
                     // we need to wait for the buffer to become available.
                     _isBufferReady.WaitOne();
+                    
 
                     // now we claim the buffer 
                     _isBufferReady.Reset();
                     Task<int> readTask;
-                   //  try {
-                        readTask = _pipe.ReadAsync(incomingMessage, 0, BufferSize);
-                    // } catch {
-                        // did it get disconnected here?
-                       // Connect();
-//                        return;
-  //                  }
+                    readTask = _pipe.ReadAsync(incomingMessage, 0, BufferSize);
+                    
                     readTask.ContinueWith(
                         antecedent => {
                             if (antecedent.IsCanceled || antecedent.IsFaulted || !IsConnected) {
@@ -334,11 +354,13 @@ namespace CoApp.Packaging.Client {
             } catch (Exception e) {
                 Logger.Message("Connection Terminating with Exception {0}/{1}", e.GetType(), e.Message);
             } finally {
+                Logger.Message("In ProcessMessages/Finally");
                 Disconnect();
             }
         }
 
         public void Disconnect() {
+            _isProcessingMessages.Reset();
             lock (this) {
                 _connectingTask = null;
 
@@ -366,7 +388,7 @@ namespace CoApp.Packaging.Client {
         /// <remarks>
         /// </remarks>
         private static void WriteAsync(UrlEncodedMessage message) {
-            if (IsConnected) {
+            if (IsPipeConnected) {
                 try {
                     message.Add("rqid", Event<GetCurrentRequestId>.RaiseFirst());
                     _instance._pipe.WriteLineAsync(message.ToString()).ContinueWith(antecedent => Logger.Error("Async Write Fail!? (1)"),
