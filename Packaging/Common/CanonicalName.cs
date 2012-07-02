@@ -210,6 +210,21 @@ namespace CoApp.Packaging.Common {
             }
         }
 
+        public CanonicalName OtherArchitectureFilter {
+            get {
+                return new CanonicalName {
+                    PackageType = PackageType,
+                    Name = Name,
+                    Flavor = Flavor,
+                    Version = Version,
+                    Architecture = Architecture.Auto,
+                    PublicKeyToken = PublicKeyToken,
+                    MatchVersionOrGreater = MatchVersionOrGreater,
+                    IsCanonical = false,
+                };
+            }
+        }
+
        
         public override string ToString() {
             if (_canonicalName == null) {

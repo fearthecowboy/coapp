@@ -93,7 +93,7 @@ namespace CoApp.Packaging.Client.UI {
             };
   
             Installer.Finished += (src, evnt) => Invoke(() => {
-                if((CoApp.Toolkit.Configuration.RegistryView.CoAppUser["Preferences", "Autoclose"].BoolValue)) {
+                if (Installer.Passive || (CoApp.Toolkit.Configuration.RegistryView.CoAppUser["Preferences", "Autoclose"].BoolValue)) {
                     ActuallyClose();
                 } else {
                     WaitForClose();
@@ -114,6 +114,15 @@ namespace CoApp.Packaging.Client.UI {
         }
 
         internal void FixFont() {
+            var ratio = DescriptionText.ActualHeight / 150;
+            if( ratio > 1.0 && DescriptionText.FontSize > 9) {
+                DescriptionText.FontSize = Math.Max( DescriptionText.FontSize/ratio, 9);
+                Task.Factory.StartNew(() => {
+                    Thread.Sleep(20);
+                    Dispatcher.BeginInvoke((Action)(FixFont));
+                });
+            }
+#if old_way
             if (DescriptionText.ActualHeight > 150 && DescriptionText.FontSize > 9) {
                 DescriptionText.FontSize -= .5;
                 Task.Factory.StartNew(() => {
@@ -121,6 +130,7 @@ namespace CoApp.Packaging.Client.UI {
                     Dispatcher.BeginInvoke((Action)(FixFont));
                 });
             }
+#endif 
         }
 
         internal void OnLoaded(object sender, RoutedEventArgs e) {
@@ -159,7 +169,12 @@ namespace CoApp.Packaging.Client.UI {
             RemoveContextMenu.IsOpen = !RemoveContextMenu.IsOpen;
         }
 
-        private void InstallButtonClick(object sender, RoutedEventArgs e) {
+        internal void InstallButtonClick(object sender, RoutedEventArgs e) {
+            if (Installer.Passive && !Installer.CanInstall) {
+                // the package is already installed.
+                ActuallyClose();
+            }
+
             if (!_actionTaken) {
                 TakeAction();
                 Installer.Install();
@@ -184,7 +199,12 @@ namespace CoApp.Packaging.Client.UI {
             ((Storyboard)FindResource("slideTrans")).Begin();
         }
 
-        private void RemoveButtonClick(object sender, RoutedEventArgs e) {
+        internal void RemoveButtonClick(object sender, RoutedEventArgs e) {
+            if (Installer.Passive && !Installer.CanRemove) {
+                // the package is already installed.
+                ActuallyClose();
+            }
+            
             if (!_actionTaken) {
                 TakeAction();
                 InstallationProgress.Foreground = new SolidColorBrush(Colors.Red);

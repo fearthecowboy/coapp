@@ -602,7 +602,8 @@ namespace CoApp.Packaging.Service {
                     Event<GetResponseInterface>.RaiseFirst().OperationCanceled("Service is shutting down");
                 }
                 else {
-                    Logger.Message("Request:[{0}]{1}".format(requestMessage["rqid"], requestMessage.ToString()));
+                    Logger.Message("REQ[{2}]:#{0}:{1}".format(requestMessage["rqid"], requestMessage.ToString(),_clientId) );
+                    // Logger.Message("Request:[{0}]{1}".format(requestMessage["rqid"], requestMessage.ToString()));
 
 
                     var packageRequestData = new XDictionary<string, PackageRequestData>();
@@ -622,6 +623,9 @@ namespace CoApp.Packaging.Service {
 
                     dispatchTask.ContinueAlways(dt => Event<GetResponseInterface>.RaiseFirst().TaskComplete());
                 }
+            } catch(Exception e) {
+                Logger.Error(e);
+                throw e;
             }
             finally {
                 // whatever, after this point let the messages flow!

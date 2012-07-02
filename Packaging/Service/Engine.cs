@@ -159,6 +159,11 @@ namespace CoApp.Packaging.Service {
                         var p = InstalledPackageFeed.Instance.FindPackages(CanonicalName.CoAppItself).HighestPackages().FirstOrDefault();
                         if( p != null ) {
                             p.DoPackageComposition();
+                            // put the coapp.exe symlink right into the OS directory. Yeah, evil, .... what are ya gonna do about that?
+                            var coappexe = Path.Combine(p.PackageDirectory, "coapp.exe");
+                            if (File.Exists(coappexe)) {
+                                Symlink.MakeFileLink(Path.Combine(Environment.GetEnvironmentVariable("SYSTEMROOT") ?? "c:\\windows", "coapp.exe"), coappexe);
+                            }
                         }
                     }
                     Signals.EngineStartupStatus = 95;

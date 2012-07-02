@@ -18,7 +18,9 @@ namespace CoApp.Packaging.Client {
     using System.Net;
     using System.Net.Configuration;
     using System.Reflection;
+    using System.Security.AccessControl;
     using System.Security.Cryptography;
+    using System.Security.Principal;
     using System.Threading.Tasks;
     using Toolkit.Exceptions;
     using Toolkit.Extensions;
@@ -194,7 +196,12 @@ namespace CoApp.Packaging.Client {
                 }
 
                 try {
-                    using (var filestream = File.Open(Filename, FileMode.Create)) {
+                    using (var filestream = File.Open(Filename, FileMode.Create,FileAccess.ReadWrite, FileShare.Read)) {
+                        
+                        FileSecurity fSec = File.GetAccessControl(Filename);
+                        fSec.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier(WellKnownSidType.WorldSid,null), FileSystemRights.FullControl, AccessControlType.Allow));
+                        File.SetAccessControl(Filename, fSec);
+
                         if (_isCanceled) {
                             _failed(RemoteLocation);
                             return;

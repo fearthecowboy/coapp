@@ -352,7 +352,7 @@ namespace CoApp.CLI {
                     case "list":
                     case "list-package":
                     case "list-packages":
-                        if( !parameters.Any() || parameters[0] == "*" ) {
+                        if( !parameters.Any() ) {
                             collectionFilter = collectionFilter.Then(p => p.HighestPackages());
                         }
 
@@ -971,13 +971,27 @@ namespace CoApp.CLI {
                         pkg.Name,
                         Version = pkg.Version,
                         Arch = pkg.Architecture,
-                        Status = (pkg.IsInstalled ? "Installed " + (pkg.IsBlocked ? "Blocked " : "") + (pkg.IsWanted ? "Wanted ": pkg.IsDependency ? "Dependency " : "")+ (pkg.IsActive ? "Active " : "" ) : ""),
-                        Location = pkg.IsInstalled ? "(installed)" : !string.IsNullOrEmpty(pkg.LocalPackagePath) ? pkg.LocalPackagePath : (pkg.RemoteLocations.IsNullOrEmpty() ? "<unknown>" :  pkg.RemoteLocations.FirstOrDefault().AbsoluteUri.UrlDecode()),
+                        Flavor = pkg.Flavor.Plain,
+                        State = pkg.IsInstalled ? pkg.PackageStatus.ToString() : "",
+                        Act = pkg.IsActive ? "yes" : "",
+                        Blk = pkg.IsBlocked ? "yes" : "",
+                        Location = PkgLocation(pkg),
                     }).ToTable().ConsoleOut();
             }
             else {
                 Console.WriteLine("No packages found.");
             }
+        }
+
+        private string PkgLocation(Package pkg) {
+            if( string.IsNullOrEmpty(pkg.LocalPackagePath)) {
+                if( !pkg.RemoteLocations.IsNullOrEmpty() ) {
+                    return pkg.RemoteLocations.FirstOrDefault().AbsoluteUri.UrlDecode();
+                }
+                return "<unknown>";
+            }
+
+            return pkg.LocalPackagePath;
         }
 
         private Task ListFeeds() {
