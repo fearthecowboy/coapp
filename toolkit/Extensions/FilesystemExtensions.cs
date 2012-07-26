@@ -131,7 +131,7 @@ namespace CoApp.Toolkit.Extensions {
             // set the temporary folder to be a child of the User temporary folder
             // based on the application name
             var appName = (Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly()).GetName().Name;
-            if( OriginalTempFolder.IndexOf(appName) == -1) {
+            if( OriginalTempFolder.IndexOf(appName, StringComparison.CurrentCultureIgnoreCase) == -1) {
                 var appTempPath = Path.Combine(OriginalTempFolder, appName);
                 if (!Directory.Exists(appTempPath)) {
                     Directory.CreateDirectory(appTempPath);
@@ -145,7 +145,9 @@ namespace CoApp.Toolkit.Extensions {
                 Environment.SetEnvironmentVariable("TMP", TempPath);
                 Environment.SetEnvironmentVariable("TEMP", TempPath);
             }
-            
+
+            TempPath = TempPath ?? OriginalTempFolder;
+
             TryToHandlePendingRenames(true);
         }
 

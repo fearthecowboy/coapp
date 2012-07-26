@@ -286,8 +286,6 @@ namespace CoApp.CLI {
                     command = command.ToLower();
                 }
 
-                
-
                 switch (command) {
                     case "-?":
                         return Help();
@@ -1128,10 +1126,6 @@ namespace CoApp.CLI {
             return removePackagesTask.Continue((total => {
                 Console.WriteLine("\r\nSuccessfully removed {0} packages", total);
             }));
-        }
-
-        private static void foot2() {
-          
         }
 
         private void ListPolicies(string policyName = null) {

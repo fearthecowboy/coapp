@@ -322,6 +322,8 @@ CoApp.Cleaner [options]
                 OverallProgress = 20;
                 OnPropertyChanged();
 
+                
+
                 // Remove CoApp toolkit MSIs
                 var toolkits = installedMSIs.Where(each => (each.ProductName.Equals("CoApp.Toolkit", StringComparison.InvariantCultureIgnoreCase) || each.ProductName.Equals("CoApp", StringComparison.InvariantCultureIgnoreCase)) && each.Manufacturer.Equals("OUTERCURVE FOUNDATION", StringComparison.CurrentCultureIgnoreCase)) .ToArray();
 
@@ -362,6 +364,11 @@ CoApp.Cleaner [options]
                     OverallProgress = 75;
                     OnPropertyChanged();
 
+                // get rid of c:\windows\coapp.exe
+                var coappexe = Path.Combine(Environment.GetEnvironmentVariable("SystemRoot"), "coapp.exe");
+                if( File.Exists(coappexe)) {
+                    coappexe.TryHardToDelete();
+                }
 
                     // try to get rid of c:\apps 
                 var apps = String.Format("{0}\\apps", Environment.GetEnvironmentVariable("SystemDrive"));
