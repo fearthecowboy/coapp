@@ -385,6 +385,9 @@ namespace CoApp.Packaging.Service {
                     case "architecture":
                         return CanonicalName.Architecture;
 
+                    case "flavor":
+                        return CanonicalName.Flavor.Plain;
+
                     case "canonicalname":
                         return CanonicalName;
                 }
@@ -426,14 +429,14 @@ namespace CoApp.Packaging.Service {
                                     foreach (var asmFile in devLib.ReferenceAssemblyFiles) {
                                         yield return new CompositionRule {
                                             Action = CompositionAction.SymlinkFile,
-                                            Destination = "${referenceassemblies}\\${arch}\\" + Path.GetFileName(asmFile),
+                                            Destination = "${referenceassemblies}\\${flavor}\\${arch}\\" + Path.GetFileName(asmFile),
                                             Source = "${packagedir}\\" + asmFile,
                                             Category = null
                                         };
 
                                         yield return new CompositionRule {
                                             Action = CompositionAction.SymlinkFile,
-                                            Destination = "${referenceassemblies}\\${arch}\\${simplename}-${version}\\" + Path.GetFileName(asmFile),
+                                            Destination = "${referenceassemblies}\\${flavor}\\${arch}\\${simplename}-${version}\\" + Path.GetFileName(asmFile),
                                             Source = "${packagedir}\\" + asmFile,
                                             Category = null
                                         };

@@ -49,9 +49,7 @@ namespace CoApp.Packaging.Service {
         private static readonly string[] CanonicalFolders = new[] {
             ".cache", 
             "ReferenceAssemblies", 
-            "ReferenceAssemblies\\x86", 
-            "ReferenceAssemblies\\x64", 
-            "ReferenceAssemblies\\any", 
+
             "x86", 
             "x64", 
             "bin", 
