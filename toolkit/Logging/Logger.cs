@@ -160,7 +160,7 @@
             var earliest = latest - howMuch.Ticks;
             return string.Join("\r\n", EventLog.Entries.OfType<EventLogEntry>()
                 .Where( each=> each.TimeGenerated.Ticks > earliest && each.TimeGenerated.Ticks < latest )
-                .Select(each => "[{0}:{1}] {2}{3}".format(each.EventID, each.Source, each.Message, (each.Data.IsNullOrEmpty() ? "" : "\r\nDATA =>" + each.Data.ToUtf8String()))));
+                .Select(each => "[{0}:{1}] {2}{3}".format(each.InstanceId, each.Source, each.Message, (each.Data.IsNullOrEmpty() ? "" : "\r\nDATA =>" + each.Data.ToUtf8String()))));
         }
         public static string GetMessages(TimeSpan howMuch) {
             return GetMessages(howMuch, new TimeSpan(0));

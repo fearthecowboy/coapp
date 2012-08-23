@@ -36,7 +36,7 @@ namespace CoApp.Packaging.Client.UI {
 
     public class Installer : MarshalByRefObject, INotifyPropertyChanged {
         internal string MsiFilename;
-        internal Task InstallTask;
+        //internal Task InstallTask;
 
         private string _finalText;
         private Package _primaryPackage;

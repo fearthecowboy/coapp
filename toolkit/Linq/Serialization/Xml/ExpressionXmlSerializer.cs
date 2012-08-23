@@ -774,7 +774,6 @@ namespace CoApp.Toolkit.Linq.Serialization.Xml {
         private void ParseBinaryExpressionConvert(ref Expression left, ref Expression right) {
             if (left.Type != right.Type) {
                 UnaryExpression unary;
-                LambdaExpression lambda;
                 if (right is ConstantExpression) {
                     unary = Expression.Convert(left, right.Type);
                     left = unary;
