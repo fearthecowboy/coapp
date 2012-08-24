@@ -24,6 +24,7 @@ namespace CoApp.Toolkit.Extensions {
     using System.Net;
     using System.Text;
     using Text;
+    using System.Reflection;
 
     public enum ResponseType {
         String,
@@ -87,6 +88,8 @@ namespace CoApp.Toolkit.Extensions {
             resultCode = -1;
 
             var webRequest = (HttpWebRequest)WebRequest.Create(url);
+            webRequest.Proxy = GetProxy(); //we should probably cache this result somewhere
+
             webRequest.CookieContainer = Cookies.GetCookieContainer();
 
             switch (requestType) {
@@ -263,6 +266,28 @@ namespace CoApp.Toolkit.Extensions {
 
         public static bool IsHttpScheme(this Uri uri, bool acceptHttps = true) {
             return (uri.Scheme == Uri.UriSchemeHttp || (acceptHttps && uri.Scheme == Uri.UriSchemeHttps));
+        }
+
+        //see https://github.com/coapp/coapp/issues/58
+        public static IWebProxy GetProxy()
+        {
+            bool isProxyUsed;
+
+            var systemWebProxy = WebRequest.GetSystemWebProxy();
+
+            var fieldInfo = systemWebProxy.GetType().GetField("webProxy", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            if (fieldInfo == null)
+            {
+                isProxyUsed = false;
+            }
+            else
+            {
+                var getSystemProxyValues = (WebProxy)fieldInfo.GetValue(systemWebProxy);
+                isProxyUsed = getSystemProxyValues.Address != null;
+            }
+
+            return isProxyUsed ? systemWebProxy : null;
         }
     }
 }
