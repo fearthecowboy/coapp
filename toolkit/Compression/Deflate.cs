@@ -163,12 +163,12 @@ namespace CoApp.Toolkit.Compression {
         // The deflate compression method
         private static readonly int Z_DEFLATED = 8;
 
-        private static readonly int STORED_BLOCK;
+        private static readonly int STORED_BLOCK = 0;
         private static readonly int STATIC_TREES = 1;
         private static readonly int DYN_TREES = 2;
 
         // The three kinds of block type
-        private static readonly int Z_BINARY;
+        private static readonly int Z_BINARY = 0;
         private static readonly int Z_ASCII = 1;
         private static readonly int Z_UNKNOWN = 2;
 

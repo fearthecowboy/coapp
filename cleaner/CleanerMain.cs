@@ -153,7 +153,7 @@ CoApp.Cleaner [options]
         }
 
         internal delegate int NativeExternalUIHandler(IntPtr context, int messageType, [MarshalAs(UnmanagedType.LPWStr)] string message);
-        private static NativeExternalUIHandler uihandler;
+        //private static NativeExternalUIHandler uihandler;
         
         private static int _progressDirection = 1;
         private static int _currentTotalTicks = -1;
