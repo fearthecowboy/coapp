@@ -854,5 +854,23 @@ namespace CoApp.Toolkit.Extensions {
             }
             return false;
         }
+
+        public static string EmptyAsNull( this string str) {
+            return (string.IsNullOrEmpty(str) ? null : str);
+        }
+
+        
+        /// <summary>
+        /// Checks to see if strings are equal, with empty strings being considered equal to null.
+        /// </summary>
+        /// <param name="str1">First String to compare</param>
+        /// <param name="str2">Second String to compare</param>
+        /// <returns></returns>
+        public static bool EqualsEx(this string str1, string str2 ) {
+            if( string.IsNullOrEmpty(str1) && string.IsNullOrEmpty(str2)) {
+                return true;
+            }
+            return str1 == str2;
+        }
     }
 }

@@ -9,18 +9,21 @@
 }
 
 commit-version {
+    compiler:vc11;
     // do the work neccessary to push the updated version.inc files or equivalent.
     // do the commit, not the push.
     
 }
 
 update-version {
+    compiler:vc11;
     build-command: @"
         cscript //e:jscript scripts\increment-build-version.js
     ";
 }
 
 release { 
+    compiler:vc11;
     default: true;
     // builds the binaries in "Release" mode but does not sign them.
     set : cfg = "Release";
@@ -35,6 +38,7 @@ release {
 }
 
 debug {
+    compiler:vc11;
     // builds binaries in debug mode
     default: false;
     set : cfg = "Debug";
@@ -46,6 +50,7 @@ debug {
 }
 
 package { 
+    compiler:vc11;
     default: false;
     set : cfg = "Release";
     uses : sign-anycpu;
@@ -67,12 +72,13 @@ package {
 }
 
 sign-anycpu {
+    compiler:vc11;
     set : release_dir = @"output\any\Release\bin\";
     
     default: false;
     
     uses: {
-        anycpu, resources
+        anycpu //, resources
     };
     
     targets: {
@@ -93,7 +99,7 @@ sign-anycpu {
 anycpu {
     default: no;
     platform : x86;
-    compiler: vc10;
+    compiler: vc11;
     
     uses: clean;
     
@@ -117,7 +123,7 @@ resources {
     default: false;
     
     platform : x86;
-    compiler: vc10;
+    compiler: vc11;
     uses: clean;
     
     targets: {
@@ -148,6 +154,7 @@ resources {
 // use:
 // ptk rehash-prerequisites
 rehash-prerequisites {
+    compiler:vc11;
     set : cfg = "Release";
     set : release_dir = @"output\any\Release\bin\";
     default: false;
@@ -180,7 +187,7 @@ rehash-prerequisites {
 rehash-x86 {
     default: false;
     platform : x86;
-    compiler: vc10;
+    compiler: vc11;
     uses: clean;
     
     targets: { 
@@ -195,7 +202,7 @@ rehash-x86 {
 rehash-x64 {
     default: false;
     platform : x64;
-    compiler: vc10;
+    compiler: vc11;
     uses: clean;
     
     targets: { 
@@ -208,6 +215,7 @@ rehash-x64 {
 }
 
 clean {
+    compiler:vc11;
     default: no;
     
     clean-command: @"

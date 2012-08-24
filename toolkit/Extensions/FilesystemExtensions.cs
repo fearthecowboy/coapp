@@ -151,6 +151,44 @@ namespace CoApp.Toolkit.Extensions {
             TryToHandlePendingRenames(true);
         }
 
+        public static IEnumerable<string> GetAllCustomFilePaths(this string filename, string currentDirectory ) {
+
+            // check system etc
+            var chkPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "etc", filename);
+            if (File.Exists(chkPath)) {
+                yield return chkPath;
+            }
+
+            // check roaming user etc
+            chkPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "etc", filename);
+            if (File.Exists(chkPath)) {
+                yield return chkPath;
+            }
+
+            // check local user etc
+            chkPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "etc", filename);
+            if (File.Exists(chkPath)) {
+                yield return chkPath;
+            }
+
+            foreach( var dir in currentDirectory.GetDirectoryStack().Reverse() ) {
+                chkPath = Path.Combine(dir, filename);
+                if (File.Exists(chkPath)) {
+                    yield return chkPath;
+                }
+            }
+        }
+
+        public static IEnumerable<string> GetDirectoryStack(this string currentDirectory ) {
+            currentDirectory = currentDirectory ?? Environment.CurrentDirectory;
+            while( !string.IsNullOrEmpty(currentDirectory) ) {
+                if( Directory.Exists(currentDirectory)) {
+                    yield return currentDirectory;
+                }
+                currentDirectory = Path.GetDirectoryName(currentDirectory);
+            }
+        }
+
         public static string GetCustomFilePath(this string filename, string currentDirectory = null) {
             try {
                 // check user etc
