@@ -18,20 +18,18 @@ namespace CoApp.Toolkit.Win32 {
     using Extensions;
 
     public static class EnvironmentUtility {
-#if !COAPP_ENGINE_CORE
         private const Int32 HWND_BROADCAST = 0xffff;
         private const Int32 WM_SETTINGCHANGE = 0x001A;
         private const Int32 SMTO_ABORTIFHUNG = 0x0002;
-#endif
 
         public static void BroadcastChange() {
 #if COAPP_ENGINE_CORE
             Rehash.ForceProcessToReloadEnvironment("explorer", "services");
-#else
+#endif
             Task.Factory.StartNew(() => {
                 User32.SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, 0, "Environment", SMTO_ABORTIFHUNG, 1000, IntPtr.Zero);
             });
-#endif
+
         }
 
         public static string GetSystemEnvironmentVariable(string name) {

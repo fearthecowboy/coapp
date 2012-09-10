@@ -1,12 +1,12 @@
-﻿//-----------------------------------------------------------------------
+﻿﻿//-----------------------------------------------------------------------
 // <copyright company="CoApp Project">
-//     Copyright (c) 2010-2012 Garrett Serack and CoApp Contributors. 
+//     Copyright (c) 2010-2012 Garrett Serack and CoApp Contributors.
 //     Contributors can be discovered using the 'git log' command.
 //     All rights reserved.
 // </copyright>
 // <license>
 //     The software is licensed under the Apache 2.0 License (the "License")
-//     You may not use the software except in compliance with the License. 
+//     You may not use the software except in compliance with the License.
 // </license>
 //-----------------------------------------------------------------------
 
@@ -115,7 +115,7 @@ namespace CoApp.ElevationProxy {
 
         private byte[] _ssmessage;
 
-        internal static void ElevateSelf() {
+        internal static void ElevateSelf(bool processCreated) {
             try {
                 var ntAuth = new SidIdentifierAuthority();
                 ntAuth.Value = new byte[] {0, 0, 0, 0, 0, 5};
@@ -129,6 +129,7 @@ namespace CoApp.ElevationProxy {
                 // :) Seems that we need to elevate?
             }
 
+    if (!processCreated) {
             // we're not an admin I guess.
             try {
                 var process = new Process {
@@ -137,7 +138,7 @@ namespace CoApp.ElevationProxy {
                         WorkingDirectory = Environment.CurrentDirectory,
                         FileName = Assembly.GetEntryAssembly().Location,
                         Verb = "runas",
-                        Arguments = Environment.GetCommandLineArgs().Skip(1).Aggregate(string.Empty, (current, each) => current + " \"" + each + "\"").Trim(),
+                    Arguments = Environment.GetCommandLineArgs().Skip(1).Aggregate(string.Empty, (current, each) => current + " \"" + each + "\"").Trim() + " __EPM1__",
                         ErrorDialog = true,
                         ErrorDialogParentHandle = GetForegroundWindow(),
                         WindowStyle = ProcessWindowStyle.Maximized,
@@ -155,6 +156,7 @@ namespace CoApp.ElevationProxy {
             } catch {
                 // nWindow.Fail(LocalizedMessage.IDS_REQUIRES_ADMIN_RIGHTS, "The installer requires administrator permissions.");
             }
+    }
 
             // we should have elevated, or failed to. either way, GTFO.
             Environment.Exit(0);
@@ -210,7 +212,7 @@ namespace CoApp.ElevationProxy {
                 System.Windows.Forms.MessageBox.Show("Required: PipeName", "CoApp Elevation Proxy", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
-            ElevateSelf();
+            ElevateSelf(args.Length == 2 && args[1] == "__EPM1__");
             var epm = new ElevationProxyMain {
                 ClientPipeName = args[0]
             };

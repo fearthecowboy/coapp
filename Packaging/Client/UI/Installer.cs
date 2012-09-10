@@ -71,7 +71,7 @@ namespace CoApp.Packaging.Client.UI {
                     if (((AppDomain.CurrentDomain.GetData("COAPP_INSTALLED") as string) ?? "false").IsTrue()) {
                         // we'd better make sure that the most recent version of the service is running.
                         EngineServiceManager.InstallAndStartService();
-                        
+                        EnvironmentUtility.BroadcastChange();
                     }
                     bool wasCreated;
                     var ewhSec = new EventWaitHandleSecurity();
