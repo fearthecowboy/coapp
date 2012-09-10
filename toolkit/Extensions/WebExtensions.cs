@@ -87,6 +87,8 @@ namespace CoApp.Toolkit.Extensions {
             resultCode = -1;
 
             var webRequest = (HttpWebRequest)WebRequest.Create(url);
+            webRequest.Proxy = GetProxy(); 
+
             webRequest.CookieContainer = Cookies.GetCookieContainer();
 
             switch (requestType) {
@@ -263,6 +265,14 @@ namespace CoApp.Toolkit.Extensions {
 
         public static bool IsHttpScheme(this Uri uri, bool acceptHttps = true) {
             return (uri.Scheme == Uri.UriSchemeHttp || (acceptHttps && uri.Scheme == Uri.UriSchemeHttps));
+        }
+
+        //see https://github.com/coapp/coapp/issues/58
+        public static IWebProxy GetProxy()
+        {
+            if (WebRequest.DefaultWebProxy.GetProxy(new Uri("http://www.coapp.org/")).AbsoluteUri == "http://www.coapp.org/")
+                return null;
+            else return WebRequest.DefaultWebProxy;
         }
     }
 }
