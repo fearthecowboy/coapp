@@ -217,7 +217,7 @@ namespace CoApp.ElevationProxy {
             epm.Go();
         }
 
-        private void AsyncCopyTo( Stream fromPipe, Stream toPipe ) {
+        private void oldAsyncCopyTo( Stream fromPipe, Stream toPipe ) {
             var buffer = new byte[BufferSize];
             fromPipe.BeginRead(buffer, 0, BufferSize, ar => {
                 var i = fromPipe.EndRead(ar);
@@ -226,6 +226,16 @@ namespace CoApp.ElevationProxy {
                 }
             }, null).AsyncWaitHandle.WaitOne();
         }
+
+        private void AsyncCopyTo(Stream fromPipe, Stream toPipe) {
+            var buffer = new byte[BufferSize];
+            var ar = fromPipe.BeginRead(buffer, 0, BufferSize, null, null);
+            var i = fromPipe.EndRead(ar);
+            if (i > 0) {
+                toPipe.Write(buffer, 0, i);
+            }
+        }
+
 
         private void AsyncCopyToWithSnoop( Stream fromPipe, Stream toPipe) {
             var buffer = new byte[BufferSize];

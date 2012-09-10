@@ -316,9 +316,6 @@ namespace CoApp.CLI {
                         Console.WriteLine( _packageManager.GetConfigurationValue("test", "something").Result);
                         return 0;
                         
-
-                        break;
-
                     case "show-debug":
                         var l = 5;
                         if( parameters.Any() ) {
